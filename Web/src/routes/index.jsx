@@ -33,6 +33,7 @@ import {
   ForgotPassword,
   ResetPassword,
   PublicScores,
+  LookSpecimen,
   UnifiedRegister,
   NotFound,
 } from './lazy-pages';
@@ -135,6 +136,7 @@ export default function AppRoutes() {
         <Route path="/scores" element={<PublicScores />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {LookSpecimen && <Route path="/__look" element={<LookSpecimen />} />}
 
         {/* Player Routes */}
         <Route path="/player" element={<Navigate to="/player/login" replace />} />

@@ -1,0 +1,157 @@
+/*
+ * The working-screen shell (design-language PLAN §7): a masthead bar — the
+ * wordmark, the role ident, the competition as the "segment", tabs with the
+ * 3px accent bar, and the account controls — then a page header. Tokens only.
+ *
+ * Breakpoints: tabs sit in the bar from `lg`; account controls from `md`;
+ * below those, one menu button opens the drawer that holds both, so the
+ * Light/Dark switch stays reachable on every page (appearance-everywhere).
+ */
+.shell-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: rgb(var(--bg));
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.shell-header__bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 var(--pad);
+}
+.shell-header__brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.shell-header__segment {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-secondary);
+  padding-left: 12px;
+  box-shadow: inset 1px 0 0 var(--line);
+}
+.shell-account { display: flex; align-items: center; gap: 8px; }
+.shell-header__nav { display: none; margin-left: auto; }
+.shell-header__account { display: none; align-items: center; gap: 8px; margin-left: auto; }
+.shell-header__nav + .shell-header__account { margin-left: 8px; }
+.shell-header--fixed { position: fixed; left: 0; right: 0; }
+.shell-header__extra { display: none; align-items: center; margin-left: auto; min-width: 0; }
+.shell-header__nav + .shell-header__extra { margin-left: 8px; }
+.shell-header__extra + .shell-header__account { margin-left: 8px; }
+/* The switch on its own, while the account cluster is in the drawer (phones). */
+.shell-header__appearance { margin-left: auto; }
+.shell-header__menu { margin-left: 8px; }
+.shell-drawer__extra { margin-bottom: 16px; }
+@media (min-width: 768px) {
+  .shell-header__account { display: flex; }
+  .shell-header__appearance { display: none; }
+}
+@media (min-width: 1024px) {
+  .shell-header__nav { display: flex; }
+  .shell-header__extra { display: flex; }
+  .shell-header__menu { display: none; }
+}
+/* A long row of tabs joins the bar only from xl; the menu covers lg too. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .shell-header--nav-xl .shell-header__nav { display: none; }
+  .shell-header--nav-xl .shell-header__menu { display: inline-flex; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .shell-header__menu { margin-left: 8px; }
+}
+@media (max-width: 479px) {
+  .shell-header__segment { display: none; }
+  /* The mark alone (the name stays for screen readers), as Home's masthead
+     does on its smallest phones: wordmark + a long ident + the menu do not fit. */
+  .shell-header__brand .brand-wordmark { min-width: 44px; justify-content: center; }
+  .shell-header__brand .brand-wordmark > span {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+}
+
+/* TabNav: links that read like tabs; the current page carries the 3px bar. */
+.shell-tabnav { display: flex; gap: 4px; }
+.shell-tabnav__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h);
+  padding: 0 12px;
+  color: var(--fg-secondary);
+  text-decoration: none;
+  font-family: var(--type-button-family);
+  font-weight: var(--type-button-weight);
+  font-size: var(--type-button-size);
+  letter-spacing: var(--type-button-tracking);
+  border-radius: var(--radius-control);
+  transition: color var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease);
+}
+@media (min-width: 1024px) and (pointer: fine) { .shell-tabnav__link { min-height: var(--control-h-mouse); } }
+.shell-tabnav__link:hover { color: var(--fg); background: rgb(var(--ink) / 0.06); }
+.shell-tabnav__link::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -10px;
+  height: var(--rule);
+  background: rgb(var(--accent));
+  transform: scaleX(0);
+  transition: transform var(--dur-3) var(--ease-cut);
+}
+.shell-tabnav__link[aria-current='page'] { color: var(--fg); }
+.shell-tabnav__link[aria-current='page']::after { transform: scaleX(1); }
+
+/* In the drawer the tabs stack, and the current one gets the left rule. */
+.shell-tabnav--vertical { flex-direction: column; align-items: stretch; gap: 2px; }
+.shell-tabnav--vertical .shell-tabnav__link { min-height: var(--control-h); padding: 0 14px; }
+.shell-tabnav--vertical .shell-tabnav__link::after { display: none; }
+.shell-tabnav--vertical .shell-tabnav__link[aria-current='page'] { box-shadow: inset var(--rule) 0 0 0 rgb(var(--accent)); background: rgb(var(--surface-raised)); }
+.shell-drawer__account { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* Page header: tag, title, actions on the right (wrapping under on phones). */
+.shell-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: clamp(24px, 3vw, 40px) 0 clamp(16px, 2vw, 24px);
+}
+.shell-page-header__text { display: grid; justify-items: start; gap: 10px; min-width: 0; }
+.shell-page-header__title { overflow-wrap: anywhere; }
+.shell-page-header__lede { margin: 0; color: var(--fg-secondary); max-width: 44rem; }
+.shell-page-header__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* The judge screens' masthead (pages/judge/judgeShared.jsx JudgeHeader). */
+.judge-header--wide .shell-header__bar { max-width: 1400px; }
+.judge-header__bar { flex-wrap: wrap; row-gap: 8px; padding-block: 8px; }
+.judge-header__who { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.judge-header__mark { width: 12px; height: 32px; flex: none; }
+.judge-header__name { display: grid; min-width: 0; }
+.judge-header__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 700; font-size: 14px; line-height: 1.25; }
+.judge-header__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-secondary); font-size: 12.5px; }
+.judge-header__context { order: 3; flex: 1 1 100%; min-width: 0; }
+.judge-header__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
+@media (max-width: 479px) {
+  .judge-header__mark, .judge-header__ident { display: none; }
+}
+@media (min-width: 640px) {
+  .judge-header__context { order: 0; flex: 0 1 20rem; }
+}
+.judge-scoring-for {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-control);
+  background: rgb(var(--surface-raised));
+  box-shadow: inset var(--rule) 0 0 0 rgb(var(--success-fg));
+}
+.judge-scoring-for__tag { color: rgb(var(--success-fg)); flex: none; }
+.judge-scoring-for__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 700; font-size: 14px; line-height: 1.25; }
+.judge-scoring-for__team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-secondary); font-size: 12.5px; }
+/* The slip's phone tabs: the current one carries the 3px accent rule. */
+.judge-tab--active { box-shadow: inset 0 calc(-1 * var(--rule)) 0 0 rgb(var(--accent)); }

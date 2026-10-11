@@ -1,0 +1,99 @@
+# Prime Time, site-wide: the final report
+
+The design-language plan ([PLAN.md](PLAN.md)) set out to draw the whole site in the landing page's "Prime Time" look, without rewriting any behaviour, and to leave an architecture where the next restyle is a token edit. This is what was done, how it was checked, and what is left.
+
+**Status (2026-10-11):** every phase and every leftover is complete, and the work is merged into `master` locally (branch `look/finish`). It is **not pushed**: pushing `master` is what deploys to Render, and the judge screens should not go live on a competition day.
+
+## What changed
+
+| Phase | Result |
+|---|---|
+| 0 | Pixel, lint and phone-speed baselines on the unchanged build |
+| 1 | Token architecture: look packs → `generated/looks.css`, a `data-look` axis beside appearance and role, Tailwind reading tokens. Zero pixel change. |
+| 2 | Type steps and fonts (Archivo, Teko), loaded only with what draws them |
+| 3 | The primitives (`components/ui`), the `/__look` specimen and its spec; Home on the shared layer |
+| 4 | The shell (`AppHeader`, `PageHeader`, `TabNav`, `AccountControls`), the brand sweep ("Mallakhamb India", the pole mark, favicons), toasts and `theme-color` from tokens |
+| W1 | `/scores`, every sign-in, registration and password screen, the 404, the level and competition choosers |
+| W2 | Every player and coach screen, the shared masthead |
+| W3 | Every admin and superadmin screen |
+| W4 | Every judge screen (token level; see "Left to do") |
+| 6 | Classic retired: prime-time is the default and only look; the old design-system components, the hover lift and the legacy palettes deleted |
+| 7 | [LOOKS.md](LOOKS.md) (the playbook), the README, Web/MEMORY and project memory |
+
+New pieces a future screen should use: `Notice`, `RunningOrder`, `TextLink`, `AuthLayout`, `Heading asIs`, the picker/popover styles, the results board (`scores/board.css`). See [README.md](README.md).
+
+## How it was verified
+
+Each wave ran the plan's §10 gates before its route group switched.
+
+- **Unit tests:** 474/474 after Phase 6. The count fell from 489 because the per-look contrast cases for classic went with it; 176 judge tests pass unchanged through W4.
+- **Lint:** no errors; the warning ratchet holds and was lowered: hard-coded colours 855 → 474, hard-coded spacing 490 → 298. `no-hardcoded-colors` is an **error** in every folder now at zero.
+- **Pixel gate (threshold 0):**
+  - W1 vs the Phase-4 reference (v4): differences only on W1 routes and on the admin/superadmin scores tabs, which share the restyled board and filters. One 7 px antialiasing change on a glyph of the judge-profile avatar, a screen W4 later rebuilt.
+  - After Phase 6, the whole site was recorded as the new reference (`.mallakhamb-visual-baseline-look-v5`), and a second, independent run compared against it.
+- **Browser audits, on the full prime-time build, one at a time:**
+
+| Audit | W4 build | Phase 6 build (pass 1, `59a0266`) | Final build (pass 2, `a79c8cb`) |
+|---|---|---|---|
+| look-specimen (contrast, overflow, 44 px targets, masthead) | 2/2 | 2/2 | 2/2 |
+| contrast-audit (real backgrounds, both appearances) | 6/6 | 6/6 | 6/6 |
+| appearance-everywhere / appearance-persistence | 1/1 · — | 1/1 · 1/1 | 1/1 · 1/1 |
+| focus-visible | 6/6 | 6/6 | 6/6 |
+| responsive-audit | 6/6 | 6/6 | 6/6 |
+| responsive-tablet · responsive-modals | — | 6/6 · 1/1 | 6/6 · 1/1 |
+| deep-screens | 1 failure, fixed | 2/2 | 2/2 |
+| responsive-score-sheet | 2/2 | 2/2 | 2/2 |
+| responsive-judge-walk | 1/1 | 1/1 | 1/1 |
+| judge-deep-screens | 1/1 | 1/1 | 1/1 |
+| Home 41-device audit | — | 41/41 | 41/41 |
+| Pixel reference recorded (every area, both appearances, 5 widths) | — | VALID | VALID |
+
+- **Pixel determinism:** a third run compared the final build against the reference it had just recorded: 0 differing screenshots in every area (VALID).
+- **Speed (phone profile: 390×844, 4× CPU, fast 4G, cold cache; median of 3, final build):**
+
+| Route | LCP | CLS | Fonts | JS | CSS |
+|---|---|---|---|---|---|
+| `/` (Home) | 2160 ms | 0 | 137.2 KB | 281.6 KB | 28.3 KB |
+| `/player/login` | 1632 ms | 0.0003 | 96.7 KB | 231.7 KB | 17.5 KB |
+| `/scores` | 1620 ms | 0.0013 | 96.7 KB | 213 KB | 17.5 KB |
+| `/judge/dashboard` | 1472 ms | 0.032 | 96.7 KB | 238.8 KB | 17.5 KB |
+
+Every app route meets the plan's budget: LCP ≤ 2.5 s and fonts ≤ 100 KB. Home is unchanged; its fonts include Devanagari. The judge dashboard's CLS was 0.077–0.091 on master.
+
+Between the two passes, the recorded screens were reviewed by eye. That found three more things to fix (`a79c8cb`): the old judge purple still showed in labels, borders and tints; some admin and judge section headings were still in the old heavy sans; and two tags stretched across their panels.
+
+The responsive audit's only findings were two links in Home's footer (a phone number and "Super Admin", under 44 px), unchanged from before the rollout. The one deep-screens failure was real: the admin masthead's mark-only wordmark was a 13 px-wide link at 768 px. It now keeps a 44 px target.
+
+## Left to do — resolved (2026-10-11, `c32815c`)
+
+| Was left | Done |
+|---|---|
+| Judge screens, anatomy | One `JudgeHeader` (the shell's masthead) on all seven judge screens, with every control's accessible name kept and the slip still measuring the header for its pinned score bar. The slip: `display-s` section titles; totals in `num-l`/`num-m`, saffron at full marks; tabular summary rows; the 3px rule on the current phone tab. |
+| Inline colours | **0** colour literals in `src` (855 when the plan started). The lint rule had flagged token references (`rgb(var(--x) / a)`) as literals; it no longer does (tested), and it is now an **error** everywhere. Exempt by name: the stopwatch island, Home's WebGL runtime, and the files that define colours. |
+| The `COLORS`/`ADMIN_COLORS` proxies | Deleted, with `SAFFRON_CTA`, `COMMON_STYLES` and the unused token helpers; their last ~110 uses read tokens. |
+| Home's footer targets | 44 px on touch and narrow windows. |
+
+**Verified twice after the leftovers** (final build `81207da`; 480/480 unit tests, no lint errors):
+
+| Check | Pass 1 (`529e52f`) | Pass 2 (`81207da`) |
+|---|---|---|
+| All 12 browser audits | all green | all green |
+| responsive-audit findings | one 40 px credit link ("AshLin"), fixed for pass 2 | **none, on any screen at any width** |
+| Pixel gate | reference recorded (VALID) | **0 differences** vs pass 1 (VALID) |
+| Home 41 devices | see below | see below |
+
+Between passes, a pass on the earlier build had found two more real defects: the superadmin overview scrolled sideways at 320–360 px, and the Home footer links were small at tablet widths. Both were fixed. During the day's Atlas outage (11:43–11:47, then brief drops) the runs were stopped or marked VOID by a new database guard, and re-run.
+
+**Home on phones:** after `327054f` ("mobile set to desktop mode on home screen"), the 41-device audit reports two things on 360–480 px phones and Pixel 7 landscape: a 3D label overlapping the text at the pole stop, and the stopwatch taller than the screen. **Master's own build reports exactly the same**, so they come from that commit's laptop layout on phones, not from this rollout. They are left to that Home work. The iPad landscape WebGL errors seen in full-matrix runs do not reproduce when each device runs alone (all four pass, 3D on).
+
+Still open, by choice:
+- **Spacing warnings (256).** These are mostly Tailwind layout values (`min-h-[44px]` touch floors, `px-[var(--pad)]`) and the responsive utility module. Pages own layout by the design rules, so the ratchet holds the count; it is not a look issue.
+- **Font budget.** App routes load 96.7 KB. The specimen, with every type step on screen, loads 104.4 KB.
+- **The API's socket CORS** refuses the `vite preview` origins in local runs. This is harmless, only noisy.
+
+## Rolling it out
+
+1. `master` already carries everything (merged locally from `look/finish`).
+2. Push `master` to let Render deploy, on a day with no competition.
+3. Check live in Chromium and WebKit: a sign-in, `/scores`, a coach dashboard, an admin tab, and a judge slip on a phone.
+4. If the judge screens misbehave on the day, the quickest rollback is reverting the merge. The route-level kill switch went with classic, because there is no other look left to switch to.

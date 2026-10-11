@@ -1,31 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import {
-  ArrowRight, Eye, EyeOff, Lock, Mail, User, Phone, Calendar,
-  UserCheck, UserPlus, Users, Scale, MapPin, Hash,
-  BarChart2, Settings,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import BHALogo from '../../assets/BHA.png';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
-
-// Design system
-import { ThemeProvider, useTheme } from '../../components/design-system/theme';
-import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
-import { HexGrid } from '../../components/design-system/backgrounds';
-import { GradientText } from '../../components/design-system/ornaments';
-import { useReducedMotion } from '../../components/design-system/animations';
+import { Button, Field, Input, PasswordInput, Select, TextLink } from '@/components/ui';
+import { AuthLayout, AuthHeader, AuthLinks } from '@/components/shell';
 
 // API services
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
-import { FG, alpha } from '@/styles/tokens';
 
-const EASE = [0.22, 1, 0.36, 1];
 
 /**
  * Detect user role from route path.
@@ -47,30 +34,6 @@ const detectRoleFromPath = (pathname) => {
  * @returns {Object} Configuration object with title, subtitle, description, and form fields
  */
 const getRoleConfig = (role) => {
-  // Unified ornament component - same design for all roles, only color changes
-  const UnifiedOrnament = ({ color }) => (
-    <motion.div className="relative flex items-center justify-center"
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.9, delay: 0.3, type: 'spring', stiffness: 200, damping: 18 }}>
-      <motion.div className="absolute w-24 h-24 rounded-full border"
-        style={{ borderColor: `${alpha(color, 0x30)}` }}
-        animate={{ scale: [1, 1.06, 1], opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
-      <div className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-        style={{
-          background: `linear-gradient(135deg, ${alpha(color, 0x20)}, ${alpha(color, 0x15)})`,
-          border: `1px solid ${alpha(color, 0x40)}`,
-          boxShadow: `0 0 40px ${alpha(color, 0x20)}, inset 0 1px 0 rgb(var(--ink) / 0.08)`,
-        }}>
-        {/* Role-specific icon but same size and positioning */}
-        {role === 'coach' && <UserCheck className="w-10 h-10" style={{ color }} aria-hidden="true" />}
-        {role === 'player' && <UserPlus className="w-10 h-10" style={{ color }} aria-hidden="true" />}
-        {role === 'judge' && <Scale className="w-10 h-10" style={{ color }} aria-hidden="true" />}
-      </div>
-    </motion.div>
-  );
-
   // Role-specific content but unified structure
   const roleContent = {
     coach: {
@@ -104,14 +67,6 @@ const getRoleConfig = (role) => {
     formTitle: 'Create Account',
     formSubtitle: 'Enter your details to register',
     buttonText: 'Create Account',
-    ornament: UnifiedOrnament,
-    background: HexGrid, // Same background for all
-    icon: role === 'coach' ? UserCheck : role === 'judge' ? Scale : UserPlus,
-    features: [
-      { icon: BarChart2, label: 'Secure' },
-      { icon: Users, label: 'Reliable' },
-      { icon: Settings, label: 'Modern' },
-    ], // Same features for all
     loginLink: `/${role}/login`,
   };
 };
@@ -159,7 +114,6 @@ const COACH_FIELDS = [
     name: 'firstName',
     label: 'First Name',
     type: 'text',
-    icon: User,
     placeholder: 'First name',
     autoComplete: 'given-name',
     rules: { required: 'First name is required' },
@@ -169,7 +123,6 @@ const COACH_FIELDS = [
     name: 'lastName',
     label: 'Last Name',
     type: 'text',
-    icon: User,
     placeholder: 'Last name',
     autoComplete: 'family-name',
     rules: { required: 'Last name is required' },
@@ -179,7 +132,6 @@ const COACH_FIELDS = [
     name: 'email',
     label: 'Email Address',
     type: 'email',
-    icon: Mail,
     placeholder: 'coach@example.com',
     autoComplete: 'email',
     rules: {
@@ -191,7 +143,6 @@ const COACH_FIELDS = [
     name: 'phone',
     label: 'Phone Number',
     type: 'tel',
-    icon: Phone,
     placeholder: 'Enter your phone number',
     autoComplete: 'tel',
     rules: PHONE_RULES,
@@ -203,7 +154,6 @@ const PLAYER_FIELDS = [
     name: 'firstName',
     label: 'First Name',
     type: 'text',
-    icon: User,
     placeholder: 'First name',
     autoComplete: 'given-name',
     rules: { required: 'First name is required' },
@@ -213,7 +163,6 @@ const PLAYER_FIELDS = [
     name: 'lastName',
     label: 'Last Name',
     type: 'text',
-    icon: User,
     placeholder: 'Last name',
     autoComplete: 'family-name',
     rules: { required: 'Last name is required' },
@@ -223,7 +172,6 @@ const PLAYER_FIELDS = [
     name: 'email',
     label: 'Email Address',
     type: 'email',
-    icon: Mail,
     placeholder: 'you@example.com',
     autoComplete: 'email',
     rules: {
@@ -235,7 +183,6 @@ const PLAYER_FIELDS = [
     name: 'phone',
     label: 'Phone Number',
     type: 'tel',
-    icon: Phone,
     placeholder: 'Enter your phone number',
     autoComplete: 'tel',
     rules: PHONE_RULES,
@@ -244,12 +191,11 @@ const PLAYER_FIELDS = [
     name: 'dateOfBirth',
     label: 'Date of Birth',
     type: 'date',
-    icon: Calendar,
     autoComplete: 'bday',
     rules: { required: 'Date of birth is required' },
     half: true,
   },
-  // gender is rendered separately as a ThemedSelect
+  // gender is rendered separately as a Select
 ];
 
 /**
@@ -265,7 +211,6 @@ const JUDGE_FIELDS = [
     name: 'firstName',
     label: 'First Name',
     type: 'text',
-    icon: User,
     placeholder: 'First name',
     autoComplete: 'given-name',
     rules: { required: 'First name is required' },
@@ -275,7 +220,6 @@ const JUDGE_FIELDS = [
     name: 'lastName',
     label: 'Last Name',
     type: 'text',
-    icon: User,
     placeholder: 'Last name',
     autoComplete: 'family-name',
     rules: { required: 'Last name is required' },
@@ -285,7 +229,6 @@ const JUDGE_FIELDS = [
     name: 'email',
     label: 'Email Address',
     type: 'email',
-    icon: Mail,
     placeholder: 'judge@example.com',
     autoComplete: 'email',
     rules: {
@@ -297,7 +240,6 @@ const JUDGE_FIELDS = [
     name: 'phone',
     label: 'Phone Number',
     type: 'tel',
-    icon: Phone,
     placeholder: 'Enter your phone number',
     autoComplete: 'tel',
     rules: PHONE_RULES,
@@ -306,7 +248,6 @@ const JUDGE_FIELDS = [
     name: 'stateUnit',
     label: 'State / Unit',
     type: 'text',
-    icon: MapPin,
     placeholder: 'e.g. Maharashtra',
     rules: {},
     half: true,
@@ -315,12 +256,11 @@ const JUDGE_FIELDS = [
     name: 'registrationNumber',
     label: 'MFI Reg. No.',
     type: 'text',
-    icon: Hash,
     placeholder: 'Optional',
     rules: {},
     half: true,
   },
-  // certificationLevel is rendered separately as a ThemedSelect
+  // certificationLevel is rendered separately as a Select
 ];
 
 /**
@@ -342,20 +282,16 @@ const HOME_AFTER_REGISTER = {
   judge: '/judge/dashboard',
 };
 
-// ─── Inner component (uses theme context) ─────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 /**
- * UnifiedRegisterInner - Registration form that adapts to coach or player role.
+ * UnifiedRegister - the registration page for coach, player and judge; the
+ * role comes from the URL (/coach/register, /player/register, /judge/register).
  */
-const UnifiedRegisterInner = () => {
+const UnifiedRegister = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
-  const theme = useTheme();
-  useReducedMotion(); // Initialize for accessibility
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const role = detectRoleFromPath(location.pathname);
@@ -430,12 +366,9 @@ const UnifiedRegisterInner = () => {
     }
   };
 
-  const BackgroundComponent = config.background;
-  const OrnamentComponent = config.ornament;
-  const IconComponent = config.icon;
   const fields = role === 'coach' ? COACH_FIELDS : role === 'judge' ? JUDGE_FIELDS : PLAYER_FIELDS;
 
-  // Group half-width player fields into pairs
+  // Group half-width fields into pairs
   const renderFields = () => {
     const result = [];
     let i = 0;
@@ -444,14 +377,14 @@ const UnifiedRegisterInner = () => {
       const next = fields[i + 1];
       if (field.half && next?.half) {
         result.push(
-          <div key={`pair-${i}`} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div key={`pair-${i}`} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {renderField(field)}
             {renderField(next)}
           </div>
         );
         i += 2;
       } else {
-        result.push(<div key={field.name}>{renderField(field)}</div>);
+        result.push(renderField(field));
         i += 1;
       }
     }
@@ -459,476 +392,85 @@ const UnifiedRegisterInner = () => {
   };
 
   const renderField = (field) => (
-    <div key={field.name}>
-      <label
-        htmlFor={`${role}-reg-${field.name}`}
-        className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: FG.accent }}
-      >
-        {field.label}
-        {field.rules?.required && (
-          <span style={{ color: FG.danger }} aria-hidden="true"> *</span>
-        )}
-      </label>
-      <ThemedInput
-        id={`${role}-reg-${field.name}`}
-        icon={field.icon}
+    <Field
+      key={field.name}
+      id={`${role}-reg-${field.name}`}
+      label={field.label}
+      required={!!field.rules?.required}
+      error={errors[field.name]?.message}
+    >
+      <Input
         type={field.type}
         placeholder={field.placeholder}
         autoComplete={field.autoComplete}
-        error={errors[field.name]?.message}
-        aria-required={!!field.rules?.required}
-        aria-describedby={errors[field.name] ? `${role}-reg-${field.name}-error` : undefined}
         {...register(field.name, field.rules)}
       />
-      <AnimatePresence>
-        {errors[field.name] && (
-          <motion.p
-            id={`${role}-reg-${field.name}-error`}
-            className="text-xs mt-1.5"
-            style={{ color: FG.danger }}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            role="alert"
-            aria-live="polite"
-          >
-            {errors[field.name].message}
-          </motion.p>
+    </Field>
+  );
+
+  return (
+    <AuthLayout role={role} title={config.title} lede={config.description}>
+      <AuthHeader tag={config.accessLabel} title={config.formTitle} lede={config.formSubtitle} />
+
+      <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label={`${config.title} registration form`} className="grid gap-5">
+        {renderFields()}
+
+        {/* Gender (player only) */}
+        {role === 'player' && (
+          <Field id="player-reg-gender" label="Gender" required error={errors.gender?.message}>
+            <Select {...register('gender', { required: 'Gender is required' })}>
+              <option value="" disabled>Select gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </Select>
+          </Field>
         )}
-      </AnimatePresence>
-    </div>
-  );
 
-  return (
-    <div
-      className="min-h-dvh flex relative overflow-hidden"
-      style={{ background: theme.colors.background, fontFamily: "'Inter', system-ui, sans-serif" }}
-    >
-      {/* ── Left decorative panel (desktop only) ── */}
-      <div
-        className="hidden lg:flex flex-col items-center justify-center w-[45%] relative border-r"
-        style={{ background: theme.colors.card, borderColor: theme.colors.border }}
-      >
-        <BackgroundComponent color={theme.colors.primary} />
+        {/* Certification level (judge only) */}
+        {role === 'judge' && (
+          <Field id="judge-reg-certificationLevel" label="Certification Level">
+            <Select {...register('certificationLevel')}>
+              <option value="" disabled>Select level (optional)</option>
+              <option value="National">National</option>
+              <option value="State">State</option>
+              <option value="District">District</option>
+              <option value="Club">Club</option>
+            </Select>
+          </Field>
+        )}
 
-        <div className="relative z-10 text-center px-12">
-          <motion.div
-            className="flex items-center justify-center gap-3 mb-12"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, ease: EASE }}
-          >
-            <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain opacity-80" />
-          </motion.div>
-
-          <div className="mb-10">
-            <OrnamentComponent color={theme.colors.primary} />
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, ease: EASE }}
-          >
-            <p
-              className="text-[11px] font-bold tracking-[0.3em] uppercase mb-3"
-              style={{ color: FG.accent }}
-            >
-              Bhausaheb Ranade Mallakhamb
-            </p>
-            <h1 className="text-4xl font-black leading-tight mb-3">
-              <GradientText
-                colors={[theme.colors.primary, theme.colors.primaryLight, theme.colors.primaryDark]}
-              >
-                {config.title}
-                <br />
-                {config.subtitle}
-              </GradientText>
-            </h1>
-            <p className="text-fg-muted text-sm leading-relaxed max-w-xs mx-auto">
-              {config.description}
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="flex items-center justify-center gap-8 mt-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-          >
-            {config.features.map(({ icon: FeatureIcon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{
-                    background: `${alpha(theme.colors.primary, 0x12)}`,
-                    border: `1px solid ${alpha(theme.colors.primary, 0x25)}`,
-                  }}
-                >
-                  <FeatureIcon
-                    className="w-4 h-4"
-                    style={{ color: FG.accent }}
-                    aria-hidden="true"
-                  />
-                </div>
-                <span
-                  className="text-[10px] font-semibold tracking-widest uppercase"
-                  style={{ color: FG.accent }}
-                >
-                  {label}
-                </span>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-
-        <div
-          className="absolute bottom-0 left-0 right-0 h-px"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)}, transparent)`,
-          }}
-        />
-      </div>
-
-      {/* ── Right form panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center relative px-6 py-12 overflow-y-auto">
-        {/* Mobile background glow */}
-        <div className="lg:hidden absolute inset-0 pointer-events-none" aria-hidden="true">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(ellipse at 50% 30%, ${alpha(theme.colors.primary, 0x10)}, transparent 65%)`,
-            }}
+        <Field id={`${role}-reg-password`} label="Password" required error={errors.password?.message}>
+          <PasswordInput
+            placeholder="Min. 8 characters"
+            autoComplete="new-password"
+            {...register('password', PASSWORD_RULES)}
           />
-        </div>
+        </Field>
 
-        {/* Mobile logo */}
-        <motion.div
-          className="lg:hidden flex items-center gap-3 mb-8"
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, ease: EASE }}
-        >
-          <img src={BHALogo} alt="BHA Logo" className="h-10 w-auto object-contain opacity-75" />
-          <div className="w-px h-8 bg-ink/10" />
-          <div>
-            <p
-              className="text-[10px] font-bold tracking-widest uppercase"
-              style={{ color: FG.accent }}
-            >
-              Mallakhamb
-            </p>
-            <p className="text-fg-muted text-[10px]">{config.title} Portal</p>
-          </div>
-        </motion.div>
+        <Field id={`${role}-reg-confirmPassword`} label="Confirm Password" required error={errors.confirmPassword?.message}>
+          <PasswordInput
+            placeholder="Re-enter your password"
+            autoComplete="new-password"
+            {...register('confirmPassword', {
+              required: 'Please confirm your password',
+              validate: (value) =>
+                value === passwordValue || 'Passwords do not match',
+            })}
+          />
+        </Field>
 
-        <motion.div
-          className="w-full max-w-sm"
-          initial={{ opacity: 0, y: 32 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: EASE }}
-        >
-          {/* Form header */}
-          <motion.div
-            className="mb-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="lg:hidden mb-5 flex justify-center">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: `${alpha(theme.colors.primary, 0x15)}`,
-                  border: `1px solid ${alpha(theme.colors.primary, 0x35)}`,
-                }}
-              >
-                <IconComponent
-                  className="w-8 h-8"
-                  style={{ color: FG.accent }}
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
+        <Button type="submit" size="lg" block loading={loading} iconRight={loading ? null : ArrowRight}>
+          {loading ? 'Creating Account...' : config.buttonText}
+        </Button>
+      </form>
 
-            <div className="flex items-center gap-2 mb-2">
-              <div
-                className="h-px flex-1"
-                style={{
-                  background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)`,
-                }}
-              />
-              <span
-                className="text-[10px] font-bold tracking-[0.2em] uppercase px-2"
-                style={{ color: FG.accent }}
-              >
-                {config.accessLabel}
-              </span>
-              <div
-                className="h-px flex-1"
-                style={{
-                  background: `linear-gradient(90deg, transparent, ${alpha(theme.colors.primary, 0x40)})`,
-                }}
-              />
-            </div>
-            <h2 className="text-3xl font-black text-ink mt-3">{config.formTitle}</h2>
-            <p className="text-fg-muted text-sm mt-1">{config.formSubtitle}</p>
-          </motion.div>
-
-          {/* Registration form */}
-          <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label={`${config.title} registration form`}>
-            <motion.div
-              className="space-y-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              {/* Role-specific fields */}
-              {renderFields()}
-
-              {/* Gender select (player only) */}
-              {role === 'player' && (
-                <div>
-                  <label
-                    htmlFor="player-reg-gender"
-                    className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                    style={{ color: FG.accent }}
-                  >
-                    Gender <span style={{ color: FG.danger }} aria-hidden="true">*</span>
-                  </label>
-                  <ThemedSelect
-                    id="player-reg-gender"
-                    placeholder="Select gender"
-                    options={[
-                      { value: 'Male', label: 'Male' },
-                      { value: 'Female', label: 'Female' },
-                    ]}
-                    aria-required="true"
-                    aria-describedby={errors.gender ? 'player-reg-gender-error' : undefined}
-                    {...register('gender', { required: 'Gender is required' })}
-                  />
-                  <AnimatePresence>
-                    {errors.gender && (
-                      <motion.p
-                        id="player-reg-gender-error"
-                        className="text-xs mt-1.5"
-                        style={{ color: FG.danger }}
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        role="alert"
-                        aria-live="polite"
-                      >
-                        {errors.gender.message}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {/* Certification level (judge only) */}
-              {role === 'judge' && (
-                <div>
-                  <label
-                    htmlFor="judge-reg-certificationLevel"
-                    className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                    style={{ color: FG.accent }}
-                  >
-                    Certification Level
-                  </label>
-                  <ThemedSelect
-                    id="judge-reg-certificationLevel"
-                    placeholder="Select level (optional)"
-                    options={[
-                      { value: 'National', label: 'National' },
-                      { value: 'State', label: 'State' },
-                      { value: 'District', label: 'District' },
-                      { value: 'Club', label: 'Club' },
-                    ]}
-                    {...register('certificationLevel')}
-                  />
-                </div>
-              )}
-
-              {/* Password */}
-              <div>
-                <label
-                  htmlFor={`${role}-reg-password`}
-                  className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: FG.accent }}
-                >
-                  Password <span style={{ color: FG.danger }} aria-hidden="true">*</span>
-                </label>
-                <ThemedInput
-                  id={`${role}-reg-password`}
-                  icon={Lock}
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Min. 8 characters"
-                  autoComplete="new-password"
-                  error={errors.password?.message}
-                  aria-required="true"
-                  aria-describedby={errors.password ? `${role}-reg-password-error` : undefined}
-                  rightElement={
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="p-1 rounded hover:bg-ink/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword
-                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
-                        : <Eye className="w-4 h-4 text-fg-muted" />}
-                    </button>
-                  }
-                  {...register('password', PASSWORD_RULES)}
-                />
-                <AnimatePresence>
-                  {errors.password && (
-                    <motion.p
-                      id={`${role}-reg-password-error`}
-                      className="text-xs mt-1.5"
-                      style={{ color: FG.danger }}
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      role="alert"
-                      aria-live="polite"
-                    >
-                      {errors.password.message}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label
-                  htmlFor={`${role}-reg-confirmPassword`}
-                  className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-                  style={{ color: FG.accent }}
-                >
-                  Confirm Password <span style={{ color: FG.danger }} aria-hidden="true">*</span>
-                </label>
-                <ThemedInput
-                  id={`${role}-reg-confirmPassword`}
-                  icon={Lock}
-                  type={showConfirm ? 'text' : 'password'}
-                  placeholder="Re-enter your password"
-                  autoComplete="new-password"
-                  error={errors.confirmPassword?.message}
-                  aria-required="true"
-                  aria-describedby={errors.confirmPassword ? `${role}-reg-confirmPassword-error` : undefined}
-                  rightElement={
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((v) => !v)}
-                      className="p-1 rounded hover:bg-ink/10 transition-colors min-h-[32px] min-w-[32px] tap-safe flex items-center justify-center"
-                      aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
-                    >
-                      {showConfirm
-                        ? <EyeOff className="w-4 h-4 text-fg-muted" />
-                        : <Eye className="w-4 h-4 text-fg-muted" />}
-                    </button>
-                  }
-                  {...register('confirmPassword', {
-                    required: 'Please confirm your password',
-                    validate: (value) =>
-                      value === passwordValue || 'Passwords do not match',
-                  })}
-                />
-                <AnimatePresence>
-                  {errors.confirmPassword && (
-                    <motion.p
-                      id={`${role}-reg-confirmPassword-error`}
-                      className="text-xs mt-1.5"
-                      style={{ color: FG.danger }}
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      role="alert"
-                      aria-live="polite"
-                    >
-                      {errors.confirmPassword.message}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Submit */}
-              <ThemedButton
-                type="submit"
-                disabled={loading}
-                loading={loading}
-                className="w-full mt-2"
-              >
-                {loading ? 'Creating Account...' : config.buttonText}
-                {!loading && <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />}
-              </ThemedButton>
-            </motion.div>
-          </form>
-
-          {/* Footer links */}
-          <motion.div
-            className="mt-7 pt-5 border-t flex items-center justify-between"
-            style={{ borderColor: `${alpha(theme.colors.primary, 0x12)}` }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.65 }}
-          >
-            <Link
-              to="/"
-              className="text-xs text-fg-muted hover:text-fg transition-colors inline-flex items-center tap-safe justify-center"
-            >
-              ← Home
-            </Link>
-            <div className="flex items-center gap-3">
-              <span className="text-fg-subtle text-xs">·</span>
-              <Link
-                to={config.loginLink}
-                className="text-xs transition-colors hover:underline underline-offset-4 inline-flex items-center tap-safe justify-center"
-                style={{ color: FG.accent }}
-              >
-                Sign in
-              </Link>
-            </div>
-          </motion.div>
-        </motion.div>
-      </div>
-
-      {/* Right edge accent line */}
-      <motion.div
-        className="absolute right-0 top-0 bottom-0 w-[2px] hidden lg:block"
-        style={{
-          background: `linear-gradient(to bottom, transparent, ${alpha(theme.colors.primary, 0x30)}, transparent)`,
-        }}
-        initial={{ scaleY: 0 }}
-        animate={{ scaleY: 1 }}
-        transition={{ duration: 1.2, delay: 0.4, ease: EASE }}
-      />
-    </div>
-  );
-};
-
-// ─── Main export with ThemeProvider wrapper ───────────────────────────────────
-
-/**
- * UnifiedRegister - Role-adaptive registration page for Coach and Player.
- *
- * Detects role from route path:
- * - /coach/register → Coach registration (green theme)
- * - /player/register → Player registration (saffron theme)
- *
- * Validates Requirements: 4.1–4.8, 7.1, 8.2, 8.4, 8.7, 12.2–12.5, 17.2, 17.3, 17.8
- */
-const UnifiedRegister = () => {
-  const location = useLocation();
-  const role = detectRoleFromPath(location.pathname);
-
-  return (
-    <ThemeProvider role={role}>
-      <UnifiedRegisterInner />
-    </ThemeProvider>
+      <AuthLinks>
+        <TextLink as={Link} to="/" className="ui-link--quiet">← Home</TextLink>
+        <span className="shell-auth__links-end">
+          <TextLink as={Link} to={config.loginLink}>Sign in</TextLink>
+        </span>
+      </AuthLinks>
+    </AuthLayout>
   );
 };
 

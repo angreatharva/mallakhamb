@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, Trophy, Lock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { COLORS, FG, SAFFRON_CTA, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
-import { FadeIn } from '@/components/design-system';
+import looksMeta from '@/styles/generated/looks.meta.json';
+import { FadeIn } from '@/components/admin/AdminKit';
 import { logger } from '@/infrastructure/logger';
 import { calculatePlayerFee, resolveFeeWindow, formatFeeWindowDate } from '@/utils/scoring/competitionFee';
+
+/** Razorpay takes a hex for its theme: the brand saffron from the pack metadata. */
+const RAZORPAY_THEME = looksMeta.looks['prime-time'].dark.accent;
 
 /** Keep in sync with AddPlayerForm checkout session key */
 const SUPERADMIN_PLAYER_CHECKOUT_STORAGE_KEY = 'mallakhamb_superadmin_player_checkout_v1';
@@ -80,7 +81,6 @@ const SuperAdminAddPlayerPayment = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
-  const reduced = useReducedMotion();
 
   useEffect(() => {
     try {
@@ -195,7 +195,7 @@ const SuperAdminAddPlayerPayment = () => {
           email: playerData.email || undefined,
         },
         theme: {
-          color: COLORS.saffron,
+          color: RAZORPAY_THEME,
         },
         method: {
           upi: true,
@@ -235,11 +235,11 @@ const SuperAdminAddPlayerPayment = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
         <div className="text-center">
           <div
-            className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }}
+            className="ui-spinner text-accent-fg mx-auto mb-4"
+            aria-hidden="true"
           />
           <p className="text-fg-muted text-sm">Loading checkout…</p>
         </div>
@@ -249,26 +249,14 @@ const SuperAdminAddPlayerPayment = () => {
 
   if (paymentComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: COLORS.dark }}>
-        <motion.div
-          className="w-full max-w-md text-center"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, type: 'spring', stiffness: 200 }}
-        >
+      <div className="min-h-screen flex items-center justify-center px-4 bg-bg">
+        <div className="w-full max-w-md text-center">
           <div
-            className="rounded-3xl border p-10"
-            style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
+            className="rounded-3xl border p-10 bg-surface border-line"
           >
-            <motion.div
-              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ background: '#22C55E18', border: '2px solid #22C55E40' }}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
-            >
-              <CheckCircle className="w-10 h-10" style={{ color: FG.success }} aria-hidden="true" />
-            </motion.div>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: 'var(--success-tint)', border: '2px solid rgb(var(--success-fg) / 0.25)' }}>
+              <CheckCircle className="w-10 h-10 text-success-fg" aria-hidden="true" />
+            </div>
             <h2 className="text-2xl font-black text-ink mb-3">Payment Successful!</h2>
             <p className="text-fg-muted mb-6 leading-relaxed">
               {checkout?.playerData?.firstName} {checkout?.playerData?.lastName} has been registered and added to{' '}
@@ -282,20 +270,19 @@ const SuperAdminAddPlayerPayment = () => {
                   state: { superadminPlayerAddedCompetitionId: checkout?.playerData?.competitionId },
                 })
               }
-              className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px]"
-              style={SAFFRON_CTA}
+              className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] bg-accent text-on-accent"
             >
               Back to Management
             </button>
           </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
   if (!checkout) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
         <p className="text-fg-muted text-sm">Redirecting…</p>
       </div>
     );
@@ -322,15 +309,7 @@ const SuperAdminAddPlayerPayment = () => {
   const playerFee = baseFee + lateFee;
 
   return (
-    <div className="min-h-screen" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {!reduced && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div
-            className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full"
-            style={{ background: `${alpha(COLORS.saffron, 0x06)}`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }}
-          />
-        </div>
-      )}
+    <div className="min-h-screen bg-bg text-fg">
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
         <FadeIn>
@@ -343,10 +322,10 @@ const SuperAdminAddPlayerPayment = () => {
             Back to Management
           </button>
           <div className="mb-8">
-            <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brand }}>
+            <p className="type-tag mb-2 text-accent-fg">
               Add player
             </p>
-            <h1 className="text-3xl font-black text-ink">Player registration payment</h1>
+            <h1 className="type-display-l text-fg">Player registration payment</h1>
             <p className="text-fg-muted text-sm mt-1">Same secure Razorpay checkout as coach team registration</p>
           </div>
         </FadeIn>
@@ -354,12 +333,11 @@ const SuperAdminAddPlayerPayment = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <FadeIn delay={0.05}>
             <div
-              className="rounded-3xl border p-6 h-full"
-              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
+              className="rounded-3xl border p-6 h-full bg-surface border-line"
             >
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${alpha(COLORS.saffron, 0x18)}` }}>
-                  <Trophy className="w-5 h-5" style={{ color: FG.brand }} aria-hidden="true" />
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-surface-raised">
+                  <Trophy className="w-5 h-5 text-accent-fg" aria-hidden="true" />
                 </div>
                 <div>
                   <h2 className="text-ink font-bold">{checkout?.teamLabel || 'Team'}</h2>
@@ -371,17 +349,17 @@ const SuperAdminAddPlayerPayment = () => {
                   <User className="w-3.5 h-3.5" aria-hidden="true" />
                   New player
                 </div>
-                <div className="flex justify-between py-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                <div className="flex justify-between py-2 border-b border-line">
                   <span className="text-fg-muted text-sm">Name</span>
                   <span className="text-ink font-semibold text-sm">
                     {pd?.firstName} {pd?.lastName}
                   </span>
                 </div>
-                <div className="flex justify-between py-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                <div className="flex justify-between py-2 border-b border-line">
                   <span className="text-fg-muted text-sm">Email</span>
                   <span className="text-ink font-semibold text-sm truncate max-w-[55%]">{pd?.email}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                <div className="flex justify-between py-2 border-b border-line">
                   <span className="text-fg-muted text-sm">Age group</span>
                   <span className="text-ink font-semibold text-sm">{pd?.ageGroup}</span>
                 </div>
@@ -395,12 +373,11 @@ const SuperAdminAddPlayerPayment = () => {
 
           <FadeIn delay={0.1}>
             <div
-              className="rounded-3xl border p-6"
-              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
+              className="rounded-3xl border p-6 bg-surface border-line"
             >
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: '#22C55E18' }}>
-                  <CreditCard className="w-5 h-5" style={{ color: FG.success }} aria-hidden="true" />
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: 'var(--success-tint)' }}>
+                  <CreditCard className="w-5 h-5 text-success-fg" aria-hidden="true" />
                 </div>
                 <div>
                   <h2 className="text-ink font-bold">Payment details</h2>
@@ -410,7 +387,7 @@ const SuperAdminAddPlayerPayment = () => {
 
               <div
                 className="space-y-2 mb-6 p-4 rounded-2xl"
-                style={{ background: 'rgb(var(--ink) / 0.03)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
+                style={{ background: 'rgb(var(--surface-sunken))', border: '1px solid var(--line)' }}
               >
                 <div className="flex justify-between text-sm items-center">
                   <div>
@@ -431,27 +408,19 @@ const SuperAdminAddPlayerPayment = () => {
                         Fees were due by {formatFeeWindowDate(feeWindow.dueBy)}
                       </span>
                     </div>
-                    <span style={{ color: FG.brand }}>+₹{lateFee.toLocaleString()}</span>
+                    <span className="text-accent-fg">+₹{lateFee.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="border-t pt-2 mt-2 flex justify-between" style={{ borderColor: COLORS.darkBorderSubtle }}>
+                <div className="border-t pt-2 mt-2 flex justify-between border-line">
                   <span className="text-ink font-bold">Total</span>
-                  <span className="font-black text-lg" style={{ color: FG.brand }}>
+                  <span className="font-black text-lg text-accent-fg">
                     ₹{playerFee.toLocaleString()}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <motion.button
-                  type="button"
-                  onClick={handlePayment}
-                  disabled={processing || !pd}
-                  className="w-full py-3 rounded-xl font-bold text-ink flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={SAFFRON_CTA}
-                  whileHover={processing ? {} : { scale: 1.01 }}
-                  whileTap={processing ? {} : { scale: 0.98 }}
-                >
+                <button type="button" onClick={handlePayment} disabled={processing || !pd} className="w-full py-3 rounded-xl font-bold text-ink flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed bg-accent text-on-accent">
                   {processing ? (
                     <>
                       <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -470,7 +439,7 @@ const SuperAdminAddPlayerPayment = () => {
                       Pay ₹{playerFee.toLocaleString()}
                     </>
                   )}
-                </motion.button>
+                </button>
 
                 <div className="flex items-center justify-center gap-2 text-fg-muted text-xs">
                   <Lock className="w-3 h-3" aria-hidden="true" />

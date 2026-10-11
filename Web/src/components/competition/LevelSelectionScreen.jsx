@@ -1,20 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { motion } from 'framer-motion';
-import { Layers, ArrowRight, Check, Trophy, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
 import { logger } from '@/infrastructure/logger';
-import { COLORS, SAFFRON_CTA, FG, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
-import { GradientText, FadeIn } from '@/components/design-system';
-import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
 import { COMPETITION_LEVELS, LEVEL_META, countByLevel } from '@/utils/competition/levels';
-
-const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
+import { Button, Heading, RunningOrder, RunningOrderItem, Tag } from '@/components/ui';
 
 /**
  * Where each role goes once a level is chosen.
@@ -29,93 +23,42 @@ const SELECT_COMPETITION_PATH = {
   judge: '/judge/select-competition',
 };
 
-// ─── Level card ───────────────────────────────────────────────────────────────
+// ─── Level row ────────────────────────────────────────────────────────────────
 
-const LevelCard = ({ level, count, counting = false, isSelected, onSelect, disabled, index }) => {
-  const reduced = useReducedMotion();
+/** One level in the running order: its name, its blurb, and how many meets it holds. */
+const LevelRow = ({ level, count, counting = false, isSelected, onSelect, disabled, index }) => {
   const meta = LEVEL_META[level];
   const isEmpty = !counting && count === 0;
 
   return (
-    <motion.button
-      onClick={() => onSelect(level)}
+    <RunningOrderItem
+      index={index + 1}
+      title={meta.label}
+      titleAs="h3"
+      meta={meta.blurb}
+      selected={isSelected}
+      // Empty levels stay selectable on purpose — see the note on the counts
+      // below — but they are visibly quieter than levels with meets behind them.
+      muted={isEmpty}
       disabled={disabled}
-      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200"
-      style={{
-        background: isSelected
-          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgb(var(--ink) / 0.03))`
-          : 'rgb(var(--ink) / 0.03)',
-        borderColor: isSelected ? `${alpha(COLORS.saffron, 0x45)}` : COLORS.darkBorderSubtle,
-        boxShadow: isSelected ? `0 0 0 1px ${alpha(COLORS.saffron, 0x20)}, 0 8px 32px ${alpha(COLORS.saffron, 0x10)}` : 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        // Empty levels stay selectable on purpose — see the note on the counts
-        // below — but they are visibly quieter than levels with meets behind them.
-        opacity: isEmpty && !isSelected ? 0.55 : 1,
-      }}
-      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06, ease: EASE_OUT }}
-      whileHover={disabled ? {} : {
-        borderColor: `${alpha(COLORS.saffron, 0x35)}`,
-        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgb(var(--ink) / 0.03))`,
-        y: -2,
-      }}
-      whileTap={disabled ? {} : { scale: 0.99 }}
-      aria-pressed={isSelected}
-    >
-      {isSelected && (
-        <div className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x60)}, transparent)` }} />
+      onClick={() => onSelect(level)}
+      aside={counting ? (
+        // The meets are still being fetched: say so, rather than showing a
+        // "0 competitions" that turns into a real number a moment later.
+        <Tag role="status" aria-label={`Counting ${meta.label} competitions`}>
+          <span className="ui-spinner" aria-hidden="true" />
+          Counting…
+        </Tag>
+      ) : (
+        <Tag tone={isEmpty ? 'neutral' : 'accent'}>
+          {count === 1 ? '1 competition' : `${count} competitions`}
+        </Tag>
       )}
-
-      <div className="p-5 flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: isSelected ? `${alpha(COLORS.saffron, 0x20)}` : 'rgb(var(--ink) / 0.06)' }}>
-          <Layers className="w-5 h-5"
-            style={{ color: isSelected ? COLORS.saffron : 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <h3 className="text-ink font-bold text-sm leading-tight">{meta.label}</h3>
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--fg-muted)' }}>
-            {meta.blurb}
-          </p>
-          {counting ? (
-            // The meets are still being fetched: say so, rather than showing a
-            // "0 competitions" that turns into a real number a moment later.
-            <span className="inline-flex items-center gap-1.5 mt-2 text-xs px-2 py-0.5 rounded-full"
-              style={{ background: 'rgb(var(--ink) / 0.05)', color: 'var(--fg-muted)' }}
-              role="status" aria-label={`Counting ${meta.label} competitions`}>
-              <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
-              Counting…
-            </span>
-          ) : (
-            <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full"
-              style={{
-                background: isEmpty ? 'rgb(var(--ink) / 0.05)' : `${alpha(COLORS.saffron, 0x12)}`,
-                color: isEmpty ? 'var(--fg-muted)' : FG.brandSoft,
-              }}>
-              {count === 1 ? '1 competition' : `${count} competitions`}
-            </span>
-          )}
-        </div>
-
-        {isSelected && (
-          <motion.div
-            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: COLORS.saffron }}
-            initial={{ scale: 0 }} animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-          >
-            <Check className="w-3.5 h-3.5 text-ink" aria-hidden="true" />
-          </motion.div>
-        )}
-      </div>
-    </motion.button>
+    />
   );
 };
 
-LevelCard.propTypes = {
+LevelRow.propTypes = {
   level: PropTypes.oneOf(COMPETITION_LEVELS).isRequired,
   count: PropTypes.number.isRequired,
   counting: PropTypes.bool,
@@ -144,7 +87,6 @@ const LevelSelectionScreen = ({ userType }) => {
   const [pendingLevel, setPendingLevel] = useState(selectedLevel);
   const [scopedCompetitions, setScopedCompetitions] = useState(null);
   const [scopedLoading, setScopedLoading] = useState(false);
-  useReducedMotion();
 
   /*
    * Counts come from whichever list this role will actually be choosing from on
@@ -222,63 +164,37 @@ const LevelSelectionScreen = ({ userType }) => {
   };
 
   // Only a first load with nothing to show yet takes the whole screen; while
-  // counting, the cards are drawn and each count shows its own spinner.
+  // counting, the rows are drawn and each count shows its own spinner.
   if (!fetchesOwnList && isLoading && !assignedCompetitions?.length) {
     return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
-        <div className="text-center">
-          <motion.div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x30)}` }}
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
-          </motion.div>
-          <p className="text-fg-muted text-sm">Loading levels...</p>
-        </div>
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
+        <p className="type-body-s text-fg-muted flex items-center gap-3 m-0">
+          <span className="ui-spinner" aria-hidden="true" />
+          Loading levels...
+        </p>
       </div>
     );
   }
 
   return (
-    // `h-dvh` with the card region as the only scrolling child, matching
+    // `h-dvh` with the row region as the only scrolling child, matching
     // CompetitionSelectionScreen — growing the page instead pushes the primary
     // action past the fold on a short viewport.
-    <div className="h-dvh relative overflow-hidden" style={{ background: COLORS.dark }}>
-      <AmbientOrbs
-        intensity={ORB_INTENSITY.warm}
-        orbs={[
-          { x: 15, y: 20, size: 400, color: COLORS.saffron, delay: 0 },
-          { x: 85, y: 70, size: 300, color: COLORS.gold, delay: 2 },
-        ]}
-      />
-
-      <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        }} />
-
-      <div className="relative z-10 h-full flex flex-col items-center p-4 py-8 md:py-10 [@media(max-height:700px)]:py-4">
+    <div className="h-dvh bg-bg text-fg">
+      <div className="h-full flex flex-col items-center px-[var(--pad)] py-8 md:py-10 [@media(max-height:700px)]:py-4">
         <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-center">
-          <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
-              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: FG.brandSoft }}>
-              <Layers className="w-3 h-3" aria-hidden="true" />
-              Level Selection
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black text-ink mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
-              Choose Your <GradientText>Level</GradientText>
-            </h1>
-            <p className="text-fg-muted text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
+          <header className="grid justify-items-start gap-3 mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
+            <Tag tone="accent" className="[@media(max-height:500px)]:hidden">Level Selection</Tag>
+            <Heading level={1} step="display-l" className="ui-wipe-in">Choose Your Level</Heading>
+            <p className="type-body text-fg-muted max-w-md m-0 [@media(max-height:500px)]:hidden">
               Competitions are organised by level. Pick one to see its meets.
             </p>
-          </FadeIn>
+          </header>
 
-          <div className="min-h-0 overflow-y-auto mb-6 py-1 pr-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="min-h-0 overflow-y-auto mb-6">
+            <RunningOrder label="Competition levels">
               {COMPETITION_LEVELS.map((level, i) => (
-                <LevelCard
+                <LevelRow
                   key={level}
                   level={level}
                   count={counts[level]}
@@ -288,27 +204,14 @@ const LevelSelectionScreen = ({ userType }) => {
                   index={i}
                 />
               ))}
-            </div>
+            </RunningOrder>
           </div>
 
-          <FadeIn delay={0.2} className="flex justify-center shrink-0">
-            <motion.button
-              onClick={handleContinue}
-              disabled={!pendingLevel}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-ink font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                background: pendingLevel
-                  ? SAFFRON_CTA.background
-                  : 'rgb(var(--ink) / 0.08)',
-                border: `1px solid ${pendingLevel ? 'transparent' : COLORS.darkBorderSubtle}`, color: pendingLevel ? SAFFRON_CTA.color : undefined,
-              }}
-              whileHover={pendingLevel ? { scale: 1.02 } : {}}
-              whileTap={pendingLevel ? { scale: 0.97 } : {}}
-            >
+          <div className="flex justify-end shrink-0">
+            <Button size="lg" onClick={handleContinue} disabled={!pendingLevel} iconRight={ArrowRight}>
               Continue
-              <ArrowRight className="w-4 h-4" aria-hidden="true" />
-            </motion.button>
-          </FadeIn>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

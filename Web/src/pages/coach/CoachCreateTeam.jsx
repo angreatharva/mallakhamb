@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowRight, Trophy, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { coachAPI } from '@/services/api';
-import { COLORS, FG, SAFFRON_CTA, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
+import { Button, Field, Heading, Input, Panel, Textarea } from '@/components/ui';
 
 const CoachCreateTeam = () => {
   const [loading, setLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const navigate = useNavigate();
-  const reduced = useReducedMotion();
   const { register, handleSubmit, formState: { errors } } = useForm();
 
   // Check if coach already has a team and should skip this page
@@ -70,148 +67,58 @@ const CoachCreateTeam = () => {
   // Show loading while checking status
   if (checkingStatus) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.dark }}>
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
-          <p className="text-fg-muted text-sm">Checking your status...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <p className="type-body-s text-fg-muted flex items-center gap-3 m-0">
+          <span className="ui-spinner" aria-hidden="true" />
+          Checking your status...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden"
-      style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {!reduced && (
-        <>
-          <div className="absolute top-1/3 left-1/4 w-96 h-96 rounded-full pointer-events-none"
-            style={{ background: `${alpha(COLORS.saffron, 0x08)}`, filter: 'blur(100px)', transform: 'translate(-50%,-50%)' }} />
-          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full pointer-events-none"
-            style={{ background: `#22C55E08`, filter: 'blur(80px)', transform: 'translate(50%,50%)' }} />
-        </>
-      )}
-
-      <motion.div className="w-full max-w-md relative z-10"
-        initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}>
-
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-3 mb-8">
+    <div className="min-h-screen bg-bg text-fg flex items-center justify-center py-12 px-[var(--pad)]">
+      <div className="w-full max-w-md grid gap-6 ui-fade-in">
+        {/* Step indicator: the current step carries the accent rule. */}
+        <ol className="shell-steps shell-steps--3" aria-label="Progress">
           {['Register', 'Create Team', 'Select Competition'].map((step, i) => (
-            <div key={step} className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{
-                    background: i === 1 ? '#22C55E' : i < 1 ? `${alpha(COLORS.saffron, 0x30)}` : 'rgb(var(--ink) / 0.08)',
-                    color: i === 1 ? '#0A0A0A' : i < 1 ? FG.brand : 'var(--fg-muted)',
-                  }}>
-                  {i + 1}
-                </div>
-                <span className="text-xs hidden sm:block"
-                  style={{ color: i === 1 ? FG.success : 'var(--fg-muted)' }}>
-                  {step}
-                </span>
-              </div>
-              {i < 2 && <div className="w-6 h-px" style={{ background: 'rgb(var(--ink) / 0.1)' }} />}
-            </div>
+            <li key={step} className="shell-steps__step" data-state={i < 1 ? 'done' : i === 1 ? 'current' : 'todo'}
+              aria-current={i === 1 ? 'step' : undefined}>
+              <span className="type-num-m" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <span className="type-tag hidden sm:inline">{step}</span>
+            </li>
           ))}
-        </div>
+        </ol>
 
-        <div className="rounded-3xl border p-8"
-          style={{
-            background: COLORS.darkCard,
-            borderColor: COLORS.darkBorderSubtle,
-            boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.darkBorderSubtle}`,
-          }}>
-
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
-              <Trophy className="w-8 h-8" style={{ color: FG.brand }} aria-hidden="true" />
-            </div>
+        <Panel variant="feature" className="grid gap-6">
+          <div className="grid gap-2">
+            <Heading level={1} step="display-l">Create Your Team</Heading>
+            <p className="type-body-s text-fg-muted m-0">Set up your team to start managing players</p>
           </div>
 
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-black text-ink mb-2">Create Your Team</h1>
-            <p className="text-fg-muted text-sm">Set up your team to start managing players</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-            <div>
-              <label htmlFor="team-name" className="block text-xs font-semibold tracking-wide uppercase mb-2"
-                style={{ color: FG.brandSoft }}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Trophy className="w-3 h-3" aria-hidden="true" />
-                  Team Name
-                </span>
-                <span aria-hidden="true" style={{ color: FG.brand }}> *</span>
-              </label>
-              <input
-                id="team-name"
+          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-5" noValidate>
+            <Field id="team-name" label="Team Name" required error={errors.name?.message}>
+              <Input
                 type="text"
                 placeholder="Enter team name"
-                className="w-full px-4 py-3 rounded-xl text-ink placeholder-ink/25 transition-all duration-200 min-h-[44px]"
-                style={{
-                  background: 'rgb(var(--ink) / 0.05)',
-                  border: `1px solid ${errors.name ? FG.danger : COLORS.darkBorderSubtle}`,
-                }}
-                onFocus={e => e.target.style.borderColor = COLORS.saffron}
-                onBlur={e => e.target.style.borderColor = errors.name ? FG.danger : COLORS.darkBorderSubtle}
                 {...register('name', { required: 'Team name is required' })}
               />
-              {errors.name && <p className="mt-1.5 text-xs text-red-700 dark:text-red-400" role="alert">{errors.name.message}</p>}
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="team-desc" className="block text-xs font-semibold tracking-wide uppercase mb-2"
-                style={{ color: FG.brandSoft }}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="w-3 h-3" aria-hidden="true" />
-                  Team Description
-                </span>
-                <span className="ml-1 text-fg-muted normal-case font-normal">(Optional)</span>
-              </label>
-              <textarea
-                id="team-desc"
+            <Field id="team-desc" label="Team Description (Optional)">
+              <Textarea
                 rows={3}
                 placeholder="Enter team description"
-                className="w-full px-4 py-3 rounded-xl text-ink placeholder-ink/25 transition-all duration-200 resize-none"
-                style={{
-                  background: 'rgb(var(--ink) / 0.05)',
-                  border: `1px solid ${COLORS.darkBorderSubtle}`,
-                }}
-                onFocus={e => e.target.style.borderColor = COLORS.saffron}
-                onBlur={e => e.target.style.borderColor = COLORS.darkBorderSubtle}
                 {...register('description')}
               />
-            </div>
+            </Field>
 
-            <motion.button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl font-bold text-ink min-h-[44px] flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={SAFFRON_CTA}
-              whileHover={loading ? {} : { scale: 1.01 }}
-              whileTap={loading ? {} : { scale: 0.98 }}>
-              {loading ? (
-                <>
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Creating Team...
-                </>
-              ) : (
-                <>
-                  Create Team
-                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </>
-              )}
-            </motion.button>
+            <Button type="submit" size="lg" block loading={loading} iconRight={loading ? null : ArrowRight}>
+              {loading ? 'Creating Team...' : 'Create Team'}
+            </Button>
           </form>
-        </div>
-      </motion.div>
+        </Panel>
+      </div>
     </div>
   );
 };

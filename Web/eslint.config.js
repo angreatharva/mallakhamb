@@ -43,8 +43,9 @@ export default defineConfig([
         { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' },
       ],
       'react-refresh/only-export-components': 'off',
-      // Design system rules - warn in development, can be upgraded to error later
-      'design-system/no-hardcoded-colors': 'warn',
+      // An error everywhere since the design-language rollout reached zero
+      // literals (docs/design-language/REPORT.md); tokens only.
+      'design-system/no-hardcoded-colors': 'error',
       'design-system/no-hardcoded-spacing': 'warn',
     },
   },
@@ -74,6 +75,31 @@ export default defineConfig([
         ...globals.browser,
         ...globals.node,
       },
+    },
+  },
+  {
+    // Two islands that draw in fixed colours on purpose (design-language PLAN
+    // §8.6, §8.14): the Time Keeper's stopwatch (Apple's palette, in every
+    // look) and Home's WebGL/canvas runtime (literal colours for the GPU).
+    // Plus the three files that must spell colours out: the rule's own token
+    // table, the pre-paint theme-color script (runs before any CSS), and
+    // Tailwind's config.
+    files: [
+      'src/pages/judge/StopwatchFace.jsx', 'src/pages/judge/stopwatchPalette.js', 'src/pages/public/home/runtime/**/*.js',
+      'eslint-rules/**/*.js', 'public/appearance-init.js', 'tailwind.config.js',
+    ],
+    rules: {
+      'design-system/no-hardcoded-colors': 'off',
+    },
+  },
+  {
+    // The look packs ARE the token source (docs/design-language/PLAN.md §4.3):
+    // the one place a raw colour or length is supposed to be written. The
+    // rules already exempt styles/tokens.js for the same reason.
+    files: ['src/styles/looks/**/*.js'],
+    rules: {
+      'design-system/no-hardcoded-colors': 'off',
+      'design-system/no-hardcoded-spacing': 'off',
     },
   },
 ])

@@ -1,16 +1,15 @@
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { calculateAverageMarks, calculateFinalScore } from '../../utils/scoring/copRules';
 
 // ─── Shared token shortcuts ───────────────────────────────────────────────────
-const C = ADMIN_COLORS;
-const surface  = C.darkCard;       // #111
-const elevated = C.darkElevated;   // #161616
-const border   = C.darkBorderSubtle;
-const borderMid = C.darkBorderMid;
-const textPrimary   = 'rgb(var(--ink) / 0.90)';
-const textSecondary = 'var(--fg-muted)';
+const surface  = 'rgb(var(--surface))';
+const elevated = 'rgb(var(--surface-raised))';   // #161616
+const border   = 'var(--line)';
+const borderMid = 'var(--line-strong)';
+const textPrimary   = 'var(--fg)';
+const textSecondary = 'var(--fg-secondary)';
 const textMuted     = 'var(--fg-muted)';
 
 // ─── Shared input style ───────────────────────────────────────────────────────
@@ -33,7 +32,7 @@ const CARD_FIELD_CLASS = 'text-base mouse:text-[13px]';
 const inputStyle = (locked, fluid = false) => ({
   background: locked ? 'rgb(var(--ink) / 0.04)' : 'rgb(var(--ink) / 0.06)',
   border: `1px solid ${locked ? border : borderMid}`,
-  borderRadius: 8,
+  borderRadius: 'var(--radius-control)',
   color: locked ? textSecondary : textPrimary,
   padding: fluid ? '6px 8px' : '6px 10px',
   fontSize: fluid ? 13 : undefined,
@@ -51,7 +50,7 @@ const Pill = ({ children, color }) => (
     background: `${alpha(color, 0x22)}`,
     color,
     border: `1px solid ${alpha(color, 0x44)}`,
-    borderRadius: 20,
+    borderRadius: 'var(--radius-control)',
     padding: '2px 10px',
     fontSize: 11,
     fontWeight: 600,
@@ -88,12 +87,12 @@ export const ResponsiveTable = ({
       style={{
         background: elevated,
         border: `1px solid ${border}`,
-        borderRadius: 12,
+        borderRadius: 'var(--radius-panel)',
         padding: '14px 16px',
         cursor: onRowClick ? 'pointer' : 'default',
         transition: 'border-color 0.15s, box-shadow 0.15s',
       }}
-      onMouseEnter={e => { if (onRowClick) { e.currentTarget.style.borderColor = `${alpha(C.saffron, 0x44)}`; e.currentTarget.style.boxShadow = `0 4px 20px rgba(0,0,0,0.4)`; }}}
+      onMouseEnter={e => { if (onRowClick) { e.currentTarget.style.borderColor = `${alpha('rgb(var(--accent))', 0x44)}`; }}}
       onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none'; }}
     >
       {columns.map((col, ci) => {
@@ -122,7 +121,7 @@ export const ResponsiveTable = ({
 
   return (
     <ResponsiveContainer className={className} {...props}>
-      <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
+      <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-panel)', border: `1px solid ${border}` }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: elevated }}>
@@ -155,7 +154,7 @@ export const ResponsiveTable = ({
                     transition: 'background 0.12s',
                     borderBottom: `1px solid ${border}`,
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = `${alpha(C.saffron, 0x0A)}`; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${alpha('rgb(var(--accent))', 0x0A)}`; }}
                   onMouseLeave={e => { e.currentTarget.style.background = ri % 2 === 0 ? surface : 'rgb(var(--ink) / 0.015)'; }}
                 >
                   {columns.map((col, ci) => (
@@ -203,7 +202,7 @@ const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'n
     placeholder={placeholder}
     className={fluid ? undefined : CARD_FIELD_CLASS}
     style={inputStyle(isLocked, fluid)}
-    onFocus={e => { if (!isLocked) e.target.style.borderColor = `${alpha(C.saffron, 0x80)}`; }}
+    onFocus={e => { if (!isLocked) e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x80)}`; }}
     onBlur={e => { e.target.style.borderColor = isLocked ? border : borderMid; }}
   />
 );
@@ -263,7 +262,7 @@ export const ResponsiveScoringTable = ({
         {/* One card per athlete on a phone; two side by side on a tablet. */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           {players.map(player => (
-            <div key={player.id} style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 14, padding: 16 }}>
+            <div key={player.id} style={{ background: elevated, border: `1px solid ${border}`, borderRadius: 'var(--radius-panel)', padding: 16 }}>
               {/* Header */}
               <div style={{ borderBottom: `1px solid ${border}`, paddingBottom: 12, marginBottom: 14 }}>
                 <p style={{ fontWeight: 700, color: textPrimary, fontSize: 15 }}>{player.name}</p>
@@ -273,7 +272,7 @@ export const ResponsiveScoringTable = ({
               {/* Time */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <label style={{ fontSize: 12, color: textSecondary }}>
-                  Time <span style={{ color: FG.danger }}>*</span>
+                  Time <span className="text-danger-fg">*</span>
                 </label>
                 <ScoreInputCell
                   value={scores[player.id]?.time}
@@ -293,7 +292,7 @@ export const ResponsiveScoringTable = ({
                   <div key={judge._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div>
                       <label style={{ fontSize: 12, color: textSecondary, display: 'block' }}>{judge.judgeType}</label>
-                      {judge.name && <span style={{ fontSize: 10, color: DATA_COLORS.purpleSoft, opacity: 0.85 }}>{judge.name}</span>}
+                      {judge.name && <span style={{ fontSize: 10, color: 'rgb(var(--accent-fg))', opacity: 0.85 }}>{judge.name}</span>}
                       {judge.isChiefCopy && (
                         <span style={{ fontSize: 10, color: textMuted, display: 'block' }}>Senior Judge&rsquo;s mark</span>
                       )}
@@ -367,7 +366,7 @@ export const ResponsiveScoringTable = ({
 
   return (
     <ResponsiveContainer className={className} {...props}>
-      <div style={{ overflowX: 'auto', borderRadius: 12, border: `1px solid ${border}` }}>
+      <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-panel)', border: `1px solid ${border}` }}>
         {/*
           * THE SHEET FITS THE SCREEN; IT DOES NOT SCROLL SIDEWAYS.
           *
@@ -411,9 +410,9 @@ export const ResponsiveScoringTable = ({
                 const isJudgeCol = i >= 2 && i < 2 + judges.length;
                 return (
                   <th key={i} scope="col" style={{ padding: '10px 8px', textAlign: 'left', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: textSecondary, borderBottom: `1px solid ${border}`, overflowWrap: 'break-word' }}>
-                    {h === 'Time' ? <>{h} <span style={{ color: FG.danger }}>*</span></> : h}
+                    {h === 'Time' ? <>{h} <span className="text-danger-fg">*</span></> : h}
                     {isJudgeCol && judgeObj?.name && (
-                      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: DATA_COLORS.purpleSoft, marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
+                      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: 'rgb(var(--accent-fg))', marginTop: 2, opacity: 0.85 }}>{judgeObj.name}</div>
                     )}
                     {isJudgeCol && judgeObj?.isChiefCopy && (
                       <div style={{ fontSize: 9, fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: textMuted, marginTop: 1 }}>Senior Judge&rsquo;s mark</div>
@@ -460,7 +459,7 @@ export const ResponsiveScoringTable = ({
                 })}
                 <td style={{ padding: '12px 8px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                    <span style={{ background: `${alpha(C.blue, 0x18)}`, color: FG.info, borderRadius: 8, padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ background: `${alpha('rgb(var(--info-fg))', 0x18)}`, color: FG.info, borderRadius: 'var(--radius-control)', padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
                       {(() => {
                         const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                         return result.average.toFixed(2);
@@ -504,7 +503,7 @@ export const ResponsiveScoringTable = ({
                   />
                 </td>
                 <td style={{ padding: '12px 8px' }}>
-                  <span style={{ background: `${alpha(C.green, 0x18)}`, color: FG.success, borderRadius: 8, padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
+                  <span style={{ background: `${alpha('rgb(var(--success-fg))', 0x18)}`, color: FG.success, borderRadius: 'var(--radius-control)', padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
                     {calculateFinalScore(scores[player.id] || {}, panelSize)}
                   </span>
                 </td>
@@ -533,12 +532,12 @@ export const ResponsiveTeamTable = ({
       style={{
         background: elevated,
         border: `1px solid ${border}`,
-        borderRadius: 14,
+        borderRadius: 'var(--radius-panel)',
         padding: compact ? '14px 16px' : '18px 20px',
         cursor: 'pointer',
         transition: 'border-color 0.15s, box-shadow 0.15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = `${alpha(C.purple, 0x55)}`; e.currentTarget.style.boxShadow = `0 4px 24px rgba(0,0,0,0.5)`; }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = `${alpha('rgb(var(--accent))', 0x55)}`; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = 'none'; }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
@@ -554,11 +553,11 @@ export const ResponsiveTeamTable = ({
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0, width: 'auto' }}>
-          <div style={{ background: `${alpha(C.purple, 0x18)}`, border: `1px solid ${alpha(C.purple, 0x30)}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
-            <p style={{ fontSize: 11, color: DATA_COLORS.purpleSoft, fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
+          <div style={{ background: `${alpha('rgb(var(--accent))', 0x18)}`, border: `1px solid ${alpha('rgb(var(--accent))', 0x30)}`, borderRadius: 'var(--radius-control)', padding: '8px 14px', marginBottom: 6 }}>
+            <p style={{ fontSize: 11, color: 'rgb(var(--accent-fg))', fontWeight: 600, letterSpacing: '0.04em' }}>Players</p>
             <p style={{ fontSize: 22, fontWeight: 800, color: DATA_COLORS.violet }}>{team.players?.length || 0}</p>
           </div>
-          <span style={{ fontSize: 12, color: DATA_COLORS.purpleSoft, fontWeight: 500 }}>View Details →</span>
+          <span style={{ fontSize: 12, color: 'rgb(var(--accent-fg))', fontWeight: 500 }}>View Details →</span>
         </div>
       </div>
     </div>

@@ -1,0 +1,25 @@
+/*
+ * Toasts (design-language PLAN §6): a panel on the overlay surface with a 3px
+ * status rule on the left. react-hot-toast takes these as `className`; its
+ * icons read the --toast-* colours below (it can only be given colour strings).
+ */
+:root,
+[data-appearance] {
+  --toast-success: rgb(var(--success-fg));
+  --toast-danger: rgb(var(--danger-fg));
+  --toast-surface: rgb(var(--surface-overlay));
+}
+.ui-toast {
+  max-width: min(28rem, calc(100vw - 32px));
+  padding: 12px 14px 12px 18px !important;
+  border-radius: var(--radius-control) !important;
+  background: rgb(var(--surface-overlay)) !important;
+  color: var(--fg) !important;
+  font-family: var(--type-body-s-family);
+  font-size: var(--type-body-s-size);
+  line-height: var(--type-body-s-leading);
+  box-shadow: inset var(--rule) 0 0 0 rgb(var(--info-fg)), inset 0 0 0 1px var(--line) !important;
+}
+.ui-toast--success { box-shadow: inset var(--rule) 0 0 0 rgb(var(--success-fg)), inset 0 0 0 1px var(--line) !important; }
+.ui-toast--error { box-shadow: inset var(--rule) 0 0 0 rgb(var(--danger-fg)), inset 0 0 0 1px var(--line) !important; }
+.ui-toast--loading { box-shadow: inset var(--rule) 0 0 0 rgb(var(--accent-fg)), inset 0 0 0 1px var(--line) !important; }

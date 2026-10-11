@@ -5,7 +5,7 @@ import {
   Scale, Users, Trophy, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
   CalendarDays, Loader2, ClipboardList, Timer
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
@@ -14,15 +14,14 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat, seatTypesFor } from './useJudgePanelData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
+import { FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
-import { FadeIn } from '@/components/design-system';
+import { FadeIn } from '@/components/admin/AdminKit';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
-import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
+import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -52,20 +51,14 @@ const holdsBothRecorderSeats = (seatTypes) => RECORDER_ROLES.every((role) => sea
 const SelectBtn = ({ selected, onClick, children, accent = J.purple }) => {
   const reduced = useReducedMotion();
   return (
-    <motion.button
-      onClick={onClick}
-      className="w-full p-3.5 rounded-xl border text-left transition-colors duration-200 min-h-[52px] flex items-center justify-between gap-3"
-      style={{
+    <button onClick={onClick} className="w-full p-3.5 rounded-xl border text-left transition-colors duration-200 min-h-[52px] flex items-center justify-between gap-3" style={{
         background: selected ? `${alpha(accent, 0x14)}` : 'rgb(var(--ink) / 0.03)',
         borderColor: selected ? `${alpha(accent, 0x50)}` : 'rgb(var(--ink) / 0.07)',
         color: selected ? FG.ink : 'rgb(var(--ink) / 0.6)',
-      }}
-      whileHover={reduced ? {} : { scale: 1.005 }}
-      whileTap={reduced ? {} : { scale: 0.995 }}
-      transition={{ duration: 0.15 }}>
+      }}>
       <span className="text-sm font-semibold">{children}</span>
       {selected && <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: accent }} aria-hidden="true" />}
-    </motion.button>
+    </button>
   );
 };
 
@@ -761,35 +754,24 @@ const JudgeDashboard = () => {
     availableCompetitions.find((c) => String(c._id) === String(id))?.name || 'Selected meet';
 
   return (
-    <div className="min-h-dvh relative flex flex-col" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
       <JudgeAmbience />
 
-      <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-              <Scale className="w-4 h-4 text-snow" aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{myJudgeType}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <AppearanceMenu />
-            <button onClick={() => navigate('/judge/profile')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-purple-500/10"
-              style={{ borderColor: 'rgba(168,85,247,0.3)', color: DATA_COLORS.purpleSoft }}
-              aria-label="Your profile">
-              <UserCircle className="w-4 h-4" aria-hidden="true" />
+      <JudgeHeader
+        title={judgeInfo.name}
+        subtitle={myJudgeType}
+        onLogout={handleLogout}
+        actions={(
+          <button onClick={() => navigate('/judge/profile')}
+            className="ui-btn ui-btn--ghost ui-btn--sm"
+            aria-label="Your profile">
+            <span className="ui-btn__label" style={{ display: 'contents' }}>
+              <UserCircle aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
-            </button>
-            <JudgeLogoutButton onLogout={handleLogout} />
-          </div>
-        </div>
-      </header>
+            </span>
+          </button>
+        )}
+      />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
 
@@ -814,7 +796,7 @@ const JudgeDashboard = () => {
                 {canSequence && (
                   <button
                     onClick={() => navigate('/judge/sequence')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-800 dark:text-purple-200 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg dark:text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                     <ListOrdered className="w-4 h-4" />
                     Set Sequence
                   </button>
@@ -822,14 +804,14 @@ const JudgeDashboard = () => {
                 {needsRoleChoice && (
                   <button
                     onClick={() => setShowRoleModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                     {chosenRole === 'Time Keeper' ? <Timer className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                     Change Role
                   </button>
                 )}
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-400 text-sm font-bold transition-colors min-h-[44px]">
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                   <Filter className="w-4 h-4" />
                   Change Category
                 </button>
@@ -839,10 +821,10 @@ const JudgeDashboard = () => {
 
           {!showModal && selectedCompetitionType && (
             <div className="rounded-2xl border p-4 flex flex-col sm:flex-row gap-4 mb-6"
-              style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
+              style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
               <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 flex-shrink-0" style={{ color: DATA_COLORS.purple }} aria-hidden="true" />
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: DATA_COLORS.purpleSoft }}>Current Assignment</span>
+                <Trophy className="w-4 h-4 flex-shrink-0 text-fg-secondary" aria-hidden="true" />
+                <span className="type-tag text-fg-secondary">Current Assignment</span>
               </div>
               <div className="flex flex-wrap gap-4 sm:ml-auto">
                 {[
@@ -862,7 +844,7 @@ const JudgeDashboard = () => {
                   ...(needsRoleChoice && roleChosen ? [{ label: 'Role', value: chosenRole }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col">
-                    <span className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--fg-muted)' }}>{label}</span>
+                    <span className="text-[10px] uppercase tracking-widest text-fg-muted">{label}</span>
                     <span className="text-sm font-bold text-ink">{value}</span>
                   </div>
                 ))}
@@ -886,7 +868,7 @@ const JudgeDashboard = () => {
               </p>
               <button
                 onClick={() => navigate('/judge/profile')}
-                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-sm font-bold transition-colors min-h-[44px]">
+                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
                 <UserCircle className="w-4 h-4" />
                 View your profile
               </button>
@@ -904,7 +886,7 @@ const JudgeDashboard = () => {
                 placeholder="Search teams by name..." aria-label="Search teams" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-ink/5 border border-ink/10 rounded-2xl py-4 pl-12 pr-4 text-base text-ink placeholder-ink/40 focus:border-purple-500/50 transition-colors shadow-lg"
+                className="w-full bg-ink/5 border border-ink/10 rounded-2xl py-4 pl-12 pr-4 text-base text-ink placeholder-ink/40 focus:border-line-strong transition-colors shadow-lg"
               />
             </div>
 
@@ -939,23 +921,22 @@ const JudgeDashboard = () => {
                               other. */}
                           <span className="flex flex-col items-center justify-center w-10 flex-shrink-0">
                             <span className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black"
-                              style={{ background: 'rgba(168,85,247,0.18)', color: DATA_COLORS.purpleSoft }}>
+                              style={{ background: 'rgb(var(--accent) / 0.18)', color: 'rgb(var(--accent-fg))' }}>
                               {orderIdx + 1}
                             </span>
                             {team.lotNo != null && (
-                              <span className="text-[9px] mt-0.5 font-bold tracking-wider uppercase"
-                                style={{ color: 'var(--fg-muted)' }}>
+                              <span className="text-[9px] mt-0.5 font-bold tracking-wider uppercase text-fg-muted">
                                 Lot {team.lotNo}
                               </span>
                             )}
                           </span>
                           <div className="min-w-0">
                           <p className="font-bold text-lg text-ink truncate">{team.name}</p>
-                          <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
+                          <p className="text-sm mt-1 text-fg-muted">
                             Coach: {team.coach?.name || 'N/A'}
                           </p>
                           {scoredCount > 0 && (
-                            <p className="text-xs mt-1.5" style={{ color: FG.success }}>
+                            <p className="text-xs mt-1.5 text-success-fg">
                               {scoredCount} of {teamPlayers.length} scored
                             </p>
                           )}
@@ -992,15 +973,10 @@ const JudgeDashboard = () => {
       {/* Selection Modal */}
       <AnimatePresence>
         {showModal && (
-          <motion.div 
-            className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <div className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto">
               <BodyScrollLock />
             
-            <motion.div 
-              className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
-              initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
+            <div className="bg-surface border border-line-strong rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel">
               
               {/* If we already made a selection once, we can cancel changing it */}
               {selectedCompetitionType && isSelectionComplete && (
@@ -1013,10 +989,10 @@ const JudgeDashboard = () => {
 
               <div className="p-8 space-y-8">
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <Filter className="w-6 h-6 text-purple-700 dark:text-purple-400" />
+                  <div className="w-12 h-12 rounded-2xl bg-surface-raised flex items-center justify-center mx-auto mb-4 border border-line-strong">
+                    <Filter className="w-6 h-6 text-accent-fg" />
                   </div>
-                  <h2 className="text-2xl font-black text-ink">Select Judging Category</h2>
+                  <h2 className="type-display-m text-fg">Select Judging Category</h2>
                   <p className="text-fg-muted text-sm mt-2">Choose the competition context you are judging for right now.</p>
                 </div>
 
@@ -1024,7 +1000,7 @@ const JudgeDashboard = () => {
                     when this judge is seated at more than one. */}
                 {availableCompetitions.length > 1 && (
                   <div>
-                    <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition</p>
+                    <p className="type-tag text-accent-fg mb-3 ml-1">Competition</p>
                     <div className="grid grid-cols-1 gap-3">
                       {availableCompetitions.map(comp => (
                         <SelectBtn
@@ -1059,7 +1035,7 @@ const JudgeDashboard = () => {
                   {/* Gender Selection or Display */}
                   {availableGenders.length > 1 ? (
                     <div>
-                      <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Gender</p>
+                      <p className="type-tag text-accent-fg mb-3 ml-1">Gender</p>
                       <div className="grid grid-cols-2 gap-3">
                         {availableGenders.map(g => (
                           <SelectBtn key={g} selected={selectedGender === g} onClick={() => setSelectedGender(g)}>
@@ -1070,7 +1046,7 @@ const JudgeDashboard = () => {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
-                      <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Gender</p>
+                      <p className="type-tag text-fg-muted mb-1">Assigned Gender</p>
                       <p className="font-bold text-ink">{availableGenders[0] || judgeInfo.gender || '—'}</p>
                     </div>
                   )}
@@ -1081,7 +1057,7 @@ const JudgeDashboard = () => {
                       category and Above 18 to a Female one. */}
                   {availableAgeGroups.length > 1 ? (
                     <div>
-                      <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">
+                      <p className="type-tag text-accent-fg mb-3 ml-1">
                         Age Group{selectedGender ? ` · ${selectedGender}` : ''}
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1094,7 +1070,7 @@ const JudgeDashboard = () => {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
-                      <p className="text-[10px] font-bold tracking-widest uppercase text-fg-muted mb-1">Assigned Age Group</p>
+                      <p className="type-tag text-fg-muted mb-1">Assigned Age Group</p>
                       <p className="font-bold text-ink">
                         {availableAgeGroups[0]
                           || (selectedGender ? 'No panel in this gender' : judgeInfo.ageGroup)
@@ -1106,7 +1082,7 @@ const JudgeDashboard = () => {
 
                 {/* Competition Type */}
                 <div>
-                  <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Competition Type</p>
+                  <p className="type-tag text-accent-fg mb-3 ml-1">Competition Type</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {competitionTypes
                       .filter(ct => availableCompetitionTypes.includes(ct.value))
@@ -1128,13 +1104,9 @@ const JudgeDashboard = () => {
                 {/* Apparatus (If needed) */}
                 <AnimatePresence mode="wait">
                   {needsApparatus && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden">
+                    <div className="overflow-hidden">
                       <div className="pt-2">
-                        <p className="text-xs font-bold tracking-widest uppercase text-purple-700 dark:text-purple-400 mb-3 ml-1">Apparatus</p>
+                        <p className="type-tag text-accent-fg mb-3 ml-1">Apparatus</p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {availableApparatus.map(app => (
                             <SelectBtn key={app} selected={selectedApparatus === app} onClick={() => setSelectedApparatus(app)}>
@@ -1149,7 +1121,7 @@ const JudgeDashboard = () => {
                           </p>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   )}
                 </AnimatePresence>
 
@@ -1159,7 +1131,7 @@ const JudgeDashboard = () => {
                     onClick={handleConfirmSelection}
                     disabled={!isSelectionComplete}
                     className="w-full py-4 rounded-xl font-bold text-ink transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ background: isSelectionComplete ? `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` : 'rgb(var(--ink) / 0.1)', color: isSelectionComplete ? '#FFFFFF' : undefined }}>
+                    style={{ background: isSelectionComplete ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.1)', color: isSelectionComplete ? 'rgb(var(--on-accent))' : undefined }}>
                     {isSelectionComplete ? (
                       <>Continue to Dashboard <ChevronRight className="w-5 h-5" /></>
                     ) : (
@@ -1169,23 +1141,17 @@ const JudgeDashboard = () => {
                 </div>
 
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
 
       {/* Role Modal — Scorer or Time Keeper, for someone seated as both here */}
       <AnimatePresence>
         {showRoleModal && !showModal && needsRoleChoice && (
-          <motion.div
-            className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <div className="modal-overlay z-50 bg-black/90 backdrop-blur-md overflow-y-auto">
               <BodyScrollLock />
-            <motion.div
-              className="bg-surface border border-purple-500/30 rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel"
-              role="dialog" aria-modal="true" aria-labelledby="role-modal-title"
-              initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}>
+            <div className="bg-surface border border-line-strong rounded-3xl w-full max-w-xl shadow-2xl relative modal-panel" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
 
               {/* Closable only once a role is on record */}
               {roleChosen && (
@@ -1199,8 +1165,8 @@ const JudgeDashboard = () => {
 
               <div className="p-8 space-y-8">
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
-                    <ClipboardList className="w-6 h-6 text-purple-700 dark:text-purple-400" />
+                  <div className="w-12 h-12 rounded-2xl bg-surface-raised flex items-center justify-center mx-auto mb-4 border border-line-strong">
+                    <ClipboardList className="w-6 h-6 text-accent-fg" />
                   </div>
                   <h2 id="role-modal-title" className="text-2xl font-black text-ink">Select Your Role</h2>
                   <p className="text-fg-muted text-sm mt-2">
@@ -1215,7 +1181,7 @@ const JudgeDashboard = () => {
                   ].map(({ role, Icon, desc }) => (
                     <SelectBtn key={role} selected={chosenRole === role} onClick={() => chooseRole(role)}>
                       <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5 flex-shrink-0 text-purple-700 dark:text-purple-300" aria-hidden="true" />
+                        <Icon className="w-5 h-5 flex-shrink-0 text-accent-fg" aria-hidden="true" />
                         <div>
                           <p className="font-bold text-ink">{role}</p>
                           <p className="text-xs text-fg-muted mt-0.5">{desc}</p>
@@ -1225,8 +1191,8 @@ const JudgeDashboard = () => {
                   ))}
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
 

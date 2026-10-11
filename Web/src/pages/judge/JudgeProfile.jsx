@@ -2,19 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import {
-  ArrowLeft, Camera, Hash, Lock, Mail, MapPin, Phone, Save, Scale, User,
-} from 'lucide-react';
+import { ArrowLeft, Camera, Save, Scale } from 'lucide-react';
 
 import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 
-import { ThemeProvider, useTheme } from '../../components/design-system/theme';
-import { ThemedInput, ThemedButton, ThemedSelect } from '../../components/design-system/forms';
-import { GlassCard } from '../../components/design-system/cards';
-import { FG, alpha } from '@/styles/tokens';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
+import {
+  Button, Field, Heading, Input, PasswordInput, Panel, Select, Tag, TextLink,
+} from '@/components/ui';
 
 const CERTIFICATION_LEVELS = [
   { value: 'National', label: 'National' },
@@ -55,40 +52,23 @@ const downscaleImage = (file, size = 256) =>
     reader.readAsDataURL(file);
   });
 
-const SectionHeading = ({ children, hint }) => {
-  const theme = useTheme();
-  return (
-    <div className="mb-5">
-      <h2 className="text-lg font-black text-ink">{children}</h2>
-      {hint && <p className="text-fg-muted text-xs mt-1">{hint}</p>}
-      <div
-        className="h-px mt-3"
-        style={{ background: `linear-gradient(90deg, ${alpha(theme.colors.primary, 0x40)}, transparent)` }}
-      />
-    </div>
-  );
-};
+const SectionHeading = ({ children, hint }) => (
+  <div className="mb-5 grid gap-1">
+    <Heading level={2} step="display-s">{children}</Heading>
+    {hint && <p className="text-fg-muted type-caption m-0">{hint}</p>}
+  </div>
+);
 
-const Field = ({ id, label, icon, error, children }) => {
-  const theme = useTheme();
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        className="block text-[11px] font-bold tracking-[0.15em] uppercase mb-2"
-        style={{ color: FG.accent }}
-      >
-        {label}
-      </label>
-      {children}
-      {error && <p className="text-xs mt-1.5" style={{ color: FG.danger }} role="alert">{error}</p>}
-    </div>
-  );
-};
-
-const JudgeProfileInner = () => {
+/**
+ * JudgeProfile — the judge's own account.
+ *
+ * Judges register themselves and own their credentials now; this is where they
+ * manage them. The panels they sit on are shown on the dashboard instead —
+ * that is the first thing a judge needs on opening the app, and it is not
+ * something they can change from here in any case.
+ */
+const JudgeProfile = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
   const photoInputRef = useRef(null);
 
   const [profile, setProfile] = useState(null);
@@ -204,53 +184,45 @@ const JudgeProfileInner = () => {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ background: theme.colors.background }}>
-        <div className="flex items-center gap-3">
-          <div
-            className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin"
-            style={{ borderTopColor: theme.colors.primary }}
-          />
-          <span className="text-fg-muted text-sm">Loading your profile…</span>
-        </div>
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
+        <p className="type-body-s text-fg-muted flex items-center gap-3 m-0">
+          <span className="ui-spinner" aria-hidden="true" />
+          Loading your profile…
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh px-4 py-8" style={{ background: theme.colors.background }}>
+    <div className="min-h-dvh px-[var(--pad)] py-8 bg-bg text-fg">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
-          <button
-            onClick={() => navigate('/judge/dashboard')}
-            className="flex items-center gap-2 text-fg-muted hover:text-ink/80 transition-colors text-sm min-h-[44px]"
-          >
-            <ArrowLeft className="w-4 h-4" />
+          <TextLink as="button" type="button" className="ui-link--quiet" onClick={() => navigate('/judge/dashboard')}>
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             Dashboard
-          </button>
+          </TextLink>
           <AppearanceMenu />
         </div>
 
-        {/* Identity card */}
-        <GlassCard className="p-6">
+        {/* Identity */}
+        <Panel variant="feature">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="relative">
-              <div
-                className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center"
-                style={{ background: `${alpha(theme.colors.primary, 0x15)}`, border: `1px solid ${alpha(theme.colors.primary, 0x35)}` }}
-              >
+              <div className="w-20 h-20 overflow-hidden flex items-center justify-center bg-surface-raised rounded-[var(--radius-panel)]">
                 {photo
                   ? <img src={photo} alt="" className="w-full h-full object-cover" />
-                  : <Scale className="w-9 h-9" style={{ color: FG.accent }} aria-hidden="true" />}
+                  : <Scale className="w-9 h-9 text-accent-fg" aria-hidden="true" />}
               </div>
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                className="absolute -bottom-2 -right-2 w-9 h-9 max-md:w-11 max-md:h-11 tap-safe rounded-xl flex items-center justify-center transition-transform hover:scale-105"
-                style={{ background: theme.colors.primary }}
+                className="ui-btn ui-btn--solid ui-icon-btn absolute -bottom-2 -right-2"
                 aria-label="Change photo"
               >
-                <Camera className="w-4 h-4 text-snow" aria-hidden="true" />
+                <span className="ui-btn__label" style={{ display: 'contents' }}>
+                  <Camera aria-hidden="true" />
+                </span>
               </button>
               <input
                 ref={photoInputRef}
@@ -261,54 +233,43 @@ const JudgeProfileInner = () => {
               />
             </div>
 
-            <div className="min-w-0">
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.accent }}>
-                Judge
-              </p>
-              <h1 className="text-2xl font-black text-ink mt-0.5 truncate">{profile?.name}</h1>
-              <p className="text-fg-muted text-sm truncate">{profile?.email}</p>
+            <div className="min-w-0 grid gap-1">
+              <Tag tone="ident">Judge</Tag>
+              <Heading level={1} step="display-m" asIs className="truncate">{profile?.name}</Heading>
+              <p className="text-fg-muted type-body-s truncate m-0">{profile?.email}</p>
             </div>
           </div>
-        </GlassCard>
+        </Panel>
 
         {/* Account details */}
-        <GlassCard className="p-6">
+        <Panel>
           <SectionHeading hint="Your details, and the credentials organisers see when staffing a panel.">
             Account
           </SectionHeading>
 
-          <form onSubmit={handleProfileSubmit(onSaveProfile)} noValidate className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleProfileSubmit(onSaveProfile)} noValidate className="grid gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Field id="judge-profile-firstName" label="First Name" error={profileErrors.firstName?.message}>
-                <ThemedInput
-                  id="judge-profile-firstName"
-                  icon={User}
+                <Input
                   placeholder="First name"
                   autoComplete="given-name"
-                  error={profileErrors.firstName?.message}
                   {...registerProfile('firstName', { required: 'First name is required' })}
                 />
               </Field>
 
               <Field id="judge-profile-lastName" label="Last Name" error={profileErrors.lastName?.message}>
-                <ThemedInput
-                  id="judge-profile-lastName"
-                  icon={User}
+                <Input
                   placeholder="Last name"
                   autoComplete="family-name"
-                  error={profileErrors.lastName?.message}
                   {...registerProfile('lastName', { required: 'Last name is required' })}
                 />
               </Field>
             </div>
 
             <Field id="judge-profile-email" label="Email Address" error={profileErrors.email?.message}>
-              <ThemedInput
-                id="judge-profile-email"
-                icon={Mail}
+              <Input
                 type="email"
                 placeholder="you@example.com"
-                error={profileErrors.email?.message}
                 {...registerProfile('email', {
                   required: 'Email is required',
                   pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' },
@@ -317,12 +278,9 @@ const JudgeProfileInner = () => {
             </Field>
 
             <Field id="judge-profile-phone" label="Phone Number" error={profileErrors.phone?.message}>
-              <ThemedInput
-                id="judge-profile-phone"
-                icon={Phone}
+              <Input
                 type="tel"
                 placeholder="Your phone number"
-                error={profileErrors.phone?.message}
                 {...registerProfile('phone', {
                   validate: (value) => {
                     if (!value) return true;
@@ -334,76 +292,49 @@ const JudgeProfileInner = () => {
               />
             </Field>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <Field id="judge-profile-stateUnit" label="State / Unit">
-                <ThemedInput
-                  id="judge-profile-stateUnit"
-                  icon={MapPin}
-                  placeholder="e.g. Maharashtra"
-                  {...registerProfile('stateUnit')}
-                />
+                <Input placeholder="e.g. Maharashtra" {...registerProfile('stateUnit')} />
               </Field>
 
               <Field id="judge-profile-registrationNumber" label="MFI Reg. No.">
-                <ThemedInput
-                  id="judge-profile-registrationNumber"
-                  icon={Hash}
-                  placeholder="Optional"
-                  {...registerProfile('registrationNumber')}
-                />
+                <Input placeholder="Optional" {...registerProfile('registrationNumber')} />
               </Field>
             </div>
 
             <Field id="judge-profile-certificationLevel" label="Certification Level">
-              <ThemedSelect
-                id="judge-profile-certificationLevel"
-                placeholder="Select level"
-                options={CERTIFICATION_LEVELS}
-                {...registerProfile('certificationLevel')}
-              />
+              <Select {...registerProfile('certificationLevel')}>
+                <option value="" disabled>Select level</option>
+                {CERTIFICATION_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>{level.label}</option>
+                ))}
+              </Select>
             </Field>
 
-            <ThemedButton type="submit" loading={savingProfile} disabled={savingProfile} className="w-full">
-              <Save className="w-4 h-4 mr-2" aria-hidden="true" />
+            <Button type="submit" block loading={savingProfile} icon={savingProfile ? null : Save}>
               {savingProfile ? 'Saving…' : 'Save changes'}
-            </ThemedButton>
+            </Button>
           </form>
-        </GlassCard>
+        </Panel>
 
         {/* Password */}
-        <GlassCard className="p-6">
+        <Panel>
           <SectionHeading hint="Your current password is required — an open session alone is not enough.">
             Password
           </SectionHeading>
 
-          <form onSubmit={handlePasswordSubmit(onChangePassword)} noValidate className="space-y-4">
-            <Field
-              id="judge-profile-currentPassword"
-              label="Current Password"
-              error={passwordErrors.currentPassword?.message}
-            >
-              <ThemedInput
-                id="judge-profile-currentPassword"
-                icon={Lock}
-                type="password"
+          <form onSubmit={handlePasswordSubmit(onChangePassword)} noValidate className="grid gap-5">
+            <Field id="judge-profile-currentPassword" label="Current Password" error={passwordErrors.currentPassword?.message}>
+              <PasswordInput
                 autoComplete="current-password"
-                error={passwordErrors.currentPassword?.message}
                 {...registerPassword('currentPassword', { required: 'Current password is required' })}
               />
             </Field>
 
-            <Field
-              id="judge-profile-newPassword"
-              label="New Password"
-              error={passwordErrors.newPassword?.message}
-            >
-              <ThemedInput
-                id="judge-profile-newPassword"
-                icon={Lock}
-                type="password"
+            <Field id="judge-profile-newPassword" label="New Password" error={passwordErrors.newPassword?.message}>
+              <PasswordInput
                 autoComplete="new-password"
                 placeholder="Min. 8 characters"
-                error={passwordErrors.newPassword?.message}
                 {...registerPassword('newPassword', {
                   required: 'New password is required',
                   minLength: { value: 8, message: 'Password must be at least 8 characters' },
@@ -414,17 +345,9 @@ const JudgeProfileInner = () => {
               />
             </Field>
 
-            <Field
-              id="judge-profile-confirmPassword"
-              label="Confirm New Password"
-              error={passwordErrors.confirmPassword?.message}
-            >
-              <ThemedInput
-                id="judge-profile-confirmPassword"
-                icon={Lock}
-                type="password"
+            <Field id="judge-profile-confirmPassword" label="Confirm New Password" error={passwordErrors.confirmPassword?.message}>
+              <PasswordInput
                 autoComplete="new-password"
-                error={passwordErrors.confirmPassword?.message}
                 {...registerPassword('confirmPassword', {
                   required: 'Please confirm your new password',
                   validate: (value) =>
@@ -433,28 +356,14 @@ const JudgeProfileInner = () => {
               />
             </Field>
 
-            <ThemedButton type="submit" loading={savingPassword} disabled={savingPassword} className="w-full">
+            <Button type="submit" variant="line" block loading={savingPassword}>
               {savingPassword ? 'Changing…' : 'Change password'}
-            </ThemedButton>
+            </Button>
           </form>
-        </GlassCard>
+        </Panel>
       </div>
     </div>
   );
 };
-
-/**
- * JudgeProfile — the judge's own account.
- *
- * Judges register themselves and own their credentials now; this is where they
- * manage them. The panels they sit on are shown on the dashboard instead —
- * that is the first thing a judge needs on opening the app, and it is not
- * something they can change from here in any case.
- */
-const JudgeProfile = () => (
-  <ThemeProvider role="judge">
-    <JudgeProfileInner />
-  </ThemeProvider>
-);
 
 export default JudgeProfile;

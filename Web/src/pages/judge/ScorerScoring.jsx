@@ -6,10 +6,11 @@
  * but cannot unlock scores (only superadmin has that permission).
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { StatusTag } from '@/components/ui';
+import { JudgeHeader } from './judgeShared';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { motion } from 'framer-motion';
-import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle, ListOrdered } from 'lucide-react';
+import { Clock, Save, Lock, Eye, AlertCircle, ListOrdered } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createAdminAPI } from '@/services/user/admin.api';
 
@@ -22,12 +23,10 @@ import { buildScorerRows } from './scorerRows';
 import { seatTypesFor } from './useJudgePanelData';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
-import BHALogo from '../../assets/BHA.png';
+import { alpha } from '../../styles/tokens';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const ScorerScoring = () => {
   const location = useLocation();
@@ -685,15 +684,14 @@ const ScorerScoring = () => {
   const darkInput = `w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
   const darkInputStyle = (disabled) => ({
     background: disabled ? 'rgb(var(--ink) / 0.02)' : 'rgb(var(--ink) / 0.04)',
-    border: `1px solid ${ADMIN_COLORS.darkBorderMid}`
+    border: `1px solid var(--line-strong)`
   });
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-ink/10 rounded-full mx-auto mb-4 animate-spin"
-            style={{ borderTopColor: ADMIN_COLORS.saffron }} />
+          <div className="w-10 h-10 border-2 border-ink/10 rounded-full mx-auto mb-4 animate-spin border-t-accent"/>
           <p className="text-fg-muted text-sm">Loading scoring page…</p>
         </div>
       </div>
@@ -702,104 +700,73 @@ const ScorerScoring = () => {
 
   if (!selectedTeam || !selectedGender || !selectedAgeGroup) {
     return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ background: ADMIN_COLORS.dark }}>
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
         <div className="text-center">
           <p className="text-fg-muted mb-4">Invalid scoring session. Please go back and select a team.</p>
-          <motion.button onClick={() => navigate('/judge/dashboard')}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-snow min-h-[44px]"
-            style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.purple}, ${ADMIN_COLORS.purpleDark})` }}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+          <button onClick={() => navigate('/judge/dashboard')} className="px-5 py-2.5 rounded-xl text-sm font-bold text-on-accent min-h-[44px]" style={{ background: 'rgb(var(--accent))' }}>
             Back to Dashboard
-          </motion.button>
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh" style={{ background: ADMIN_COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <motion.header className="sticky top-0 z-40 border-b"
-        style={{ background: 'rgb(var(--bg) / 0.94)', backdropFilter: 'blur(20px)', borderColor: ADMIN_COLORS.darkBorderSubtle }}
-        initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
-        <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-4">
-            <motion.button onClick={() => navigate('/judge/dashboard')}
-              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-ink/10 transition-colors text-ink/60 hover:text-ink">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
-            </motion.button>
-            <div className="w-px h-5 bg-ink/10" />
-            <div className="flex items-center gap-2">
-              <img src={BHALogo} alt="BHA" className="h-7 w-auto object-contain opacity-70" />
-              <Trophy className="w-4 h-4" style={{ color: FG.brand }} />
-              <span className="text-ink font-bold text-sm hidden sm:inline">Scorer Scoring</span>
-              {isLocked && <Lock className="w-4 h-4" style={{ color: FG.danger }} />}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {/*
-              * The Scorer sets the running order as well as recording the
-              * marks — they are the person watching the floor, and the order
-              * changes there (a withdrawal, an athlete not ready) long after
-              * the lots were drawn. The server allows it (SEQUENCE_JUDGE_TYPES
-              * is Senior Judge and Scorer); until now the only way in was the
-              * dashboard, which meant leaving a half-filled sheet to reach it.
-              *
-              * /judge/sequence reads the category from the same sessionStorage
-              * keys the dashboard wrote on the way here.
-              */}
-            <motion.button
-              onClick={() => navigate('/judge/sequence')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold tap-safe mouse:min-h-[36px] transition-colors"
-              style={{
-                borderColor: `${alpha(ADMIN_COLORS.purple, 0x40)}`,
-                color: DATA_COLORS.purpleSoft,
-                background: `${alpha(ADMIN_COLORS.purple, 0x12)}`,
-              }}
-              whileHover={{ background: `${alpha(ADMIN_COLORS.purple, 0x25)}` }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
+    <div className="min-h-dvh bg-bg text-fg">
+      <JudgeHeader
+        wide
+        back={{ label: 'Back to Dashboard', onClick: () => navigate('/judge/dashboard') }}
+        title="Scorer Scoring"
+        subtitle={isLocked ? 'Scores locked' : null}
+        status={isLocked ? <StatusTag status="danger">Locked</StatusTag> : null}
+        live={isLocked ? null : isConnected}
+        actions={(
+          /*
+           * The Scorer sets the running order as well as recording the
+           * marks — they are the person watching the floor, and the order
+           * changes there (a withdrawal, an athlete not ready) long after
+           * the lots were drawn. The server allows it (SEQUENCE_JUDGE_TYPES
+           * is Senior Judge and Scorer); until now the only way in was the
+           * dashboard, which meant leaving a half-filled sheet to reach it.
+           *
+           * /judge/sequence reads the category from the same sessionStorage
+           * keys the dashboard wrote on the way here.
+           */
+          <button onClick={() => navigate('/judge/sequence')} className="ui-btn ui-btn--line ui-btn--sm">
+            <span className="ui-btn__label" style={{ display: 'contents' }}>
+              <ListOrdered aria-hidden="true" />
               <span className="hidden sm:inline">Set Sequence</span>
-            </motion.button>
-            <AppearanceMenu />
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
-              {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
             </span>
-          </div>
-        </div>
-      </motion.header>
+          </button>
+        )}
+      />
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6">
         <CompetitionLockBanner />
 
         {isLocked && (
-          <motion.div className="rounded-2xl border p-4 flex items-center justify-between gap-4"
-            style={{ background: `${alpha(ADMIN_COLORS.red, 0x10)}`, borderColor: `${alpha(ADMIN_COLORS.red, 0x30)}` }}
-            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="rounded-2xl border p-4 flex items-center justify-between gap-4 bg-surface-sunken border-line">
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: FG.danger }} />
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-danger-fg"/>
               <div>
                 <p className="font-bold text-ink text-sm">Scoring session is locked</p>
                 <p className="text-xs mt-0.5 text-fg-muted">Scores saved and locked. Cannot be modified.</p>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Scoring session — one compact strip: the category, the four facts
             the Scorer checks at a glance, and the player count. */}
-        <div className="rounded-2xl border px-4 py-3 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6"
-          style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+        <div className="rounded-2xl border px-4 py-3 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 bg-surface border-line">
           <div className="flex items-center justify-between gap-4 sm:block sm:flex-shrink-0">
             <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Scoring Session</p>
+              <p className="type-tag text-accent-fg">Scoring Session</p>
               <h2 className="text-lg sm:text-xl font-black text-ink leading-tight">{selectedGender.label} — {selectedAgeGroup.label}</h2>
             </div>
             {/* Count on the right of the title on a phone… */}
             <p className="sm:hidden flex items-baseline gap-1.5">
-              <span className="text-2xl font-black" style={{ color: FG.brand }}>{players.length}</span>
+              <span className="text-2xl font-black text-accent-fg">{players.length}</span>
               <span className="text-[10px] uppercase tracking-widest text-fg-muted">Players</span>
             </p>
           </div>
@@ -822,13 +789,13 @@ const ScorerScoring = () => {
 
           {/* …and at the far end on a wide screen. */}
           <p className="hidden sm:flex flex-col items-end flex-shrink-0 leading-none">
-            <span className="text-3xl font-black" style={{ color: FG.brand }}>{players.length}</span>
+            <span className="text-3xl font-black text-accent-fg">{players.length}</span>
             <span className="text-[10px] uppercase tracking-widest text-fg-muted mt-1">Players</span>
           </p>
         </div>
 
-        {/* <div className="rounded-2xl border p-4" style={{ background: `${alpha(ADMIN_COLORS.blue, 0x08)}`, borderColor: `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
-          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.blueSoft }}>Scoring System</p>
+        {/* <div className="rounded-2xl border p-4 bg-surface-sunken border-line">
+          <p className="type-tag mb-2 text-fg-secondary">Scoring System</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-fg-muted">
             <p><span className="text-ink/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
             <p><span className="text-ink/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
@@ -838,8 +805,8 @@ const ScorerScoring = () => {
         </div> */}
 
         {players.length > 0 ? (
-          <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
-            <p className="text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2" style={{ color: FG.brand }}>
+          <div className="rounded-2xl border p-6 bg-surface border-line">
+            <p className="type-tag mb-4 flex items-center gap-2 text-accent-fg">
               <Clock className="w-3.5 h-3.5" /> Player Scoring {isLocked && <Eye className="w-3.5 h-3.5 text-ink/30" />}
             </p>
             {/* `judges` sizes the panel, `sheetSeats` draws it — they differ by
@@ -848,12 +815,12 @@ const ScorerScoring = () => {
             <ResponsiveScoringTable players={tableRows} scores={scores} judges={sheetSeats} panelSize={seatedPanelSize} onScoreChange={handleScoreChange} isLocked={readOnly} />
           </div>
         ) : (
-          <div className="rounded-2xl border p-8 text-center" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+          <div className="rounded-2xl border p-8 text-center bg-surface border-line">
             <p className="text-fg-muted">No players found for this category.</p>
           </div>
         )}
 
-        <div className="rounded-2xl border p-6" style={{ background: ADMIN_COLORS.darkCard, borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+        <div className="rounded-2xl border p-6 bg-surface border-line">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {[{ label: 'Time Keeper', value: timeKeeper, setter: setTimeKeeper, placeholder: 'Enter time keeper name', required: true },
             { label: 'Scorer', value: scorer, setter: setScorer, placeholder: judgeInfo?.name || 'Enter scorer name', required: true },
@@ -866,27 +833,24 @@ const ScorerScoring = () => {
               const fieldId = `scorer-${label.toLowerCase().replace(/\s+/g, '-')}`;
               return (
               <div key={label}>
-                <label htmlFor={fieldId} className="block text-xs font-bold tracking-widest uppercase mb-2" style={{ color: FG.brandSoft }}>
+                <label htmlFor={fieldId} className="block type-tag mb-2 text-accent-fg">
                   {label}
                   {required && <span className="text-red-700 dark:text-red-500 ml-1">*</span>}
                 </label>
                 <input id={fieldId} type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={readOnly} placeholder={placeholder} className={darkInput} style={darkInputStyle(readOnly)}
-                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; } }}
-                  onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
+                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; } }}
+                  onBlur={(e) => { e.target.style.borderColor = 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }} />
               </div>
               );
             })}
           </div>
           <div className="flex justify-end">
             {!readOnly ? (
-              <motion.button onClick={handleSaveScores}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]"
-                style={{ background: `linear-gradient(135deg, ${ADMIN_COLORS.green}, #16A34A)`, color: '#0A0A0A' }}
-                whileHover={{ scale: 1.02, filter: 'brightness(1.1)' }} whileTap={{ scale: 0.97 }}>
+              <button onClick={handleSaveScores} className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]" style={{ background: 'rgb(var(--success-fill))', color: 'rgb(var(--success-on))' }}>
                 <Save className="w-4 h-4" /> Save & Lock Scores
-              </motion.button>
+              </button>
             ) : (
-              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--fg-muted)' }}>
+              <div className="flex items-center gap-2 text-sm text-fg-muted">
                 <Lock className="w-4 h-4" />
                 {isLocked ? 'Scores are saved and locked' : 'This competition has closed'}
               </div>

@@ -1,0 +1,98 @@
+/*
+ * Pickers and their popovers (design-language PLAN §6 "Menu, Popover"): the
+ * competition picker in the masthead and the listbox dropdowns. Square, the
+ * hairline, the overlay surface; the trigger reads like a field (tag label,
+ * value, chevron). Keyboard behaviour stays in each component.
+ */
+.ui-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--control-h);
+  max-width: 15rem;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: rgb(var(--surface-sunken));
+  box-shadow: inset 0 0 0 var(--ring) var(--line-strong);
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow var(--dur-2) var(--ease);
+}
+.ui-picker:hover:not(:disabled) { transform: none; box-shadow: inset 0 0 0 var(--ring) var(--fg-secondary); }
+.ui-picker[aria-expanded='true'] { box-shadow: inset 0 calc(-1 * var(--rule)) 0 0 rgb(var(--accent)), inset 0 0 0 var(--ring) var(--line-strong); }
+.ui-picker:disabled { opacity: 0.55; cursor: not-allowed; }
+.ui-picker__text { display: grid; gap: 2px; min-width: 0; }
+.ui-picker__label { color: var(--fg-secondary); font-size: 10.5px; }
+.ui-picker__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.ui-picker__chevron { width: 14px; height: 14px; flex: none; color: var(--fg-secondary); transition: transform var(--dur-2) var(--ease); }
+.ui-picker[aria-expanded='true'] .ui-picker__chevron { transform: rotate(180deg); }
+
+.ui-popover {
+  position: absolute;
+  z-index: var(--z-popover);
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  min-width: 14rem;
+  border-radius: var(--radius-control);
+  background: rgb(var(--surface-overlay));
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-lg, 0 18px 40px rgb(0 0 0 / 0.35));
+  color: var(--fg);
+  overflow: hidden;
+}
+.ui-popover--wide { width: min(20rem, calc(100vw - 2 * var(--pad))); }
+.ui-popover__title { margin: 0; padding: 12px 14px 10px; color: rgb(var(--accent-fg)); box-shadow: inset 0 -1px 0 var(--line); }
+.ui-popover__search { padding: 10px; box-shadow: inset 0 -1px 0 var(--line); }
+.ui-popover__clear {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 0; background: transparent; color: var(--fg-secondary); cursor: pointer;
+}
+.ui-popover__clear:hover { transform: translateY(-50%); color: var(--fg); }
+.ui-popover__list { max-height: 15rem; overflow-y: auto; }
+.ui-popover__empty { margin: 0; padding: 24px 14px; text-align: center; color: var(--fg-secondary); }
+.ui-popover__option {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 0 -1px 0 var(--line);
+  transition: background-color var(--dur-1) var(--ease);
+}
+.ui-popover__option:last-child { box-shadow: none; }
+.ui-popover__option:hover:not(:disabled) { transform: none; background: rgb(var(--surface-raised)); }
+.ui-popover__option[aria-selected='true'] { background: rgb(var(--surface-raised)); box-shadow: inset var(--rule) 0 0 0 rgb(var(--accent)), inset 0 -1px 0 var(--line); }
+.ui-popover__option:disabled { opacity: 0.55; cursor: not-allowed; }
+.ui-popover__option:focus-visible { outline-offset: calc(-1 * var(--focus-width)); }
+.ui-popover__option-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+.ui-popover__foot { box-shadow: inset 0 1px 0 var(--line); }
+.ui-popover__busy {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 22px;
+  border-radius: var(--radius-panel);
+  background: rgb(var(--surface-overlay));
+  box-shadow: inset 0 var(--rule) 0 0 rgb(var(--accent)), inset 0 0 0 1px var(--line);
+  color: var(--fg);
+}
+
+/* The dropdown's trigger fills its column and reads like a field. */
+.ui-picker--field { width: 100%; max-width: none; justify-content: space-between; padding: 0 14px; }
+.ui-picker--field .ui-picker__value { font-size: var(--type-input-size); font-weight: 400; }
+@media (min-width: 1024px) and (pointer: fine) {
+  .ui-picker--field { min-height: var(--control-h-mouse); }
+  .ui-picker--field .ui-picker__value { font-size: var(--type-input-size-mouse); }
+}
+.ui-picker--empty .ui-picker__value { color: var(--fg-muted); }
+.ui-picker--error { box-shadow: inset var(--rule) 0 0 0 rgb(var(--danger-fg)), inset 0 0 0 var(--ring) rgb(var(--danger-fg)); }
+.ui-popover--fill { left: 0; right: 0; min-width: 0; }
+.ui-popover--fill .ui-popover__list { max-height: 280px; }

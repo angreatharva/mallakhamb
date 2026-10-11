@@ -14,11 +14,11 @@ import { FG } from '@/styles/tokens';
 
 const LEVELS = [
   { level: 0, label: '', color: '' },
-  { level: 1, label: 'Weak', color: '#EF4444', fg: FG.danger },
-  { level: 2, label: 'Fair', color: '#F59E0B', fg: FG.warning },
-  { level: 3, label: 'Good', color: '#10B981', fg: FG.success },
-  { level: 4, label: 'Strong', color: '#10B981', fg: FG.success },
-  { level: 5, label: 'Very Strong', color: '#059669', fg: FG.success },
+  { level: 1, label: 'Weak', color: 'rgb(var(--danger-fg))', fg: FG.danger },
+  { level: 2, label: 'Fair', color: 'rgb(var(--warning-fg))', fg: FG.warning },
+  { level: 3, label: 'Good', color: 'rgb(var(--success-fg))', fg: FG.success },
+  { level: 4, label: 'Strong', color: 'rgb(var(--success-fg))', fg: FG.success },
+  { level: 5, label: 'Very Strong', color: 'rgb(var(--success-fg))', fg: FG.success },
 ];
 
 export const PasswordStrengthIndicator = ({ password, minLength = 8, strongLength = 12 }) => {

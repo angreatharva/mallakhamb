@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { publicAPI } from '@/services/index.js';
-import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
-import { FadeIn } from '@/components/design-system';
-import { useReducedMotion } from '@/hooks/useResponsive';
 import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRules';
+import { EmptyState, ErrorState, Heading, Panel, Tag, TextLink } from '@/components/ui';
+import { RankBadge, SkeletonRow } from '@/components/scores/PlayerRankingBoard';
 
 // ─── Design constants ─────────────────────────────────────────────────────────
 const COMP_TYPE_LABELS = {
@@ -20,39 +18,11 @@ const COMP_TYPE_SUBLABELS = {
   competition_3: 'Apparatus Championship',
 };
 
-const RANK_COLORS = {
-  1: { bg: 'rgba(245,166,35,0.15)', border: 'rgba(245,166,35,0.4)', text: DATA_COLORS.gold, glow: 'rgba(245,166,35,0.2)' },
-  2: { bg: 'rgba(192,192,192,0.10)', border: 'rgba(192,192,192,0.35)', text: DATA_COLORS.silver, glow: 'rgba(192,192,192,0.1)' },
-  3: { bg: 'rgba(205,127,50,0.12)', border: 'rgba(205,127,50,0.35)', text: DATA_COLORS.bronze, glow: 'rgba(205,127,50,0.1)' },
-};
-
-// ─── Rank Badge ───────────────────────────────────────────────────────────────
-const RankBadge = ({ rank }) => {
-  const c = RANK_COLORS[rank];
-  if (c) {
-    return (
-      <div className="w-9 h-9 rounded-full flex items-center justify-center border text-sm font-black flex-shrink-0"
-        style={{ background: c.bg, borderColor: c.border, color: c.text }}>
-        {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
-      </div>
-    );
-  }
-  return (
-    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-      style={{ background: 'rgb(var(--ink) / 0.05)', color: 'var(--fg-muted)' }}>
-      {rank}
-    </div>
-  );
-};
-
-// ─── Score Pill ───────────────────────────────────────────────────────────────
-const ScorePill = ({ label, value, accent }) => (
-  <div className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl"
-    style={{ background: `${alpha(accent, 0x12)}`, border: `1px solid ${alpha(accent, 0x25)}` }}>
-    <span className="text-xs font-bold tabular-nums" style={{ color: accent }}>
-      {typeof value === 'number' ? value.toFixed(2) : (value ?? '—')}
-    </span>
-    <span className="text-[10px] leading-tight" style={{ color: 'var(--fg-muted)' }}>{label}</span>
+// ─── Score part (the results board's anatomy) ─────────────────────────────────
+const ScorePart = ({ label, value, tone }) => (
+  <div className="sb-part" data-tone={tone}>
+    <span className="sb-part__value">{typeof value === 'number' ? value.toFixed(2) : (value ?? '—')}</span>
+    <span className="sb-part__label type-tag">{label}</span>
   </div>
 );
 
@@ -71,114 +41,58 @@ const parseBreakdown = (player) => {
   };
 };
 
-// ─── Skeleton row ─────────────────────────────────────────────────────────────
-const SkeletonRow = () => (
-  <div className="flex items-center gap-4 p-4 rounded-2xl border animate-pulse"
-    style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.05)' }}>
-    <div className="w-9 h-9 rounded-full flex-shrink-0" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
-    <div className="flex-1 space-y-2">
-      <div className="h-3 rounded-full w-1/3" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
-      <div className="h-2 rounded-full w-1/4" style={{ background: 'rgb(var(--ink) / 0.04)' }} />
-    </div>
-    <div className="h-8 w-16 rounded-xl" style={{ background: 'rgb(var(--ink) / 0.06)' }} />
-  </div>
-);
-
 // ─── Player Score Row ─────────────────────────────────────────────────────────
-const PlayerScoreRow = ({ player, rank, highlightPlayerId, index, apparatus }) => {
+const PlayerScoreRow = ({ player, rank, highlightPlayerId, apparatus }) => {
   const [expanded, setExpanded] = useState(false);
-  const reduced = useReducedMotion();
   const isHighlighted = highlightPlayerId && String(player.playerId) === String(highlightPlayerId);
-  const rc = RANK_COLORS[rank];
   const breakdown = parseBreakdown(player);
 
   return (
-    <motion.div
-      initial={reduced ? false : { opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.3 }}
-      className="rounded-2xl border overflow-hidden"
-      style={{
-        background: isHighlighted
-          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgb(var(--ink) / 0.02))`
-          : rc
-          ? `linear-gradient(135deg, ${rc.bg}, rgb(var(--ink) / 0.01))`
-          : 'rgb(var(--ink) / 0.02)',
-        borderColor: isHighlighted
-          ? `${alpha(COLORS.saffron, 0x40)}`
-          : rc
-          ? rc.border
-          : 'rgb(var(--ink) / 0.07)',
-        boxShadow: rc ? `0 0 20px ${rc.glow}` : 'none',
-      }}
+    <article
+      className="sb-card ui-fade-in"
+      data-place={rank >= 1 && rank <= 3 ? rank : undefined}
+      data-podium={isHighlighted || undefined}
     >
       <button
         type="button"
-        className="w-full flex items-center gap-3 p-3.5 text-left"
+        className="sb-team__toggle"
         onClick={() => setExpanded(v => !v)}
         aria-expanded={expanded}
       >
-        <RankBadge rank={rank} />
-        <div className="flex-1 min-w-0">
+        <RankBadge rank={rank} compact />
+        <div className="flex-1 min-w-0 grid gap-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-ink font-bold text-sm truncate">{player.playerName}</p>
-            {isHighlighted && (
-              <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-                style={{ background: `${alpha(COLORS.saffron, 0x20)}`, color: FG.brandSoft }}>You</span>
-            )}
-            {!player.isFinalized && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: 'rgb(var(--ink) / 0.06)', color: 'var(--fg-muted)' }}>Pending</span>
-            )}
+            <p className="sb-card__name truncate">{player.playerName}</p>
+            {isHighlighted && <Tag tone="execution">You</Tag>}
+            {!player.isFinalized && <Tag>Pending</Tag>}
           </div>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
+          <p className="sb-card__meta">
             {player.teamName || ''}
             {apparatus ? ` · ${apparatus}` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="text-right">
-            <p className="text-lg font-black tabular-nums"
-              style={{ color: isHighlighted ? FG.brand : rc ? rc.text : FG.ink }}>
-              {player.isFinalized ? Number(player.finalScore || 0).toFixed(2) : '—'}
-            </p>
-            <p className="text-[10px]" style={{ color: 'var(--fg-muted)' }}>score</p>
-          </div>
-          {expanded
-            ? <ChevronUp className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
-            : <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: 'rgb(var(--ink) / 0.3)' }} />
-          }
+        <div className="sb-card__total">
+          <p className="sb-card__score type-num-m">
+            {player.isFinalized ? Number(player.finalScore || 0).toFixed(2) : '—'}
+          </p>
+          <p className="sb-card__score-label type-tag">Score</p>
         </div>
+        <ChevronDown className="sb-team__chevron" aria-hidden="true" />
       </button>
 
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: 'rgb(var(--ink) / 0.06)' }}>
-              <p className="text-[10px] font-bold tracking-widest uppercase mt-3 mb-2"
-                style={{ color: 'var(--fg-muted)' }}>Score Breakdown (Average)</p>
-              <div className="flex flex-wrap gap-2">
-                <ScorePill label="Difficulty" value={breakdown.difficulty} accent={DATA_COLORS.blue} />
-                <ScorePill label="Combination" value={breakdown.combination} accent={DATA_COLORS.purple} />
-                <ScorePill label="Execution" value={breakdown.execution} accent={FG.brand} />
-                <ScorePill label="Originality" value={breakdown.bonus} accent={DATA_COLORS.green} />
-              </div>
-              {breakdown.used > 0 && (
-                <p className="text-[10px] mt-2" style={{ color: 'var(--fg-muted)' }}>
-                  {describeSlipAverage(breakdown)}
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+      {expanded && (
+        <div className="sb-card__breakdown ui-fade-in">
+          <p className="sb-card__breakdown-title type-tag">Score Breakdown (Average)</p>
+          <div className="sb-parts">
+            <ScorePart label="Difficulty" value={breakdown.difficulty} tone="difficulty" />
+            <ScorePart label="Combination" value={breakdown.combination} tone="combination" />
+            <ScorePart label="Execution" value={breakdown.execution} tone="execution" />
+            <ScorePart label="Originality" value={breakdown.bonus} tone="originality" />
+          </div>
+          {breakdown.used > 0 && <p className="sb-card__note">{describeSlipAverage(breakdown)}</p>}
+        </div>
+      )}
+    </article>
   );
 };
 
@@ -196,12 +110,9 @@ const ApparatusSection = ({ apparatus, players, highlightPlayerId, selfOnly = fa
 
   return (
     <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-full"
-          style={{ background: 'rgb(var(--ink) / 0.06)', color: 'var(--fg-muted)', border: '1px solid rgb(var(--ink) / 0.1)' }}>
-          {apparatus}
-        </span>
-        <span className="text-xs" style={{ color: 'var(--fg-muted)' }}>
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <span className="sb-app__name">{apparatus}</span>
+        <span className="type-caption text-fg-muted">
           {selfOnly
             ? `Rank #${displayPlayers[0]?.rank} out of ${sorted.length} competitors`
             : `${sorted.filter(p => p.isFinalized).length} / ${sorted.length} finalized`}
@@ -213,7 +124,6 @@ const ApparatusSection = ({ apparatus, players, highlightPlayerId, selfOnly = fa
             key={`${player.playerId}-${idx}`}
             player={player}
             rank={player.rank}
-            index={idx}
             apparatus={null}
             highlightPlayerId={highlightPlayerId}
           />
@@ -253,7 +163,6 @@ const PerformancePanel = ({
   const [scoresByApparatus, setScoresByApparatus] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const reduced = useReducedMotion();
 
   // Set initial active tab when competitionTypes change
   useEffect(() => {
@@ -334,106 +243,66 @@ const PerformancePanel = ({
   });
 
   return (
-    <FadeIn delay={0.05}>
-      <div className="rounded-3xl border overflow-hidden"
-        style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x28)}` }}>
-              <TrendingUp className="w-5 h-5" style={{ color: FG.brand }} aria-hidden="true" />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-ink">{title}</h2>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--fg-muted)' }}>
-                Live scores · updates as judges submit
-              </p>
-            </div>
-          </div>
-
-          {/* Tab strip */}
-          <div className="flex gap-2 flex-wrap">
-            {competitionTypes.map(ct => {
-              const isActive = activeTab === ct;
-              return (
-                <button
-                  key={ct}
-                  type="button"
-                  onClick={() => setActiveTab(ct)}
-                  className="flex flex-col items-start px-4 py-2.5 rounded-xl border transition-all duration-200 min-h-[44px]"
-                  style={{
-                    background: isActive ? `${alpha(COLORS.saffron, 0x15)}` : 'rgb(var(--ink) / 0.03)',
-                    borderColor: isActive ? `${alpha(COLORS.saffron, 0x50)}` : 'rgb(var(--ink) / 0.08)',
-                    color: isActive ? FG.brandSoft : 'var(--fg-muted)',
-                  }}
-                >
-                  <span className="text-sm font-bold leading-tight">
-                    {COMP_TYPE_LABELS[ct] || ct}
-                  </span>
-                  <span className="text-[10px] leading-tight text-fg-muted hidden sm:block">
-                    {COMP_TYPE_SUBLABELS[ct] || ''}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+    <Panel flush className="overflow-hidden ui-fade-in">
+      {/* Header */}
+      <div className="px-[clamp(16px,2.4vw,28px)] pt-6 pb-4 border-b border-line">
+        <div className="grid gap-1 mb-4">
+          <Heading level={2} step="display-s">{title}</Heading>
+          <p className="type-caption text-fg-muted m-0">Live scores · updates as judges submit</p>
         </div>
 
-        {/* Body */}
-        <div className="p-6">
-          <AnimatePresence mode="wait">
-            {loading ? (
-              <motion.div key="loading"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <div className="space-y-3">
-                  {[...Array(4)].map((_, i) => <SkeletonRow key={i} />)}
-                </div>
-              </motion.div>
-            ) : error ? (
-              <motion.div key="error"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="rounded-2xl border p-8 text-center"
-                style={{ background: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.2)' }}>
-                <p className="text-sm font-semibold" style={{ color: FG.danger }}>{error}</p>
-                <button type="button" onClick={() => fetchScoresForTab(activeTab)}
-                  className="mt-3 text-xs underline" style={{ color: 'var(--fg-muted)' }}>
-                  Try again
-                </button>
-              </motion.div>
-            ) : !hasScores ? (
-              <motion.div key="empty"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="rounded-2xl border p-10 text-center"
-                style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.06)' }}>
-                <Trophy className="w-12 h-12 mx-auto mb-3 text-ink/15" aria-hidden="true" />
-                <p className="text-fg-muted font-semibold text-sm">{emptyLabel}</p>
-                <p className="text-fg-muted text-xs mt-1">
-                  Scores appear here once judges finalize results.
-                </p>
-              </motion.div>
-            ) : (
-              <motion.div key={activeTab}
-                initial={reduced ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}>
-                {Object.entries(scoresByApparatus).map(([apparatus, players]) => (
-                  <ApparatusSection
-                    key={apparatus}
-                    apparatus={apparatus}
-                    players={players}
-                    highlightPlayerId={highlightPlayerId}
-                    selfOnly={selfOnly}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        {/* Competition types: a pressed-button strip, as before */}
+        <div className="flex gap-2 flex-wrap">
+          {competitionTypes.map(ct => {
+            const isActive = activeTab === ct;
+            return (
+              <button
+                key={ct}
+                type="button"
+                onClick={() => setActiveTab(ct)}
+                aria-pressed={isActive}
+                className="perf-tab"
+              >
+                <span className="perf-tab__label">{COMP_TYPE_LABELS[ct] || ct}</span>
+                <span className="perf-tab__sub hidden sm:block">{COMP_TYPE_SUBLABELS[ct] || ''}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
-    </FadeIn>
+
+      {/* Body */}
+      <div className="p-[clamp(16px,2.4vw,28px)]">
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => <SkeletonRow key={i} />)}
+          </div>
+        ) : error ? (
+          <ErrorState
+            tag="Could not load"
+            action={<TextLink as="button" type="button" onClick={() => fetchScoresForTab(activeTab)}>Try again</TextLink>}
+          >
+            {error}
+          </ErrorState>
+        ) : !hasScores ? (
+          <EmptyState tag={emptyLabel}>
+            Scores appear here once judges finalize results.
+          </EmptyState>
+        ) : (
+          <div key={activeTab} className="ui-fade-in">
+            {Object.entries(scoresByApparatus).map(([apparatus, players]) => (
+              <ApparatusSection
+                key={apparatus}
+                apparatus={apparatus}
+                players={players}
+                highlightPlayerId={highlightPlayerId}
+                selfOnly={selfOnly}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </Panel>
   );
 };
 

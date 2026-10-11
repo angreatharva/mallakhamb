@@ -1,33 +1,16 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Mail, Send, Sparkles } from 'lucide-react';
+import { Send } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, useInView } from 'framer-motion';
 import { authAPI } from '@/services/api';
 import { validateEmailFormat } from '@/validators/form.validator';
 import { portalFromSearch, accountTypeFor, loginPathFor, withPortal } from './resetPortal';
 import { logger } from '@/infrastructure/logger';
-import BHALogo from '../../assets/BHA.png';
-import { COLORS, EASE_OUT, FG, alpha } from '../../styles/tokens';
-import { GradientText } from '@/components/design-system';
-import { useReducedMotion } from '@/hooks/useResponsive';
-import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
+import { Button, Field, Input, Notice, TextLink } from '@/components/ui';
+import { AuthLayout, AuthHeader, AuthLinks } from '@/components/shell';
 
-const StyledInput = ({ error, ...props }) => (
-  <input
-    className="w-full px-4 py-3 rounded-xl text-ink text-base mouse:text-sm transition-all duration-200 min-h-[48px] placeholder:text-ink/25"
-    style={{
-      background: 'rgb(var(--ink) / 0.05)',
-      border: `1px solid ${error ? '#EF4444' : COLORS.darkBorderSubtle}`,
-      caretColor: COLORS.saffron,
-    }}
-    onFocus={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.saffron; e.target.style.boxShadow = `0 0 0 3px ${error ? '#EF444420' : `${alpha(COLORS.saffron, 0x20)}`}`; }}
-    onBlur={e => { e.target.style.borderColor = error ? '#EF4444' : COLORS.darkBorderSubtle; e.target.style.boxShadow = 'none'; }}
-    {...props}
-  />
-);
-
+const PORTAL_NAME = { player: 'Player', coach: 'Coach', admin: 'Admin', superadmin: 'Super Admin', judge: 'Judge' };
 
 const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
@@ -36,9 +19,6 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const portal = portalFromSearch(location.search);
-  const reduced = useReducedMotion();
-  const cardRef = useRef(null);
-  const cardInView = useInView(cardRef, { once: true });
 
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -69,161 +49,61 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div
-      className="min-h-dvh flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden"
-      style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}
+    <AuthLayout
+      role={portal}
+      title={PORTAL_NAME[portal] || 'Account'}
+      lede="Locked out? A one-time code to your email gets you back in."
     >
-      <AmbientOrbs
-        intensity={ORB_INTENSITY.warm}
-        orbs={[
-          { x: 15, y: 20, size: 400, color: COLORS.saffron, delay: 0, duration: 7, blur: 120 },
-          { x: 85, y: 70, size: 300, color: COLORS.gold, delay: 2, duration: 9, blur: 100 },
-        ]}
+      <AuthHeader
+        tag="Password reset"
+        title="Forgot Password?"
+        lede="Enter your email and we'll send you a one-time code to reset your password."
       />
 
-      {!reduced && (
-        <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none opacity-[0.04]"
-          style={{
-            backgroundImage: `linear-gradient(${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px), linear-gradient(90deg, ${alpha(COLORS.saffron, 0x80)} 1px, transparent 1px)`,
-            backgroundSize: '50px 50px',
-            transform: 'perspective(400px) rotateX(60deg)',
-            transformOrigin: 'bottom center',
-          }}
-        />
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-5">
+        <Field id="email" label="Email Address" required error={errors.email?.message}>
+          <Input
+            {...register('email', {
+              required: 'Email is required',
+              validate: v => validateEmailFormat(v) || 'Please enter a valid email address',
+            })}
+            type="email" autoComplete="email"
+            placeholder="you@example.com"
+            disabled={loading || sent}
+          />
+        </Field>
+
+        <Button type="submit" size="lg" block loading={loading} disabled={sent} icon={loading || sent ? null : Send}>
+          {loading ? 'Sending OTP…' : sent ? 'OTP Sent — Redirecting…' : 'Send OTP'}
+        </Button>
+
+        {loading && (
+          <Notice tone="info" className="ui-fade-in">
+            This may take a moment if the server is starting up.
+          </Notice>
+        )}
+      </form>
+
+      {sent && (
+        <Notice tone="success" title="If that email has an account, a 6-digit code is on its way" role="status" aria-live="polite" className="ui-fade-in">
+          Redirecting to reset page…
+        </Notice>
       )}
 
-      {/* Logo */}
-      <motion.div className="mb-8 flex items-center gap-3"
-        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: EASE_OUT }}>
-        <Link to="/" aria-label="Back to home">
-          <img src={BHALogo} alt="BHA Logo" className="h-12 w-auto object-contain" />
-        </Link>
-        <div>
-          <p className="text-xs font-bold tracking-widest uppercase" style={{ color: FG.brand }}>Bhausaheb Ranade</p>
-          <p className="text-ink text-sm font-bold leading-tight">Mallakhamb Competition</p>
-        </div>
-      </motion.div>
+      {error && !sent && (
+        <Notice tone="danger" role="alert" aria-live="assertive" className="ui-fade-in">
+          {error}
+        </Notice>
+      )}
 
-      {/* Card */}
-      <motion.div ref={cardRef} className="w-full max-w-md relative z-10"
-        initial={{ opacity: 0, y: 40, scale: 0.97 }}
-        animate={cardInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-        transition={{ duration: 0.65, ease: EASE_OUT }}>
-        <div className="rounded-3xl p-8 border" style={{
-          background: 'rgb(var(--ink) / 0.03)', backdropFilter: 'blur(24px)',
-          borderColor: COLORS.darkBorder,
-          boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.darkBorderSubtle}`,
-        }}>
-          {/* Icon + heading */}
-          <div className="text-center mb-8">
-            <motion.div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 mx-auto"
-              style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${COLORS.darkBorder}` }}
-              initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2, type: 'spring', stiffness: 300, damping: 20 }}>
-              <Mail className="w-7 h-7" style={{ color: FG.brand }} aria-hidden="true" />
-            </motion.div>
-            <h1 className="text-2xl font-black text-ink mb-2">
-              Forgot <GradientText>Password?</GradientText>
-            </h1>
-            <p className="text-fg-muted text-sm leading-relaxed">
-              Enter your email and we&apos;ll send you a one-time code to reset your password.
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <div className="mb-5">
-              <label htmlFor="email" className="block text-sm font-semibold text-ink/70 mb-2">
-                Email Address <span style={{ color: FG.brand }} aria-hidden="true">*</span>
-              </label>
-              <StyledInput
-                {...register('email', {
-                  required: 'Email is required',
-                  validate: v => validateEmailFormat(v) || 'Please enter a valid email address',
-                })}
-                id="email" type="email" autoComplete="email"
-                placeholder="you@example.com"
-                disabled={loading || sent}
-                error={!!errors.email}
-                aria-describedby={errors.email ? 'email-error' : undefined}
-                aria-invalid={!!errors.email}
-              />
-              {errors.email && (
-                <motion.p id="email-error" role="alert" className="mt-2 text-xs font-medium"
-                  style={{ color: FG.danger }}
-                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}>
-                  {errors.email.message}
-                </motion.p>
-              )}
-            </div>
-
-            <motion.button
-              type="submit" disabled={loading || sent}
-              className="w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm min-h-[48px] px-6 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: `linear-gradient(135deg, ${COLORS.saffron}, ${COLORS.saffronDark})`, color: '#0A0A0A' }}
-              whileHover={!loading && !sent ? { scale: 1.02 } : {}}
-              whileTap={!loading && !sent ? { scale: 0.97 } : {}}>
-              {loading ? (
-                <>
-                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink" />
-                  Sending OTP…
-                </>
-              ) : sent ? (
-                <><Sparkles className="w-4 h-4" aria-hidden="true" /> OTP Sent — Redirecting…</>
-              ) : (
-                <><Send className="w-4 h-4" aria-hidden="true" /> Send OTP</>
-              )}
-            </motion.button>
-
-            {loading && (
-              <motion.div className="mt-4 p-3 rounded-xl border text-xs text-fg-muted flex items-center gap-2"
-                style={{ background: `${alpha(COLORS.saffron, 0x0A)}`, borderColor: `${alpha(COLORS.saffron, 0x20)}` }}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
-                <Mail className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brandSoft }} aria-hidden="true" />
-                This may take a moment if the server is starting up.
-              </motion.div>
-            )}
-          </form>
-
-          {sent && (
-            <motion.div className="mt-5 p-4 rounded-xl border"
-              style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }} role="status" aria-live="polite">
-              <p className="text-sm font-semibold text-green-700 dark:text-green-400">If that email has an account, a 6-digit code is on its way</p>
-              <p className="text-xs text-green-700 dark:text-green-400/70 mt-1">Redirecting to reset page…</p>
-            </motion.div>
-          )}
-
-          {error && !sent && (
-            <motion.div className="mt-5 p-4 rounded-xl border"
-              style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' }}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }} role="alert" aria-live="assertive">
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-            </motion.div>
-          )}
-
-          {/* Footer links */}
-          <div className="mt-8 pt-6 border-t flex flex-col items-center gap-3" style={{ borderColor: COLORS.darkBorderSubtle }}>
-            <p className="text-sm text-fg-muted">
-              Remember your password?{' '}
-              <Link to={loginPathFor(portal)} className="font-semibold underline underline-offset-2 transition-colors duration-200 hover:opacity-80"
-                style={{ color: FG.brandSoft }}>
-                Back to Login
-              </Link>
-            </p>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition-colors duration-200 min-h-[44px]">
-              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </motion.div>
-    </div>
+      <AuthLinks>
+        <TextLink as={Link} to="/" className="ui-link--quiet">← Back to Home</TextLink>
+        <span className="shell-auth__links-end">
+          <span className="type-body-s">Remember your password?</span>
+          <TextLink as={Link} to={loginPathFor(portal)}>Back to Login</TextLink>
+        </span>
+      </AuthLinks>
+    </AuthLayout>
   );
 };
 

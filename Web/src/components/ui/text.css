@@ -1,0 +1,94 @@
+/*
+ * Heading, Tag, StatusTag, Stat, SpecList (design-language PLAN §6).
+ * Type comes from the `type-*` steps; this file only adds colour and anatomy.
+ */
+.ui-heading { margin: 0; color: var(--fg); }
+/* Names and other stored values keep their case in a display step (beats the type utility). */
+.ui-heading.ui-heading--as-is { text-transform: none; }
+
+/* The stinger (stage screens only): a saffron bar wipes across the heading. */
+.ui-sting { position: relative; display: inline-block; }
+.ui-sting__bar {
+  position: absolute;
+  inset: -0.04em -0.1em 0.06em;
+  background: rgb(var(--accent));
+  transform-origin: right center;
+  animation: ui-sting var(--dur-4) var(--ease-cut) both;
+  pointer-events: none;
+}
+@keyframes ui-sting {
+  0% { transform: scaleX(0); transform-origin: left center; }
+  45% { transform: scaleX(1); transform-origin: left center; }
+  55% { transform: scaleX(1); transform-origin: right center; }
+  100% { transform: scaleX(0); transform-origin: right center; }
+}
+@media (prefers-reduced-motion: reduce) { .ui-sting__bar { display: none; } }
+
+/* Tags are square and always text (a role is never colour alone). */
+.ui-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: var(--radius-control);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--fg-secondary);
+  white-space: nowrap;
+  /* A tag is as wide as its text, even as a grid item (grids stretch by default). */
+  justify-self: start;
+  max-width: 100%;
+}
+.ui-tag--accent { color: rgb(var(--accent-fg)); box-shadow: inset 0 0 0 1px rgb(var(--accent-fg) / 0.5); }
+.ui-tag--ident { color: rgb(var(--ident-fg)); box-shadow: inset 0 0 0 1px rgb(var(--ident-fg) / 0.5); }
+.ui-tag--solid { color: rgb(var(--on-ident)); background: rgb(var(--ident)); box-shadow: none; }
+
+/* Status: a square tinted tag, always text. Never a filled pill. */
+.ui-status { box-shadow: none; }
+.ui-status--success { color: rgb(var(--success-fg)); background: var(--success-tint); }
+.ui-status--warning { color: rgb(var(--warning-fg)); background: var(--warning-tint); }
+.ui-status--danger { color: rgb(var(--danger-fg)); background: var(--danger-tint); }
+.ui-status--info { color: rgb(var(--info-fg)); background: var(--info-tint); }
+.ui-status::before { content: ''; width: 6px; height: 6px; background: currentColor; flex: none; }
+
+/* Stat: tag label, a number that is the point, a unit in the accent. */
+.ui-stat { display: grid; gap: 6px; }
+.ui-stat__label { color: var(--fg-secondary); overflow-wrap: anywhere; }
+.ui-stat__value { color: var(--fg); }
+.ui-unit { font-size: 0.56em; color: rgb(var(--accent-fg)); margin-left: 0.15em; }
+.ui-stat__hint { margin: 0; color: var(--fg-secondary); }
+
+/* SpecList: label left, value right, hairline rows (Home's spec sheet). */
+.ui-spec { margin: 0; border-top: 1px solid var(--line); }
+.ui-spec__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 16px;
+  padding: 11px 0 9px;
+  border-bottom: 1px solid var(--line);
+}
+.ui-spec__label { color: var(--fg-secondary); }
+.ui-spec__value { margin: 0; color: var(--fg); text-align: right; }
+
+/* TextLink: underlined accent text; the target grows to 44px on touch. */
+.ui-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: rgb(var(--accent-fg));
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: color var(--dur-2) var(--ease);
+}
+.ui-link:hover { color: var(--fg); text-decoration-thickness: 2px; }
+.ui-link--quiet { color: var(--fg-secondary); }
+@media (min-width: 1024px) and (pointer: fine) { .ui-link { min-height: 32px; } }
+
+/* A quiet line saying what a list shows ("Team rankings for: …"): the rule, no tint. */
+.info-line { margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius-control); background: rgb(var(--surface-sunken)); box-shadow: inset var(--rule) 0 0 0 var(--line-strong); font-size: 14px; color: var(--fg-secondary); }
+/* The judge's live connection: the status square pulses while connected (off for reduced motion). */
+.live-dot--on::before { animation: ui-pulse 1.6s var(--ease-in-out) infinite; }
+@media (prefers-reduced-motion: reduce) { .live-dot--on::before { animation: none; } }

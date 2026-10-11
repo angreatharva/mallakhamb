@@ -114,11 +114,17 @@ IntelliSense only — no `tsconfig.json`/`jsconfig.json` anywhere in
 ## npm scripts — dev/build/lint/test only (seed/e2e/audit scripts are in [15-E2E-AND-SEEDING.md](15-E2E-AND-SEEDING.md))
 
 ```
+looks          node scripts/build-looks.mjs          (compile look packs → src/styles/generated/; see 05-DESIGN-SYSTEM)
+looks:check    node scripts/build-looks.mjs --check  (exit 1 if the generated files are stale)
+predev         = looks                                (so dev/build never run on stale tokens)
 dev            vite
 dev:host       vite --host 0.0.0.0
+prebuild       = looks
 build          vite build
 lint           eslint .                  (reports everything, incl. warn-level design-token rules)
 lint:ci        eslint . --quiet          (errors only — the CI-facing gate, though nothing runs it automatically)
+fonts:metrics  node scripts/font-metrics.mjs  (re-measure the metric-matched fallbacks → src/styles/fonts-fallback.css; only when a font file changes)
+lint:ratchet   node scripts/lint-ratchet.mjs  (warnings per rule may not rise above lint-baseline.json; `-- --update` after a reduction)
 preview        vite preview
 test           vitest run
 test:coverage  vitest run --coverage

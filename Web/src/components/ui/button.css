@@ -1,0 +1,78 @@
+/*
+ * Button and IconButton (design-language PLAN §6). Tokens only: no hex value,
+ * font name or look id here, so every look restyles them from its pack.
+ *
+ * Base rules are single classes, never :where(): Tailwind's preflight resets
+ * button and input padding, font and colour with element selectors, which a
+ * zero-specificity rule loses to. Pages put layout on a wrapper, not on the
+ * primitive (decision D11).
+ * 44px on touch (--control-h), compact with a mouse (--control-h-mouse) — the
+ * same split as `.tap-safe` / `mouse:`.
+ */
+.ui-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-h);
+  min-width: var(--control-h);
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-control);
+  font-family: var(--type-button-family);
+  font-weight: var(--type-button-weight);
+  font-size: var(--type-button-size);
+  line-height: var(--type-button-leading);
+  letter-spacing: var(--type-button-tracking);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-2) var(--ease),
+    color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+@media (min-width: 1024px) and (pointer: fine) {
+  .ui-btn { min-height: var(--control-h-mouse); min-width: var(--control-h-mouse); }
+  .ui-btn--lg { min-height: var(--control-h); }
+}
+.ui-btn--sm { padding: 0 12px; }
+.ui-btn--lg { padding: 0 24px; }
+.ui-btn--block { display: flex; width: 100%; }
+
+/* Press 1px; never scale (§5.6). Beats index.css's `button:active` reset. */
+.ui-btn:active:not(:disabled):not([aria-disabled='true']) { transform: translateY(1px); }
+
+/* Solid: the one colour you press. On hover it turns to ink, as Home's does. */
+.ui-btn--solid { background: rgb(var(--accent)); color: rgb(var(--on-accent)); }
+.ui-btn--solid:hover:not(:disabled):not([aria-disabled='true']) { background: rgb(var(--ink)); color: rgb(var(--bg)); }
+.ui-btn--solid:focus-visible { outline-color: rgb(var(--ink)); }
+
+/* Line: an inset ring; it brightens on hover. */
+.ui-btn--line { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 var(--ring) var(--line-strong); }
+.ui-btn--line:hover:not(:disabled):not([aria-disabled='true']) { box-shadow: inset 0 0 0 var(--ring) var(--fg); background: rgb(var(--ink) / 0.1); }
+
+/* Ghost: text only until hovered. */
+.ui-btn--ghost { background: transparent; color: var(--fg); }
+.ui-btn--ghost:hover:not(:disabled):not([aria-disabled='true']) { background: rgb(var(--ink) / 0.08); }
+
+/* Danger: destructive actions, behind a danger dialog. */
+.ui-btn--danger { background: rgb(var(--danger-fill)); color: rgb(var(--danger-on)); }
+.ui-btn--danger:hover:not(:disabled):not([aria-disabled='true']) { background: rgb(var(--ink)); color: rgb(var(--bg)); }
+
+.ui-btn:disabled,
+.ui-btn[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+
+.ui-btn svg { width: 16px; height: 16px; flex: none; }
+
+/* IconButton: a square control with an accessible name. */
+.ui-icon-btn { padding: 0; }
+
+/* Loading: the label stays (its width holds), a spinner sits on top. The
+   label is made transparent, not `visibility: hidden` — that would also drop
+   it from the accessible name, leaving an unnamed button. */
+.ui-btn[aria-busy='true'] { cursor: progress; }
+.ui-btn[aria-busy='true'] > .ui-btn__label { color: transparent; }
+.ui-btn > .ui-spinner { position: absolute; }

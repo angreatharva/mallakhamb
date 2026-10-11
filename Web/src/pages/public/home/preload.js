@@ -1,5 +1,4 @@
-import tekoLatin600 from '@fontsource/teko/files/teko-latin-600-normal.woff2?url';
-import archivoLatin from '@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url';
+import { preloadFirstPaintFonts } from '@/styles/fonts';
 
 /**
  * The landing page's hero photograph (its largest paint). index.html starts the same request with
@@ -16,14 +15,8 @@ export const HERO_IMAGE = {
  * the first screen is set in, in parallel with the app's own boot, instead of after it.
  */
 export function preloadHome() {
-  [tekoLatin600, archivoLatin].forEach((href) => {
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'font';
-    link.type = 'font/woff2';
-    link.crossOrigin = 'anonymous';
-    link.href = href;
-    document.head.appendChild(link);
-  });
+  // The same two files every prime-time first screen preloads, through the same
+  // once-per-page set, so App's loadLookFonts('prime-time') adds no duplicates.
+  preloadFirstPaintFonts();
   import('@/pages/public/Home');
 }

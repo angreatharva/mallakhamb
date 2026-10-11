@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ListOrdered, Users, ChevronDown, ChevronRight, Info, Save } from 'lucide-react';
+import { Users, ChevronDown, ChevronRight, Info, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -10,9 +9,8 @@ import { resolveJudgeSeat } from './useJudgePanelData';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
-import { COLORS, DATA_COLORS, FG, alpha } from '@/styles/tokens';
-import { J } from './judgeShared';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
+import { FG, alpha } from '@/styles/tokens';
+import { J, JudgeHeader } from './judgeShared';
 
 /** Judge roles allowed to set a panel's running order. Mirrors the server's
  *  `SEQUENCE_JUDGE_TYPES` and `requireSequenceManager`; this copy only decides
@@ -216,45 +214,26 @@ const JudgeSequence = () => {
   if (!judgeInfo) return null;
 
   return (
-    <div className="min-h-dvh relative flex flex-col"
-      style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <header className="sticky top-0 z-40 border-b flex-shrink-0"
-        style={{ background: 'rgb(var(--bg) / 0.92)', backdropFilter: 'blur(20px)', borderColor: 'rgba(168,85,247,0.15)' }}>
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/judge/dashboard')}
-            className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
-            aria-label="Back to dashboard">
-            <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
-          </button>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)' }}>
-            <ListOrdered className="w-4 h-4 text-snow" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-ink font-bold text-sm leading-tight truncate">Running Order</p>
-            <p className="text-xs truncate" style={{ color: DATA_COLORS.purpleSoft }}>{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
-          </div>
-          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-            {saving && <span className="text-xs text-fg-muted">Saving…</span>}
-            <AppearanceMenu />
-          </div>
-        </div>
-      </header>
+    <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
+      <JudgeHeader
+        back={{ label: 'Back to dashboard', onClick: () => navigate('/judge/dashboard') }}
+        title="Running Order"
+        subtitle={resolveJudgeSeat(judgeInfo, category)?.judgeType}
+        status={saving ? <span className="type-caption text-fg-muted">Saving…</span> : null}
+      />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
         <div className="rounded-2xl border p-5 mb-6"
-          style={{ background: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.25)' }}>
-          <p className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: DATA_COLORS.purpleSoft }}>Category</p>
+          style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
+          <p className="type-tag mb-2 text-fg-secondary">Category</p>
           <h1 className="text-xl font-black text-ink">
             {categoryParams?.gender} — {categoryParams?.ageGroup}
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
+          <p className="text-sm mt-1 text-fg-muted">
             {COMP_LABEL[category.competitionType] || category.competitionType}
           </p>
           {roster?.lotsDrawnAt && (
-            <p className="text-xs mt-3" style={{ color: 'var(--fg-muted)' }}>
+            <p className="text-xs mt-3 text-fg-muted">
               Lots drawn {new Date(roster.lotsDrawnAt).toLocaleString()}
               {roster.lotsDrawnByName ? ` by ${roster.lotsDrawnByName}` : ''}
             </p>
@@ -296,7 +275,7 @@ const JudgeSequence = () => {
                 return (
                   <div>
                     <div className="flex items-center gap-3">
-                      <OrderBadge lotNo={team.lotNo} position={index} accent={DATA_COLORS.purpleSoft} />
+                      <OrderBadge lotNo={team.lotNo} position={index} accent={'rgb(var(--accent-fg))'} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-ink text-sm truncate">{team.name}</p>
                         <p className="text-xs text-fg-muted truncate">
@@ -317,7 +296,7 @@ const JudgeSequence = () => {
 
                     {isExpanded && (
                       <div className="mt-3 border-l-2" style={{ borderColor: `${alpha(J.purple, 0x30)}` }}>
-                        <p className="text-[10px] font-bold tracking-widest uppercase mb-2 pl-3" style={{ color: DATA_COLORS.purpleSoft }}>
+                        <p className="type-tag mb-2 pl-3 text-fg-secondary">
                           Athlete order
                         </p>
                         <div className="pl-3">
@@ -350,14 +329,9 @@ const JudgeSequence = () => {
             />
 
             <div className="flex justify-end">
-              <motion.button
-                onClick={() => persistTeamOrder(teamsRef.current)}
-                disabled={saving}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-snow min-h-[48px] disabled:opacity-50"
-                style={{ background: `linear-gradient(135deg, ${J.purple}, ${J.purpleDark})` }}
-                whileHover={saving ? {} : { scale: 1.02 }} whileTap={saving ? {} : { scale: 0.97 }}>
+              <button onClick={() => persistTeamOrder(teamsRef.current)} disabled={saving} className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-on-accent min-h-[48px] disabled:opacity-50" style={{ background: 'rgb(var(--accent))' }}>
                 <Save className="w-4 h-4" /> Save Order
-              </motion.button>
+              </button>
             </div>
           </div>
         )}

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Trophy, Users, Calendar, Award, User } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { playerAPI } from '@/services/api';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -9,63 +8,36 @@ import CompetitionDisplay from '@/components/competition/CompetitionDisplay';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
-import { COLORS, FG, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
-import { GradientText, FadeIn } from '@/components/design-system';
 import Dropdown from '@/components/auth/Dropdown';
 import PerformancePanel from '@/components/performance/PerformancePanel';
 import { levelLabel } from '@/utils/competition/levels';
-import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
+import {
+  Dialog, EmptyState, Heading, IconButton, Panel, RunningOrder, RunningOrderItem, StatusTag, Tag,
+} from '@/components/ui';
+import { PageHeader } from '@/components/shell';
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
-const StatCard = ({ icon: Icon, label, value, accent, delay = 0, children }) => (
-  <FadeIn delay={delay}>
-    <motion.div
-      className="p-5 rounded-2xl border relative overflow-hidden"
-      style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}
-      whileHover={{ borderColor: `${alpha(accent, 0x35)}`, boxShadow: `0 0 30px ${alpha(accent, 0x10)}` }}
-      transition={{ duration: 0.25 }}>
-      <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-        style={{ background: `${alpha(accent, 0x06)}`, filter: 'blur(20px)', transform: 'translate(30%, -30%)' }} />
-      <div className="flex items-start gap-4 relative z-10">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: `${alpha(accent, 0x15)}` }}>
-          <Icon className="w-5 h-5" style={{ color: accent }} aria-hidden="true" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-fg-muted text-xs font-medium tracking-wide uppercase mb-1">{label}</p>
-          {children || (
-            <p className="text-ink font-bold text-lg leading-tight truncate">{value || '—'}</p>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  </FadeIn>
+// ─── Key fact ─────────────────────────────────────────────────────────────────
+/** One fact at the top of the dashboard: a tag label over a value (or a control). */
+const Fact = ({ label, value, children }) => (
+  <Panel className="grid gap-2 content-start">
+    <p className="type-tag text-fg-muted m-0">{label}</p>
+    {children || <p className="m-0 text-fg font-bold text-lg leading-tight truncate">{value || '—'}</p>}
+  </Panel>
 );
 
 // ─── Info row ─────────────────────────────────────────────────────────────────
 const InfoRow = ({ label, value, last = false }) => (
-  <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1 ${!last ? 'border-b' : ''}`}
-    style={{ borderColor: COLORS.darkBorderSubtle }}>
-    <span className="text-fg-muted text-sm font-medium">{label}</span>
-    <span className="text-ink text-sm font-semibold sm:text-right break-all">{value || '—'}</span>
+  <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1 ${!last ? 'border-b border-line' : ''}`}>
+    <span className="text-fg-muted type-body-s">{label}</span>
+    <span className="text-fg type-body-s font-semibold sm:text-right break-all">{value || '—'}</span>
   </div>
 );
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
-const StatusBadge = ({ status }) => {
-  const map = {
-    Submitted: { bg: '#22C55E18', border: '#22C55E40', text: FG.successSoft },
-    Active: { bg: `${alpha(COLORS.saffron, 0x18)}`, border: `${alpha(COLORS.saffron, 0x40)}`, text: FG.brandSoft },
-  };
-  const style = map[status] || { bg: 'rgb(var(--ink) / 0.06)', border: 'rgb(var(--ink) / 0.12)', text: 'var(--fg-muted)' };
-  return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border"
-      style={{ background: style.bg, borderColor: style.border, color: style.text }}>
-      {status || 'Not assigned'}
-    </span>
-  );
-};
+// ─── Status ───────────────────────────────────────────────────────────────────
+const STATUS = { Submitted: 'success', Active: 'info' };
+const StatusBadge = ({ status }) => (STATUS[status]
+  ? <StatusTag status={STATUS[status]}>{status}</StatusTag>
+  : <Tag>{status || 'Not assigned'}</Tag>);
 
 // ─── Age group display ────────────────────────────────────────────────────────
 const AGE_GROUP_MAP = {
@@ -86,7 +58,7 @@ const PlayerDashboard = () => {
   const [updatingTeam, setUpdatingTeam] = useState(false);
   const [showCompetitionModal, setShowCompetitionModal] = useState(false);
   const urlCompetitionHandledRef = useRef(false);
-  useReducedMotion(); // Initialize for accessibility
+
 
   const clearCompetitionIdFromUrl = useCallback(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -268,166 +240,100 @@ const PlayerDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center"
-        style={{ background: COLORS.dark }}>
-        <div className="text-center">
-          <div className="animate-spin w-12 h-12 rounded-full border-2 border-t-transparent mx-auto mb-4"
-            style={{ borderColor: `${alpha(COLORS.saffron, 0x40)}`, borderTopColor: COLORS.saffron }} />
-          <p className="text-fg-muted text-sm">Loading your profile...</p>
-        </div>
+      <div className="min-h-dvh flex items-center justify-center bg-bg">
+        <p className="type-body-s text-fg-muted flex items-center gap-3 m-0">
+          <span className="ui-spinner" aria-hidden="true" />
+          Loading your profile...
+        </p>
       </div>
     );
   }
 
+  const teamPicker = (placeholder) => (
+    <Dropdown
+      options={teams}
+      value={selectedTeam}
+      onChange={handleTeamSelect}
+      placeholder={placeholder}
+      loading={teamsLoading || updatingTeam}
+      disabled={updatingTeam}
+    />
+  );
+
   return (
-    <div className="min-h-dvh" style={{ background: COLORS.dark, fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-8">
+    <div className="min-h-dvh bg-bg text-fg">
+      <div className="max-w-6xl mx-auto px-[var(--pad)] pb-12 space-y-8">
+        <PageHeader
+          eyebrow="Welcome back"
+          title={`${player?.firstName || ''} ${player?.lastName || ''}`.trim() || 'Player'}
+          asIs
+          lede={player?.team ? `Team: ${player.team.name}` : 'No team assigned yet'}
+          actions={(
+            <>
+              <IconButton label="Refresh player data" icon={RefreshCw} variant="ghost" onClick={() => fetchPlayerProfile(true)} />
+              <StatusBadge status={player?.teamStatus} />
+            </>
+          )}
+        />
+
         {/* Competition context */}
         {assignedCompetitions && assignedCompetitions.length > 0 ? (
           <CompetitionDisplay className="mb-0" />
         ) : (
-          <FadeIn>
-            <div className="rounded-2xl border p-4 text-center"
-              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <p className="text-fg-muted text-sm">
-                No competitions assigned yet. Your coach will add you to competitions.
-              </p>
-            </div>
-          </FadeIn>
+          <EmptyState tag="No competitions yet" className="ui-fade-in">
+            No competitions assigned yet. Your coach will add you to competitions.
+          </EmptyState>
         )}
 
-        {/* Welcome banner */}
-        <FadeIn>
-          <div className="rounded-3xl border p-6 md:p-8 relative overflow-hidden"
-            style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}>
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ background: `radial-gradient(ellipse at 0% 50%, ${alpha(COLORS.saffron, 0x08)}, transparent 60%)` }} />
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
-                <h1 className="text-2xl md:text-3xl font-black text-ink">
-                  {player?.firstName} <GradientText>{player?.lastName}</GradientText>
-                </h1>
-                <p className="text-fg-muted text-sm mt-1">
-                  {player?.team ? `Team: ${player.team.name}` : 'No team assigned yet'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => fetchPlayerProfile(true)}
-                  className="p-2 rounded-lg text-fg-muted hover:text-fg hover:bg-ink/5 transition-colors tap-safe justify-center"
-                  title="Refresh player data"
-                  /*
-                   * `title` is not an accessible name a screen reader announces
-                   * reliably, and it does nothing at all on touch — this button
-                   * reported an empty name in the audit.
-                   */
-                  aria-label="Refresh player data"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-                <StatusBadge status={player?.teamStatus} />
-              </div>
-            </div>
-          </div>
-        </FadeIn>
-
-        {/* Stats grid */}
+        {/* Key facts */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Trophy} label="Team" accent={COLORS.saffron} delay={0}>
-            {player?.team ? (
-              <p className="text-ink font-bold text-base leading-tight truncate">{player.team.name}</p>
-            ) : (
-              <div className="mt-1">
-                <Dropdown
-                  options={teams}
-                  value={selectedTeam}
-                  onChange={handleTeamSelect}
-                  placeholder="Select a team"
-                  loading={teamsLoading || updatingTeam}
-                  disabled={updatingTeam}
-                />
-              </div>
-            )}
-          </StatCard>
-
-          <StatCard icon={Award} label="Age Group" accent="#22C55E" delay={0.06}
+          <Fact label="Team">
+            {player?.team
+              ? <p className="m-0 text-fg font-bold text-lg leading-tight truncate">{player.team.name}</p>
+              : teamPicker('Select a team')}
+          </Fact>
+          <Fact label="Age Group"
             value={player?.ageGroup ? AGE_GROUP_MAP[player.ageGroup] || player.ageGroup : 'Not assigned'} />
-
-          <StatCard icon={Users} label="Gender" accent="#A855F7" delay={0.12}
-            value={player?.gender} />
-
-          <StatCard icon={Calendar} label="Date of Birth" accent="#3B82F6" delay={0.18}
+          <Fact label="Gender" value={player?.gender} />
+          <Fact label="Date of Birth"
             value={player?.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'} />
         </div>
 
         {/* Detail panels */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Profile */}
-          <FadeIn delay={0.1}>
-            <div className="rounded-2xl border p-6"
-              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-ink font-bold text-lg mb-5 flex items-center gap-2">
-                <User className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
-                Profile Information
-              </h2>
-              <InfoRow label="Full Name" value={`${player?.firstName} ${player?.lastName}`} />
-              <InfoRow label="Email" value={player?.email} />
-              <InfoRow label="Date of Birth"
-                value={player?.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'} />
-              <InfoRow label="Gender" value={player?.gender} />
-              <InfoRow label="Team" value={player?.team?.name || 'Not assigned'} last />
-            </div>
-          </FadeIn>
+          <Panel>
+            <Heading level={2} step="display-s" className="mb-3">Profile Information</Heading>
+            <InfoRow label="Full Name" value={`${player?.firstName} ${player?.lastName}`} />
+            <InfoRow label="Email" value={player?.email} />
+            <InfoRow label="Date of Birth"
+              value={player?.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'} />
+            <InfoRow label="Gender" value={player?.gender} />
+            <InfoRow label="Team" value={player?.team?.name || 'Not assigned'} last />
+          </Panel>
 
-          {/* Team info */}
-          <FadeIn delay={0.15}>
-            <div className="rounded-2xl border p-6"
-              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorderSubtle }}>
-              <h2 className="text-ink font-bold text-lg mb-5 flex items-center gap-2">
-                <Trophy className="w-4 h-4" style={{ color: FG.brand }} aria-hidden="true" />
-                Team Information
-              </h2>
-
-              {player?.team ? (
-                <>
-                  <InfoRow label="Team Name" value={player.team.name} />
-                  <InfoRow label="Age Group"
-                    value={player.ageGroup ? (AGE_GROUP_MAP[player.ageGroup] || player.ageGroup) : 'Not assigned'} />
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1">
-                    <span className="text-fg-muted text-sm font-medium">Status</span>
-                    <StatusBadge status={player.teamStatus} />
-                  </div>
-                </>
-              ) : (
-                <div className="py-6 text-center">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: 'rgb(var(--ink) / 0.04)' }}>
-                    <Users className="w-6 h-6 text-ink/20" />
-                  </div>
-                  <p className="text-fg-muted text-sm mb-1">Not assigned to any team yet.</p>
-                  <p className="text-fg-muted text-xs mb-5">Select a team from the card above to join.</p>
-                  <div className="max-w-xs mx-auto">
-                    <Dropdown
-                      options={teams}
-                      value={selectedTeam}
-                      onChange={handleTeamSelect}
-                      placeholder="Select a team to join"
-                      loading={teamsLoading || updatingTeam}
-                      disabled={updatingTeam}
-                    />
-                    {updatingTeam && (
-                      <p className="text-xs mt-2 text-center" style={{ color: FG.brandSoft }}>
-                        Joining team...
-                      </p>
-                    )}
-                  </div>
+          <Panel>
+            <Heading level={2} step="display-s" className="mb-3">Team Information</Heading>
+            {player?.team ? (
+              <>
+                <InfoRow label="Team Name" value={player.team.name} />
+                <InfoRow label="Age Group"
+                  value={player.ageGroup ? (AGE_GROUP_MAP[player.ageGroup] || player.ageGroup) : 'Not assigned'} />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1">
+                  <span className="text-fg-muted type-body-s">Status</span>
+                  <StatusBadge status={player.teamStatus} />
                 </div>
-              )}
-            </div>
-          </FadeIn>
+              </>
+            ) : (
+              <div className="py-4 grid gap-3">
+                <p className="type-body-s text-fg m-0">Not assigned to any team yet.</p>
+                <p className="type-caption text-fg-muted m-0">Select a team from the card above to join.</p>
+                <div className="max-w-xs">
+                  {teamPicker('Select a team to join')}
+                  {updatingTeam && <p className="type-caption text-accent-fg mt-2 mb-0">Joining team...</p>}
+                </div>
+              </div>
+            )}
+          </Panel>
         </div>
 
         {/* My Performance Section */}
@@ -447,103 +353,46 @@ const PlayerDashboard = () => {
         )}
       </div>
 
-      {/* Competition Selection Modal */}
-      <AnimatePresence>
-        {showCompetitionModal && assignedCompetitions && assignedCompetitions.length > 1 && (
-          <motion.div
-            className="modal-overlay z-50"
-            style={{ background: 'rgba(0,0,0,0.8)' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={(e) => {
-              // Don't allow closing by clicking backdrop - force selection
-              e.stopPropagation();
-            }}
-          >
-              <BodyScrollLock />
-            <motion.div
-              className="w-full max-w-2xl rounded-3xl border p-6 md:p-8 modal-panel"
-              style={{ background: COLORS.darkCard, borderColor: COLORS.darkBorder }}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                  style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                  <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
-                </div>
-                <h2 className="text-2xl font-black text-ink mb-2">Select Competition</h2>
-                <p className="text-fg-muted text-sm">
-                  You&apos;re registered for multiple competitions. Please select one to continue.
-                </p>
-              </div>
-
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {assignedCompetitions.map((competition) => (
-                  <motion.button
-                    key={competition._id}
-                    onClick={async () => {
-                      try {
-                        logger.info('Modal: Selecting competition', { 
-                          competitionId: competition._id, 
-                          competitionName: competition.name 
-                        });
-                        await switchCompetition(competition._id);
-                        logger.info('Modal: Competition switched successfully');
-                        setShowCompetitionModal(false);
-                        toast.success(`Selected ${competition.name}`);
-                      } catch (error) {
-                        logger.error('Modal: Failed to select competition', error);
-                        toast.error('Failed to select competition');
-                      }
-                    }}
-                    className="w-full text-left p-4 rounded-xl border transition-all"
-                    style={{ 
-                      background: COLORS.dark,
-                      borderColor: COLORS.darkBorderSubtle 
-                    }}
-                    whileHover={{ 
-                      borderColor: `${alpha(COLORS.saffron, 0x40)}`,
-                      boxShadow: `0 0 20px ${alpha(COLORS.saffron, 0x10)}` 
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${alpha(COLORS.saffron, 0x15)}` }}>
-                        <Trophy className="w-5 h-5" style={{ color: FG.brand }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-ink font-bold text-base mb-1 truncate">
-                          {competition.name}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
-                          {competition.place && <span>{competition.place}</span>}
-                          {competition.level && (
-                            <>
-                              <span>•</span>
-                              <span>{levelLabel(competition.level)}</span>
-                            </>
-                          )}
-                          {competition.year && (
-                            <>
-                              <span>•</span>
-                              <span>{competition.year}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Competition selection: required when several meets and none chosen (no close). */}
+      <Dialog
+        open={Boolean(showCompetitionModal && assignedCompetitions && assignedCompetitions.length > 1)}
+        onClose={() => {}}
+        dismissible={false}
+        wide
+        title="Select Competition"
+      >
+        <p className="type-body-s text-fg-muted mt-0 mb-4">
+          You&apos;re registered for multiple competitions. Please select one to continue.
+        </p>
+        <div className="max-h-96 overflow-y-auto">
+          <RunningOrder label="Competitions">
+            {(assignedCompetitions || []).map((competition, i) => (
+              <RunningOrderItem
+                key={competition._id}
+                index={i + 1}
+                titleAs="h3"
+                title={competition.name}
+                meta={[competition.place, competition.level && levelLabel(competition.level), competition.year].filter(Boolean).join(' · ')}
+                onClick={async () => {
+                  try {
+                    logger.info('Modal: Selecting competition', {
+                      competitionId: competition._id,
+                      competitionName: competition.name,
+                    });
+                    await switchCompetition(competition._id);
+                    logger.info('Modal: Competition switched successfully');
+                    setShowCompetitionModal(false);
+                    toast.success(`Selected ${competition.name}`);
+                  } catch (error) {
+                    logger.error('Modal: Failed to select competition', error);
+                    toast.error('Failed to select competition');
+                  }
+                }}
+              />
+            ))}
+          </RunningOrder>
+        </div>
+      </Dialog>
     </div>
   );
 };

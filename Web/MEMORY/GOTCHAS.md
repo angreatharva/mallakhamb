@@ -248,3 +248,21 @@ your own machine.
   is `process.env.CI`-aware, but nothing checked into the repo
   (`.github/workflows`, `.gitlab-ci.yml`) actually sets that variable or
   runs lint/test/e2e as a gate. `render.yaml` is deploy-only.
+
+## Design-language rollout traps (2026-10-10/11)
+
+- **e2e/seed flows read the markup.** Ids (`#coach-reg-email`), headings
+  ("Sign In", "Choose Your Level", "Choose Your Arena", "Select Your Team"),
+  button names ("Logout", /^district/, "Add Player", "Save Team") and h3s
+  inside choice cards (`card.locator('h3')`). A restyle keeps every one;
+  grep `e2e/` before renaming.
+- **`Field` puts its `id` on the control via cloneElement**: give the id to
+  `Field`, not the `Input`, or the input loses the id the flows fill.
+- **A JS `//` comment inside a JSX tag** survives in source but breaks any
+  naive attribute rewriter (a codemod joined the next prop onto the comment
+  line). Read the result.
+- **Stored names in display steps** get uppercased by the type utility; use
+  `asIs` / the running order's titles (text-transform:none with higher
+  specificity than the `type-*` utility).
+- **A mark-only wordmark** must keep `min-width: 44px` (`brand-wordmark--compact`);
+  deep-screens caught a 13px-wide home link on admin tabs at 768.

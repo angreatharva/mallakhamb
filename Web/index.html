@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <!-- The pole mark (design-language PLAN D9). PNG for browsers without SVG favicons; iOS home screen. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
       Appearance (dark | light). The two tags let a browser colour its own
@@ -11,8 +14,8 @@
       blocking CLASSIC script, placed before any stylesheet, so the first paint
       is already in the right appearance — see src/utils/ui/appearance.js.
     -->
-    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3eee6" media="(prefers-color-scheme: light)" />
     <script src="/appearance-init.js"></script>
     <!--
       The landing page's largest paint is its hero photograph. Start it with the

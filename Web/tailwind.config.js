@@ -1,4 +1,5 @@
 import { SCREENS, WIDE_CONTAINER_MIN, Z_INDEX } from './src/styles/breakpoints.js';
+import { DURATION_STEPS, TYPE_PROPS, TYPE_STEPS } from './src/styles/looks/contract.js';
 
 const px = (n) => `${n}px`;
 
@@ -25,6 +26,12 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  /*
+   * The type steps are the vocabulary the look primitives are built on, so they
+   * exist whether or not a page uses one yet (Tailwind otherwise emits only the
+   * classes it finds in source).
+   */
+  safelist: TYPE_STEPS.map((step) => `type-${step}`),
   /*
    * Appearance (dark | light) is carried by `html[data-appearance]` and almost
    * everything follows it through the colour tokens below, not through
@@ -74,6 +81,13 @@ export default {
         },
         'on-accent': channel('on-accent'),
 
+        // Role ident (prime-time: the role shown as a tag; never a button colour).
+        ident: {
+          DEFAULT: channel('ident'),
+          fg: channel('ident-fg'),
+        },
+        'on-ident': channel('on-ident'),
+
         // Status, each with text, fill, label-on-fill and tint.
         ...Object.fromEntries(['success', 'warning', 'danger', 'info'].map((status) => [status, {
           fg: channel(`${status}-fg`),
@@ -82,33 +96,58 @@ export default {
           tint: `var(--${status}-tint)`,
         }])),
 
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
-        secondary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-        }
       },
+      /*
+       * Type, shape and motion read the LOOK tokens (src/styles/looks/,
+       * generated into styles/generated/looks.css), so a look restyles 600+
+       * `rounded-*` uses without a page edit. Only token NAMES
+       * live here: a new look never edits this file (design-language PLAN §4.5).
+       */
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: 'var(--font-text)',
+        display: 'var(--font-display)',
+      },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        DEFAULT: 'var(--radius)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+        '3xl': 'var(--radius-3xl)',
+      },
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        DEFAULT: 'var(--shadow)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        '2xl': 'var(--shadow-2xl)',
+        inner: 'var(--shadow-inner)',
+      },
+      backdropBlur: {
+        sm: 'var(--backdrop-blur-sm)',
+        DEFAULT: 'var(--backdrop-blur)',
+        md: 'var(--backdrop-blur-md)',
+        lg: 'var(--backdrop-blur-lg)',
+        xl: 'var(--backdrop-blur-xl)',
+        '2xl': 'var(--backdrop-blur-2xl)',
+        '3xl': 'var(--backdrop-blur-3xl)',
+      },
+      transitionTimingFunction: {
+        DEFAULT: 'var(--ease)',
+        in: 'var(--ease-in)',
+        out: 'var(--ease-out)',
+        'in-out': 'var(--ease-in-out)',
+        cut: 'var(--ease-cut)',
+      },
+      transitionDuration: {
+        DEFAULT: 'var(--duration-default)',
+        ...Object.fromEntries(DURATION_STEPS.map((step) => [step, `var(--duration-${step})`])),
+        press: 'var(--dur-1)',
+        hover: 'var(--dur-2)',
+        wipe: 'var(--dur-3)',
+        entrance: 'var(--dur-4)',
       },
       // Enhanced responsive spacing system
       spacing: {
@@ -163,6 +202,19 @@ export default {
        * TOUCH band `.tap-safe` covers, so the two never fight over a property.
        */
       addVariant('mouse', MOUSE);
+
+      /*
+       * Type steps — `type-display-l`, `type-tag`, `type-num-m`, … — the one
+       * vocabulary for type (design-language PLAN §5.4). Each reads its look's
+       * `--type-<step>-<prop>` tokens, so a look changes them without a page
+       * edit. Display steps are uppercase: never on COP wording or names.
+       */
+      addUtilities(Object.fromEntries(TYPE_STEPS.map((step) => [
+        `.type-${step}`,
+        Object.fromEntries(Object.entries(TYPE_PROPS).map(([prop, css]) => [css, `var(--type-${step}-${prop})`])),
+      ])));
+      // 16px on touch stops iOS zooming into a field; a mouse gets the compact size.
+      addUtilities({ '.type-input': { [MOUSE]: { fontSize: 'var(--type-input-size-mouse)' } } });
 
       // The stacking scale as custom properties, from the same table as the
       // `z-*` utilities, so CSS and JS read one set of numbers.

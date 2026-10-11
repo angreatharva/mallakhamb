@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check, Search, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsive } from '@/hooks/useResponsive';
-import { COLORS, FG, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
 
 
+/**
+ * A listbox dropdown (the picker trigger and popover in components/ui/popover.css).
+ * Keeps its own keyboard handling; the e2e flows find it by
+ * `button[aria-haspopup="listbox"]` and its "Selected: …" name.
+ */
 const Dropdown = ({
   options,
   value,
@@ -25,7 +27,6 @@ const Dropdown = ({
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
   const { isMobile } = useResponsive();
-  const reduced = useReducedMotion();
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -61,144 +62,91 @@ const Dropdown = ({
     ? options.filter(o => o.label.toLowerCase().includes(searchTerm.toLowerCase()))
     : options;
 
-  const borderColor = error
-    ? 'rgba(239,68,68,0.5)'
-    : isOpen
-    ? `${alpha(COLORS.saffron, 0x60)}`
-    : COLORS.darkBorderSubtle;
-
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {label && (
-        <label className="block text-xs font-semibold tracking-wide mb-1.5"
-          style={{ color: FG.brandSoft }}>
-          {label}
-        </label>
+        <span className="block mb-2 type-tag text-fg-muted">{label}</span>
       )}
       <button
         ref={buttonRef}
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className="w-full text-left rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 min-h-[44px] flex items-center justify-between gap-2 focus:ring-2"
-        style={{
-          background: disabled ? 'rgb(var(--ink) / 0.03)' : 'rgb(var(--ink) / 0.05)',
-          border: `1px solid ${borderColor}`,
-          // The placeholder here is the button's visible NAME ("Select
-          // competition first"), not a field hint, so it has to read at 4.5:1.
-          color: value ? FG.ink : 'var(--fg-muted)',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          boxShadow: isOpen ? `0 0 0 3px ${alpha(COLORS.saffron, 0x18)}` : 'none',
-          outlineColor: FG.brand,
-        }}
+        className={`ui-picker ui-picker--field ${value ? '' : 'ui-picker--empty'} ${error ? 'ui-picker--error' : ''}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={value ? `Selected: ${value.label}` : placeholder}
         aria-disabled={disabled}
       >
-        <span className="truncate">{value ? value.label : placeholder}</span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="flex-shrink-0"
-        >
-          <ChevronDown className="w-4 h-4" style={{ color: isOpen ? FG.brand : 'rgb(var(--ink) / 0.45)' }} aria-hidden="true" />
-        </motion.div>
+        {/* The placeholder here is the button's visible NAME ("Select
+            competition first"), not a field hint, so it reads at 4.5:1. */}
+        <span className="ui-picker__value">{value ? value.label : placeholder}</span>
+        <ChevronDown className="ui-picker__chevron" aria-hidden="true" />
       </button>
 
-      <AnimatePresence>
-        {isOpen && !disabled && (
-          <motion.div
-            className={`absolute left-0 right-0 mt-2 rounded-xl border overflow-hidden z-50 ${dropdownClassName}`}
-            style={{
-              background: 'rgb(var(--surface))',
-              borderColor: `${alpha(COLORS.saffron, 0x25)}`,
-              boxShadow: `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px ${alpha(COLORS.saffron, 0x10)}`,
-              maxHeight: 280,
-              overflowY: 'auto',
-            }}
-            initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
-            role="listbox"
-          >
-            {searchable && (
-              <div className="p-2 border-b" style={{ borderColor: COLORS.darkBorderSubtle }}>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                    style={{ color: 'rgb(var(--ink) / 0.3)' }} aria-hidden="true" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search..." aria-label="Search options"
-                    className="w-full pl-8 pr-8 py-2 text-base mouse:text-sm rounded-lg"
-                    style={{
-                      background: 'rgb(var(--ink) / 0.06)',
-                      border: `1px solid ${COLORS.darkBorderSubtle}`,
-                      color: FG.ink,
-                    }}
-                    autoFocus={!isMobile}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSearchTerm(''); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg transition-colors"
-                      aria-label="Clear search"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+      {isOpen && !disabled && (
+        <div className={`ui-popover ui-popover--fill ui-fade-in ${dropdownClassName}`} role="listbox">
+          {searchable && (
+            <div className="ui-popover__search">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-fg-muted pointer-events-none z-10" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search..." aria-label="Search options"
+                  className="ui-input pl-8 pr-10"
+                  autoFocus={!isMobile}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setSearchTerm(''); }}
+                    className="ui-popover__clear"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" aria-hidden="true" />
+                  </button>
+                )}
               </div>
-            )}
-
-            <div className="py-1">
-              {loading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-fg-muted text-sm">
-                  <div className="animate-spin w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink/60" />
-                  Loading...
-                </div>
-              ) : filteredOptions.length === 0 ? (
-                <div className="py-6 text-center text-fg-muted text-sm">No options found</div>
-              ) : (
-                filteredOptions.map((option, i) => {
-                  const isSelected = value?.value === option.value;
-                  return (
-                    /*
-                     * Hover is CSS, not framer `whileHover`: framer cannot
-                     * animate a CSS variable, and the hard-coded '#fff' it
-                     * animated to would be white text on the light menu.
-                     */
-                    <button
-                      key={i}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelect(option)}
-                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors duration-150 min-h-[44px] ${
-                        isSelected ? '' : 'text-ink/75 hover:text-fg hover:bg-[rgb(255_107_0_/_0.04)]'}`}
-                      style={isSelected
-                        ? { color: FG.brandSoft, background: `${alpha(COLORS.saffron, 0x12)}` }
-                        : undefined}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(option); }
-                        else if (e.key === 'ArrowDown') { e.preventDefault(); e.target.nextElementSibling?.focus(); }
-                        else if (e.key === 'ArrowUp') { e.preventDefault(); e.target.previousElementSibling?.focus(); }
-                      }}
-                    >
-                      <span className="flex-1 break-words">{option.label}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: FG.brand }} aria-hidden="true" />}
-                    </button>
-                  );
-                })
-              )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+
+          <div className="ui-popover__list">
+            {loading ? (
+              <p className="ui-popover__empty type-body-s flex items-center justify-center gap-2">
+                <span className="ui-spinner" aria-hidden="true" />
+                Loading...
+              </p>
+            ) : filteredOptions.length === 0 ? (
+              <p className="ui-popover__empty type-body-s">No options found</p>
+            ) : (
+              filteredOptions.map((option, i) => {
+                const isSelected = value?.value === option.value;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => handleSelect(option)}
+                    className="ui-popover__option items-center"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(option); }
+                      else if (e.key === 'ArrowDown') { e.preventDefault(); e.target.nextElementSibling?.focus(); }
+                      else if (e.key === 'ArrowUp') { e.preventDefault(); e.target.previousElementSibling?.focus(); }
+                    }}
+                  >
+                    <span className="flex-1 break-words type-body-s">{option.label}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0 text-accent-fg" aria-hidden="true" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

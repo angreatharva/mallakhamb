@@ -1,0 +1,52 @@
+/*
+ * RunningOrder (design-language PLAN §7 "Selection"): numbered rows, display
+ * names, hairlines, a chevron; hover is the raised surface, the chosen row
+ * carries the 3px accent rule on the left.
+ */
+.ui-order { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.ui-order__item { border-bottom: 1px solid var(--line); }
+.ui-order__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px 16px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px 12px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+/* The row is the target; the global button lift would make a list jitter. */
+.ui-order__row:hover { transform: none; }
+.ui-order__row:hover:not(:disabled) { background: rgb(var(--surface-raised)); }
+.ui-order__row:focus-visible { outline-offset: calc(-1 * var(--focus-width)); }
+.ui-order__row[aria-pressed='true'] {
+  background: rgb(var(--surface-raised));
+  box-shadow: inset var(--rule) 0 0 0 rgb(var(--accent));
+}
+.ui-order__row:disabled { cursor: not-allowed; opacity: 0.55; }
+/* Quieter, still choosable (an empty level stays selectable on purpose). */
+.ui-order__row--muted .ui-order__title,
+.ui-order__row--muted .ui-order__num { color: var(--fg-secondary); }
+
+.ui-order__num { min-width: 2ch; color: var(--fg-secondary); }
+.ui-order__row[aria-pressed='true'] .ui-order__num { color: rgb(var(--accent-fg)); }
+.ui-order__body { display: grid; gap: 4px; min-width: 0; }
+/* Stored names keep their own case (plan §8.10). */
+.ui-order__row .ui-order__title { overflow-wrap: anywhere; text-transform: none; }
+.ui-order__meta { color: var(--fg-secondary); }
+.ui-order__aside { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.ui-order__mark { width: 18px; height: 18px; color: var(--fg-secondary); flex: none; }
+.ui-order__row[aria-pressed='true'] .ui-order__mark { color: rgb(var(--accent-fg)); }
+
+@media (max-width: 479px) {
+  /* The status tags drop under the name rather than squeezing it. */
+  .ui-order__row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .ui-order__aside { grid-column: 2; grid-row: 2; justify-content: flex-start; }
+  .ui-order__mark { grid-column: 3; grid-row: 1; }
+}

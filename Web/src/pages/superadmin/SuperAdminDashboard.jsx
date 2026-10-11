@@ -1,5 +1,4 @@
 import UnifiedDashboard from '../unified/UnifiedDashboard';
-import { ThemeProvider } from '../../components/design-system/theme';
 
 /**
  * SuperAdminDashboard - Redirect wrapper for backward compatibility
@@ -9,9 +8,7 @@ import { ThemeProvider } from '../../components/design-system/theme';
  */
 const SuperAdminDashboard = () => {
   return (
-    <ThemeProvider role="superadmin">
-      <UnifiedDashboard />
-    </ThemeProvider>
+    <UnifiedDashboard />
   );
 };
 

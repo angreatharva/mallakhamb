@@ -1,6 +1,6 @@
 # Prime Time, site-wide: the design-language plan
 
-**Status:** plan only (2026-10-07). Nothing in this document is implemented yet.
+**Status:** Phases 0–7 and the leftovers done (2026-10-11), merged into `master` locally from `look/finish`; **not pushed or deployed** (the push deploys to Render; avoid a competition day). Prime-time is the only look. See the progress log (§14), [REPORT.md](REPORT.md) and [LOOKS.md](LOOKS.md).
 **Reference implementation:** the landing page, at commit `9814afa`:
 - `src/pages/public/Home.jsx`
 - `src/pages/public/home/home.css`
@@ -680,3 +680,209 @@ What must **never** be needed for a restyle: editing pages, editing Tailwind's c
 - GSAP or three.js on app screens.
 - Per-competition skins: the architecture makes them possible (§11), but none is built.
 - Self-hosting the Home photos as AVIF. That is a separate change, and downloading the photos needs the owner's OK.
+
+---
+
+## 14. Progress log
+
+### 2026-10-07: Phase 0 and Phase 1 (branch `look/phase-1-tokens`, from `a5c7556`)
+
+**Phase 0 (baselines)**
+- 0.1: the owner asked for the work to start.
+- 0.2: fresh pixel baselines for every audited route × 375/768/820/1024/1366 × dark/light, recorded against a **frozen production build** of `a5c7556` served by `vite preview` on :4174 (launch config `look-frozen`). Source edits can't reach a frozen build, so Phase 1 was written while the baselines recorded. Baselines: `D:/Mallakhamb-Repo/.mallakhamb-visual-baseline-look/` (outside the repo; the 2026-09-30 set is untouched). Runner: `.mk-look-builds/look-visual.sh <update|compare> <tag>` (one area at a time, a lock, a void-run signature of the served build and the spec files).
+- **Home is not pixel-gated.** Its full-page capture never settles: the GSAP runtime flips ~27% of the pixels between two shots of the same build. Compare runs use `VISUAL_ONLY='^(?!home$)'`. Home stays covered by `npm run audit:home` (41 devices), as §8 item 14 already says.
+- 0.3: `lint-baseline.json` (1,429 warnings: colours 855, spacing 490, hooks 35, unused vars 49) and `npm run lint:ratchet`. The look packs are exempt from the two design-system rules: they are the token source.
+- 0.4 (performance baseline): not done yet. Needed before Phase 2.
+
+**Phase 1 (token architecture)**
+- 1.1: `src/styles/looks/{contract,define,build,color,index}.js` and `scripts/build-looks.mjs` (`npm run looks`, `looks:check`, run by `predev`/`prebuild`). Output: `src/styles/generated/looks.css` + `looks.meta.json`, committed.
+- 1.2: the `classic` pack holds `index.css`'s token blocks verbatim; `index.css` now `@import`s the generated file. A one-off parse of the old `index.css` confirmed every old declaration is reproduced exactly. New tokens only: `ident`, `ident-fg`, `on-ident` (classic mirrors the role accent), and the look tokens below.
+- 1.3: Tailwind's `fontFamily.sans` (+ new `display`), `borderRadius`, `boxShadow`, `backdropBlur`, `transitionTimingFunction` (+ `cut`) and `transitionDuration` (+ `press`/`hover`/`wipe`/`entrance`) read tokens; `classic` holds the old values. No coloured shadows exist in the app, so tokenised shadows lose nothing.
+- 1.4: `src/utils/ui/look.js` (`LOOK_BY_ROUTE`, `applyLook`, `?look=` dev override, `currentLook`), called beside `applyRoleAccent`; `appearance-init.js` sets the default look before first paint.
+- 1.5: the `prime-time` pack: dark from Home, light "chalk paper" from §5. **It passes every contrast pair with no exceptions.** One data colour re-tuned for dark teak: Combination purple `#C084FC` (classic's `#A855F7` is 4.49 on teak-2, just under 4.5); the rest keep classic's dark hexes.
+- **Deviation from 1.4/1.6 (decided on the owner's behalf):** `/` is **not** mapped to prime-time yet, and Home's local variables are not yet aliases of the shared tokens. Home's masthead holds the shared `AppearanceMenu` (Tailwind `rounded-lg`, `text-ink`, …), which prime-time tokens would visibly restyle, and Phase 1's exit gate requires Home unchanged. Both move to Phase 3.2, where Home adopts the shared primitives and is re-baselined anyway. Done now: `.cd-rb`'s local `--bg`/`--fg` renamed to `--rb-bg`/`--rb-fg`.
+- 1.7: `looks.contract.test.js`, `looks.contrast.test.js`, `looks.drift.test.js`, `utils/ui/look.test.js` (47 tests). `classic` lists three contrast exceptions: worst-case pairings today's design fails (4.39–4.40) that no audited screen draws. They retire with classic.
+- **Evidence (Phase 1 exit gate):**
+  - **Computed styles:** frozen `a5c7556` build vs the Phase 1 build, every element × 20 properties, 8 public routes × 375/1366 × dark/light: **identical**. A positive control (player vs coach login) shows the comparison does detect a difference.
+  - **Pixel gate, threshold 0, every audited route except Home × 375/768/820/1024/1366 × dark/light: identical.** Coach, admin and superadmin matched on the first run. Public, judge and player needed re-captures, for reasons the unchanged build shows too (the self-check of `a5c7556` against its own baseline failed on the same screens):
+    - player `select-level` / `select-competition` land on the level chooser in one capture and pass straight through to the dashboard in another (one competition at the level; the CompetitionContext auto-select race). Both states matched exactly on re-capture.
+    - judge `select-level`, `select-competition` and the dashboard family differed in one run and matched exactly in the next.
+    - public `reset-password` at 375 dark differed by 8 pixels, in the self-check too; it matched on re-capture.
+    - One self-check superadmin run failed to sign in ("Invalid credentials" with `loginAttempts: 0`): the API briefly lost Atlas. Void, re-run clean.
+  - **The gate itself is only as deterministic as the data.** Before Phase 5 relies on it, make the chooser and dashboard captures wait for a settled competition state (or pin it), so a diff means a change.
+  - **Home** (not pixel-gated): `npm run audit:home` against the Phase 1 build **41/41 devices clean**, and the computed-style comparison on `/` (≈1,050 elements, 375/1366, dark/light) **identical**.
+  - vitest **435/435** (48 files); `npm run looks:check` clean; `npm run lint:ratchet` holds.
+
+### 2026-10-07 (evening): Phase 0.4, a deterministic gate, Phase 2 (branch `look/phase-2-type`, from Phase 1)
+
+Worked in a git worktree (`D:/Mallakhamb-Repo/mk-look`) so the main checkout stays on master. Its `node_modules` must be a real install (`npm ci`), not a junction: Vite refuses to serve files resolved outside the root ("Denied ID … ?url").
+
+**Phase 0.4: performance baseline (done).** `e2e/perf-baseline.mjs`: phone profile (390×844, 4× CPU, Fast 4G, cold cache), median of 3, against a frozen production build. Master `a5c7556`:
+
+| Route | LCP | CLS | Fonts | JS |
+|---|---|---|---|---|
+| Home | 2.09–2.20 s | 0 | 137 KB | 283 KB |
+| Player login | 2.48 s | 0 | 0 | 244 KB |
+| /scores | 1.70–2.60 s (bimodal on the same build) | 0 | 0 | 217 KB |
+| Judge dashboard | 1.39–1.80 s | **0.077–0.091** | 0 | 239 KB |
+
+The judge dashboard already shifts on master, so its gate is "no worse", not 0. Home's 137 KB = Archivo latin 88 + Teko latin 500/600 15 + Teko Devanagari 33×2 (मल्लखांब). A lever if the budget ever bites: Archivo's weight-only latin file is **34 KB** against 88 KB with the width axis (only the 125%-wide tags need it).
+
+**The gate is deterministic now.**
+- **Cause of the chooser flake:** `e2e/support/audit-routes.js` `signInAs` asked `count()` for the lazy level chooser the instant the URL changed. When it wasn't drawn yet, no level was chosen, and later `/select-competition` captures flipped between the chooser and a pass-through. It now waits for the chooser the URL promises.
+- **Runner guard:** `.mk-look-builds/look-visual.sh` reads the API log and marks an area **VOID** if any Mongo network error falls inside its window. On 2026-10-07 Atlas dropped repeatedly from 20:30 to 21:43 IST and voided a whole baseline run; that run was discarded.
+- Baselines v3: `D:/Mallakhamb-Repo/.mallakhamb-visual-baseline-look-v3`, recorded clean from master's frozen build.
+
+**Phase 2 (type and fonts)**
+- 2.1:
+  - `src/styles/look-fonts.js`: the @font-face rules (Archivo Variable wdth+wght, Teko 500/600) plus `fonts-fallback.css`.
+  - `fonts-fallback.css`: metric-matched 'Archivo Fallback' (Arial at 98.92%) and 'Teko Fallback' (Arial at 67.49%), measured in Chromium by `npm run fonts:metrics`.
+  - `src/styles/fonts.js`: `loadLookFonts(look)`, called beside `applyLook`. For prime-time it preloads the two latin first-paint files and loads the faces; for classic it does nothing.
+- **Deviation from §5.4 ("loaded once, app-wide"):** the faces are a separate chunk, loaded only by what is drawn in them:
+  - Home (statically, as before);
+  - prime-time routes;
+  - from Phase 3, the primitives.
+  - Why: merely declaring them in the entry CSS changed Chrome's anti-aliasing on a classic screen (judge profile avatar corner, 3–7 px, reproducible). A bisect pinned it to the fontsource faces. Classic routes now ship master's exact entry CSS rules plus unused tokens and utilities.
+- 2.2: `type-display-xl/l/m/s`, `type-num-l/m`, `type-body`, `type-body-s`, `type-caption`, `type-tag`, `type-button`, `type-input`.
+  - Tailwind utilities, safelisted, reading `--type-<step>-<prop>`. Values are in `looks/type-scale.js`, written against each look's own font tokens.
+  - `type-scale.test.js` enforces: display face only at 24 px and up; text ≥ 12 px, tags ≥ 11 px; inputs 16 px on touch; uppercase only on display steps and tags; tabular numbers.
+- Checked live on a `VITE_LOOK_OVERRIDE=1` build: every step resolves as specified (Teko 600 uppercase display, Teko 500 tabular numbers, Archivo 700 tags at 125%) in dark and chalk-paper light.
+
+**Phase 2 exit gate**
+- **Pixel gate (threshold 0, v3 baselines): every audited route identical.** Two screens needed a closer look:
+  - coach `select-competition` 1024 light: master's own build fails it identically (3527 vs 3675 px), so the baseline caught an odd state;
+  - `reset-password` 375 light: 8 px once, matched on re-capture, like master.
+- **Computed styles:** identical on 9 public routes and Home.
+- **Speed:**
+  - Classic routes still download **0 font bytes**.
+  - CSS +2.4 KB transferred (the type tokens and utilities); entry chunks 211.3 → 214.2 KB gzip.
+  - LCP and CLS within master's own run-to-run spread on every route; Home unchanged (137 KB fonts, CLS 0).
+- vitest **450/450**; `looks:check` clean; lint ratchet holds.
+- **Not yet measurable:** the 100 KB first-paint font budget on a real prime-time screen. No route is prime-time until Phase 3's specimen page; measure it there.
+
+### 2026-10-08: Phase 3 (branch `look/phase-3-primitives`, stacked on Phase 2)
+
+**3.1 Primitives** (`src/components/ui/`, with the guide in [README.md](README.md)):
+- Button, IconButton, Field with Input/Select/Textarea/PasswordInput, Panel, Heading, Tag, StatusTag, Stat, SpecList, DataTable, Tabs/TabPanel, Segmented, Dialog, ConfirmDialog, Menu, Spinner, Skeleton, EmptyState, ErrorState, Grain, `toastOptions`.
+- New component tokens in the contract: radius-control, radius-panel, rule, ring, focus-width/offset, control-h(-mouse), pad, grain-opacity, hover-lift.
+  - `index.css`'s focus ring and button hover lift now read tokens; classic's values reproduce today's exactly.
+- Tailwind gained `ident` colours.
+- `ui.test.jsx`: 17 tests (roles, keyboard, focus trap, states).
+
+**Defects found and fixed on the way:**
+- `:where()` base rules lost to Tailwind's preflight, so primitive base rules are single classes.
+- Primitive CSS in lazy chunks beat pages' layout utilities. All of it is now one `ui.css`, imported at the top of `index.css`, before Tailwind's layers.
+- A loading button lost its accessible name (`visibility: hidden`), so the label is `color: transparent`.
+- The phone table's `::before` labels failed contrast, and the route audit can't see pseudo text. `ui-table` restyles them; the specimen spec measures them.
+- Segmented options were 40 px on touch; now 44 px.
+- The dev-only specimen chunk shipped in production builds. `vite.config.js` now `define`s `VITE_LOOK_OVERRIDE`.
+
+**3.2 Home on the shared layer.**
+- `/` maps to prime-time, and Home's root carries `data-look`.
+- Its colour variables are aliases of the prime-time tokens.
+- Its buttons and tags are `ui-btn` / `type-tag`; its grain is `<Grain/>`.
+- The stinger stays Home's own (scroll-driven by GSAP).
+- Computed styles of Home's own sections are unchanged, apart from the font-stack text. What changed is intended: the masthead's Light/Dark menu now takes the prime-time style.
+
+**3.3 / 3.4 Specimen.**
+- `/__look` (dev and `VITE_LOOK_OVERRIDE=1` builds only), driven by the URL: `?look=&appearance=&role=`.
+- `e2e/look-specimen.spec.js`: prime-time × dark/light × 6 roles × 375/1366, plus dialog, confirm and menu open.
+  - **0 contrast failures** (2,066 text elements per appearance, `::before` labels included).
+  - No sideways scroll, and every target ≥ 44 px at touch widths.
+- The contrast measurement moved to `e2e/support/contrast.js`. `measurePage` no longer counts focusable containers (tab panels, dialogs) as tap targets.
+
+**Phase 3 exit gate:**
+- **Classic routes: pixel-identical to master** (threshold 0, v3 baselines, no database-error windows). The only exception is the coach chooser capture that master's own build fails identically.
+- **Home:** `audit:home` 41/41.
+- **Speed:**
+  - **Home LCP equal to master:** median 2168 vs 2184 ms, n=10 interleaved, CLS 0.
+  - Classic routes: within master's spread, CSS +5.4 KB (the primitives' rules), still 0 font bytes.
+  - Prime-time specimen: LCP 1.66 s, CLS 0.
+- **A regression found and removed.** Home first measured ~90 ms slower. Bisecting ruled out `ui.css`, the `/` mapping and the barrel import (which was still fixed: Home imports `ui/Stage` directly). The cause was the metric-matched fallback faces in the font stacks: listing them cost ~80–90 ms before first render, and neither a single `local()` source nor `font-display: swap` helped. They were removed from the stacks; `npm run fonts:metrics` remains as a lever.
+- **Font budget: 104.4 KB** on a prime-time page using every type step (Archivo 88 + Teko 500/600). That is over the §5.4 estimate, which counted only Teko 600. Speed is within budget, so this is accepted for now. The lever is Archivo's weight-only file (−54 KB, losing the 125% width on tags).
+- vitest 467/467; lint ratchet holds; `looks:check` clean.
+
+**3.5 Owner checkpoint.** The specimen screenshots are in [README.md](README.md), and every combination is at `/__look`. The owner asked to continue through the phases, so Phase 4 goes ahead. Any change asked for at this checkpoint is a pack or primitive edit, which the waves inherit.
+
+### 2026-10-10: Phase 4 (branch `look/phase-4-shells`, stacked on Phase 3)
+
+**4.1 Shells** (`src/components/shell/`):
+- `AppHeader`: wordmark, `RoleIdent`, the competition as the "segment", `TabNav` from `lg`, `AccountControls` from `md`. Below those, one menu button opens a `Dialog sheet` drawer with the tabs and the account cluster, so the Light/Dark switch is reachable everywhere. Below 480 px the wordmark collapses to the mark, keeping its name for screen readers.
+- `PageHeader`: the page's h1.
+- Built and audited now; each rollout wave adopts them.
+- `shell.test.jsx`: 8 tests.
+
+**Defect found and fixed.** On phones, the account cluster sat on top of the wordmark and ident. The component had Tailwind's `flex` on its own root, and utilities beat the shell's breakpoint rules (which is the design). Rule: a component never puts a layout utility on its own root. `look-specimen.spec.js` now fails on masthead overlap or overflow; a positive control on the broken build confirmed it catches this.
+
+**4.2 Brand sweep.**
+- "Mallakhamb India" and `PoleMark` replace "Bhausaheb Ranade" (6 screens) and `BHA.png` (9 screens); the 3.9 MB `BHA.png` is deleted.
+- The password pages' two-line "Bhausaheb Ranade / Mallakhamb Competition" lockup becomes "Mallakhamb India".
+- `favicon.svg`, `favicon-32.png` and `apple-touch-icon.png` (the saffron mark on stage black) replace `vite.svg`.
+- `theme-color` follows the look: `THEME_COLOR_BY_LOOK` is built from `looks.meta.json`, and `syncThemeColor()` runs on appearance and look changes.
+
+**4.3 Toasts.** App's `<Toaster>` uses the token-driven `toastOptions` on prime-time routes. Classic routes keep the old literal options (deleted in Phase 6).
+
+**Phase 4 exit gate:**
+- **Pixel gate (threshold 0, v3 baselines).** Judge identical; coach identical apart from the known baseline capture. Every other difference was reviewed by measuring the bounding box of the changed pixels in each screenshot (`.mk-look-builds/diff-boxes.cjs`):
+  - logins, registers, forgot/reset and team selection: only the brand lockup (2.2–4.2k px), no height change;
+  - admin and superadmin dashboard tabs and scoring: only the header row (y14–49). The narrower pole mark shifts the title and tabs left;
+  - one `superadmin-scoring` capture also caught "Loading competitions…", a timing state unrelated to Phase 4.
+  - A public-area run voided by one database error was re-run clean.
+- **New baselines** were recorded from the Phase 4 build as the reference for Phase 5: `D:/Mallakhamb-Repo/.mallakhamb-visual-baseline-look-v4`.
+- **Specimen:** 0 failures (contrast, overflow, 44 px targets, masthead overlap), all roles, both appearances.
+- **Speed:** within master's spread on every route; classic routes still 0 font bytes; CSS +6 KB.
+- vitest **476/476**; lint ratchet holds; `looks:check` clean.
+
+### 2026-10-10: W1, public and auth (branch `look/w1-public-auth`, commit `e1a8741`)
+
+- `AuthLayout` (shell): the split sign-in layout — the black stage side (`data-appearance="dark"` island: role ident, the role name in Teko with the stinger, pole mark, grain, the portal row on sign-in pages) and the form side (one saffron submit, underlined `TextLink`s, `Notice` errors). Login, register, admin register, forgot and reset use it.
+- The choosers are running orders (`RunningOrder`); "Opening ‹name›…" and "Counting…" are unchanged.
+- `/scores` is a results graphic: medal colours on the rank and the podium's 3px rule, totals in the display face, the panel-rule average as ruled values. The board is shared with the admin scores page.
+- The 404 claims its look (`claimLook`): no path can name it.
+- Every id, heading and accessible name the e2e and seed flows read was kept (checked against `e2e/support`).
+- **Gate:** pixel gate vs v4 — every difference is on a W1 route or on the admin/superadmin scores tabs (the shared board and filters, expected); one 7 px antialiasing change on the judge-profile avatar glyph (re-run alone: the same 7 px, a screen W4 rewrites). Specimen and unit tests green.
+
+### 2026-10-10: W2, player and coach (branch `look/w2-player-coach`, commit `65ede8f`)
+
+- The Navbar is the shared `AppHeader` (`fixed`, the picker in `extra`); the Light/Dark switch stays in the bar at every width.
+- Player dashboard, team selection, coach dashboard (squad, summary, add-player and submit dialogs), create team and payment rebuilt on the primitives. Razorpay's theme reads `looks.meta.json`.
+- Shared widgets restyled once: `Dropdown`, `CompetitionSelector`, `CompetitionDisplay`, the lock banner, `PerformancePanel`.
+
+### 2026-10-10: W3, admin and superadmin (branch `look/w3-admin`, commit `87140ac`)
+
+- `UnifiedDashboard`'s masthead is `AppHeader` with the tabs as links (from `xl`), `AdminKit` is drawn by the primitives, the old `ConfirmDialog` API wraps the primitive.
+- Inline tints, pills, scrims and gradient fills became token classes, and decorative framer was removed, by three reviewed codemods (`.mk-look-builds/scratch/w1/codemod_*.py`).
+
+### 2026-10-10: W4, judge (branch `look/w4-judge`, commit `b11c725`)
+
+- The judge colour set `J` and every fill read tokens; ambient orbs gone; `LiveDot` a status tag; decorative framer removed. `StopwatchFace` untouched. All 176 judge unit tests pass unchanged.
+- **Not done in this wave, deliberately:** the judge headers and the slip's row anatomy keep their structure (token colours only). See REPORT.md.
+
+### 2026-10-11: Phase 6, retire classic (branch `look/phase-6-retire-classic`, commit `5425d98` + `59a0266`)
+
+- `DEFAULT_LOOK = 'prime-time'`; the classic pack deleted; `LOOK_BY_ROUTE` empty (mechanism kept); theme-color and `appearance-init.js` paint prime-time.
+- `components/design-system/` deleted except `LiveRegion`; the judge profile rebuilt on the primitives; the global hover lift and Tailwind's legacy palettes deleted.
+- `no-hardcoded-colors` is an error in every folder at zero.
+- **Audits on the W4 build** (before Phase 6): specimen 2/2, contrast-audit 6/6, appearance-everywhere 1/1, focus-visible 6/6, responsive-audit 6/6 (only Home's two footer links, untouched), score sheet 2/2, judge walk 1/1, judge deep screens 1/1. deep-screens failed once: the mark-only wordmark was a 13 px-wide link at 768 on admin tabs — fixed (`59a0266`).
+
+### 2026-10-11: final verification (twice)
+
+- **Pass 1** (Phase 6 build `59a0266`): all 12 browser audits green, Home 41/41, the pixel reference recorded (`.mallakhamb-visual-baseline-look-v5`).
+- **Review by eye** of the recorded screens found three things the audits do not check: the old judge purple in labels and borders, old-sans section headings, and stretched tags. Fixed in `a79c8cb`.
+- **Pass 2** (final build `a79c8cb`): all 12 audits green, Home 41/41, the reference re-recorded. A third, compare-only run reproduced it with 0 differences.
+- **Speed:** login 1632 ms, `/scores` 1620 ms, judge dashboard 1472 ms LCP; fonts 96.7 KB; CLS ≤ 0.032. See REPORT.md.
+
+### 2026-10-11: Phase 7, hand-over
+
+- [LOOKS.md](LOOKS.md): the playbook (§11) as a working guide, the gates, the wave checklist, the traps.
+- [REPORT.md](REPORT.md): what changed, the verification, what is left.
+- README updated for the new primitives; Web/MEMORY (05, 07, GOTCHAS) and project memory updated.
+
+### 2026-10-11: the leftovers (branch `look/finish`, `c32815c`)
+
+- Merged `master` (`327054f`, Home in desktop mode on phones) into the branch first; it merged cleanly.
+- `JudgeHeader` on all seven judge screens; slip anatomy (display-s titles, num-l totals saffron at full marks, the 3px phone-tab rule).
+- Colour literals 0; the colour rule fixed for token references and made an error; the proxies and dead token helpers deleted.
+- Home's footer links are 44 px targets.
+- Fixes found by verification: the superadmin overview at 320–360 px; Home footer and credit links as 44 px targets through tablet widths.
+- **Verified twice** on the final build `81207da`: all 12 audits green in both passes, responsive findings none, pixel gate 0 differences against the reference recorded in pass 1, 480/480 unit tests. The Home phone findings also appear on master's own build (from `327054f`); see REPORT.md.

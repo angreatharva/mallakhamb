@@ -27,4 +27,10 @@ export const ForgotPassword = lazy(() => import('@/pages/shared/ForgotPassword')
 export const ResetPassword = lazy(() => import('@/pages/shared/ResetPassword'));
 export const NotFound = lazy(() => import('@/pages/shared/NotFound'));
 export const PublicScores = lazy(() => import('@/pages/public/PublicScores'));
+/*
+ * The look specimen (design-language PLAN Phase 3.3): dev and VITE_LOOK_OVERRIDE
+ * builds only. A constant-false branch, so a deployed build drops the chunk.
+ */
+export const LOOK_SPECIMEN_ENABLED = import.meta.env.DEV || import.meta.env.VITE_LOOK_OVERRIDE === '1';
+export const LookSpecimen = LOOK_SPECIMEN_ENABLED ? lazy(() => import('@/pages/dev/LookSpecimen')) : null;
 export const UnifiedRegister = lazy(() => import('@/pages/unified/UnifiedRegister'));

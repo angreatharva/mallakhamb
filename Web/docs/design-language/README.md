@@ -1,0 +1,100 @@
+# The design language: how to build a screen
+
+The plan and its progress log: [PLAN.md](PLAN.md). How to change the look itself: [LOOKS.md](LOOKS.md). The rollout's final report: [REPORT.md](REPORT.md). This file is the working guide. Read it before building or restyling any screen.
+
+## The one rule
+
+**Pages decide layout. Primitives and tokens decide the look.**
+
+| Layer | It may decide | It may not |
+|---|---|---|
+| Look pack (`src/styles/looks/*.js`) | every value | — |
+| Primitive (`src/components/ui/*`) | anatomy and states, from tokens | hex values, font names, look ids |
+| Page | layout with Tailwind (grid, flex, gap, padding, width, position); which primitives to use | colour, type, borders, radius, shadow, blur; inline visual styles |
+
+A restyle then means editing a pack. If a restyle needs a page edit, a token is missing: add it to `src/styles/looks/contract.js`, and the contract test lists every pack that must define it.
+
+## The primitives
+
+Import them from `@/components/ui`:
+
+| Need | Use |
+|---|---|
+| An action | `Button` (`solid` · `line` · `ghost` · `danger`; `sm` · `md` · `lg`; `loading`; `icon`; `as={Link}`). **One `solid` per view.** |
+| An icon-only action | `IconButton label="…"`: the label is required, it is the accessible name |
+| A form control | `Field` around `Input`, `Select`, `Textarea` or `PasswordInput`. Field wires the label, the help text and the error. Mark fields: `<Input numeric inputMode="decimal" />`, never `type="number"` |
+| A surface | `Panel` (`plain` · `band` · `feature`; `rule="danger"`) |
+| A heading | `Heading level={…} step="display-l"`. The level is the outline; the step is the look. `asIs` keeps a name's own case |
+| A label or role | `Tag` (`neutral` · `accent` · `ident`, `solid`) |
+| A status | `StatusTag status="success\|warning\|danger\|info"`. Always text, never a coloured dot alone |
+| A key number | `Stat` (label, value, unit) · `SpecList` (label/value rows) |
+| A table | `DataTable`: every column kept; labelled cards below `md`; `activeKey` marks the current row |
+| Views of one thing | `Tabs` + `TabPanel` · `Segmented` for a choice among a few |
+| A modal | `Dialog` · `ConfirmDialog`. Focus moves in, stays in, and comes back |
+| A list of actions | `Menu` |
+| Nothing, loading, failure | `EmptyState` · `Skeleton` · `Spinner` · `ErrorState` |
+| A message about the form or screen it sits in | `Notice` (`info` · `success` · `warning` · `danger`; `title`). Pass `role="alert"` or `role="status"` yourself |
+| A choice read as a list (levels, competitions) | `RunningOrder` + `RunningOrderItem` (`index`, `title`, `meta`, `aside`, `selected`, `muted`). The number is decoration; titles keep their case |
+| A link in running text | `TextLink` (`as={Link}`; `ui-link--quiet` for the secondary one) |
+| Stage screens only | `Grain`, `Heading sting` |
+| Toasts | `toastOptions` (App's `<Toaster>` uses them) |
+
+The shell, from `@/components/shell`:
+
+| Need | Use |
+|---|---|
+| A signed-in screen's masthead | `AppHeader role segment nav onLogout profileTo` (+ `extra` for a picker, `fixed`, `navFrom="xl"` for a long tab row, `compactBrand`). The wordmark, the role ident, the competition as the "segment", tabs and the account cluster. On phones, one menu button opens a drawer holding the tabs and the account cluster, so the Light/Dark switch is always reachable |
+| The page's title row | `PageHeader eyebrow title lede actions`: the page's `h1` |
+| The role | `RoleIdent role`: text and colour, never colour alone |
+| Light/Dark, Profile, Log out | `AccountControls` |
+| Route tabs | `TabNav items label` (NavLink; the current page carries the bar) |
+| A sign-in, registration or password screen | `AuthLayout role title lede switcher` with `AuthHeader` and `AuthLinks`: the black stage side (role name, pole mark, grain) and the form side |
+
+The brand, from `@/components/brand/Brand`: `Wordmark` (the mark and "Mallakhamb India") and `PoleMark` (decorative, or `title` when it stands alone). Never the old name or `BHA.png`.
+
+**A component never puts a Tailwind layout utility on its own root** (`flex`, `grid`, `hidden`…). Utilities win ties by design, so a utility on the root overrides the component's own breakpoint rules. This is how the masthead once showed its desktop account cluster on phones.
+
+The type steps are Tailwind utilities: `type-display-xl/l/m/s`, `type-num-l/m`, `type-body`, `type-body-s`, `type-caption`, `type-tag`, `type-button`, `type-input`.
+
+## Rules the tests hold you to
+
+- **Teko only at 24 px and up.** Never in inputs, body text, COP wording or table cells.
+- **Uppercase only on text the site writes:** display steps and tags. Never on COP wording, stored values or people's names.
+- **Inputs are 16 px on touch**, so iOS doesn't zoom.
+- **Every target is ≥ 44 px on touch.** A mouse on a desktop-width screen gets the compact 36 px.
+- **Every text colour meets 4.5:1** (3:1 when large) on every surface, in both appearances and for every role. `looks.contrast.test.js` checks this without a browser; `e2e/look-specimen.spec.js` checks it on the real page.
+- **No sideways page scroll**, at any width.
+
+## Cascade order
+
+`src/components/ui/ui.css` is imported at the top of `index.css`, before Tailwind's layers:
+- the primitives' single-class rules beat preflight's element resets;
+- a page's layout utilities, which come later, win ties.
+
+Never import a primitive's CSS from its component. A lazy chunk would load after the utilities and override a page's layout.
+
+The `@font-face` rules are the exception, and the opposite way round. They live in `src/styles/look-fonts.js` and load with what is drawn in them (`loadLookFonts` in App, Home, the primitives), never in the entry chunk: declaring them there once moved pixels on a screen that did not draw the fonts.
+
+## Seeing it
+
+The specimen at `/__look` shows every primitive in every state. It exists only in dev and in builds made with `VITE_LOOK_OVERRIDE=1`.
+
+```
+/__look?look=prime-time&appearance=light&role=judge
+```
+
+To photograph it and audit contrast, layout and targets:
+
+```
+E2E_BASE_URL=http://localhost:4175 npx playwright test e2e/look-specimen.spec.js --project=chromium
+```
+
+To preview a route in another look (when there is one), add `?look=<id>` in dev or an override build. It applies to that browser tab only; `?look=off` clears it.
+
+| Dark, 1366 | Light, 1366 |
+|---|---|
+| ![prime-time dark, judge, 1366](specimen/prime-time-dark-judge-1366.png) | ![prime-time light, judge, 1366](specimen/prime-time-light-judge-1366.png) |
+
+| Dark, 375 | Light, 375 |
+|---|---|
+| ![prime-time dark, coach, 375](specimen/prime-time-dark-coach-375.png) | ![prime-time light, coach, 375](specimen/prime-time-light-coach-375.png) |

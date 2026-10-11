@@ -1,0 +1,24 @@
+{
+  "generatedBy": "scripts/build-looks.mjs",
+  "default": "prime-time",
+  "looks": {
+    "prime-time": {
+      "dark": {
+        "bg": "#000000",
+        "surface": "#140e09",
+        "surface-raised": "#20160e",
+        "surface-sunken": "#000000",
+        "surface-overlay": "#20160e",
+        "accent": "#ff6b00"
+      },
+      "light": {
+        "bg": "#f3eee6",
+        "surface": "#fbf8f3",
+        "surface-raised": "#ffffff",
+        "surface-sunken": "#e8e0d4",
+        "surface-overlay": "#ffffff",
+        "accent": "#ff6b00"
+      }
+    }
+  }
+}

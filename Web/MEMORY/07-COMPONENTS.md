@@ -7,6 +7,7 @@ covers:
   - src/components/auth/SafeText.jsx
   - src/components/auth/PasswordStrength.jsx
   - src/components/admin/AdminKit.jsx
+  - src/components/ui/**
   - src/components/layout/AppearanceMenu.jsx
   - src/components/layout/ErrorBoundary.jsx
   - src/components/layout/Navbar.jsx
@@ -49,6 +50,62 @@ components/superadmin/AddPlayerForm.jsx
 [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md) instead (it's a
 `protected-route.jsx` implementation detail); noted here only for
 completeness.
+
+## Rollout additions (design-language W1–W4 + Phase 6, 2026-10-10/11)
+
+- `ui/Notice` (inline status, 3px rule; caller passes the role),
+  `ui/RunningOrder` + `RunningOrderItem` (numbered choice rows; `titleAs="h3"`
+  where the e2e flows read the card's h3), `ui/TextLink`, `Grain local`,
+  `Heading asIs` (names keep their case), popover/picker CSS (`ui/popover.css`:
+  `.ui-picker`, `.ui-popover*`, used by `auth/Dropdown` and
+  `competition/CompetitionSelector`), `.ui-check` (checkbox chip),
+  `.info-line`.
+- `shell/AuthLayout` + `AuthHeader` + `AuthLinks`: every sign-in, register,
+  forgot and reset screen (black stage side, `data-appearance="dark"` island).
+  `AppHeader` gained `extra`, `fixed`, `navFrom="xl"`, `compactBrand`, and
+  keeps the Light/Dark switch in the bar at every width. `AccountControls`
+  says "Logout" (the e2e name).
+- `scores/board.css`: the results board (`.sb-*`), the squad (`.squad-*`),
+  the fee sheet (`.pay-sheet*`), `.perf-tab`. Imported through `ui.css`.
+- `admin/AdminKit` keeps its names (DarkCard, FadeIn, DarkBtn…) but is drawn
+  by the primitives; `auth/ConfirmDialog` (isOpen/message API) wraps the
+  `ui` ConfirmDialog.
+- `components/design-system/` is gone except `accessibility/LiveRegion`.
+
+## `shell/` and `brand/` (design-language Phase 4, branch `look/phase-4-shells`)
+
+`@/components/shell`: `AppHeader` (wordmark, RoleIdent, competition
+"segment", TabNav from `lg`, AccountControls from `md`, a menu button
+opening a `Dialog sheet` drawer below those; below 480px the wordmark
+collapses to the mark, name kept for screen readers), `PageHeader`
+(the page h1), `RoleIdent`, `AccountControls`, `TabNav` (NavLink,
+`aria-current="page"`). `@/components/brand/Brand`: `BRAND_NAME`,
+`Wordmark`, `PoleMark` (saffron via `--brand-fg`). Built in Phase 4,
+adopted per rollout wave. Trap: a Tailwind layout utility on a
+component's ROOT beats the component's own breakpoint CSS (utilities
+win ties) — `AccountControls` once showed on phones because of a `flex`
+class. `look-specimen.spec.js` now fails on masthead overlap/overflow.
+
+## `ui/` — the look primitives (design-language Phase 3, branch `look/phase-3-primitives`)
+
+`@/components/ui`: Button, IconButton, Field + Input/Select/Textarea/
+PasswordInput, Panel, Heading, Tag, StatusTag, Stat, SpecList, DataTable,
+Tabs/TabPanel, Segmented, Dialog, ConfirmDialog, Menu, Spinner, Skeleton,
+EmptyState, ErrorState, Grain, `toastOptions`. The guide is
+`docs/design-language/README.md`; the specimen is `/__look` (dev /
+`VITE_LOOK_OVERRIDE=1` builds only). They read tokens only and import
+`@/styles/look-fonts`. Their CSS is NOT imported per component: it is one
+`ui.css`, imported at the top of `index.css` before Tailwind's layers, so
+preflight loses to them and pages' layout utilities beat them on ties.
+Traps already hit:
+- `:where()` base rules lost to preflight (`button { padding: 0 }`) — base
+  rules are single classes.
+- A loading label hidden with `visibility: hidden` dropped the button's
+  accessible name — it is `color: transparent`.
+- `.stacked-table`'s `::before` labels (35% ink) fail contrast on light
+  surfaces and the route audit cannot see pseudo text — `ui-table` restyles
+  them; `look-specimen.spec.js` measures `::before` text.
+Tests: `ui/ui.test.jsx` (roles, keyboard, focus trap, states).
 
 ## Shared pieces added by the responsive/appearance work (2026-10)
 

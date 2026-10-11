@@ -10,135 +10,49 @@ import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { competitionsAtLevel, levelLabel } from '@/utils/competition/levels';
 import { idOf } from '@/pages/judge/judgeCategoryOptions';
+import { ArrowRight, Layers, Search, X } from 'lucide-react';
 import {
-  Trophy, MapPin, Calendar, Search, X, Check, ArrowRight, Zap, Clock, Layers,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { COLORS, SAFFRON_CTA, FG, alpha } from '@/styles/tokens';
-import { useReducedMotion } from '@/hooks/useResponsive';
-import { GradientText, FadeIn } from '@/components/design-system';
-import { AmbientOrbs, ORB_INTENSITY } from '@/components/design-system/backgrounds';
-
-
-const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
+  Button, Heading, IconButton, Input, RunningOrder, RunningOrderItem, StatusTag, Tag, EmptyState, ErrorState, TextLink,
+} from '@/components/ui';
 
 const statusConfig = {
-  ongoing: { color: FG.success, label: 'Live', Icon: Zap },
-  upcoming: { color: FG.info, label: 'Upcoming', Icon: Clock },
-  completed: { color: 'var(--fg-muted)', label: 'Completed', Icon: Check },
+  ongoing: { status: 'success', label: 'Live' },
+  upcoming: { status: 'info', label: 'Upcoming' },
+  completed: { status: null, label: 'Completed' },
 };
 
-// ─── Ambient orb ─────────────────────────────────────────────────────────────
-// ─── Competition Card ─────────────────────────────────────────────────────────
-const CompetitionCard = ({ competition, isSelected, onSelect, disabled, index }) => {
-  const reduced = useReducedMotion();
+// ─── Competition row ──────────────────────────────────────────────────────────
+const CompetitionRow = ({ competition, isSelected, onSelect, disabled, index }) => {
   const status = statusConfig[competition.status] || statusConfig.completed;
-  const StatusIcon = status.Icon;
-
-  const CardIcon = Trophy;
+  const dates = competition.startDate && competition.endDate
+    ? `${new Date(competition.startDate).toLocaleDateString()} – ${new Date(competition.endDate).toLocaleDateString()}`
+    : null;
+  const where = [competition.place, dates].filter(Boolean).join(' · ');
 
   return (
-    <motion.button
-      onClick={() => onSelect(competition._id || competition.id)}
+    <RunningOrderItem
+      index={index + 1}
+      title={`${competition.name} ${competition.year || ''}`.trim()}
+      // An h3, as the card had: the seed chain reads the chosen meet from it.
+      titleAs="h3"
+      meta={(where || competition.description) ? (
+        <>
+          {where}
+          {competition.description && <span className="block line-clamp-2">{competition.description}</span>}
+        </>
+      ) : null}
+      selected={isSelected}
       disabled={disabled}
-      className="w-full text-left rounded-2xl border relative overflow-hidden transition-all duration-200 group"
-      style={{
-        background: isSelected
-          ? `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x12)}, rgb(var(--ink) / 0.03))`
-          : 'rgb(var(--ink) / 0.03)',
-        borderColor: isSelected ? `${alpha(COLORS.saffron, 0x45)}` : COLORS.darkBorderSubtle,
-        boxShadow: isSelected ? `0 0 0 1px ${alpha(COLORS.saffron, 0x20)}, 0 8px 32px ${alpha(COLORS.saffron, 0x10)}` : 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-      }}
-      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06, ease: EASE_OUT }}
-      whileHover={disabled ? {} : {
-        borderColor: `${alpha(COLORS.saffron, 0x35)}`,
-        background: `linear-gradient(135deg, ${alpha(COLORS.saffron, 0x08)}, rgb(var(--ink) / 0.03))`,
-        y: -2,
-      }}
-      whileTap={disabled ? {} : { scale: 0.99 }}
-      aria-pressed={isSelected}
-    >
-      {/* Selected shimmer */}
-      {isSelected && (
-        <div className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${alpha(COLORS.saffron, 0x60)}, transparent)` }} />
+      onClick={() => onSelect(competition._id || competition.id)}
+      aside={(
+        <>
+          {competition.level && <Tag>{levelLabel(competition.level)}</Tag>}
+          {competition.status && (status.status
+            ? <StatusTag status={status.status}>{status.label}</StatusTag>
+            : <Tag>{status.label}</Tag>)}
+        </>
       )}
-
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: isSelected ? `${alpha(COLORS.saffron, 0x20)}` : 'rgb(var(--ink) / 0.06)' }}>
-              <CardIcon className="w-5 h-5" style={{ color: isSelected ? COLORS.saffron : 'rgb(var(--ink) / 0.4)' }} aria-hidden="true" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-ink font-bold text-sm leading-tight">
-                {competition.name} {competition.year || ''}
-              </h3>
-              
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                {competition.place && (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--fg-muted)' }}>
-                    <MapPin className="w-3 h-3" aria-hidden="true" />
-                    {competition.place}
-                  </span>
-                )}
-                {competition.level && (
-                  <span className="text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: `${alpha(COLORS.saffron, 0x12)}`, color: FG.brandSoft }}>
-                    {levelLabel(competition.level)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Status + check */}
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {competition.status && (
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{ background: `${alpha(status.color, 0x15)}`, color: status.color, border: `1px solid ${alpha(status.color, 0x30)}` }}>
-                {competition.status === 'ongoing' && (
-                  <motion.span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ background: status.color }}
-                    animate={{ opacity: [1, 0.3, 1] }}
-                    transition={{ duration: 1.2, repeat: Infinity }} />
-                )}
-                {status.label}
-              </span>
-            )}
-            {isSelected && (
-              <motion.div
-                className="w-6 h-6 rounded-full flex items-center justify-center"
-                style={{ background: COLORS.saffron }}
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              >
-                <Check className="w-3.5 h-3.5 text-ink" aria-hidden="true" />
-              </motion.div>
-            )}
-          </div>
-        </div>
-
-        {competition.startDate && competition.endDate && (
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--fg-muted)' }}>
-            <Calendar className="w-3 h-3" aria-hidden="true" />
-            {new Date(competition.startDate).toLocaleDateString()} –{' '}
-            {new Date(competition.endDate).toLocaleDateString()}
-          </div>
-        )}
-
-        {/* Description */}
-        {competition.description && (
-          <p className="mt-2 text-xs leading-relaxed line-clamp-2" style={{ color: 'var(--fg-muted)' }}>
-            {competition.description}
-          </p>
-        )}
-      </div>
-    </motion.button>
+    />
   );
 };
 
@@ -173,7 +87,6 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const [scopedCompetitions, setScopedCompetitions] = useState(null);
   const [scopedLoading, setScopedLoading] = useState(false);
   const [scopedError, setScopedError] = useState(null);
-  useReducedMotion();
 
   /**
    * Does this player already belong to a squad?
@@ -635,22 +548,13 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const passingThrough = !!autoTarget && !autoFailed;
   if (loading || isSelecting || passingThrough) {
     return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ background: COLORS.dark }}>
-        <div className="text-center">
-          <motion.div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: `${alpha(COLORS.saffron, 0x18)}`, border: `1px solid ${alpha(COLORS.saffron, 0x30)}` }}
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <Trophy className="w-8 h-8" style={{ color: FG.brand }} />
-          </motion.div>
-          <p className="text-fg-muted text-sm">
-            {passingThrough
-              ? `Opening ${autoTarget.name || 'your competition'}…`
-              : isSelecting ? 'Loading your dashboard...' : 'Loading competitions...'}
-          </p>
-        </div>
+      <div className="min-h-dvh flex items-center justify-center bg-bg px-[var(--pad)]">
+        <p className="type-body-s text-fg-muted flex items-center gap-3 m-0">
+          <span className="ui-spinner" aria-hidden="true" />
+          {passingThrough
+            ? `Opening ${autoTarget.name || 'your competition'}…`
+            : isSelecting ? 'Loading your dashboard...' : 'Loading competitions...'}
+        </p>
       </div>
     );
   }
@@ -658,35 +562,23 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   // ── Error ──
   if (error) {
     return (
-      <div className="min-h-dvh flex items-center justify-center p-4" style={{ background: COLORS.dark }}>
-        <FadeIn className="text-center max-w-sm w-full">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-            <Trophy className="w-10 h-10 text-red-700 dark:text-red-400" />
-          </div>
-          <h2 className="text-2xl font-black text-ink mb-3">Error</h2>
-          <p className="text-red-700 dark:text-red-200 text-sm leading-relaxed mb-8">
-            {error}
-          </p>
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={() => userType === 'coach' ? fetchCoachData() : window.location.reload()}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-ink font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
-              style={SAFFRON_CTA}
-            >
-              Try Again
-            </button>
-            {userType === 'coach' && error.includes('create a team') && (
-              <button
-                onClick={() => navigate('/coach/create-team')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-ink font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
-                style={SAFFRON_CTA}
-              >
-                Create Team
-              </button>
-            )}
-          </div>
-        </FadeIn>
+      <div className="min-h-dvh flex items-center justify-center bg-bg px-[var(--pad)]">
+        <ErrorState
+          tag="Error"
+          className="w-full max-w-md ui-fade-in"
+          action={(
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => userType === 'coach' ? fetchCoachData() : window.location.reload()}>
+                Try Again
+              </Button>
+              {userType === 'coach' && error.includes('create a team') && (
+                <Button variant="line" onClick={() => navigate('/coach/create-team')}>Create Team</Button>
+              )}
+            </div>
+          )}
+        >
+          {error}
+        </ErrorState>
       </div>
     );
   }
@@ -710,35 +602,21 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     }[userType] || 'You are not assigned to any competition at this level.';
 
     return (
-      <div className="min-h-dvh flex items-center justify-center p-4" style={{ background: COLORS.dark }}>
-        <FadeIn className="text-center max-w-sm w-full">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${COLORS.darkBorderSubtle}` }}>
-            <Trophy className="w-10 h-10 text-ink/20" />
-          </div>
-          <h2 className="text-2xl font-black text-ink mb-3">
-            Nothing at {levelLabel(selectedLevel)} Level
-          </h2>
-          <p className="text-fg-muted text-sm leading-relaxed mb-8">
+      <div className="min-h-dvh flex items-center justify-center bg-bg px-[var(--pad)]">
+        <div className="w-full max-w-md grid gap-4 ui-fade-in">
+          <Heading level={2} step="display-m">Nothing at {levelLabel(selectedLevel)} Level</Heading>
+          <EmptyState
+            tag="No competitions"
+            action={(
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button icon={Layers} onClick={() => navigate(`/${userType}/select-level`)}>Choose Another Level</Button>
+                <Button variant="line" onClick={() => navigate('/')}>Go to Home</Button>
+              </div>
+            )}
+          >
             {emptyReason} Try another level, or check back later.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2 justify-center">
-            <button
-              onClick={() => navigate(`/${userType}/select-level`)}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-ink font-bold text-sm min-h-[44px] transition-all hover:brightness-110 active:scale-95"
-              style={SAFFRON_CTA}
-            >
-              <Layers className="w-4 h-4" aria-hidden="true" /> Choose Another Level
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-ink/70 font-bold text-sm min-h-[44px] transition-all hover:text-ink active:scale-95"
-              style={{ background: 'rgb(var(--ink) / 0.05)', border: `1px solid ${COLORS.darkBorderSubtle}` }}
-            >
-              Go to Home
-            </button>
-          </div>
-        </FadeIn>
+          </EmptyState>
+        </div>
       </div>
     );
   }
@@ -750,45 +628,23 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
     // pushed "Register Team & Continue" past the fold — 24px past it with only
     // three competitions on a 695px-tall window, and further with every extra
     // card — so the primary action needed a scroll nobody knew to make.
-    <div className="h-dvh relative overflow-hidden" style={{ background: COLORS.dark }}>
-      {/* Ambient background */}
-      <AmbientOrbs
-        intensity={ORB_INTENSITY.warm}
-        orbs={[
-          { x: 15, y: 20, size: 400, color: COLORS.saffron, delay: 0 },
-          { x: 85, y: 70, size: 300, color: COLORS.gold, delay: 2 },
-        ]}
-      />
-
-      {/* Noise texture overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        }} />
-
-      <div className="relative z-10 h-full flex flex-col items-center p-4 py-8 md:py-10 [@media(max-height:700px)]:py-4">
+    <div className="h-dvh bg-bg text-fg">
+      <div className="h-full flex flex-col items-center px-[var(--pad)] py-8 md:py-10 [@media(max-height:700px)]:py-4">
         {/*
-          * Header, search and CTA are `shrink-0`; the card region is the one
+          * Header, search and CTA are `shrink-0`; the list region is the one
           * item allowed to shrink, so it absorbs every overflow. `justify-center`
           * still centres the whole stack while it fits.
           */}
         <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-center">
           {/*
-            * Header. The height-based variants buy the card list back its room
-            * on short viewports — a landscape phone (375px tall) spends half of
-            * it on a badge and a subtitle, which left the list a 47px sliver
-            * once the screen stopped growing.
+            * Header. The height-based variants buy the list back its room on
+            * short viewports: a landscape phone (375px tall) would otherwise
+            * spend half of it on a tag and a subtitle.
             */}
-          <FadeIn className="text-center mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-5 border [@media(max-height:500px)]:hidden"
-              style={{ background: `${alpha(COLORS.saffron, 0x12)}`, borderColor: `${alpha(COLORS.saffron, 0x35)}`, color: FG.brandSoft }}>
-              <Trophy className="w-3 h-3" aria-hidden="true" />
-              Competition Selection
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black text-ink mb-3 leading-tight [@media(max-height:500px)]:text-2xl [@media(max-height:500px)]:mb-1">
-              Choose Your <GradientText>Arena</GradientText>
-            </h1>
-            <p className="text-fg-muted text-base max-w-md mx-auto [@media(max-height:500px)]:hidden">
+          <header className="grid justify-items-start gap-3 mb-8 shrink-0 [@media(max-height:700px)]:mb-5 [@media(max-height:500px)]:mb-3">
+            <Tag tone="accent" className="[@media(max-height:500px)]:hidden">Competition Selection</Tag>
+            <Heading level={1} step="display-l" className="ui-wipe-in">Choose Your Arena</Heading>
+            <p className="type-body text-fg-muted max-w-md m-0 [@media(max-height:500px)]:hidden">
               Select a competition to continue to your dashboard
             </p>
 
@@ -798,129 +654,76 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
               * the one they were looking for reads as the meet having vanished.
               */}
             {selectedLevel && (
-              <button
-                onClick={() => navigate(`/${userType}/select-level`)}
-                className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors min-h-[32px] tap-safe"
-                style={{
-                  background: `${alpha(COLORS.saffron, 0x12)}`,
-                  border: `1px solid ${alpha(COLORS.saffron, 0x30)}`,
-                  color: FG.brandSoft,
-                }}
-              >
-                <Layers className="w-3 h-3" aria-hidden="true" />
+              <TextLink as="button" type="button" onClick={() => navigate(`/${userType}/select-level`)}>
+                <Layers className="w-4 h-4" aria-hidden="true" />
                 {levelLabel(selectedLevel)} level
-                <span className="text-fg-muted font-normal">· change</span>
-              </button>
+                <span className="text-fg-muted">· change</span>
+              </TextLink>
             )}
-          </FadeIn>
+          </header>
 
           {/* Search */}
           {competitions.length > 3 && (
-            <FadeIn delay={0.1} className="mb-6 shrink-0">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: 'rgb(var(--ink) / 0.3)' }} aria-hidden="true" />
-                <input
-                  type="text"
-                  placeholder="Search by name, place, level, or status..." aria-label="Search competitions"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-10 py-3.5 rounded-xl text-base mouse:text-sm transition-all min-h-[44px]"
-                  style={{
-                    background: 'rgb(var(--ink) / 0.05)',
-                    border: `1px solid ${searchQuery ? `${alpha(COLORS.saffron, 0x40)}` : COLORS.darkBorderSubtle}`,
-                    color: FG.ink,
-                    boxShadow: searchQuery ? `0 0 0 3px ${alpha(COLORS.saffron, 0x12)}` : 'none',
-                  }}
+            <div className="mb-6 shrink-0 relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none z-10" aria-hidden="true" />
+              <Input
+                type="text"
+                placeholder="Search by name, place, level, or status..." aria-label="Search competitions"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-12"
+              />
+              {searchQuery && (
+                <IconButton
+                  label="Clear search"
+                  icon={X}
+                  variant="ghost"
+                  className="absolute right-0 top-1/2 -translate-y-1/2"
+                  onClick={() => setSearchQuery('')}
                 />
-                <AnimatePresence>
-                  {searchQuery && (
-                    <motion.button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-fg-muted hover:text-fg transition-colors"
-                      initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
-                      aria-label="Clear search"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-              </div>
-            </FadeIn>
+              )}
+            </div>
           )}
 
-          {/* Cards grid — the only scrolling region. `py-1 pr-1` keeps the
-              hover lift and the selected card's glow off the clip edge. */}
-          <div className="min-h-0 overflow-y-auto mb-6 py-1 pr-1">
-            <AnimatePresence mode="wait">
-              {filteredCompetitions && filteredCompetitions.length === 0 ? (
-                <motion.div
-                  key="empty"
-                  className="text-center py-16"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                >
-                  <p className="text-fg-muted text-sm">
-                    No competitions found for &quot;{searchQuery}&quot;
-                  </p>
-                  <button onClick={() => setSearchQuery('')}
-                    className="mt-2 text-xs font-semibold transition-colors"
-                    style={{ color: FG.brandSoft }}>
-                    Clear search
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="grid"
-                  className="grid grid-cols-1 md:grid-cols-2 gap-3"
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                >
-                  {filteredCompetitions?.map((competition, i) => (
-                    <CompetitionCard
-                      key={competition._id || competition.id}
-                      competition={competition}
-                      isSelected={selectedCompetition === (competition._id || competition.id)}
-                      onSelect={setSelectedCompetition}
-                      disabled={isSelecting}
-                      index={i}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* The list: the only scrolling region. */}
+          <div className="min-h-0 overflow-y-auto mb-6">
+            {filteredCompetitions && filteredCompetitions.length === 0 ? (
+              <div className="text-center py-16 ui-fade-in">
+                <p className="type-body-s text-fg-muted m-0">
+                  No competitions found for &quot;{searchQuery}&quot;
+                </p>
+                <TextLink as="button" type="button" onClick={() => setSearchQuery('')}>Clear search</TextLink>
+              </div>
+            ) : (
+              <RunningOrder label="Competitions">
+                {filteredCompetitions?.map((competition, i) => (
+                  <CompetitionRow
+                    key={competition._id || competition.id}
+                    competition={competition}
+                    isSelected={selectedCompetition === (competition._id || competition.id)}
+                    onSelect={setSelectedCompetition}
+                    disabled={isSelecting}
+                    index={i}
+                  />
+                ))}
+              </RunningOrder>
+            )}
           </div>
 
           {/* CTA */}
-          <FadeIn delay={0.2} className="flex justify-center shrink-0">
-            <motion.button
+          <div className="flex justify-end shrink-0">
+            <Button
+              size="lg"
               onClick={handleCompetitionSelect}
-              disabled={!selectedCompetition || isSelecting}
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-ink font-bold text-sm min-h-[52px] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                background: selectedCompetition
-                  ? SAFFRON_CTA.background
-                  : 'rgb(var(--ink) / 0.08)',
-                border: `1px solid ${selectedCompetition ? 'transparent' : COLORS.darkBorderSubtle}`, color: selectedCompetition ? SAFFRON_CTA.color : undefined,
-              }}
-              whileHover={selectedCompetition && !isSelecting ? { scale: 1.02, brightness: 1.1 } : {}}
-              whileTap={selectedCompetition && !isSelecting ? { scale: 0.97 } : {}}
+              disabled={!selectedCompetition}
+              loading={isSelecting}
+              iconRight={isSelecting ? null : ArrowRight}
             >
-              <>
-                {isSelecting ? (
-                  <>
-                    <div
-                      className="animate-spin w-4 h-4 rounded-full border-2 border-ink/30 border-t-ink"
-                    />
-                    {userType === 'coach' ? 'Registering...' : 'Loading...'}
-                  </>
-                ) : (
-                  <>
-                    {userType === 'coach' ? 'Register Team & Continue' : 'Continue to Dashboard'}
-                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                  </>
-                )}
-              </>
-            </motion.button>
-          </FadeIn>
+              {isSelecting
+                ? (userType === 'coach' ? 'Registering...' : 'Loading...')
+                : (userType === 'coach' ? 'Register Team & Continue' : 'Continue to Dashboard')}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

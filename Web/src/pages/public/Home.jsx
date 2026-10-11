@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
-import '@fontsource/teko/500.css';
-import '@fontsource/teko/600.css';
-import '@fontsource-variable/archivo/wdth.css';
+import '@/styles/look-fonts';
+// The module, not the barrel: Home needs only the grain, not every primitive.
+import { Grain } from '@/components/ui/Stage';
 import './home/home.css';
 import sectionsHtml from './home/sections.html?raw';
 import footerHtml from './home/footer.html?raw';
@@ -82,9 +82,9 @@ const Home = () => {
   }, [navigate]);
 
   return (
-    <div className="mk-home" data-appearance="dark" ref={pageRef}>
+    <div className="mk-home" data-look="prime-time" data-appearance="dark" ref={pageRef}>
       <a className="skip" href="#main">Skip to content</a>
-      <div className="grain" aria-hidden="true" />
+      <Grain />
 
       <header className="masthead">
         <nav className="masthead__nav" aria-label="Primary">
@@ -136,9 +136,9 @@ const Home = () => {
                 <h3 className="role__name">{role.name}</h3>
                 <p className="role__desc">{role.desc}</p>
                 <div className="role__acts">
-                  <Link className="btn btn--solid" to={role.login} aria-label={`${role.name} — Log in`}>Log in</Link>
+                  <Link className="ui-btn ui-btn--solid ui-btn--lg" to={role.login} aria-label={`${role.name} — Log in`}>Log in</Link>
                   {role.register && (
-                    <Link className="btn btn--line" to={role.register} aria-label={`${role.name} — Register`}>Register</Link>
+                    <Link className="ui-btn ui-btn--line ui-btn--lg" to={role.register} aria-label={`${role.name} — Register`}>Register</Link>
                   )}
                 </div>
               </div>

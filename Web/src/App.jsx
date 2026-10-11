@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { MotionConfig } from 'framer-motion';
@@ -13,7 +13,18 @@ import { useMediaQuery } from '@/hooks/useResponsive';
 import { verifyCopRulesAgainstServer } from '@/utils/scoring/copRulesSync';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { applyRoleAccent } from '@/utils/ui/appearance';
+import { applyLook, onLookClaim } from '@/utils/ui/look';
+import { toastOptions as lookToastOptions } from '@/components/ui/toast';
+import { loadLookFonts } from '@/styles/fonts';
 import { CornerAppearanceMenu } from '@/components/layout/AppearanceMenu';
+
+/* Toasts in the look (components/ui/toast.js), with the durations they always had. */
+const TOAST_OPTIONS = {
+  ...lookToastOptions,
+  duration: 4000,
+  success: { ...lookToastOptions.success, duration: 3000 },
+  error: { ...lookToastOptions.error, duration: 4000 },
+};
 
 function AppContent() {
   const { user, userType, loading, logout: handleLogout } = useAuth();
@@ -33,11 +44,16 @@ function AppContent() {
     verifyCopRulesAgainstServer();
   }, []);
 
-  // Role accent for the CSS tokens, from the URL like everything else here.
-  // A layout effect, so a route change never paints one frame in the old role.
+  // Role accent and look for the CSS tokens, from the URL like everything else
+  // here. A layout effect, so a route change never paints one frame in the old
+  // role or look. Both only flip an attribute on <html>; nothing remounts.
+  // A screen no route names (the 404) claims its look; re-apply when it does.
+  const [claims, setClaims] = useState(0);
+  useEffect(() => onLookClaim(() => setClaims((n) => n + 1)), []);
   useLayoutEffect(() => {
     applyRoleAccent(getRoleFromPath(location.pathname));
-  }, [location.pathname]);
+    loadLookFonts(applyLook(location.pathname, location.search));
+  }, [location.pathname, location.search, claims]);
 
   if (loading) {
     return <PageLoader />;
@@ -65,8 +81,11 @@ function AppContent() {
   // /admin/teams (the dashboard's Teams tab is the linked one, inside the dashboard header).
   const isHeaderlessPage = /^\/(admin\/teams|superadmin\/add-player-payment)\/?$/.test(location.pathname);
 
+  // The look specimen (dev/preview only) carries its own controls.
+  const isSpecimen = location.pathname === '/__look';
+
   const shouldHideNavbar =
-    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage;
+    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage || isSpecimen;
 
   return (
     <CompetitionProvider userType={userType}>
@@ -102,30 +121,7 @@ function AppContent() {
         <Toaster
           position={isPhone ? 'top-center' : 'top-right'}
           containerStyle={isPhone ? { top: 76, left: 12, right: 12 } : { top: 76 }}
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-              // Long validation messages otherwise widen the toast past the
-              // viewport and take the page's horizontal scroll with them.
-              maxWidth: 'min(92vw, 24rem)',
-            },
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: '#4ade80',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              duration: 4000,
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
-              },
-            },
-          }}
+          toastOptions={TOAST_OPTIONS}
         />
       </div>
     </CompetitionProvider>

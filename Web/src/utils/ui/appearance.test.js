@@ -56,8 +56,8 @@ describe('appearance preference', () => {
 describe('applyAppearance', () => {
   beforeEach(() => {
     document.head.innerHTML = `
-      <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
-      <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">`;
+      <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+      <meta name="theme-color" content="#f3eee6" media="(prefers-color-scheme: light)">`;
     document.documentElement.removeAttribute('data-appearance');
   });
 
@@ -72,14 +72,14 @@ describe('applyAppearance', () => {
   it('forces both theme-color tags for an explicit choice', () => {
     applyAppearance('dark', 'dark');
     const colours = [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.content);
-    expect(colours).toEqual(['#0a0a0a', '#0a0a0a']);
+    expect(colours).toEqual(['#000000', '#000000']);
   });
 
   it('hands the tags back to their media queries for `system`', () => {
     applyAppearance('dark', 'dark');
     applyAppearance('light', 'system');
     const colours = [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.content);
-    expect(colours).toEqual(['#0a0a0a', '#f6f7f9']);
+    expect(colours).toEqual(['#000000', '#f3eee6']);
   });
 
   it('suppresses transitions for the switch and releases them after', async () => {

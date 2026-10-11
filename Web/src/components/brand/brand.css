@@ -1,0 +1,26 @@
+/*
+ * The brand (design-language PLAN D9): "Mallakhamb India" and the pole mark,
+ * everywhere the old name and the BHA logo were. The mark is the brand
+ * saffron as text (`--brand-fg`: the saffron hex in dark, the -700 shade that
+ * reads on light surfaces), so it is right on classic screens too.
+ */
+.brand-mark { display: block; flex: none; fill: currentColor; color: rgb(var(--brand-fg)); }
+.brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--fg);
+  text-decoration: none;
+  font-family: var(--type-tag-family);
+  font-weight: var(--type-tag-weight);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: var(--type-tag-tracking);
+  text-transform: uppercase;
+  font-stretch: var(--type-tag-stretch);
+  white-space: nowrap;
+}
+.brand-wordmark .brand-mark { width: 13px; height: 34px; }
+/* The mark alone is still a 44px target (it is the link home). */
+.brand-wordmark--compact { min-width: 44px; justify-content: center; }

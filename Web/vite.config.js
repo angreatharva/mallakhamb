@@ -1,4 +1,5 @@
 import path from 'path'
+import process from 'node:process'
 import { fileURLToPath } from 'url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -8,6 +9,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  /*
+   * The look preview switch (design-language PLAN §4.4) as a build-time
+   * constant: '' unless the build sets VITE_LOOK_OVERRIDE=1. Vite only inlines
+   * env vars that exist, so without this an unset one stayed a runtime lookup
+   * and the dev-only specimen chunk shipped in every production build.
+   */
+  define: {
+    'import.meta.env.VITE_LOOK_OVERRIDE': JSON.stringify(process.env.VITE_LOOK_OVERRIDE || ''),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
@@ -52,6 +62,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
     css: true,
+    /*
+     * Four workers, not one per core. The judge-screen tests render whole
+     * screens in jsdom; with a worker per core (15 on a 16-core laptop) they
+     * compete for the machine and the slowest took 3.5 s of the 5 s timeout, so
+     * a busy machine tipped a different handful over the edge on every run
+     * (master included). With four, the slowest takes 1.2 s. The timeout stays
+     * at the default, so a real hang still fails.
+     */
+    maxWorkers: 4,
     // Scoped to src so Vitest never tries to run the Playwright specs in e2e/,
     // which its default glob would otherwise match on `*.spec.js`.
     include: ['src/**/*.{test,spec}.{js,jsx}'],
@@ -65,8 +84,8 @@ export default defineConfig({
         'src/**/*.test.{js,jsx}',
         'src/setupTests.js',
         'src/main.jsx',
-        // Presentational design-system pieces: markup and tokens, no logic
-        // worth asserting, and including them buries the code that matters.
+        // LiveRegion, the one presentational piece kept from the old design
+        // system: markup, no logic worth asserting.
         'src/components/design-system/**',
         'src/styles/**',
         'src/assets/**',

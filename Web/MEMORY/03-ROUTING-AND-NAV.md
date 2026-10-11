@@ -34,6 +34,12 @@ role," start in `UnifiedLogin.jsx`/`UnifiedDashboard.jsx`, not the
 per-role wrapper file** — the wrapper almost certainly doesn't contain
 the logic you're looking for.
 
+**`/__look`** (the design-language specimen) exists only when
+`import.meta.env.DEV || VITE_LOOK_OVERRIDE === '1'` (`LOOK_SPECIMEN_ENABLED`,
+`routes/lazy-pages.js`). `vite.config.js` `define`s `VITE_LOOK_OVERRIDE` as
+`''` when unset — without it Vite left the lookup at runtime and the chunk
+shipped in production builds.
+
 ## The route tree — five role layouts, each wrapping `<Outlet/>`
 
 `AppRoutes` (`routes/index.jsx:128-235`) is a flat `<Routes>` tree (React
