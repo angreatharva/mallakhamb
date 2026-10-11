@@ -218,8 +218,8 @@
 .mk-home .foot a:hover{color:var(--saffron)}
 .mk-home .foot__links li{line-height:2.1}
 .mk-home .foot__links a{display:inline-block;min-height:24px}
-/* Touch, and narrow windows: every footer link (the contact links too) is a 44px target. */
-@media (pointer:coarse),(max-width:767px){
+/* Touch, and windows below the laptop layout: every footer link (the contact links too) is a 44px target. */
+@media (pointer:coarse),(max-width:1023px){
   .mk-home .foot__links li{line-height:1.4}
   .mk-home .foot__links a,.mk-home .foot address a,.mk-home .credits a{display:inline-flex;align-items:center;min-height:44px}
 }

@@ -37,6 +37,7 @@
   white-space: nowrap;
   /* A tag is as wide as its text, even as a grid item (grids stretch by default). */
   justify-self: start;
+  max-width: 100%;
 }
 .ui-tag--accent { color: rgb(var(--accent-fg)); box-shadow: inset 0 0 0 1px rgb(var(--accent-fg) / 0.5); }
 .ui-tag--ident { color: rgb(var(--ident-fg)); box-shadow: inset 0 0 0 1px rgb(var(--ident-fg) / 0.5); }
@@ -52,7 +53,7 @@
 
 /* Stat: tag label, a number that is the point, a unit in the accent. */
 .ui-stat { display: grid; gap: 6px; }
-.ui-stat__label { color: var(--fg-secondary); }
+.ui-stat__label { color: var(--fg-secondary); overflow-wrap: anywhere; }
 .ui-stat__value { color: var(--fg); }
 .ui-unit { font-size: 0.56em; color: rgb(var(--accent-fg)); margin-left: 0.15em; }
 .ui-stat__hint { margin: 0; color: var(--fg-secondary); }

@@ -405,7 +405,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       {/* Stats Grid */}
       <div className="grid gap-4">
         <Tag tone="accent" className="justify-self-start">Overview</Tag>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] md:grid-cols-3 gap-4">
           <StatPanel label="Total Teams" value={stats?.totalTeams} />
           <StatPanel label="Total Participants" value={stats?.totalParticipants} />
           <StatPanel label="Boys Teams" value={stats?.boysTeams} />
@@ -487,8 +487,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     <div className="space-y-8">
       {/* System Overview */}
       <div className="grid gap-4">
-        <Tag tone="accent" className="justify-self-start">System Overview — All Competitions</Tag>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Tag tone="accent" className="justify-self-start whitespace-normal">System Overview — All Competitions</Tag>
+        <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] md:grid-cols-4 gap-4">
           <StatPanel label="Total Admins" value={systemStats?.admins} />
           <StatPanel label="Total Coaches" value={systemStats?.coaches} />
           <StatPanel label="Total Teams" value={systemStats?.teams} />
@@ -522,7 +522,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] md:grid-cols-3 gap-4">
           <StatPanel label="Total Teams" value={competitionStats?.totalTeams} />
           <StatPanel label="Total Participants" value={competitionStats?.totalParticipants} />
           <StatPanel label="Boys Teams" value={competitionStats?.boysTeams} />
