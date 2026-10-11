@@ -156,17 +156,26 @@ hand-verified-identical-in-prose or genuinely untested:
   `UnifiedDashboard.jsx` — not shared into a common hook. A bugfix to
   one likely needs the identical fix in the other two.
 
-## A real component-name collision, both versions live in production
+## ~~A real component-name collision~~ — resolved by deletion (Phase 6)
 
-`src/components/design-system/index.jsx` is not a barrel — it directly
-defines its own `GlassCard`/`FadeIn`/`GradientText`/`SaffronButton`,
-separate implementations from the same-named components under
-`cards/`/`animations/`/`ornaments/`. **12 files** import from the
-bare `@/components/design-system` path (resolving to `index.jsx`), not
-the subfolder versions, and `components/admin/AdminKit.jsx` adds a third
-`FadeIn` and a second `DarkCard`. Before editing one, check which import
-path the call site you care about actually uses. See
-[05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#same-names-different-components-still-true).
+The non-barrel `components/design-system/index.jsx` and its duplicate
+`GlassCard`/`FadeIn`/`GradientText`/`SaffronButton` are gone; only
+`accessibility/LiveRegion` remains. `AdminKit.jsx` keeps its old export
+names (`DarkCard`, `FadeIn`, `EmptyState`…) drawn by the `ui` primitives,
+and `EmptyState` also exists in `@/components/ui` — check the import path.
+See [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#same-names-different-components).
+
+## Open blockers for moving production off Render (`deploy/COMMON.md`, 2026-10-11)
+
+Both work on `*.onrender.com` today and break on the planned
+`mallakhambcompetition.com` hosts:
+- **F1 — socket URL.** Seven files build it with
+  `VITE_API_URL.replace('/api','')`, which mangles an `api.` hostname. See
+  [09-REALTIME.md](09-REALTIME.md#connection-setup--identical-across-all-six).
+- **F2 — CSP.** `connect-src` in `index.html` allows only `'self'`,
+  Razorpay, `*.onrender.com`, ngrok and loopback. Add the new
+  `https://`/`wss://` API hosts and **keep** the onrender entries until
+  decommission (rollback needs them).
 
 ## Styling traps (responsive/appearance work, 2026-10)
 
@@ -266,3 +275,34 @@ your own machine.
   specificity than the `type-*` utility).
 - **A mark-only wordmark** must keep `min-width: 44px` (`brand-wordmark--compact`);
   deep-screens caught a 13px-wide home link on admin tabs at 768.
+- **A new colour literal fails lint now** (`no-hardcoded-colors` is `error`
+  since `c32815c`). Don't add a file to the exemption list to get past it —
+  only the stopwatch, Home's WebGL runtime and the colour-defining files are
+  exempt, by name. See [02-CONVENTIONS.md](02-CONVENTIONS.md).
+- **Grid items stretch by default, so a Tag in a grid did too** ("Overview"
+  spanned its whole panel). `ui/text.css` gives the tag `justify-self: start`
+  (`a79c8cb`) and `max-width: 100%`, and `.ui-stat__label` gets
+  `overflow-wrap: anywhere` (`529e52f`); with shrinkable stat-grid columns in
+  `UnifiedDashboard.jsx` that's what made the superadmin overview fit a 320px
+  phone (it had scrolled sideways by 63px at 320 and 360).
+- **Home's small links are 44px targets below the laptop layout**, not only
+  below 768 — the tablet audit flagged the footer and photo-credit links
+  (`99c4372`, `529e52f`, `81207da`: at least 44px tall AND wide).
+
+## Home is the laptop layout on every device (2026-10-10/11)
+
+- **Phones and tablets get `width=1280` on `/`**, scaled to fit — never the
+  narrow layout. Two places set it: an inline script in `index.html`
+  (before first paint, so the hero never lays out narrow and jumps) and
+  `useDesktopViewport()` in `src/pages/public/home/desktopViewport.js`
+  (arriving at `/` from inside the app; restores
+  `width=device-width, initial-scale=1.0` on leaving). **Keep
+  `DESKTOP_VIEWPORT` identical to the string in `index.html`.** Pinch-zoom
+  stays on; desktop browsers ignore the tag.
+- **So a portrait phone is a 1280×~2770 frame and a sideways one 1280×534.**
+  Layout bugs show up as "laptop rules in a tall/short frame", not as narrow
+  breakpoints: the pole's height label was pushed onto the text (the 3D
+  offset now moves right as the frame gets taller; frames at least as wide
+  as tall keep `-0.05`), and the unpinned stopwatch overflowed a landscape
+  phone (its dial is now capped by viewport height too). `npm run audit:home`
+  (41 devices) is the check — 0 problems at `3c5c725`.

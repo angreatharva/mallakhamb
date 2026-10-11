@@ -17,8 +17,8 @@ covers:
   - eslint-rules/no-hardcoded-spacing.js
 read_when: "adding a UI primitive, touching colors/spacing/breakpoints/appearance, restyling anything, or wondering why two components share a name"
 depends_on: []
-verified_against_commit: 3a6cca9
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 Rewritten 2026-10-07. The responsive/appearance work (branch
@@ -28,15 +28,23 @@ source, colours are CSS custom properties, and the app has Light and
 Dark. Full history: `docs/RESPONSIVE_UIUX_PLAN.md` (per-file log) and
 `docs/RESPONSIVE_UIUX_REPORT.md` (summary).
 
-**Current state (2026-10-11, Phase 6, branch `look/phase-6-retire-classic`,
-unmerged):** prime-time is the ONLY look. `DEFAULT_LOOK = 'prime-time'`, the
+**Current state (2026-10-11, merged to local `master` as `0ad9159`, then
+the leftovers `c32815c`/`a79c8cb`; not yet pushed — a push deploys to
+Render):** prime-time is the ONLY look. `DEFAULT_LOOK = 'prime-time'`, the
 classic pack is deleted, `LOOK_BY_ROUTE` is empty (the mechanism stays: the
 next look rolls out through it — `docs/design-language/LOOKS.md`), the 404
 claims its look with `claimLook()`. The old `components/design-system/`
 (GlassCard, Themed*, ThemeProvider, GradientText, AmbientOrbs, FadeIn…) is
-deleted except `accessibility/LiveRegion`. `COLORS`/`ADMIN_COLORS` proxies
-still have users (their values are token strings). The history below is
-how it got here; where it says "classic routes", read "before the wave".
+deleted except `accessibility/LiveRegion`. **The `COLORS`/`ADMIN_COLORS`
+proxies, `SAFFRON_CTA`, `COMMON_STYLES` and the unused token helpers are
+deleted too** (`c32815c`); `tokens.js` now exports only `DESIGN_TOKENS`,
+`alpha`, `DATA_COLORS` and `FG`. **Colour literals in `src/`: 0** (from 855),
+and `no-hardcoded-colors` is an `error` — see
+[02-CONVENTIONS.md](02-CONVENTIONS.md). The judge screens no longer use the
+old judge purple (Tailwind `purple-*`, `DATA_COLORS.purpleSoft`, purple
+`rgba` literals): they read the accent tokens. What was verified and what
+is left: `docs/design-language/REPORT.md`. The history below is how it got
+here; where it says "classic routes", read "before the wave".
 
 **Look packs (Phase 1 of `docs/design-language/PLAN.md`, branch
 `look/phase-1-tokens`, 2026-10-07).** Token VALUES no longer live in
@@ -142,10 +150,12 @@ axis is "Look", for the same reason.
 - **`src/styles/tokens.js`** — `DESIGN_TOKENS.colors.surfaces/borders/text`
   are `rgb(var(--…))` strings, so they follow the appearance. Semantic text
   colour in JS is **`FG.*`** (and `DATA_COLORS.*` for Difficulty/Combination/
-  Originality/deductions/medals), never a `'rgb(var(--x))'` literal — the
-  `design-system/no-hardcoded-colors` lint rule exempts only tokens.js.
-  `SAFFRON_CTA`, `COMMON_STYLES`, the deprecated `COLORS`/`ADMIN_COLORS`
-  proxies and `EASE_*` constants are also here.
+  Originality/deductions/medals). Exports are only `DESIGN_TOKENS`
+  (default too), `alpha`, `DATA_COLORS`, `FG`; `SAFFRON_CTA`,
+  `COMMON_STYLES`, the `COLORS`/`ADMIN_COLORS` proxies and `EASE_*` were
+  deleted in `c32815c` — don't resurrect them from an old branch. The lint
+  rule no longer flags `rgb(var(--x))` / `rgb(var(--x) / a)`, but `FG`/
+  `DATA_COLORS` are still the way to name a colour in JS.
 - **`alpha(color, 0xNN)`** (tokens.js) is the only way to add opacity to a
   token. It replaced 428 `` `${hex}NN` `` string concatenations, which emit
   invalid CSS (`var(--x)0A`) once a value is a variable. It understands the
@@ -183,41 +193,25 @@ suggestions.
 **Editing `tailwind.config.js` needs a dev-server restart.** It doesn't
 hot-reload; the utility silently doesn't exist.
 
-## `design-system/` — by subfolder
+## `design-system/` — only `accessibility/` is left
 
-- **`theme/`** — `ThemeProvider` (role-aware JS context, role from the URL
-  path, memoized per role) + `useTheme` (throws in dev outside the
-  provider; `DEFAULT_THEME` in prod). Exposes `{role, colors:{primary,
-  primaryLight, primaryDark, background, card, border, borderBright},
-  spacing, typography, radii, shadows}`.
-- **`forms/`** — `ThemedButton` (reads `bg-accent text-on-accent`; 5
-  users), `ThemedInput`, `ThemedSelect`, `ThemedTextarea` (0 users).
-- **`cards/`** — `GlassCard` (2 users), `DarkCard`, `StatCard` (2),
-  `TiltCard` (0).
-- **`animations/`** — `FadeIn` (IntersectionObserver, once, reduced-motion
-  aware), `useReducedMotion`, and its own `EASE_*`/`DURATION` constants.
-- **`backgrounds/`** — `AmbientOrbs` (one clipping layer; its `--orb-scale`
-  is set by media query in `index.css`, CSS not JS) and `HexGrid`. The
-  other decorative backgrounds were deleted.
-- **`ornaments/`** — `ShieldOrnament`, `CoachOrnament` (0 users),
-  `GradientText`.
-- **`accessibility/`** — `LiveRegion` (+ `ErrorAnnouncement`/
-  `StatusAnnouncement`); 0 imports.
-- `audit/DesignTokenAudit.jsx` — **deleted** (was dead).
+`src/components/design-system/` now holds just `accessibility/LiveRegion.jsx`
+(+ `ErrorAnnouncement`/`StatusAnnouncement`) and its `index.js`. Everything
+else this section used to list — `theme/ThemeProvider`/`useTheme`,
+`forms/Themed*`, `cards/GlassCard|DarkCard|StatCard|TiltCard`,
+`animations/FadeIn`, `backgrounds/AmbientOrbs|HexGrid`,
+`ornaments/*`, and the non-barrel `index.jsx` with its own
+`GlassCard`/`FadeIn`/`GradientText`/`SaffronButton` — was deleted in
+Phase 6 (`5425d98`). Their replacements are the `@/components/ui`
+primitives ([07-COMPONENTS.md](07-COMPONENTS.md)).
 
-User counts are from the design-language plan §2 (measured at `9814afa`);
-re-verify before deleting anything.
+## Same names, different components
 
-## Same names, different components (still true)
-
-`src/components/design-system/index.jsx` is **not a barrel**: it defines
-its own `GlassCard`, `FadeIn`, `GradientText`, `SaffronButton`, separate
-from `cards/`, `animations/`, `ornaments/`. Twelve files import the bare
-`@/components/design-system` and get the `index.jsx` versions.
-`components/admin/AdminKit.jsx` adds a **third** `FadeIn` and a second
-`DarkCard` (the admin kit: `DarkCard`, `FadeIn`, `EmptyState`,
-`LoadingState`, `DarkSearch`, `DarkBtn`). Left unmerged on purpose (they
-differ visually). Before editing one, grep the call site's import path.
+`components/admin/AdminKit.jsx` still exports `DarkCard`, `FadeIn`,
+`EmptyState`, `LoadingState`, `DarkSearch`, `DarkBtn` under their old
+names, but they are drawn by the `ui` primitives now. `EmptyState` exists
+both there and in `@/components/ui` — grep the call site's import path
+before editing one.
 
 ## `src/utils/ui/cn.js`
 

@@ -5,8 +5,8 @@ covers:
   - eslint-rules/**
 read_when: "adding a new file, wondering why lint is warning about a color/spacing literal, or setting up a new test/e2e file's lint scope"
 depends_on: [05-DESIGN-SYSTEM]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 ## Import alias: `@/` → `src/`
@@ -53,14 +53,31 @@ apply to three different file globs:
 `globalIgnores`: `dist`, `coverage`, `test-results`, `playwright-report`
 (`:11`).
 
-## The two custom `design-system` lint rules — `warn`, not `error`, and why that matters
+## The two custom `design-system` lint rules — colours `error`, spacing `warn`
 
 `eslint-rules/no-hardcoded-colors.js` and
 `eslint-rules/no-hardcoded-spacing.js` are registered as a custom
-`design-system` plugin (`eslint-rules/index.js`) and wired in at `warn`
-level (`eslint.config.js:47-48`) — **deliberately not `error`**, per the
-comment: "warn in development, can be upgraded to error later." Both
-rules ship their **own internal copy** of the token values they check
+`design-system` plugin (`eslint-rules/index.js`).
+
+**Since `c32815c` (2026-10-11) `no-hardcoded-colors` is an `error`
+everywhere** — the design-language rollout took `src/` from 855 colour
+literals to **0**. A new hex/`rgb()`/`rgba()` literal in `src/` now fails
+`lint:ci`. Token references — `rgb(var(--x))` and `rgb(var(--x) / 0.5)` —
+are stripped before matching and are not flagged (tested). Exempt **by
+file name** in `eslint.config.js`: the Time Keeper's stopwatch
+(`StopwatchFace.jsx`, `stopwatchPalette.js` — Apple's palette in every
+look), Home's WebGL/canvas runtime (`src/pages/public/home/runtime/**`),
+`eslint-rules/**`, `public/appearance-init.js`, `tailwind.config.js`, and
+the look packs (`src/styles/looks/**`, which also exempt spacing). Need a
+colour? Use `FG.*` / `DATA_COLORS.*` / a Tailwind token class, or add a
+token ([05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md)).
+
+`no-hardcoded-spacing` stays `warn`, held by the ratchet:
+`npm run lint:ratchet` fails if any rule's warning count rises above
+`lint-baseline.json` (2026-10-11: spacing 256, `exhaustive-deps` 35,
+`unused-vars` 44); after a reduction run `npm run lint:ratchet -- --update`.
+
+Both rules ship their **own internal copy** of the token values they check
 against (not an import of `src/styles/tokens.js`) — see
 [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#one-breakpoint-and-z-index-source)
 for the full drift analysis; the practical consequence for this doc is
@@ -72,13 +89,11 @@ tokenized. Both rules skip files matching `tokens.js`/`tokens.ts`,
 does) `tailwind.config`.
 
 **`lint` vs `lint:ci`** (`package.json` scripts): `npm run lint` is
-`eslint .` (reports everything, including the `warn`-level design-token
-rules); `npm run lint:ci` is `eslint . --quiet` (errors only — silences
-the warn-level design-token noise). `README.md` documents a point-in-time
-count of "45 errors and ~1,820 warnings" — treat any specific count as
-perishable, not a fact to rely on; the volume of warnings is large
-enough that `lint:ci`'s errors-only behavior is how this project
-actually gates changes, not full `lint`.
+`eslint .` (reports everything, including the `warn`-level spacing
+rule); `npm run lint:ci` is `eslint . --quiet` (errors only — which now
+includes every colour literal). `README.md`'s old "45 errors and ~1,820
+warnings" count is long stale; `lint:ci` + `lint:ratchet` are how this
+project actually gates changes.
 
 ## Testing file conventions
 

@@ -133,3 +133,18 @@ Rewritten from the code and `docs/RESPONSIVE_UIUX_REPORT.md`:
 - Web/package-lock.json
 - Web/.env* — names only, via grep, never opened
 - src/assets/* binaries — sizes recorded (BHA.png, Mallakhamb.png, main-home.jpg), bytes not read
+
+## Re-verification 2026-10-11 (`cd66189`) — design-language leftovers, Home on phones, deploy blockers
+
+Commits since `58249df`: `a79c8cb`, `c32815c` (judge header and slip, 0 colour
+literals, proxies deleted, colour rule → error), `529e52f`/`99c4372`/`81207da`
+(44px targets, superadmin overview at 320px), `327054f`/`3c5c725` (Home forced
+to the 1280 laptop layout on phones/tablets), plus repo-root `deploy/COMMON.md`
+findings F1/F2 that live in `Web/`.
+- [x] eslint.config.js, eslint-rules/no-hardcoded-colors.js, lint-baseline.json → 02-CONVENTIONS
+- [x] src/styles/tokens.js (exports now DESIGN_TOKENS/alpha/DATA_COLORS/FG only), src/components/design-system/ (only accessibility/ left) → 05-DESIGN-SYSTEM
+- [x] src/pages/judge/judgeShared.jsx (JudgeHeader, ScoringFor, J as tokens, JudgeAmbience no-op) → 06-SCREENS/judge-shared, 07-COMPONENTS
+- [x] src/pages/public/home/desktopViewport.js, index.html viewport script, home/runtime/apparatus.js, home/home.css → 06-SCREENS/public-home-and-scores, GOTCHAS
+- [x] src/components/ui/text.css, src/pages/unified/UnifiedDashboard.jsx (320px overview) → GOTCHAS
+- [x] socket-URL `replace('/api','')` in 7 files, CSP `connect-src` in index.html → 09-REALTIME, GOTCHAS, 00-INDEX
+- Not re-read this pass: per-screen 06-SCREENS docs for the other judge screens (their `:NN` line refs predate the restyle; behaviour unchanged by these commits).

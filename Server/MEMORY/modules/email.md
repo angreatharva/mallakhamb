@@ -6,8 +6,8 @@ covers:
   - docs/gmail-api-email.md
 read_when: "changing email provider selection, templates, or what triggers an email"
 depends_on: [modules/auth]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 The reset flow that triggers these mails is in
@@ -26,7 +26,7 @@ service internals in [modules/auth.md](auth.md#email--srcservicesemail).
 | `src/services/email/templates/otp.template.js` | The reset code (`otp.service.js:generateAndSendOTP`) |
 | `src/services/email/templates/password-reset.template.js` | The "password changed" notice after a successful reset (`otp.service.js:notifyPasswordChanged`) |
 | `src/services/email/templates/notification.template.js` | Implemented, **zero callers** |
-| `scripts/gmail-oauth-token.js` (`npm run gmail:token`) | One-time: mints the refresh token from a Desktop-type OAuth client |
+| `scripts/gmail-oauth-token.js` (`npm run gmail:token`) | One-time: mints the refresh token from a Desktop-type OAuth client, then **refreshes it once against the same client ID/secret before printing it** (so a later failure on Render can only mean the value changed in transit). Prints the token's length and the first 12 chars of the client ID to compare against Render. Reads `Server/.env` too; in PowerShell set `$env:GMAIL_CLIENT_ID`/`$env:GMAIL_CLIENT_SECRET` instead of the inline `VAR=value` form |
 | `docs/gmail-api-email.md` | The Google Cloud setup, step by step |
 
 ## Facts worth knowing before touching email
@@ -38,6 +38,22 @@ service internals in [modules/auth.md](auth.md#email--srcservicesemail).
   `sync: false` in `render.yaml`; see [12-CONFIG-AND-ENV.md](../12-CONFIG-AND-ENV.md)).
 - **The Google OAuth app must be *published*.** In Testing mode, refresh
   tokens expire after 7 days and mail silently stops a week after setup.
+- **A Google refresh token starts `1//`.** The adapter logs a startup
+  `warn` ("GMAIL_REFRESH_TOKEN looks malformed", with the first 4 chars and
+  the length) when it doesn't, or when it contains whitespace, quotes or a
+  backslash. This happened for real (2026-10-07): a paste turned `//` into
+  `\`, and Google answered only `invalid_grant: Bad Request`. A token-refresh
+  failure now includes Google's `error_description`, which is what tells
+  "Token has been expired or revoked." apart from "Bad Request" (a mangled
+  value). Guarded by `gmail-api.adapter.test.js`.
+- **Blank Gmail keys stop the server booting, even in development.** Config
+  validation only demands the four Gmail values when `NODE_ENV=production`,
+  but `GmailApiAdapter`'s constructor throws `missing configuration: …`
+  whenever one is blank, and `EmailService` is a singleton built at boot.
+  Since `8d0dc23`, `.env_example` sets `EMAIL_PROVIDER=gmail-api`
+  (uncommented), so a fresh local `.env` copied from it won't start until the
+  keys are filled in or the provider is set back to `nodemailer`. See
+  [GOTCHAS.md](../GOTCHAS.md).
 - **Sends are fire-and-forget from the reset flow.** A failed send never
   fails the HTTP request; it's logged and counted as
   `mallakhamb_emails_sent_total{outcome="failed"}`. No Grafana alert exists

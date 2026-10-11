@@ -25,8 +25,8 @@ covers:
   - src/utils/security/sanitize.js
 read_when: "reusing or changing a shared (non-design-system, non-responsive) component"
 depends_on: [05-DESIGN-SYSTEM, SHARED-CONTRACTS]
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 ## Scope
@@ -86,6 +86,17 @@ component's ROOT beats the component's own breakpoint CSS (utilities
 win ties) — `AccountControls` once showed on phones because of a `flex`
 class. `look-specimen.spec.js` now fails on masthead overlap/overflow.
 
+**Judge screens don't use `AppHeader`: they use `JudgeHeader`**
+(`src/pages/judge/judgeShared.jsx`, `c32815c`), the shell masthead drawn
+with `shell-header judge-header` classes (CSS in `shell/shell.css`), on all
+seven judge screens. Props: `back {label,onClick,disabled}`, `title`,
+`subtitle` (who is judging / the seat), `context` (usually
+`<ScoringFor name team />` — the athlete being scored), `live` (renders
+`LiveDot` when not `null`), `status`, `actions`, `onLogout`, `wide`. It is a
+`forwardRef`: **the slip measures the header through that ref to place its
+pinned score bar** — keep the ref when restyling. Every control keeps its
+accessible name (e2e reads them).
+
 ## `ui/` — the look primitives (design-language Phase 3, branch `look/phase-3-primitives`)
 
 `@/components/ui`: Button, IconButton, Field + Input/Select/Textarea/
@@ -117,9 +128,10 @@ Phase 8 merged proven duplicates; each keeps every caller's behaviour.
   and the superadmin add-player form use 12/16, player-style forms 8. Don't
   "unify" the defaults — the differences are deliberate.
 - **`admin/AdminKit.jsx`** — the admin screens' kit: `DarkCard`, `FadeIn`,
-  `EmptyState`, `LoadingState`, `DarkSearch`, `DarkBtn`. Note the names
-  collide with `design-system` components of the same name (see
-  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#same-names-different-components-still-true)).
+  `EmptyState`, `LoadingState`, `DarkSearch`, `DarkBtn`, drawn by the `ui`
+  primitives. The old `design-system` twins are deleted; `EmptyState` still
+  also exists in `@/components/ui` (see
+  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#same-names-different-components)).
 - **`JudgeLogoutButton`** (exported from `pages/judge/judgeShared.jsx`,
   `{onLogout, compact}`) — the one judge logout control.
 - **`layout/AppearanceMenu.jsx`** — the Light/Dark control: an icon button

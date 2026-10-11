@@ -25,6 +25,14 @@ phone < 768 (`md`), **tablet 768–1023**, desktop ≥ 1024 (`lg`). The tablet
 band is built now (it wasn't before 2026-09-29). A tablet is a **touch**
 device, so touch metrics follow the pointer, not the width.
 
+**Exception: Home (`/`) ignores the bands on phones and tablets.** It
+switches the viewport meta to `width=1280`, so every device gets the
+laptop layout scaled down (2026-10-10). Its bugs look like "laptop rules in
+a very tall or very short frame", and `npm run audit:home` (41 devices) is
+the check, not the band audits. See
+[06-SCREENS/public-home-and-scores.md](06-SCREENS/public-home-and-scores.md).
+Every other route still uses the device viewport.
+
 ## The shared primitives (Tailwind plugin in `tailwind.config.js`)
 
 | Primitive | What it does | Why |

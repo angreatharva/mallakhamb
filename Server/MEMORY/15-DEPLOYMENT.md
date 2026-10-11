@@ -3,10 +3,11 @@ doc: 15-DEPLOYMENT
 covers:
   - render.yaml
   - docs/RELEASE-RUNBOOK.md
+  - ../deploy/{README,COMMON}.md (plan summary only)
 read_when: "deploying, rolling back, or changing render.yaml/deployment-relevant env vars"
 depends_on: [01-ARCHITECTURE, 12-CONFIG-AND-ENV]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 ## Topology
@@ -115,6 +116,40 @@ because a sync would silently reset an incident mitigation:**
 - **`docs/RELEASE-RUNBOOK.md`** and **`docs/AUDIT.md`** are both current and
   consistent with the code and with each other — prefer these over
   `deployment-guide.md` for anything deploy-related.
+
+## Planned move off Render (`deploy/`, repo root — plan only, nothing executed)
+
+Status 2026-10-11 (`cd66189`): production is still Render free + Atlas +
+Grafana Cloud. The move is planned in four docs at the repo root:
+`deploy/README.md` (options compared, decisions needed),
+`deploy/COMMON.md` (platform-neutral findings F1–F16, env-var master list,
+phases C0 code fixes → C9 decommission, runbooks), `deploy/oci/PLAN.md`
+(recommended: Oracle Cloud Always Free on a Pay-As-You-Go account, Mumbai,
+Arm 2 OCPU / 12 GB, Caddy for both API and SPA) and `deploy/aws/PLAN.md`
+(fallback: EC2 + CloudFront/S3). Target hosts are on
+`mallakhambcompetition.com`, which **already runs a live PHP site and a
+Laravel `api.`**, with DNS and email at BigRock — whether the app replaces
+or sits beside them (decision D1/D2) is open, and the domain expires
+2026-11-14.
+
+What the plan changes about this doc's assumptions:
+- **One Node process on one server, still.** No Socket.IO Redis adapter and
+  in-memory cache/revocation list (F8) — no cluster mode, no second
+  instance, no load balancer.
+- **Migrations move to a release step:** the deploy script runs
+  `npm run prepare:db`, so `MIGRATE_ON_START=false` on the VM (F10).
+- **The HTTPS redirect also hits `/metrics` and health routes** (F6): local
+  checks need `-H 'X-Forwarded-Proto: https'`; never give Caddy a
+  `health_uri`.
+- **Server-side blockers still open in code:** F4 (webhooks verified with
+  `RAZORPAY_KEY_SECRET`; `RAZORPAY_WEBHOOK_SECRET` never read) and F5
+  (`.env_example` ships `DISCOUNT_CODE_ENABLED=true` with a real-looking
+  code; `Server/.env.scripts` is tracked). The two Web blockers (F1 socket
+  URL `replace('/api','')` breaks on an `api.` host; F2 CSP `connect-src`
+  only allows `*.onrender.com`) are in `Web/MEMORY/GOTCHAS.md`.
+- Monitoring dashboards/alerts are sized for Render's 0.1 CPU / 512 MiB and
+  must switch preset at cutover (F15; see
+  [11-OBSERVABILITY.md](11-OBSERVABILITY.md)).
 
 ## Open questions
 - ⚠️ UNVERIFIED: whether `docs/RELEASE-RUNBOOK.md`'s specific migration

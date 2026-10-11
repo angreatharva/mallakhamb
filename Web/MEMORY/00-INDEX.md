@@ -4,8 +4,8 @@ covers:
   - Web/**
 read_when: "always — the entry point for any change in Web/"
 depends_on: []
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 # MEMORY — router
@@ -63,9 +63,11 @@ against commit `f0bdc1d`, 2026-09-23.
 | Change the judge slip / mismatch review flow | [11-SCORING-CLIENT.md](11-SCORING-CLIENT.md), [06-SCREENS/judge-scoring.md](06-SCREENS/judge-scoring.md), [06-SCREENS/judge-panel-review.md](06-SCREENS/judge-panel-review.md) | `src/pages/judge/{JudgeScoring,JudgePanelReview,judgeShared,useJudgePanelData}.js*` |
 | Add a socket event | `CHANGE-RECIPES.md#add-socket-event`, [09-REALTIME.md](09-REALTIME.md) | `Server/src/socket/events/event-types.js`, the relevant judge/admin screen |
 | Add a form | `CHANGE-RECIPES.md#add-form`, [13-FORMS-AND-VALIDATION.md](13-FORMS-AND-VALIDATION.md) | the relevant screen; check `form.validator.js` first, most forms don't use it |
-| Change a color/spacing/breakpoint | `CHANGE-RECIPES.md#change-design-tokens`, [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/index.css` (both appearance blocks), `src/styles/breakpoints.js`, `src/styles/tokens.js` |
+| Change a color/spacing/breakpoint | `CHANGE-RECIPES.md#change-design-tokens`, [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md), [02-CONVENTIONS.md](02-CONVENTIONS.md) (colour literals are a lint **error**) | `src/styles/looks/{contract,prime-time}.js` → `npm run looks`, `src/styles/breakpoints.js`, `src/styles/tokens.js` (`FG`/`DATA_COLORS`) |
+| Change a judge screen's header / the slip's look | [06-SCREENS/judge-shared.md](06-SCREENS/judge-shared.md), [07-COMPONENTS.md](07-COMPONENTS.md) | `JudgeHeader` in `src/pages/judge/judgeShared.jsx` (keep its ref — the slip pins its score bar off it), `src/components/shell/shell.css` |
+| Prepare the SPA for the move off Render | [GOTCHAS.md](GOTCHAS.md) ("Open blockers for moving production off Render"), [09-REALTIME.md](09-REALTIME.md) | the 7 `replace('/api'` socket sites, CSP `connect-src` in `index.html`; plan in repo-root `deploy/COMMON.md` (C1.1, C1.2) |
 | Light/Dark, or anything that must read in both appearances | [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/utils/ui/appearance.js`, `public/appearance-init.js`, `src/contexts/AppearanceProvider.jsx`, `src/components/layout/AppearanceMenu.jsx` |
-| Restyle screens / the site-wide design language | `docs/design-language/PLAN.md` (the active plan), [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/styles/looks/*` once Phase 1 lands |
+| Restyle screens / the site-wide design language | `docs/design-language/LOOKS.md` (the playbook), `REPORT.md` (what's done/left), [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/styles/looks/*` — a restyle is a pack edit; prime-time is the only look |
 | Change the landing page | [06-SCREENS/public-home-and-scores.md](06-SCREENS/public-home-and-scores.md), `docs/homepage/README.md` | `src/pages/public/Home.jsx`, `src/pages/public/home/**`; verify with `npm run audit:home` |
 | Change password reset | [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md#password-reset--otp-only-scoped-to-the-login-page-it-came-from) | `src/pages/shared/{ForgotPassword,ResetPassword,resetPortal}.*`, `src/services/auth/auth.api.js` |
 | Fix a horizontal-scroll or touch-target bug | [12-RESPONSIVE.md](12-RESPONSIVE.md) | measure with the Playwright audits, never the in-app preview; the shared primitives (`.tap-safe`, `mouse:`, `.modal-panel`, `.stacked-table`) live in `tailwind.config.js` |

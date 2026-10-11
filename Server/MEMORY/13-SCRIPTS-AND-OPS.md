@@ -5,8 +5,8 @@ covers:
   - package.json
 read_when: "running or changing a seed/ops/perf script, or checking what an npm script actually does before running it"
 depends_on: [01-ARCHITECTURE, 04-DATA-MODEL]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 All 40 npm scripts map cleanly to an existing file (`scripts/*.js`,
@@ -55,7 +55,7 @@ See *Seed Chains*, *Seed Roster*, *Browser Seeding Traps* in project memory for 
 | `migrate-superadmin-role.js` | (`node scripts/migrate-superadmin-role.js`) | One-time `super_admin`→`superadmin` role rename. **Deliberately NOT in `src/migrations/`** — putting a script there once broke `migrate:up` entirely |
 | `checkEnv.js` | `env:check` | Diffs `.env`/`.env.production` key sets against `.env_example`; `--fix` rewrites in template order, never copies dev values into prod. Prints key **names** only |
 | `meetStatus.js` | `meet:status` | Read-only report: per-category entered/submitted/judged/locked state + fee-window phase |
-| `gmail-oauth-token.js` | `gmail:token` | One-time, interactive: opens Google consent for a Desktop OAuth client and prints a `gmail.send` refresh token for `GMAIL_REFRESH_TOKEN`. Writes nothing. See [modules/email.md](modules/email.md) |
+| `gmail-oauth-token.js` | `gmail:token` | One-time, interactive: opens Google consent for a Desktop OAuth client and prints a `gmail.send` refresh token for `GMAIL_REFRESH_TOKEN` — after first refreshing it once against the same client, so the printed token is known-good; also prints its length to compare with Render. Reads `.env`; PowerShell needs `$env:VAR=` instead of inline `VAR=value`. Writes nothing. See [modules/email.md](modules/email.md) |
 | `generateOpenApi.js` | `docs:openapi`, `docs:openapi:check` | Builds `docs/openapi.json`/`.yaml` from `src/docs/openapi.js`; `--check` diffs against the live router and exits non-zero on drift |
 
 ## Perf harness (`scripts/perf/`)

@@ -6,8 +6,8 @@ covers:
   - src/pages/public/PublicScores.jsx
 read_when: "changing the public landing page or the public results viewer"
 depends_on: [07-COMPONENTS, 05-DESIGN-SYSTEM]
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 ## `Home.jsx` — the landing page (rebuilt 2026-10-06, `9814afa`)
@@ -30,6 +30,21 @@ quality bar). The old 839-line Home (particles, `MagneticCursor`, dead
   removed, pristine markup restored) — keeps StrictMode's double mount safe.
 - **`home/home.css`**: every rule scoped to `.mk-home`, because Vite keeps a
   lazy route's CSS on the page after you leave it.
+- **Phones and tablets are shown the laptop layout** (`327054f`, 2026-10-10):
+  on `/` the viewport meta becomes `width=1280` (past Home's own `big`
+  breakpoint, min-width 1024), scaled to fit, pinch-zoom kept. Set before
+  first paint by an inline script in `index.html` and, when arriving from
+  inside the app, by `useDesktopViewport()` (`home/desktopViewport.js`,
+  called in `Home.jsx`), which restores `width=device-width,
+  initial-scale=1.0` on unmount. `DESKTOP_VIEWPORT` must equal the
+  `index.html` string. Consequence: a portrait phone is a ~1280×2770 frame,
+  a sideways one 1280×534 — `3c5c725` fixed the two bugs that caused (3D view
+  offset grows with frame height so the pole's height label clears the text;
+  the unpinned stopwatch dial is capped by viewport height). The narrow
+  (< 1024) rules in `home.css` still exist and still matter for small
+  desktop windows.
+- **Touch targets:** footer and photo-credit links are ≥ 44px tall and wide
+  below the laptop layout and on touch (`99c4372`, `529e52f`, `81207da`).
 - **`home/preload.js`** + an inline script in `index.html`: on `/` the hero
   photo, the Home chunk and the fonts (self-hosted Fontsource Teko + Archivo,
   CSP `font-src 'self'`) start with the app's boot.

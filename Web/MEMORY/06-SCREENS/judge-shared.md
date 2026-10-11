@@ -2,17 +2,21 @@
 doc: 06-SCREENS/judge-shared
 covers:
   - src/pages/judge/judgeShared.jsx
-read_when: "changing the breakdown shape, the mismatch/tolerance modals, the Senior Judge override modal, or seeing sideways scroll on a judge page"
+read_when: "changing the breakdown shape, the mismatch/tolerance modals, the Senior Judge override modal, the judge header, or seeing sideways scroll on a judge page"
 depends_on: [11-SCORING-CLIENT, SHARED-CONTRACTS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 ## What it is
 
-`src/pages/judge/judgeShared.jsx` (733 lines) — not a route; imported by
-`JudgeScoring.jsx`, `JudgePanelReview.jsx`, `JudgeDashboard.jsx`, and
-`JudgeTeamPlayers.jsx`. This is the file
+`src/pages/judge/judgeShared.jsx` (894 lines at `cd66189`; the `:NN` line
+refs below are from the original `f0bdc1d` read and have drifted — search
+by name) — not a route; imported by every judge screen (`JudgeScoring`,
+`JudgePanelReview`, `JudgeDashboard`, `JudgeTeamPlayers`, `JudgeSequence`,
+`ScorerScoring`, `TimeKeeperScoring`) and `useJudgePanelData.js`. Also
+exports `DifficultyPicker`, `DecimalInput`, `DIFFICULTY_CLASSES`, the path
+constants, `ACTIVE_SESSION_KEY`, `playerIdOf`, `scoringCacheKey`. This is the file
 [11-SCORING-CLIENT.md](../11-SCORING-CLIENT.md)'s note on
 `scoringPropTypes.js` points to as the **canonical definition** of the
 `breakdown` shape — everything downstream mirrors what this file
@@ -80,23 +84,37 @@ specifically "to keep the modal presentational." If you add a new
 scoring calculation this modal needs, pass it in the same way rather
 than importing `copRules.js` directly here.
 
-## `JudgeAmbience` — fixes a real, previously-shipped sideways-scroll bug
+## `JudgeAmbience` — now a no-op
 
-The shared background-orbs component (`:649-658`). Comment documents
-the concrete history: each of the five judge pages used to place three
-raw `Orb` copies directly in the page root, unclipped — the orb
-positioned at `left: 95%` hung past the right edge and caused sideways
-scroll at both 375px and 1440px. `AmbientOrbs` (see
-[05-DESIGN-SYSTEM.md](../05-DESIGN-SYSTEM.md#design-system--by-subfolder))
-now owns the clipping. This is a **second, independent** fix for the
-same class of bug the design-system doc documents for the orbs
-elsewhere — if you're adding a new judge page, use `JudgeAmbience`,
-never a raw `Orb`.
+`export const JudgeAmbience = () => null` since the design-language
+rollout: working screens carry no ambient decoration (plan §5.7). It is
+kept only so its four callers need not change. History: it once owned the
+background orbs whose unclipped `left: 95%` copy caused sideways scroll at
+375 and 1440px; `AmbientOrbs` and the orbs are deleted. Don't put
+decoration back here.
 
-## `LiveDot`
+## `J` — the judge "palette", now token names
 
-Connected/offline socket status pill, with a `compact` prop for mobile
-headers. No special behavior beyond styling.
+`J.purple`/`purpleLight`/`purpleDark`/`green`/`greenDark`/`amber` keep
+their old keys so the screens read the same, but the values are tokens
+(`rgb(var(--accent))`, `--accent-fg`, `--success-fg`, `--warning-fg`): the
+"purple" is **the role accent of the current look**, not purple.
+
+## `JudgeHeader`, `ScoringFor`, `JudgeLogoutButton`, `LiveDot` — the masthead
+
+`JudgeHeader` (`c32815c`) is the one header on all seven judge screens:
+pole mark, role ident, `title`, `subtitle` (who is judging / the seat),
+`context` (normally `<ScoringFor name team />`, the athlete being scored),
+`status`, `live` (→ `LiveDot`), `actions`, Light/Dark, and
+`JudgeLogoutButton` when `onLogout` is given; optional `back` icon button,
+`wide` variant. It's a `forwardRef` — **the slip measures the header via
+that ref to pin its score bar**, so a restyle must keep the ref and the
+accessible names. `LiveDot` shows the connection as text with a status
+colour (never colour alone), with a `compact` prop.
+
+The slip itself (in `JudgeScoring.jsx`): section titles in `display-s`,
+totals `num-l`/`num-m` turning saffron at full marks, summary rows in
+tabular figures, phone tabs with the 3px rule.
 
 ## Change guidance
 

@@ -76,6 +76,8 @@ against commit `f0bdc1d`, 2026-09-23.
 | Debug startup/shutdown/index/migration behavior | `01-ARCHITECTURE.md`, `modules/infrastructure.md` | `scripts/startup.js`, `src/infrastructure/database/*` |
 | Debug logging/metrics/health | `11-OBSERVABILITY.md` | `src/infrastructure/{logger,health-monitor}.js`, `src/infrastructure/prometheus/` |
 | Deploy or roll back | `15-DEPLOYMENT.md` | `render.yaml` |
+| Plan or prepare the move off Render (OCI / AWS) | `15-DEPLOYMENT.md` ("Planned move off Render") | repo-root `deploy/README.md`, `deploy/COMMON.md` (findings F1–F16, phases C0–C9), `deploy/oci/PLAN.md`, `deploy/aws/PLAN.md` |
+| Email won't send, or the server won't boot after copying `.env_example` | `modules/email.md`, `GOTCHAS.md` | `src/services/email/gmail-api.adapter.js`, `.env_example` |
 | Check whether a README/doc claim is trustworthy | `GOTCHAS.md` | — several `docs/*.md` files are severely stale, see the list there before citing one |
 
 ## `covers:` is the staleness contract

@@ -160,3 +160,14 @@ Summary:
 - `waitForInFlightRequests()`'s actual drain behavior during shutdown (modules/infrastructure, GOTCHAS)
 - MongoDB driver auto-reconnect sufficiency post-initial-connect (modules/infrastructure)
 - Whether `validateTeamForCompetition`/`getTeamRoster` have callers outside `team.controller.js` (modules/team)
+
+## Re-verification 2026-10-11 (`cd66189`)
+
+Commits since `a5c7556` touching `Server/` (`8d0dc23`, `0d180ba`) and the
+repo-root `deploy/` plans (`cd66189`):
+- [x] src/services/email/gmail-api.adapter.js — malformed-token startup warning, `error_description` in refresh failures → modules/email, GOTCHAS
+- [x] scripts/gmail-oauth-token.js — self-test of the minted token → modules/email, 13-SCRIPTS-AND-OPS
+- [x] .env_example — `EMAIL_PROVIDER=gmail-api` now active → 12-CONFIG-AND-ENV, GOTCHAS (boot failure with blank keys verified by constructing `EmailService`)
+- [x] docs/gmail-api-email.md — PowerShell form → modules/email
+- [x] tests/unit/services/email/gmail-api.adapter.test.js — new malformed-token case → modules/email
+- [x] ../deploy/{README,COMMON}.md (summary only; oci/aws plans referenced, not transcribed) → 15-DEPLOYMENT, 00-INDEX

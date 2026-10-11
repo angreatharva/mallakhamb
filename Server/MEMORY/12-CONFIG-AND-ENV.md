@@ -5,8 +5,8 @@ covers:
   - src/config/payment.config.js
 read_when: "adding a new env var, changing a default, or debugging why a config value isn't what you expect"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 All values loaded once via `config.load()` at process start
@@ -39,7 +39,7 @@ this doc — names only.**
 
 | Var | Default | Required? |
 |---|---|---|
-| `EMAIL_PROVIDER` | `nodemailer` | `'nodemailer'`, `'resend'` or `'gmail-api'`. **Production on Render must be `gmail-api`**: free Render blocks SMTP ports |
+| `EMAIL_PROVIDER` | `nodemailer` | `'nodemailer'`, `'resend'` or `'gmail-api'`. **Production on Render must be `gmail-api`**: free Render blocks SMTP ports. Code default is `nodemailer`, but **`.env_example` sets `gmail-api`** (since `8d0dc23`) — a local `.env` copied from it fails to boot until the `GMAIL_*` keys are filled (validation doesn't catch it outside production; the adapter constructor does). See [GOTCHAS.md](GOTCHAS.md) |
 | `EMAIL_USER` | `''` | **Required in production** when provider=nodemailer |
 | `EMAIL_HOST` | `smtp.gmail.com` | |
 | `EMAIL_PORT` | `587` | |

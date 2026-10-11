@@ -9,8 +9,8 @@ covers:
   - src/pages/admin/AdminScoring.jsx
 read_when: "adding or debugging any socket.io-client usage — live scoring, running-order pushes, panel sync"
 depends_on: [08-API-INTEGRATION, 11-SCORING-CLIENT]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: cd66189
+last_verified: 2026-10-11
 ---
 
 ## No shared socket context — six independent connections, one copy-pasted pattern
@@ -39,6 +39,15 @@ const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').
 const token = secureStorage.getItem('judge_token' /* or role-derived key */);
 const socket = io(socketUrl, { auth: { token }, withCredentials: true });
 ```
+
+**⚠️ Open deploy blocker (`deploy/COMMON.md` F1, 2026-10-11):**
+`.replace('/api', '')` removes the FIRST `/api`, so an API host that starts
+with `api.` (`https://api.<domain>/api`) becomes `https:/.<domain>/api` and
+every live-scoring socket breaks. Seven files carry the line (the six above
+plus `TimeKeeperScoring.jsx`). The planned fix (C1.1) is one
+`getSocketBaseUrl()` in `src/config/api.config.js` that strips only a
+trailing `/api`, used everywhere; `grep -rn "replace('/api'" src` must then
+return nothing. Fine on `*.onrender.com` today.
 
 Auth rides the `auth: { token }` handshake payload (a JWT), matching the
 server's JWT socket auth. **`AdminScoring.jsx` derives its storage key
