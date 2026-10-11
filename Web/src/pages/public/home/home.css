@@ -451,7 +451,10 @@
 @media (min-width:1024px){
   .mk-home .cd-clock{grid-template-columns:minmax(0,760px) minmax(auto,1fr);grid-template-rows:1fr auto auto auto 1fr;
     grid-template-areas:". watch" "head watch" "marks watch" "ctrl watch" ". watch";column-gap:clamp(40px,6vw,112px);
-    --sw-d:min(560px,36vw)}
+    /* The dial, and also never taller than the screen: the watch's chrome (title, buttons, padding) is
+       about 160px, so a short laptop-layout window (a phone held sideways is 1280x534 in the laptop
+       layout) still shows all of it. Any window 630px or taller is unchanged. */
+    --sw-d:min(560px,36vw,calc(100vh - 170px))}
   .mk-home .cd-clock__watch{margin-top:0;align-self:center;justify-self:center;width:auto}
   .mk-home .cd-lead{font-size:clamp(17px,1.1vw,20px)}
   .mk-home .cd-clock .cd-mark__txt,.mk-home .cd-clock .cd-hint{font-size:clamp(15px,.95vw,17px)}
