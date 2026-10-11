@@ -602,7 +602,12 @@ transformed.z += uSway * rk * 0.04 * sin(uTime * 0.7 + 1.3 + position.y * 0.5);`
       camera.aspect = W / Hh;
       const a = W / Hh;
       distScale = a < 1 ? Math.min(1.45, 1 + (1 - a) * 1.2) : 1;
-      if (wideQ.matches) camera.setViewOffset(W, Hh, -0.05 * W, 0, W, Hh); else camera.clearViewOffset();
+      // The laptop layout puts the object right of centre, clear of the text column. A portrait frame in
+      // that layout (a phone shown the laptop page: 1280 wide, ~2.2x as tall) brings the pole's left-hand
+      // height label onto the text, so shift a little further right the taller the frame is. Any frame
+      // at least as wide as it is tall (every laptop and desktop) keeps the original -0.05.
+      const shift = 0.05 + (a < 1 ? 0.08 * (1 - a) : 0);
+      if (wideQ.matches) camera.setViewOffset(W, Hh, -shift * W, 0, W, Hh); else camera.clearViewOffset();
       camera.updateProjectionMatrix();
     }
     const ro = new ResizeObserver(resize); ro.observe(view); resize();
