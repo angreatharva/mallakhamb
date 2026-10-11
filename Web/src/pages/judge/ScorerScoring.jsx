@@ -6,9 +6,11 @@
  * but cannot unlock scores (only superadmin has that permission).
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { StatusTag } from '@/components/ui';
+import { JudgeHeader } from './judgeShared';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle, ListOrdered } from 'lucide-react';
+import { Clock, Save, Lock, Eye, AlertCircle, ListOrdered } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createAdminAPI } from '@/services/user/admin.api';
 
@@ -21,12 +23,10 @@ import { buildScorerRows } from './scorerRows';
 import { seatTypesFor } from './useJudgePanelData';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
-import { PoleMark } from '@/components/brand/Brand';
+import { alpha } from '../../styles/tokens';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const ScorerScoring = () => {
   const location = useLocation();
@@ -684,7 +684,7 @@ const ScorerScoring = () => {
   const darkInput = `w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] px-3 py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`;
   const darkInputStyle = (disabled) => ({
     background: disabled ? 'rgb(var(--ink) / 0.02)' : 'rgb(var(--ink) / 0.04)',
-    border: `1px solid ${ADMIN_COLORS.darkBorderMid}`
+    border: `1px solid var(--line-strong)`
   });
 
   if (loading) {
@@ -713,49 +713,33 @@ const ScorerScoring = () => {
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
-      <header className="sticky top-0 z-40 border-b bg-bg border-line">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/judge/dashboard')} className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-ink/10 transition-colors text-ink/60 hover:text-ink">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
-            </button>
-            <div className="w-px h-5 bg-ink/10" />
-            <div className="flex items-center gap-2">
-              <PoleMark className="h-7 w-auto opacity-70" />
-              <Trophy className="w-4 h-4 text-accent-fg"/>
-              <span className="text-ink font-bold text-sm hidden sm:inline">Scorer Scoring</span>
-              {isLocked && <Lock className="w-4 h-4 text-danger-fg"/>}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {/*
-              * The Scorer sets the running order as well as recording the
-              * marks — they are the person watching the floor, and the order
-              * changes there (a withdrawal, an athlete not ready) long after
-              * the lots were drawn. The server allows it (SEQUENCE_JUDGE_TYPES
-              * is Senior Judge and Scorer); until now the only way in was the
-              * dashboard, which meant leaving a half-filled sheet to reach it.
-              *
-              * /judge/sequence reads the category from the same sessionStorage
-              * keys the dashboard wrote on the way here.
-              */}
-            <button onClick={() => navigate('/judge/sequence')} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold tap-safe mouse:min-h-[36px] transition-colors" style={{
-                borderColor: `${alpha(ADMIN_COLORS.purple, 0x40)}`,
-                color: 'rgb(var(--accent-fg))',
-                background: `${alpha(ADMIN_COLORS.purple, 0x12)}`,
-              }}>
-              <ListOrdered className="w-3.5 h-3.5" aria-hidden="true" />
+      <JudgeHeader
+        wide
+        back={{ label: 'Back to Dashboard', onClick: () => navigate('/judge/dashboard') }}
+        title="Scorer Scoring"
+        subtitle={isLocked ? 'Scores locked' : null}
+        status={isLocked ? <StatusTag status="danger">Locked</StatusTag> : null}
+        live={isLocked ? null : isConnected}
+        actions={(
+          /*
+           * The Scorer sets the running order as well as recording the
+           * marks — they are the person watching the floor, and the order
+           * changes there (a withdrawal, an athlete not ready) long after
+           * the lots were drawn. The server allows it (SEQUENCE_JUDGE_TYPES
+           * is Senior Judge and Scorer); until now the only way in was the
+           * dashboard, which meant leaving a half-filled sheet to reach it.
+           *
+           * /judge/sequence reads the category from the same sessionStorage
+           * keys the dashboard wrote on the way here.
+           */
+          <button onClick={() => navigate('/judge/sequence')} className="ui-btn ui-btn--line ui-btn--sm">
+            <span className="ui-btn__label" style={{ display: 'contents' }}>
+              <ListOrdered aria-hidden="true" />
               <span className="hidden sm:inline">Set Sequence</span>
-            </button>
-            <AppearanceMenu />
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
-              {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
             </span>
-          </div>
-        </div>
-      </header>
+          </button>
+        )}
+      />
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6">
         <CompetitionLockBanner />
@@ -854,15 +838,15 @@ const ScorerScoring = () => {
                   {required && <span className="text-red-700 dark:text-red-500 ml-1">*</span>}
                 </label>
                 <input id={fieldId} type="text" value={value} onChange={(e) => setter(e.target.value)} disabled={readOnly} placeholder={placeholder} className={darkInput} style={darkInputStyle(readOnly)}
-                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; } }}
-                  onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }} />
+                  onFocus={(e) => { if (!readOnly) { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; } }}
+                  onBlur={(e) => { e.target.style.borderColor = 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }} />
               </div>
               );
             })}
           </div>
           <div className="flex justify-end">
             {!readOnly ? (
-              <button onClick={handleSaveScores} className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]" style={{ background: 'rgb(var(--success-fill))', color: '#0A0A0A' }}>
+              <button onClick={handleSaveScores} className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]" style={{ background: 'rgb(var(--success-fill))', color: 'rgb(var(--success-on))' }}>
                 <Save className="w-4 h-4" /> Save & Lock Scores
               </button>
             ) : (

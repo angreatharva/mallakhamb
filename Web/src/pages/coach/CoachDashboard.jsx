@@ -615,7 +615,7 @@ const CoachDashboard = () => {
             <Heading level={2} step="display-s" className="mb-4">Boys Age Groups</Heading>
             <div className="space-y-3">
               {maleAgeGroupValues.map(ag => (
-                <AgeGroupCard key={ag} ageGroup={ag} gender="Male" tone="blue" />
+                <AgeGroupCard key={ag} ageGroup={ag} gender="Male" tone="boys" />
               ))}
             </div>
           </Panel>
@@ -623,7 +623,7 @@ const CoachDashboard = () => {
             <Heading level={2} step="display-s" className="mb-4">Girls Age Groups</Heading>
             <div className="space-y-3">
               {femaleAgeGroupValues.map(ag => (
-                <AgeGroupCard key={ag} ageGroup={ag} gender="Female" tone="pink" />
+                <AgeGroupCard key={ag} ageGroup={ag} gender="Female" tone="girls" />
               ))}
             </div>
           </Panel>
@@ -668,8 +668,8 @@ const CoachDashboard = () => {
           ]} />
           {team?.isSubmitted && <Notice tone="info">Team Submitted</Notice>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[{ label: 'Boys', values: maleAgeGroupValues, gender: 'Male', tone: 'blue' },
-              { label: 'Girls', values: femaleAgeGroupValues, gender: 'Female', tone: 'pink' }].map(({ label, values, gender, tone }) => (
+            {[{ label: 'Boys', values: maleAgeGroupValues, gender: 'Male', tone: 'boys' },
+              { label: 'Girls', values: femaleAgeGroupValues, gender: 'Female', tone: 'girls' }].map(({ label, values, gender, tone }) => (
               <div key={gender}>
                 <p className="type-tag text-fg mt-0 mb-3">{label} Age Groups</p>
                 <div className="space-y-2">

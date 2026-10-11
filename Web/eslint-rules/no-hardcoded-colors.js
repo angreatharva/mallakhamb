@@ -113,8 +113,11 @@ function detectColorValue(value) {
     return { type: 'hex', value: hexMatch[0], full: value };
   }
   
-  // RGB/RGBA colors
-  const rgbMatch = value.match(/rgba?\s*\([^)]+\)/i);
+  // RGB/RGBA colors. `rgb(var(--token))` and `rgb(var(--token) / 0.5)` are NOT
+  // hard-coded: tokens are RGB channel triplets, and that is how one is used
+  // (src/styles/looks; docs/design-language/README.md). Strip them first.
+  const withoutTokens = value.replace(/rgba?\(\s*var\(--[\w-]+\)\s*(\/\s*[\d.]+%?\s*)?\)/gi, '');
+  const rgbMatch = withoutTokens.match(/rgba?\s*\([^)]+\)/i);
   if (rgbMatch) {
     return { type: 'rgb', value: rgbMatch[0], full: value };
   }

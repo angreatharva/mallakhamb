@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { UserPlus, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
+import { FG, alpha } from '../../styles/tokens';
 import Dropdown from '@/components/auth/Dropdown';
 import { logger } from '@/infrastructure/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
@@ -27,9 +27,9 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => (
     <input
       id={id}
       className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all duration-200"
-      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-      onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'}`, padding: '0.625rem 0.875rem' }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
     {hint && <p className="text-xs mt-1 text-fg-muted">{hint}</p>}
@@ -475,13 +475,13 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             const fee = getCompetitionPlayerFeeRupees(doc);
             if (fee === null) {
               return (
-                <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: FG.danger, background: 'rgba(239,68,68,0.08)', border: `1px solid ${alpha(ADMIN_COLORS.red, 0x40)}` }}>
+                <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: FG.danger, background: 'rgb(var(--danger-fg) / 0.08)', border: `1px solid ${alpha('rgb(var(--danger-fg))', 0x40)}` }}>
                   This competition has no valid per-player fee. Open Competitions, edit this competition, and set the fee.
                 </p>
               );
             }
             return (
-              <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'var(--fg-muted)', background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderSubtle}` }}>
+              <p className="text-xs mt-2 rounded-lg px-3 py-2" style={{ color: 'var(--fg-muted)', background: 'rgb(var(--ink) / 0.04)', border: `1px solid var(--line)` }}>
                 Fee for this competition: <span className="font-bold text-ink">₹{fee.toLocaleString()}</span> per player (total is players × this amount; no separate base fee).
               </p>
             );
@@ -538,15 +538,15 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
                           onClick={() => toggleApparatus(compType, app)}
                           className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200"
                           style={{
-                            background: isSelected ? `${alpha(ADMIN_COLORS.saffron, 0x15)}` : 'rgb(var(--ink) / 0.04)',
-                            border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : ADMIN_COLORS.darkBorderMid}`,
+                            background: isSelected ? `${alpha('rgb(var(--accent))', 0x15)}` : 'rgb(var(--ink) / 0.04)',
+                            border: `1px solid ${isSelected ? 'rgb(var(--accent))' : 'var(--line-strong)'}`,
                           }}
                         >
                           <div 
                             className="w-4 h-4 rounded-md flex items-center justify-center transition-colors"
                             style={{
-                              background: isSelected ? ADMIN_COLORS.saffron : 'transparent',
-                              border: `1px solid ${isSelected ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.2)'}`,
+                              background: isSelected ? 'rgb(var(--accent))' : 'transparent',
+                              border: `1px solid ${isSelected ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.2)'}`,
                             }}
                           >
                             {isSelected && <CheckCircle2 className="w-3 h-3 text-dark" />}
@@ -583,13 +583,13 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200"
             style={{ 
               background: 'rgb(var(--ink) / 0.04)', 
-              border: `1px solid ${errors.password ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, 
+              border: `1px solid ${errors.password ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'}`, 
               padding: '0.625rem 3rem 0.625rem 0.875rem',
               minHeight: '44px',
               height: '44px'
             }}
-            onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-            onBlur={(e) => { e.target.style.borderColor = errors.password ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+            onFocus={(e) => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; }}
+            onBlur={(e) => { e.target.style.borderColor = errors.password ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }}
             {...register('password', {
               required: 'Password is required',
               minLength: { value: 8, message: 'Password must be at least 8 characters' }
@@ -641,13 +641,13 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
             className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200"
             style={{ 
               background: 'rgb(var(--ink) / 0.04)', 
-              border: `1px solid ${errors.confirmPassword ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, 
+              border: `1px solid ${errors.confirmPassword ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'}`, 
               padding: '0.625rem 3rem 0.625rem 0.875rem',
               minHeight: '44px',
               height: '44px'
             }}
-            onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-            onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+            onFocus={(e) => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; }}
+            onBlur={(e) => { e.target.style.borderColor = errors.confirmPassword ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }}
             {...register('confirmPassword', {
               required: 'Please confirm your password',
               validate: (value) => value === password || 'Passwords do not match'

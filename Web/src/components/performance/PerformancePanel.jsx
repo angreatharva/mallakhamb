@@ -63,7 +63,7 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, apparatus }) => {
         <div className="flex-1 min-w-0 grid gap-1">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="sb-card__name truncate">{player.playerName}</p>
-            {isHighlighted && <Tag tone="accent">You</Tag>}
+            {isHighlighted && <Tag tone="execution">You</Tag>}
             {!player.isFinalized && <Tag>Pending</Tag>}
           </div>
           <p className="sb-card__meta">
@@ -84,10 +84,10 @@ const PlayerScoreRow = ({ player, rank, highlightPlayerId, apparatus }) => {
         <div className="sb-card__breakdown ui-fade-in">
           <p className="sb-card__breakdown-title type-tag">Score Breakdown (Average)</p>
           <div className="sb-parts">
-            <ScorePart label="Difficulty" value={breakdown.difficulty} tone="blue" />
-            <ScorePart label="Combination" value={breakdown.combination} tone="purple" />
-            <ScorePart label="Execution" value={breakdown.execution} tone="accent" />
-            <ScorePart label="Originality" value={breakdown.bonus} tone="green" />
+            <ScorePart label="Difficulty" value={breakdown.difficulty} tone="difficulty" />
+            <ScorePart label="Combination" value={breakdown.combination} tone="combination" />
+            <ScorePart label="Execution" value={breakdown.execution} tone="execution" />
+            <ScorePart label="Originality" value={breakdown.bonus} tone="originality" />
           </div>
           {breakdown.used > 0 && <p className="sb-card__note">{describeSlipAverage(breakdown)}</p>}
         </div>

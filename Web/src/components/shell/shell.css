@@ -126,3 +126,32 @@
 .shell-page-header__title { overflow-wrap: anywhere; }
 .shell-page-header__lede { margin: 0; color: var(--fg-secondary); max-width: 44rem; }
 .shell-page-header__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* The judge screens' masthead (pages/judge/judgeShared.jsx JudgeHeader). */
+.judge-header--wide .shell-header__bar { max-width: 1400px; }
+.judge-header__bar { flex-wrap: wrap; row-gap: 8px; padding-block: 8px; }
+.judge-header__who { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.judge-header__mark { width: 12px; height: 32px; flex: none; }
+.judge-header__name { display: grid; min-width: 0; }
+.judge-header__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 700; font-size: 14px; line-height: 1.25; }
+.judge-header__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-secondary); font-size: 12.5px; }
+.judge-header__context { order: 3; flex: 1 1 100%; min-width: 0; }
+.judge-header__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
+@media (max-width: 479px) {
+  .judge-header__mark, .judge-header__ident { display: none; }
+}
+@media (min-width: 640px) {
+  .judge-header__context { order: 0; flex: 0 1 20rem; }
+}
+.judge-scoring-for {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-control);
+  background: rgb(var(--surface-raised));
+  box-shadow: inset var(--rule) 0 0 0 rgb(var(--success-fg));
+}
+.judge-scoring-for__tag { color: rgb(var(--success-fg)); flex: none; }
+.judge-scoring-for__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 700; font-size: 14px; line-height: 1.25; }
+.judge-scoring-for__team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-secondary); font-size: 12.5px; }
+/* The slip's phone tabs: the current one carries the 3px accent rule. */
+.judge-tab--active { box-shadow: inset 0 calc(-1 * var(--rule)) 0 0 rgb(var(--accent)); }

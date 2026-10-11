@@ -130,12 +130,12 @@ const PlayerCard = ({ player, rank, podium = false, className = '' }) => {
       <div className="sb-card__breakdown">
         <p className="sb-card__breakdown-title type-tag">Score Breakdown (Average)</p>
         <div className="sb-parts">
-          <ScorePart label="Difficulty" value={toFixed(avgBreakdown.difficulty)} tone="blue" />
-          <ScorePart label="Combination" value={toFixed(avgBreakdown.combination)} tone="purple" />
-          <ScorePart label="Execution" value={toFixed(avgBreakdown.execution)} tone="accent" />
-          <ScorePart label="Originality" value={toFixed(avgBreakdown.bonus)} tone="green" />
-          {player.deduction > 0 && <ScorePart label="Deduct" value={`-${player.deduction}`} tone="red" />}
-          {player.otherDeduction > 0 && <ScorePart label="Other" value={`-${player.otherDeduction}`} tone="red" />}
+          <ScorePart label="Difficulty" value={toFixed(avgBreakdown.difficulty)} tone="difficulty" />
+          <ScorePart label="Combination" value={toFixed(avgBreakdown.combination)} tone="combination" />
+          <ScorePart label="Execution" value={toFixed(avgBreakdown.execution)} tone="execution" />
+          <ScorePart label="Originality" value={toFixed(avgBreakdown.bonus)} tone="originality" />
+          {player.deduction > 0 && <ScorePart label="Deduct" value={`-${player.deduction}`} tone="deduct" />}
+          {player.otherDeduction > 0 && <ScorePart label="Other" value={`-${player.otherDeduction}`} tone="deduct" />}
           {player.baseScoreApplied && <Tag className="sb-card__base self-center">Base Score</Tag>}
         </div>
         {fromSlips && <p className="sb-card__note">{describeSlipAverage(fromSlips)}</p>}

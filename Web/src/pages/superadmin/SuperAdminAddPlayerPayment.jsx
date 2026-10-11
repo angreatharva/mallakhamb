@@ -254,7 +254,7 @@ const SuperAdminAddPlayerPayment = () => {
           <div
             className="rounded-3xl border p-10 bg-surface border-line"
           >
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#22C55E18', border: '2px solid #22C55E40' }}>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: 'var(--success-tint)', border: '2px solid rgb(var(--success-fg) / 0.25)' }}>
               <CheckCircle className="w-10 h-10 text-success-fg" aria-hidden="true" />
             </div>
             <h2 className="text-2xl font-black text-ink mb-3">Payment Successful!</h2>
@@ -376,7 +376,7 @@ const SuperAdminAddPlayerPayment = () => {
               className="rounded-3xl border p-6 bg-surface border-line"
             >
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: '#22C55E18' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: 'var(--success-tint)' }}>
                   <CreditCard className="w-5 h-5 text-success-fg" aria-hidden="true" />
                 </div>
                 <div>

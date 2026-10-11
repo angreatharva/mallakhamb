@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import {
-  Scale, User, CheckCircle, ChevronRight, ArrowLeft, Users, Lock
+import { User, CheckCircle, ChevronRight, Users, Lock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
@@ -20,8 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/admin/AdminKit';
-import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
+import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
 
 const JudgeTeamPlayers = () => {
   const navigate = useNavigate();
@@ -376,38 +374,16 @@ const JudgeTeamPlayers = () => {
     <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
       <JudgeAmbience />
 
-      <header className="sticky top-0 z-40 border-b flex-shrink-0 bg-bg border-line">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={() => navigate('/judge/dashboard')}
-              className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
-              aria-label="Back to dashboard"
-            >
-              <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
-            </button>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgb(var(--accent))' }}>
-              <Scale className="w-4 h-4 text-on-accent" aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate text-fg-secondary">
-                {resolveJudgeSeat(judgeInfo, {
-                  gender: selectedGender,
-                  ageGroup: selectedAgeGroup,
-                  competitionType: selectedCompetitionType,
-                })?.judgeType}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-          <AppearanceMenu />
-          <JudgeLogoutButton onLogout={handleLogout} />
-          </div>
-        </div>
-      </header>
+      <JudgeHeader
+        back={{ label: 'Back to dashboard', onClick: () => navigate('/judge/dashboard') }}
+        title={judgeInfo.name}
+        subtitle={resolveJudgeSeat(judgeInfo, {
+          gender: selectedGender,
+          ageGroup: selectedAgeGroup,
+          competitionType: selectedCompetitionType,
+        })?.judgeType}
+        onLogout={handleLogout}
+      />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
         <FadeIn delay={0}>
@@ -493,7 +469,7 @@ const JudgeTeamPlayers = () => {
                           {player.name}
                           {isLocked ? (
                             <span className="type-tag px-2 py-0.5 rounded-md"
-                              style={{ background: 'rgba(34,197,94,0.2)', color: FG.success }}>
+                              style={{ background: 'rgb(var(--success-fg) / 0.2)', color: FG.success }}>
                               Finalized
                             </span>
                           ) : isSubmitted ? (
@@ -526,7 +502,7 @@ const JudgeTeamPlayers = () => {
                       )}
                       {isLocked ? (
                         <div className="w-8 h-8 flex-shrink-0 rounded-full flex items-center justify-center"
-                          style={{ background: 'rgba(34,197,94,0.2)' }}>
+                          style={{ background: 'rgb(var(--success-fg) / 0.2)' }}>
                           <Lock className="w-4 h-4 text-green-700 dark:text-green-400" aria-hidden="true" />
                         </div>
                       ) : (

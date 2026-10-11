@@ -46,14 +46,14 @@
   padding-left: 10px;
   box-shadow: inset var(--rule) 0 0 0 var(--tone);
 }
-.sb-part[data-tone='blue'] { --tone: rgb(var(--cat-blue)); }
-.sb-part[data-tone='purple'] { --tone: rgb(var(--cat-purple)); }
-.sb-part[data-tone='accent'] { --tone: rgb(var(--accent)); }
-.sb-part[data-tone='green'] { --tone: rgb(var(--cat-green)); }
-.sb-part[data-tone='red'] { --tone: rgb(var(--cat-red)); }
+.sb-part[data-tone='difficulty'] { --tone: rgb(var(--cat-blue)); }
+.sb-part[data-tone='combination'] { --tone: rgb(var(--cat-purple)); }
+.sb-part[data-tone='execution'] { --tone: rgb(var(--accent)); }
+.sb-part[data-tone='originality'] { --tone: rgb(var(--cat-green)); }
+.sb-part[data-tone='deduct'] { --tone: rgb(var(--cat-red)); }
 /* Cell numbers: the text face with tabular figures (Teko is for the big ones). */
 .sb-part__value { color: var(--fg); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
-.sb-part[data-tone='red'] .sb-part__value { color: rgb(var(--danger-fg)); }
+.sb-part[data-tone='deduct'] .sb-part__value { color: rgb(var(--danger-fg)); }
 .sb-part__label { color: var(--fg-secondary); }
 .sb-card__note { margin: 10px 0 0; color: var(--fg-secondary); font-size: 12.5px; }
 
@@ -122,8 +122,8 @@
   box-shadow: inset var(--rule) 0 0 0 var(--tone), inset 0 0 0 1px var(--line);
   transition: background-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
 }
-.squad-group[data-tone='blue'] { --tone: rgb(var(--cat-blue)); }
-.squad-group[data-tone='pink'] { --tone: rgb(var(--cat-pink)); }
+.squad-group[data-tone='boys'] { --tone: rgb(var(--cat-blue)); }
+.squad-group[data-tone='girls'] { --tone: rgb(var(--cat-pink)); }
 .squad-group[data-dragover] { background: rgb(var(--surface-raised)); box-shadow: inset var(--rule) 0 0 0 var(--tone), inset 0 0 0 var(--ring) rgb(var(--accent)); }
 .squad-player {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;

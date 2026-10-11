@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Scale, User, CheckCircle, Send, ArrowLeft, BookOpen, X, Minus
+import { CheckCircle, Send, BookOpen, X, Minus
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -25,14 +24,9 @@ import {
 } from '@/utils/scoring/copRules';
 import ScorerScoring from './ScorerScoring'; // Import scorer component
 import TimeKeeperScoring from './TimeKeeperScoring';
-import {
-  J, JudgeAmbience, LiveDot, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY,
-  playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES,
-  JudgeLogoutButton,
-} from './judgeShared';
+import { J, JudgeAmbience, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES, JudgeHeader, ScoringFor } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 // ─── COP PDF Modal ────────────────────────────────────────────────────────────
 const CopPdfModal = ({ isOpen, onClose }) => {
@@ -40,7 +34,7 @@ const CopPdfModal = ({ isOpen, onClose }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex flex-col" data-appearance="dark" role="dialog" aria-modal="true" aria-label="Code of Points" style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(12px)' }}>
+        <div className="fixed inset-0 z-[9999] flex flex-col" data-appearance="dark" role="dialog" aria-modal="true" aria-label="Code of Points" style={{ background: 'var(--scrim)', backdropFilter: 'blur(12px)' }}>
           <BodyScrollLock />
           {/* Modal header */}
           <div
@@ -56,10 +50,10 @@ const CopPdfModal = ({ isOpen, onClose }) => {
               </div>
               <div>
                 <p className="text-ink font-black text-sm leading-tight">Code of Points</p>
-                <p className="text-xs" style={{ color: 'rgba(192,132,252,0.8)' }}>COP Mallakhamb — Rules &amp; Scoring Guide</p>
+                <p className="text-xs" style={{ color: 'rgb(var(--accent-fg) / 0.8)' }}>COP Mallakhamb — Rules &amp; Scoring Guide</p>
               </div>
             </div>
-            <button onClick={onClose} className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border transition-all duration-200 hover:bg-red-500/10" style={{ borderColor: 'rgba(239,68,68,0.3)', color: FG.danger }} aria-label="Close COP PDF">
+            <button onClick={onClose} className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center border transition-all duration-200 hover:bg-red-500/10" style={{ borderColor: 'rgb(var(--danger-fg) / 0.3)', color: FG.danger }} aria-label="Close COP PDF">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -114,10 +108,10 @@ const ScoreInput = ({ label, value, onChange, hint }) => {
   );
 };
 
-const ScoreRow = ({ label, value, max, color = J.purple }) => (
-  <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'rgb(var(--ink) / 0.05)' }}>
-    <span className="text-xs text-fg-muted">{label}</span>
-    <span className="text-sm font-black" style={{ color }}>
+const ScoreRow = ({ label, value, max, color = 'var(--fg)' }) => (
+  <div className="flex items-center justify-between py-2 border-b border-line">
+    <span className="type-body-s text-fg-secondary">{label}</span>
+    <span className="text-sm font-bold tabular-nums" style={{ color }}>
       {typeof value === 'number' ? value.toFixed(2) : value}
       <span className="text-xs font-normal ml-1 text-fg-muted">/ {max}</span>
     </span>
@@ -127,8 +121,8 @@ const ScoreRow = ({ label, value, max, color = J.purple }) => (
 const CheckRow = ({ checked, onChange, label, penalty }) => (
   <label className="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px]"
     style={{
-      background: checked ? 'rgba(34,197,94,0.08)' : 'rgb(var(--ink) / 0.03)',
-      borderColor: checked ? 'rgba(34,197,94,0.3)' : 'rgb(var(--ink) / 0.07)',
+      background: checked ? 'rgb(var(--success-fg) / 0.08)' : 'rgb(var(--ink) / 0.03)',
+      borderColor: checked ? 'rgb(var(--success-fg) / 0.3)' : 'rgb(var(--ink) / 0.07)',
     }}>
     <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200"
       style={{ borderColor: checked ? J.green : 'rgb(var(--ink) / 0.2)', background: checked ? J.green : 'transparent' }}>
@@ -156,8 +150,8 @@ const SelectAllRow = ({ metCount, itemCount, onChange, className = '' }) => {
   return (
     <label className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px] ${className}`}
       style={{
-        background: all ? 'rgba(34,197,94,0.08)' : 'rgb(var(--accent) / 0.08)',
-        borderColor: all ? 'rgba(34,197,94,0.3)' : 'rgb(var(--accent) / 0.3)',
+        background: all ? 'rgb(var(--success-fg) / 0.08)' : 'rgb(var(--accent) / 0.08)',
+        borderColor: all ? 'rgb(var(--success-fg) / 0.3)' : 'rgb(var(--accent) / 0.3)',
       }}>
       <div className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200"
         style={{ borderColor: all || some ? J.green : 'rgb(var(--ink) / 0.2)', background: all ? J.green : 'transparent' }}>
@@ -672,48 +666,16 @@ const JudgeSlip = () => {
       <JudgeAmbience />
 
       {/*  Header  */}
-      <header ref={headerRef} className="sticky top-0 z-40 border-b bg-bg border-line">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2.5 sm:h-14 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button onClick={goBackAfterScoring}
-                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
-                aria-label="Back to team">
-                <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
-              </button>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgb(var(--accent))' }}>
-                <Scale className="w-4 h-4 text-on-accent" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-ink font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
-                <p className="text-xs truncate text-fg-secondary">{myJudgeType}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
-              <LiveDot connected={isConnected} compact />
-              <AppearanceMenu />
-              <JudgeLogoutButton onLogout={handleLogout} compact />
-            </div>
-          </div>
-
-          {/* Scoring-for banner */}
-          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 rounded-xl border min-w-0 w-full sm:w-auto sm:max-w-xs"
-            style={{ background: 'rgba(34,197,94,0.06)', borderColor: 'rgba(34,197,94,0.2)' }}>
-            <User className="w-4 h-4 flex-shrink-0 text-success-fg" aria-hidden="true" />
-            <div className="min-w-0">
-              <p className="text-ink font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
-              <p className="text-xs truncate text-fg-muted">{selectedTeam?.name}</p>
-            </div>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
-            <LiveDot connected={isConnected} />
-            <AppearanceMenu />
-            <JudgeLogoutButton onLogout={handleLogout} />
-          </div>
-        </div>
-      </header>
+      <JudgeHeader
+        ref={headerRef}
+        wide
+        back={{ label: 'Back to team', onClick: goBackAfterScoring }}
+        title={judgeInfo.name}
+        subtitle={myJudgeType}
+        context={<ScoringFor name={selectedPlayer.name} team={selectedTeam?.name} />}
+        live={isConnected}
+        onLogout={handleLogout}
+      />
 
       <main className="relative z-10 max-w-[1400px] mx-auto px-3 sm:px-6 py-4 sm:py-5" id="main-content">
         {/* Before the sheet, not beside the button: the point is that the judge
@@ -738,11 +700,11 @@ const JudgeSlip = () => {
                     <div className="rounded-2xl p-3 flex items-center justify-between relative overflow-hidden"
                       style={{ background: 'rgb(var(--surface-raised))', border: '1px solid var(--line)' }}>
                       <div className="min-w-0 pr-2">
-                        <p className="text-[10px] font-extrabold tracking-widest uppercase text-fg-secondary">Live Final Score</p>
+                        <p className="type-tag text-fg-secondary m-0">Live Final Score</p>
                         <p className="text-xs text-ink/60 truncate mt-0.5">{selectedPlayer?.name} • <span className="text-fg-muted">{selectedApparatus || 'Pole'}</span></p>
                       </div>
                       <div className="flex items-baseline gap-1 flex-shrink-0" key={calcFinal()}>
-                        <span className="text-4xl font-black text-ink leading-none">{calcFinal()}</span>
+                        <span className={`type-num-l leading-none ${parseFloat(calcFinal()) >= 10 ? 'text-accent-fg' : 'text-fg'}`}>{calcFinal()}</span>
                         <span className="text-xs text-fg-muted font-semibold">/ 10.00</span>
                       </div>
                     </div>
@@ -754,7 +716,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('difficulty')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'difficulty' ? 'bg-surface-raised text-ink border border-line-strong shadow-sm' : 'text-fg-muted hover:text-ink/80'
+                          activeMobileTab === 'difficulty' ? 'bg-surface-raised text-ink judge-tab--active' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Difficulty
@@ -763,7 +725,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('combination')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'combination' ? 'bg-surface-raised text-ink border border-line-strong shadow-sm' : 'text-fg-muted hover:text-ink/80'
+                          activeMobileTab === 'combination' ? 'bg-surface-raised text-ink judge-tab--active' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Combination
@@ -772,7 +734,7 @@ const JudgeSlip = () => {
                         type="button"
                         onClick={() => setActiveMobileTab('exec_orig')}
                         className={`py-2 px-1 min-h-[44px] rounded-lg text-xs font-black transition-all duration-200 text-center truncate ${
-                          activeMobileTab === 'exec_orig' ? 'bg-surface-raised text-ink border border-line-strong shadow-sm' : 'text-fg-muted hover:text-ink/80'
+                          activeMobileTab === 'exec_orig' ? 'bg-surface-raised text-ink judge-tab--active' : 'text-fg-muted hover:text-ink/80'
                         }`}
                       >
                         Exec & Orig
@@ -791,7 +753,7 @@ const JudgeSlip = () => {
                         <div key="tab-difficulty" className="rounded-2xl border p-4 space-y-4 bg-surface-sunken border-line">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="font-black text-ink text-base">Difficulty Elements</h3>
+                              <h3 className="type-display-s text-fg">Difficulty Elements</h3>
                               <p className="text-xs text-fg-muted mt-0.5">Select counts for Class A, B, and C elements</p>
                             </div>
                             <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-surface-raised text-fg">Max 3.80</span>
@@ -821,7 +783,7 @@ const JudgeSlip = () => {
                         <div key="tab-combination" className="rounded-2xl border p-4 space-y-4 bg-surface-sunken border-line">
                           <div className="flex items-center justify-between gap-2">
                             <div>
-                              <h3 className="font-black text-ink text-base">Combination Requirements</h3>
+                              <h3 className="type-display-s text-fg">Combination Requirements</h3>
                               <p className="text-xs text-fg-muted mt-0.5 truncate">{selectedApparatus || 'Pole Mallakhamb'}</p>
                             </div>
                             <span className="text-xs px-2.5 py-1 rounded-full font-bold flex-shrink-0 bg-surface-raised text-fg">Max 1.60</span>
@@ -854,7 +816,7 @@ const JudgeSlip = () => {
                           {/* Execution Card */}
                           <div className="rounded-2xl border p-4 space-y-3 bg-surface-sunken border-line">
                             <div className="flex items-center justify-between">
-                              <h3 className="font-black text-ink text-base">Execution Score</h3>
+                              <h3 className="type-display-s text-fg">Execution Score</h3>
                               <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-surface-raised text-fg">Max 4.40</span>
                             </div>
                             <ScoreInput label="" value={scores.execution}
@@ -864,7 +826,7 @@ const JudgeSlip = () => {
                           {/* Originality Card */}
                           <div className="rounded-2xl border p-4 space-y-3 bg-surface-sunken border-line">
                             <div className="flex items-center justify-between">
-                              <h3 className="font-black text-ink text-base">Originality Bonus</h3>
+                              <h3 className="type-display-s text-fg">Originality Bonus</h3>
                               <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-surface-raised text-fg">Max 0.20</span>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -888,7 +850,7 @@ const JudgeSlip = () => {
 
                           {/* Summary Card */}
                           <div className="rounded-2xl border p-4 space-y-1 bg-surface-sunken border-line">
-                            <h3 className="font-black text-ink text-sm mb-2">Overall Score Breakdown</h3>
+                            <h3 className="type-tag text-fg-secondary mb-2">Overall Score Breakdown</h3>
                             <ScoreRow label="1. Difficulty" value={scores.difficulty.total} max="3.80" />
                             <ScoreRow label="2. Combination" value={scores.combination.total} max="1.60" />
                             <ScoreRow label="3. Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
@@ -908,11 +870,10 @@ const JudgeSlip = () => {
                   {/* Left Column: Scoring Controls */}
                   <div className="flex flex-col gap-4 order-1">
                     {/* Score hero */}
-                    <div className="rounded-2xl p-6 flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'rgb(var(--surface-raised))', border: '1px solid var(--line)' }}>
-                      <div className="absolute inset-0 pointer-events-none"
-                        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgb(var(--accent) / 0.15), transparent 60%)' }} />
-                      <p className="type-tag mb-2 relative z-10 text-fg-secondary">Final Score</p>
-                      <p className="text-7xl font-black relative z-10 text-fg" key={calcFinal()}>
+                    {/* The total: the lower third (3px rule), num-l, saffron at full marks. */}
+                    <div className="ui-panel ui-panel--feature p-6 flex flex-col items-center justify-center">
+                      <p className="type-tag mb-2 text-fg-secondary">Final Score</p>
+                      <p className={`type-num-l m-0 ${parseFloat(calcFinal()) >= 10 ? 'text-accent-fg' : 'text-fg'}`} key={calcFinal()}>
                         {calcFinal()}
                       </p>
                       <p className="text-sm relative z-10 mt-1 text-fg-muted">out of 10.00</p>
@@ -921,7 +882,7 @@ const JudgeSlip = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="rounded-2xl border p-4 bg-surface-sunken border-line">
                         <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-black text-ink text-sm">Execution</h3>
+                          <h3 className="type-tag text-fg-secondary">Execution</h3>
                           <span className="text-xs px-2 py-1 rounded-full bg-surface-raised text-fg">Max 4.40</span>
                         </div>
                         <ScoreInput label="" value={scores.execution}
@@ -930,7 +891,7 @@ const JudgeSlip = () => {
 
                       <div className="rounded-2xl border p-4 bg-surface-sunken border-line">
                         <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-black text-ink text-sm">Originality</h3>
+                          <h3 className="type-tag text-fg-secondary">Originality</h3>
                           <span className="text-xs px-2 py-1 rounded-full bg-surface-raised text-fg">0.20</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -956,7 +917,7 @@ const JudgeSlip = () => {
                     <div className="rounded-2xl border p-4 flex-1 bg-surface-sunken border-line">
                       <div className="flex items-center justify-between mb-3 gap-2">
                         <div className="min-w-0">
-                          <h3 className="font-black text-ink text-sm">Combination</h3>
+                          <h3 className="type-tag text-fg-secondary">Combination</h3>
                           <p className="text-xs mt-0.5 truncate text-fg-muted">{selectedApparatus || 'Pole Mallakhamb'}</p>
                         </div>
                         <span className="text-xs px-2 py-1 rounded-full flex-shrink-0 bg-surface-raised text-fg">Max 1.60</span>
@@ -981,7 +942,7 @@ const JudgeSlip = () => {
                   <div className="flex flex-col gap-4 order-2">
                     <div className="rounded-2xl border p-4 space-y-3 bg-surface-sunken border-line">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-black text-ink text-sm">Difficulty</h3>
+                        <h3 className="type-tag text-fg-secondary">Difficulty</h3>
                         <span className="text-xs px-2 py-1 rounded-full bg-surface-raised text-fg">Max 3.80</span>
                       </div>
                       <div className="space-y-4">
@@ -998,7 +959,7 @@ const JudgeSlip = () => {
                     </div>
 
                     <div className="rounded-2xl border p-4 space-y-1 bg-surface-sunken border-line">
-                      <h3 className="font-black text-ink text-sm mb-2">Score Summary</h3>
+                      <h3 className="type-tag text-fg-secondary mb-2">Score Summary</h3>
                       <ScoreRow label="1. Difficulty" value={scores.difficulty.total} max="3.80" />
                       <ScoreRow label="2. Combination" value={scores.combination.total} max="1.60" />
                       <ScoreRow label="3. Execution" value={parseFloat(scores.execution || 0)} max="4.40" />
@@ -1051,8 +1012,8 @@ const JudgeSlip = () => {
                 }}>
                 <div className="max-w-[1400px] mx-auto flex items-center gap-3">
                   <div className="flex-shrink-0 text-center px-2">
-                    <p className="text-[10px] uppercase tracking-widest text-fg-secondary">Total</p>
-                    <p className="text-xl font-black text-ink leading-none">{calcFinal()}</p>
+                    <p className="type-tag text-fg-secondary m-0">Total</p>
+                    <p className={`type-num-m leading-none m-0 ${parseFloat(calcFinal()) >= 10 ? 'text-accent-fg' : 'text-fg'}`}>{calcFinal()}</p>
                   </div>
                   <button onClick={submitScore} disabled={submitting || !isConnected || submitted || competitionLocked} className="flex-1 py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 min-h-[52px]" style={{
                       background: submitted ? 'rgb(var(--success-fill))' : 'rgb(var(--accent))', color: submitted ? 'rgb(var(--success-on))' : 'rgb(var(--on-accent))',

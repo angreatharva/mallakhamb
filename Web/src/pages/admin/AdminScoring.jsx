@@ -12,7 +12,7 @@ import { calculateAverageMarks, getTimeDeductionForTime } from '@/utils/scoring/
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
-import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { PoleMark } from '@/components/brand/Brand';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
@@ -631,8 +631,8 @@ const AdminScoring = () => {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                        style={isLocked ? { background: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger } : { background: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success }}>
-                        {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />{isConnected ? 'Live' : 'Offline'}</>}
+                        style={isLocked ? { background: `${alpha('rgb(var(--danger-fg))', 0x20)}`, color: FG.danger } : { background: `${alpha('rgb(var(--success-fg))', 0x20)}`, color: FG.success }}>
+                        {isLocked ? <><Lock className="w-3.5 h-3.5" /> Locked</> : <><div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? 'rgb(var(--success-fg))' : 'rgb(var(--danger-fg))' }} />{isConnected ? 'Live' : 'Offline'}</>}
                     </span>
                     <AppearanceMenu />
                     </div>
@@ -693,9 +693,9 @@ const AdminScoring = () => {
                                     const isSenior = judge.judgeType === 'Senior Judge';
                                     return (
                                         <div key={judge._id} className="rounded-xl border p-3 text-center"
-                                            style={{ background: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x12)}` : `${alpha(ADMIN_COLORS.blue, 0x10)}`, borderColor: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x30)}` : `${alpha(ADMIN_COLORS.blue, 0x25)}` }}>
+                                            style={{ background: isSenior ? `${alpha('rgb(var(--accent))', 0x12)}` : `${alpha('rgb(var(--info-fg))', 0x10)}`, borderColor: isSenior ? `${alpha('rgb(var(--accent))', 0x30)}` : `${alpha('rgb(var(--info-fg))', 0x25)}` }}>
                                             <span className="inline-block px-2 py-0.5 rounded-full text-xs font-bold mb-2"
-                                                style={{ background: isSenior ? `${alpha(ADMIN_COLORS.purple, 0x25)}` : `${alpha(ADMIN_COLORS.blue, 0x25)}`, color: isSenior ? 'rgb(var(--accent-fg))' : DATA_COLORS.blueSoft }}>
+                                                style={{ background: isSenior ? `${alpha('rgb(var(--accent))', 0x25)}` : `${alpha('rgb(var(--info-fg))', 0x25)}`, color: isSenior ? 'rgb(var(--accent-fg))' : DATA_COLORS.blueSoft }}>
                                                 {judge.judgeType}
                                             </span>
                                             <p className="font-bold text-ink text-sm">{judge.name}</p>

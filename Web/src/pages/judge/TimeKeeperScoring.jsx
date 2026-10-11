@@ -13,13 +13,15 @@
  * that did not reach the Scorer can be sent again.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { JudgeHeader } from './judgeShared';
+import { STOPWATCH } from './stopwatchPalette';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { ArrowLeft, Timer, Send, Check, AlertCircle } from 'lucide-react';
+import { Send, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
-import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
+import { FG, alpha } from '../../styles/tokens';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { buildScorerRows } from './scorerRows';
@@ -27,7 +29,6 @@ import { apparatusKey } from '@/utils/scoring/apparatus';
 import { seatTypesFor } from './useJudgePanelData';
 import { useTimekeeping, BEEP_MARKS, deductionNote } from './timeKeeper';
 import StopwatchFace from './StopwatchFace';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const SESSION_KEY = 'timekeeper_active_session';
 
@@ -164,32 +165,11 @@ const TimeKeeperScoring = () => {
 
   return (
     <div className="min-h-dvh bg-bg text-fg">
-      <header className="sticky top-0 z-40 border-b bg-bg border-line">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-4">
-            <button type="button" onClick={() => navigate('/judge/dashboard')} disabled={busy}
-              className="flex items-center gap-2 text-sm font-semibold min-h-[44px] px-3 rounded-lg hover:bg-ink/10 transition-colors disabled:opacity-40"
-              style={{ color: 'rgb(var(--ink) / 0.6)' }}>
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
-            </button>
-            <div className="w-px h-5 bg-ink/10" />
-            <div className="flex items-center gap-2">
-              <Timer className="w-4 h-4 text-accent-fg" aria-hidden="true" />
-              <span className="text-ink font-bold text-sm">Time Keeper</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-          <AppearanceMenu />
-          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{ background: `${alpha(isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red, 0x20)}`, color: isConnected ? FG.success : FG.danger }}>
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`}
-              style={{ background: isConnected ? ADMIN_COLORS.green : ADMIN_COLORS.red }} />
-            {isConnected ? 'Live' : 'Offline'}
-          </span>
-          </div>
-        </div>
-      </header>
+      <JudgeHeader
+        back={{ label: 'Back to Dashboard', onClick: () => navigate('/judge/dashboard'), disabled: busy }}
+        title="Time Keeper"
+        live={isConnected}
+      />
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-5">
         <CompetitionLockBanner />
@@ -217,17 +197,17 @@ const TimeKeeperScoring = () => {
               footer={watch.status === 'stopped' && selected ? (
                 times[selectedId]?.sent ? (
                   <span className="flex flex-col items-center gap-0.5">
-                    <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
+                    <span className="flex items-center gap-1" style={{ color: STOPWATCH.green }}>
                       <Check className="w-3.5 h-3.5" aria-hidden="true" /> Sent to the Scorer
                     </span>
                     {deductionNote(times[selectedId]?.seconds) && (
-                      <span style={{ color: '#FF453A' }}>{deductionNote(times[selectedId]?.seconds)}</span>
+                      <span style={{ color: STOPWATCH.red }}>{deductionNote(times[selectedId]?.seconds)}</span>
                     )}
                   </span>
                 ) : (
                   <button type="button" onClick={() => sendTime(selected, times[selectedId]?.seconds)}
                     className="flex items-center gap-1 font-semibold underline-offset-2 hover:underline"
-                    style={{ color: '#FFD60A' }}>
+                    style={{ color: STOPWATCH.yellow }}>
                     <Send className="w-3.5 h-3.5" aria-hidden="true" /> Not received — send again
                   </button>
                 )
@@ -250,8 +230,8 @@ const TimeKeeperScoring = () => {
                         aria-pressed={active}
                         className="w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left min-h-[52px] transition-colors disabled:opacity-40"
                         style={{
-                          background: active ? `${alpha(ADMIN_COLORS.saffron, 0x14)}` : 'rgb(var(--ink) / 0.02)',
-                          borderColor: active ? `${alpha(ADMIN_COLORS.saffron, 0x55)}` : ADMIN_COLORS.darkBorderSubtle,
+                          background: active ? `${alpha('rgb(var(--accent))', 0x14)}` : 'rgb(var(--ink) / 0.02)',
+                          borderColor: active ? `${alpha('rgb(var(--accent))', 0x55)}` : 'var(--line)',
                         }}>
                         <span className="text-sm font-bold text-ink truncate">{row.name}</span>
                         {rec && (

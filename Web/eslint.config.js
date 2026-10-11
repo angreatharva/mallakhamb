@@ -43,8 +43,9 @@ export default defineConfig([
         { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' },
       ],
       'react-refresh/only-export-components': 'off',
-      // Design system rules - warn in development, can be upgraded to error later
-      'design-system/no-hardcoded-colors': 'warn',
+      // An error everywhere since the design-language rollout reached zero
+      // literals (docs/design-language/REPORT.md); tokens only.
+      'design-system/no-hardcoded-colors': 'error',
       'design-system/no-hardcoded-spacing': 'warn',
     },
   },
@@ -77,22 +78,18 @@ export default defineConfig([
     },
   },
   {
-    // Folders the design-language rollout has finished: a hard-coded colour is
-    // an error here, so the token rule cannot slide back (PLAN Phase 6). Add a
-    // folder once its count reaches zero; `npm run lint:ratchet` holds the rest.
+    // Two islands that draw in fixed colours on purpose (design-language PLAN
+    // §8.6, §8.14): the Time Keeper's stopwatch (Apple's palette, in every
+    // look) and Home's WebGL/canvas runtime (literal colours for the GPU).
+    // Plus the three files that must spell colours out: the rule's own token
+    // table, the pre-paint theme-color script (runs before any CSS), and
+    // Tailwind's config.
     files: [
-      'src/components/ui/**/*.{js,jsx}',
-      'src/components/shell/**/*.{js,jsx}',
-      'src/components/brand/**/*.{js,jsx}',
-      'src/components/competition/**/*.{js,jsx}',
-      'src/components/layout/**/*.{js,jsx}',
-      'src/pages/player/**/*.{js,jsx}',
-      'src/pages/unified/**/*.{js,jsx}',
-      'src/pages/shared/**/*.{js,jsx}',
-      'src/pages/public/*.{js,jsx}',
+      'src/pages/judge/StopwatchFace.jsx', 'src/pages/judge/stopwatchPalette.js', 'src/pages/public/home/runtime/**/*.js',
+      'eslint-rules/**/*.js', 'public/appearance-init.js', 'tailwind.config.js',
     ],
     rules: {
-      'design-system/no-hardcoded-colors': 'error',
+      'design-system/no-hardcoded-colors': 'off',
     },
   },
   {

@@ -27,7 +27,7 @@ const SortableList = ({
   getKey,
   renderItem,
   disabled = false,
-  accent = '#A855F7',
+  accent = 'rgb(var(--accent))',
   emptyMessage = 'Nothing to order yet.',
 }) => {
   const [draggingKey, setDraggingKey] = useState(null);
@@ -80,8 +80,8 @@ const SortableRow = ({ item, disabled, accent, isDragging, onDragStart, onDragEn
       onDragEnd={onDragEnd}
       className="rounded-xl border flex items-stretch gap-2 overflow-hidden"
       style={{
-        background: isDragging ? `${alpha(accent, 0x18)}` : 'rgba(255,255,255,0.03)',
-        borderColor: isDragging ? `${alpha(accent, 0x60)}` : 'rgba(255,255,255,0.08)',
+        background: isDragging ? `${alpha(accent, 0x18)}` : 'rgb(var(--ink) / 0.03)',
+        borderColor: isDragging ? `${alpha(accent, 0x60)}` : 'rgb(var(--ink) / 0.08)',
         cursor: disabled ? 'default' : 'grab',
         position: 'relative',
         // Lift the row being dragged above its neighbours, otherwise it slides

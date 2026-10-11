@@ -11,7 +11,7 @@
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Scale, User, ArrowLeft, AlertTriangle, Pencil, Lock } from 'lucide-react';
+import { AlertTriangle, Pencil, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
@@ -30,13 +30,8 @@ import {
   calculateAverageMarks,
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
-import {
-  J, JudgeAmbience, LiveDot, MismatchModal, ToleranceModal, SrEditModal,
-  SCORING_PATH, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey,
-  JudgeLogoutButton,
-} from './judgeShared';
+import { J, JudgeAmbience, MismatchModal, ToleranceModal, SrEditModal, SCORING_PATH, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey, JudgeHeader, ScoringFor } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const JudgePanelReview = () => {
   const navigate = useNavigate();
@@ -390,48 +385,18 @@ const JudgePanelReview = () => {
       <JudgeAmbience />
 
       {/*  Header  */}
-      <header className="sticky top-0 z-40 border-b bg-bg border-line">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2.5 sm:h-14 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
-          <div className="flex items-center justify-between gap-2 min-w-0 w-full sm:w-auto">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button onClick={() => { if (!finalized) goBackToScoring(); else goBackToTeam(); }}
-                className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
-                aria-label={finalized ? 'Back to team' : 'Back to scoring'}>
-                <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
-              </button>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgb(var(--accent))' }}>
-                <Scale className="w-4 h-4 text-on-accent" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-ink font-bold text-sm leading-tight truncate max-w-[140px] sm:max-w-[200px]">{judgeInfo.name}</p>
-                <p className="text-xs truncate text-fg-secondary">{myJudgeType}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 sm:hidden">
-              <LiveDot connected={isConnected} compact />
-              <AppearanceMenu />
-              <JudgeLogoutButton onLogout={handleLogout} compact />
-            </div>
-          </div>
-
-          {/* Reviewing-for banner */}
-          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 rounded-xl border min-w-0 w-full sm:w-auto sm:max-w-xs"
-            style={{ background: 'rgba(34,197,94,0.06)', borderColor: 'rgba(34,197,94,0.2)' }}>
-            <User className="w-4 h-4 flex-shrink-0 text-success-fg" aria-hidden="true" />
-            <div className="min-w-0">
-              <p className="text-ink font-bold text-sm leading-tight truncate">{selectedPlayer.name}</p>
-              <p className="text-xs truncate text-fg-muted">{selectedTeam?.name}</p>
-            </div>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
-            <LiveDot connected={isConnected} />
-            <AppearanceMenu />
-            <JudgeLogoutButton onLogout={handleLogout} />
-          </div>
-        </div>
-      </header>
+      <JudgeHeader
+        wide
+        back={{
+          label: finalized ? 'Back to team' : 'Back to scoring',
+          onClick: () => { if (!finalized) goBackToScoring(); else goBackToTeam(); },
+        }}
+        title={judgeInfo.name}
+        subtitle={myJudgeType}
+        context={<ScoringFor name={selectedPlayer.name} team={selectedTeam?.name} />}
+        live={isConnected}
+        onLogout={handleLogout}
+      />
 
       <main className="relative z-10 max-w-[1400px] mx-auto px-3 sm:px-6 py-4 sm:py-5" id="main-content">
         <div className="space-y-5 pb-6">
@@ -468,7 +433,7 @@ const JudgePanelReview = () => {
               Shown to the same people as the modal: the Senior Judge and the judges
               whose slips differ from theirs. */}
           {shouldSeeMismatch && (
-            <button type="button" onClick={() => { setMismatchDismissed(false); setShowMismatchModal(true); }} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left" style={{ background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)' }}>
+            <button type="button" onClick={() => { setMismatchDismissed(false); setShowMismatchModal(true); }} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left" style={{ background: 'rgb(var(--danger-fg) / 0.08)', borderColor: 'rgb(var(--danger-fg) / 0.3)' }}>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 text-danger-fg"/>
                 <span className="text-sm font-bold text-ink">
@@ -478,21 +443,21 @@ const JudgePanelReview = () => {
                   ].filter(Boolean).join(' · ')} mismatch detected
                 </span>
               </div>
-              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(239,68,68,0.15)', color: FG.danger }}>View Details</span>
+              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgb(var(--danger-fg) / 0.15)', color: FG.danger }}>View Details</span>
             </button>
           )}
 
           {/* Tolerance — its own strip, in its own colour, because it is a
               separate block on Final Submit and resolved a different way. */}
           {shouldSeeTolerance && (
-            <button type="button" onClick={() => { setToleranceDismissed(false); setShowToleranceModal(true); }} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left" style={{ background: 'rgba(245,158,11,0.09)', borderColor: 'rgba(245,158,11,0.35)' }}>
+            <button type="button" onClick={() => { setToleranceDismissed(false); setShowToleranceModal(true); }} className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left" style={{ background: 'rgb(var(--warning-fg) / 0.09)', borderColor: 'rgb(var(--warning-fg) / 0.35)' }}>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning-fg"/>
                 <span className="text-sm font-bold text-ink">
                   Tolerance exceeded — gap {Number(panelMismatch.toleranceInfo?.difference ?? 0).toFixed(2)} over ±{Number(panelMismatch.toleranceInfo?.tolerance ?? 0).toFixed(2)}
                 </span>
               </div>
-              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(245,158,11,0.18)', color: FG.warning }}>View Details</span>
+              <span className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgb(var(--warning-fg) / 0.18)', color: FG.warning }}>View Details</span>
             </button>
           )}
 

@@ -9,7 +9,7 @@ import {
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { superAdminAPI } from '@/services/api';
-import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import Dropdown from '@/components/auth/Dropdown';
@@ -47,9 +47,9 @@ const DarkInput = ({ label, required, error, hint, id, ...props }) => {
     <input
       id={inputId}
       className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all duration-200"
-      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-      onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'}`, padding: '0.625rem 0.875rem' }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; }}
+      onBlur={(e) => { e.target.style.borderColor = error ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
     {hint && <p className="text-xs mt-1 text-fg-muted">{hint}</p>}
@@ -89,9 +89,9 @@ const DarkTextarea = ({ label, required, id, ...props }) => {
     <textarea
       id={textareaId}
       className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 transition-all duration-200 resize-none"
-      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, padding: '0.625rem 0.875rem' }}
-      onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-      onBlur={(e) => { e.target.style.borderColor = ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+      style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid var(--line-strong)`, padding: '0.625rem 0.875rem' }}
+      onFocus={(e) => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; }}
+      onBlur={(e) => { e.target.style.borderColor = 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }}
       {...props}
     />
   </div>
@@ -219,7 +219,7 @@ const validateFeeWindow = ({ registrationOpenDate, feeDueDate, startDate, endDat
 
 const StatusBadge = ({ active }) => (
   <span className="px-2.5 py-1 rounded-full text-xs font-bold"
-    style={{ background: active ? `${alpha(ADMIN_COLORS.green, 0x20)}` : `${alpha(ADMIN_COLORS.red, 0x20)}`, color: active ? FG.success : FG.danger }}>
+    style={{ background: active ? `${alpha('rgb(var(--success-fg))', 0x20)}` : `${alpha('rgb(var(--danger-fg))', 0x20)}`, color: active ? FG.success : FG.danger }}>
     {active ? 'Active' : 'Inactive'}
   </span>
 );
@@ -234,13 +234,13 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
       {isOpen && (
         <div className="modal-overlay z-50 bg-scrim" onClick={(e) => e.target === e.currentTarget && onClose()}>
           <div className={`w-full ${isMobile ? 'max-w-full' : maxWidth} max-h-[90vh] flex flex-col rounded-3xl border overflow-hidden modal-panel`} style={{ 
-              background: ADMIN_COLORS.darkElevated, 
-              borderColor: ADMIN_COLORS.darkBorderSubtle,
+              background: 'rgb(var(--surface-raised))', 
+              borderColor: 'var(--line)',
               margin: isMobile ? '0 0.5rem' : '0',
             }}>
             <div className="flex items-center justify-between border-b flex-shrink-0" 
               style={{ 
-                borderColor: ADMIN_COLORS.darkBorderSubtle,
+                borderColor: 'var(--line)',
                 padding: isMobile ? '1rem' : '1.5rem',
               }}>
               <div>
@@ -274,7 +274,7 @@ const DarkModal = ({ isOpen, onClose, title, subtitle, children, footer, maxWidt
             {footer && (
               <div className="flex gap-3 border-t flex-shrink-0" 
                 style={{ 
-                  borderColor: ADMIN_COLORS.darkBorderSubtle,
+                  borderColor: 'var(--line)',
                   padding: isMobile ? '1rem' : '1.5rem',
                   flexDirection: isMobile ? 'column' : 'row',
                 }}>
@@ -816,8 +816,8 @@ const SuperAdminManagement = () => {
               const isActive = activeSection === s.id;
               return (
                 <button key={s.id} onClick={() => setActiveSection(s.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200 ${isActive ? 'text-ink' : 'text-fg-muted hover:text-ink'}`} style={{
-                    background: isActive ? `${alpha(ADMIN_COLORS.saffron, 0x18)}` : 'transparent',
-                    border: `1px solid ${isActive ? alpha(ADMIN_COLORS.saffron, 0x30) : 'transparent'}`,
+                    background: isActive ? `${alpha('rgb(var(--accent))', 0x18)}` : 'transparent',
+                    border: `1px solid ${isActive ? alpha('rgb(var(--accent))', 0x30) : 'transparent'}`,
                   }}>
                   <Icon className="w-4 h-4" aria-hidden="true" />
                   {s.label}
@@ -852,7 +852,7 @@ const SuperAdminManagement = () => {
                       <div className="flex flex-wrap gap-1">
                         {(comp.competitionTypes || []).map(t => (
                           <span key={t} className="px-2 py-0.5 rounded-full text-xs font-bold"
-                            style={{ background: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: 'rgb(var(--accent-fg))' }}>
+                            style={{ background: `${alpha('rgb(var(--accent))', 0x20)}`, color: 'rgb(var(--accent-fg))' }}>
                             {compTypeLabel(t)}
                           </span>
                         ))}
@@ -965,7 +965,7 @@ const SuperAdminManagement = () => {
                     <Td>{admin.email}</Td>
                     <Td>
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold"
-                        style={{ background: admin.role === 'superadmin' ? `${alpha(ADMIN_COLORS.saffron, 0x20)}` : `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: admin.role === 'superadmin' ? FG.brand : FG.info }}>
+                        style={{ background: admin.role === 'superadmin' ? `${alpha('rgb(var(--accent))', 0x20)}` : `${alpha('rgb(var(--info-fg))', 0x20)}`, color: admin.role === 'superadmin' ? FG.brand : FG.info }}>
                         {admin.role === 'superadmin' ? 'Super Admin' : 'Admin'}
                       </span>
                     </Td>
@@ -1077,7 +1077,7 @@ const SuperAdminManagement = () => {
                 <input type="checkbox" className="sr-only" checked={formData.isActive || false}
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
                 <div className="w-10 h-6 rounded-full transition-colors duration-200"
-                  style={{ background: formData.isActive ? ADMIN_COLORS.green : 'rgb(var(--ink) / 0.15)' }}>
+                  style={{ background: formData.isActive ? 'rgb(var(--success-fg))' : 'rgb(var(--ink) / 0.15)' }}>
                   <div className="w-4 h-4 bg-snow rounded-full absolute top-1 transition-transform duration-200"
                     style={{ left: formData.isActive ? '22px' : '4px' }} />
                 </div>
@@ -1240,8 +1240,8 @@ const SuperAdminManagement = () => {
                 <label key={option.value}
                   className="flex flex-col gap-0.5 p-3 rounded-xl border cursor-pointer transition-all duration-200 min-h-[44px]"
                   style={{
-                    background: checked ? `${alpha(ADMIN_COLORS.purple, 0x14)}` : 'rgb(var(--ink) / 0.02)',
-                    borderColor: checked ? ADMIN_COLORS.purple : ADMIN_COLORS.darkBorderSubtle,
+                    background: checked ? `${alpha('rgb(var(--accent))', 0x14)}` : 'rgb(var(--ink) / 0.02)',
+                    borderColor: checked ? 'rgb(var(--accent))' : 'var(--line)',
                   }}>
                   <input type="radio" name="maxTeamSize" className="sr-only" checked={checked}
                     onChange={() => setCompetitionFormData(prev => ({ ...prev, maxTeamSize: option.value }))} />
@@ -1270,11 +1270,11 @@ const SuperAdminManagement = () => {
               const checked = competitionFormData.competitionTypes.includes(ct.id);
               return (
                 <div key={ct.id} className="p-3 rounded-xl border transition-all duration-200"
-                  style={{ background: checked ? `${alpha(ADMIN_COLORS.purple, 0x08)}` : 'rgb(var(--ink) / 0.02)', borderColor: checked ? `${alpha(ADMIN_COLORS.purple, 0x40)}` : ADMIN_COLORS.darkBorderSubtle }}>
+                  style={{ background: checked ? `${alpha('rgb(var(--accent))', 0x08)}` : 'rgb(var(--ink) / 0.02)', borderColor: checked ? `${alpha('rgb(var(--accent))', 0x40)}` : 'var(--line)' }}>
                   <label className="flex items-start gap-3 cursor-pointer mb-2">
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleCompetitionType(ct.id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-                      style={{ background: checked ? ADMIN_COLORS.purple : 'transparent', borderColor: checked ? ADMIN_COLORS.purple : 'rgb(var(--ink) / 0.3)' }}>
+                      style={{ background: checked ? 'rgb(var(--accent))' : 'transparent', borderColor: checked ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.3)' }}>
                       {checked && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
                     <div>
@@ -1299,7 +1299,7 @@ const SuperAdminManagement = () => {
                                 <input type="checkbox" className="sr-only" checked={appChecked} disabled={!allowed}
                                   onChange={() => toggleGenderApparatus(ct.id, gender, app)} />
                                 <div className="w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                                  style={{ background: appChecked ? ADMIN_COLORS.purple : 'transparent', borderColor: appChecked ? ADMIN_COLORS.purple : 'rgb(var(--ink) / 0.3)' }}>
+                                  style={{ background: appChecked ? 'rgb(var(--accent))' : 'transparent', borderColor: appChecked ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.3)' }}>
                                   {appChecked && <svg className="w-2 h-2 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                                 </div>
                                 <span className="text-xs font-semibold text-ink/80">{app}</span>
@@ -1332,7 +1332,7 @@ const SuperAdminManagement = () => {
             <label className="flex items-center gap-2 p-2 -mr-2 rounded-lg cursor-pointer transition-all tap-safe">
               <input type="checkbox" className="sr-only" checked={allAgeGroupsSelected} onChange={toggleAllAgeGroups} />
               <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                style={{ background: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'transparent', borderColor: allAgeGroupsSelected ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
+                style={{ background: allAgeGroupsSelected ? 'rgb(var(--accent))' : 'transparent', borderColor: allAgeGroupsSelected ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.3)' }}>
                 {allAgeGroupsSelected && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
               </div>
               <span className="text-xs font-bold text-ink/70 whitespace-nowrap">
@@ -1353,10 +1353,10 @@ const SuperAdminManagement = () => {
                     const checked = isAgeGroupSelected(ag, gender);
                     return (
                       <label key={gender} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${!valid ? 'opacity-30 cursor-not-allowed' : ''}`}
-                        style={{ background: checked && valid ? `${alpha(ADMIN_COLORS.saffron, 0x12)}` : 'transparent' }}>
+                        style={{ background: checked && valid ? `${alpha('rgb(var(--accent))', 0x12)}` : 'transparent' }}>
                         <input type="checkbox" className="sr-only" checked={checked} disabled={!valid} onChange={() => valid && toggleAgeGroup(ag, gender)} />
                         <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                          style={{ background: checked && valid ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked && valid ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
+                          style={{ background: checked && valid ? 'rgb(var(--accent))' : 'transparent', borderColor: checked && valid ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.3)' }}>
                           {checked && valid && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <span className="text-xs font-semibold text-ink/70">{gender}</span>
@@ -1380,17 +1380,17 @@ const SuperAdminManagement = () => {
               <input type="text" placeholder="Search admins…" aria-label="Search admins" value={adminSearchQuery}
                 onChange={(e) => setAdminSearchQuery(e.target.value)}
                 className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all"
-                style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${ADMIN_COLORS.darkBorderMid}`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
+                style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid var(--line-strong)`, paddingLeft: '2.5rem', paddingRight: '1rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }} />
             </div>
             <div className="relative space-y-1 max-h-40 overflow-y-auto">
               {filteredAdmins.map(admin => {
                 const checked = competitionFormData.admins.includes(admin._id);
                 return (
                   <label key={admin._id} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all"
-                    style={{ background: checked ? `${alpha(ADMIN_COLORS.saffron, 0x10)}` : 'transparent' }}>
+                    style={{ background: checked ? `${alpha('rgb(var(--accent))', 0x10)}` : 'transparent' }}>
                     <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleAdminSelection(admin._id)} />
                     <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
-                      style={{ background: checked ? ADMIN_COLORS.saffron : 'transparent', borderColor: checked ? ADMIN_COLORS.saffron : 'rgb(var(--ink) / 0.3)' }}>
+                      style={{ background: checked ? 'rgb(var(--accent))' : 'transparent', borderColor: checked ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.3)' }}>
                       {checked && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                     </div>
                     <span className="text-sm text-ink/70">{admin.name} <span className="text-fg-muted">({admin.email})</span></span>

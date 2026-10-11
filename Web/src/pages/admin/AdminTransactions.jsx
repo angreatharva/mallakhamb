@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { logger } from '@/infrastructure/logger';
-import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { AnimatePresence } from 'framer-motion';
 import Dropdown from '@/components/auth/Dropdown';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -12,9 +12,9 @@ import { DarkCard, FadeIn } from '@/components/admin/AdminKit';
 
 const statusStyle = (status) => {
   const map = {
-    completed: { bg: `${alpha(ADMIN_COLORS.green, 0x20)}`, color: FG.success },
-    pending: { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: FG.brandGold },
-    failed: { bg: `${alpha(ADMIN_COLORS.red, 0x20)}`, color: FG.danger },
+    completed: { bg: `${alpha('rgb(var(--success-fg))', 0x20)}`, color: FG.success },
+    pending: { bg: `${alpha('rgb(var(--medal-gold))', 0x20)}`, color: FG.brandGold },
+    failed: { bg: `${alpha('rgb(var(--danger-fg))', 0x20)}`, color: FG.danger },
   };
   return map[status] || { bg: 'rgb(var(--ink) / 0.08)', color: 'var(--fg-muted)' };
 };
@@ -236,9 +236,9 @@ const AdminTransactions = () => {
                         onClick={() => openPlayersModal(row.players)}
                         className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg min-h-[44px] transition-colors"
                         style={{
-                          background: `${alpha(ADMIN_COLORS.purple, 0x18)}`,
+                          background: `${alpha('rgb(var(--accent))', 0x18)}`,
                           color: DATA_COLORS.violet,
-                          border: `1px solid ${alpha(ADMIN_COLORS.purple, 0x30)}`,
+                          border: `1px solid ${alpha('rgb(var(--accent))', 0x30)}`,
                         }}
                       >
                         <Users className="w-4 h-4" aria-hidden="true" />
@@ -282,9 +282,9 @@ const AdminTransactions = () => {
                               onClick={() => openPlayersModal(players)}
                               className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-105"
                               style={{ 
-                                background: `${alpha(ADMIN_COLORS.purple, 0x18)}`,
+                                background: `${alpha('rgb(var(--accent))', 0x18)}`,
                                 color: DATA_COLORS.violet,
-                                border: `1px solid ${alpha(ADMIN_COLORS.purple, 0x30)}`
+                                border: `1px solid ${alpha('rgb(var(--accent))', 0x30)}`
                               }}
                             >
                               <Users className="w-4 h-4" />
@@ -317,8 +317,8 @@ const AdminTransactions = () => {
           <div className="modal-overlay z-50 bg-scrim" onClick={closePlayersModal}>
               <BodyScrollLock />
             <div className="rounded-2xl border max-w-2xl w-full max-h-[80vh] overflow-hidden modal-panel" style={{ 
-                background: ADMIN_COLORS.darkCard, 
-                borderColor: ADMIN_COLORS.darkBorderSubtle 
+                background: 'rgb(var(--surface))', 
+                borderColor: 'var(--line)' 
               }} onClick={(e) => e.stopPropagation()}>
               {/* Header */}
               <div className="p-6 border-b border-line">
@@ -354,22 +354,22 @@ const AdminTransactions = () => {
                     {selectedPlayers.map((player, idx) => (
                       <div key={idx} className="p-4 rounded-xl border" style={{ 
                           background: 'rgb(var(--ink) / 0.02)', 
-                          borderColor: ADMIN_COLORS.darkBorderSubtle 
+                          borderColor: 'var(--line)' 
                         }}>
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-ink font-bold">{player.name}</p>
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
-                                background: `${alpha(ADMIN_COLORS.saffron, 0x20)}`, 
+                                background: `${alpha('rgb(var(--accent))', 0x20)}`, 
                                 color: FG.brand 
                               }}>
                                 {player.ageGroup}
                               </span>
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
                                 background: player.gender === 'Male' 
-                                  ? `${alpha(ADMIN_COLORS.blue, 0x20)}` 
-                                  : `${alpha(ADMIN_COLORS.purple, 0x20)}`,
+                                  ? `${alpha('rgb(var(--info-fg))', 0x20)}` 
+                                  : `${alpha('rgb(var(--accent))', 0x20)}`,
                                 color: player.gender === 'Male' 
                                   ? FG.info
                                   : DATA_COLORS.violet

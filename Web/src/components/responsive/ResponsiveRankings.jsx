@@ -1,21 +1,20 @@
 import React from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
-import { ADMIN_COLORS, DATA_COLORS, alpha } from '../../styles/tokens';
+import { DATA_COLORS, alpha } from '../../styles/tokens';
 
-const C = ADMIN_COLORS;
-const elevated   = C.darkElevated;
-const border     = C.darkBorderSubtle;
-const borderMid  = C.darkBorderMid;
+const elevated   = 'rgb(var(--surface-raised))';
+const border     = 'var(--line)';
+const borderMid  = 'var(--line-strong)';
 const textPrimary   = 'var(--fg)';
 const textSecondary = 'var(--fg-secondary)';
 const textMuted     = 'var(--fg-muted)';
 
 // ─── Medal config ─────────────────────────────────────────────────────────────
 const MEDALS = [
-  { emoji: '🥇', color: DATA_COLORS.gold, bg: 'rgba(245,166,35,0.10)', border: 'rgba(245,166,35,0.25)' },
-  { emoji: '🥈', color: DATA_COLORS.silver, bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.20)' },
-  { emoji: '🥉', color: DATA_COLORS.bronze, bg: 'rgba(205,127,50,0.10)', border: 'rgba(205,127,50,0.20)' },
+  { emoji: '🥇', color: DATA_COLORS.gold, bg: 'rgb(var(--medal-gold) / 0.10)', border: 'rgb(var(--medal-gold) / 0.25)' },
+  { emoji: '🥈', color: DATA_COLORS.silver, bg: 'rgb(var(--medal-silver) / 0.10)', border: 'rgb(var(--medal-silver) / 0.20)' },
+  { emoji: '🥉', color: DATA_COLORS.bronze, bg: 'rgb(var(--medal-bronze) / 0.10)', border: 'rgb(var(--medal-bronze) / 0.20)' },
 ];
 
 const getMedalStyle = (index, searching) => {
@@ -202,7 +201,7 @@ export const ResponsiveIndividualRankings = ({
               const tied = isTied(player);
               return (
                 <tr key={player.playerId} style={{ background: ms.bg, borderBottom: `1px solid ${border}`, transition: 'background 0.12s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = `${alpha(C.saffron, 0x08)}`; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${alpha('rgb(var(--accent))', 0x08)}`; }}
                   onMouseLeave={e => { e.currentTarget.style.background = ms.bg; }}
                 >
                   <td style={{ padding: '13px 16px', whiteSpace: 'nowrap' }}>
@@ -381,14 +380,14 @@ export const ResponsiveRankingsFilters = ({
           value={searchTerm}
           onChange={e => onSearchChange(e.target.value)}
           style={inputStyle}
-          onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
+          onFocus={e => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x70)}`; }}
           onBlur={e => { e.target.style.borderColor = borderMid; }}
         />
         <select
           value={selectedGender?.value || ''} aria-label="Gender"
           onChange={e => onGenderChange(genders.find(g => g.value === e.target.value))}
           style={selectStyle()}
-          onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
+          onFocus={e => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x70)}`; }}
           onBlur={e => { e.target.style.borderColor = borderMid; }}
         >
           <option value="">Select Gender</option>
@@ -399,7 +398,7 @@ export const ResponsiveRankingsFilters = ({
           onChange={e => onAgeGroupChange(ageGroups.find(ag => ag.value === e.target.value))}
           style={selectStyle(!selectedGender)}
           disabled={!selectedGender}
-          onFocus={e => { if (selectedGender) e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
+          onFocus={e => { if (selectedGender) e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x70)}`; }}
           onBlur={e => { e.target.style.borderColor = borderMid; }}
         >
           <option value="">Select Age Group</option>

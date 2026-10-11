@@ -18,11 +18,10 @@ import { FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/admin/AdminKit';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
-import { J, JudgeAmbience, JudgeLogoutButton } from './judgeShared';
+import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -758,31 +757,21 @@ const JudgeDashboard = () => {
     <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
       <JudgeAmbience />
 
-      <header className="sticky top-0 z-40 border-b flex-shrink-0 bg-bg border-line">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgb(var(--accent))' }}>
-              <Scale className="w-4 h-4 text-on-accent" aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-ink font-bold text-sm leading-tight truncate">{judgeInfo.name}</p>
-              <p className="text-xs truncate text-fg-secondary">{myJudgeType}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <AppearanceMenu />
-            <button onClick={() => navigate('/judge/profile')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all duration-200 tap-safe mouse:min-h-[36px] hover:bg-surface-raised"
-              style={{ borderColor: 'rgb(var(--accent) / 0.3)', color: 'rgb(var(--accent-fg))' }}
-              aria-label="Your profile">
-              <UserCircle className="w-4 h-4" aria-hidden="true" />
+      <JudgeHeader
+        title={judgeInfo.name}
+        subtitle={myJudgeType}
+        onLogout={handleLogout}
+        actions={(
+          <button onClick={() => navigate('/judge/profile')}
+            className="ui-btn ui-btn--ghost ui-btn--sm"
+            aria-label="Your profile">
+            <span className="ui-btn__label" style={{ display: 'contents' }}>
+              <UserCircle aria-hidden="true" />
               <span className="hidden sm:inline">Profile</span>
-            </button>
-            <JudgeLogoutButton onLogout={handleLogout} />
-          </div>
-        </div>
-      </header>
+            </span>
+          </button>
+        )}
+      />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
 

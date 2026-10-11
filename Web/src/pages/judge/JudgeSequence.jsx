@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { ArrowLeft, ListOrdered, Users, ChevronDown, ChevronRight, Info, Save } from 'lucide-react';
+import { Users, ChevronDown, ChevronRight, Info, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
@@ -10,8 +10,7 @@ import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
 import { FG, alpha } from '@/styles/tokens';
-import { J } from './judgeShared';
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
+import { J, JudgeHeader } from './judgeShared';
 
 /** Judge roles allowed to set a panel's running order. Mirrors the server's
  *  `SEQUENCE_JUDGE_TYPES` and `requireSequenceManager`; this copy only decides
@@ -216,29 +215,12 @@ const JudgeSequence = () => {
 
   return (
     <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
-      <header className="sticky top-0 z-40 border-b flex-shrink-0 bg-bg border-line">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/judge/dashboard')}
-            className="w-9 h-9 tap-safe rounded-xl flex items-center justify-center flex-shrink-0 bg-ink/5 hover:bg-ink/10 transition-colors border border-ink/10"
-            aria-label="Back to dashboard">
-            <ArrowLeft className="w-4 h-4 text-ink" aria-hidden="true" />
-          </button>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgb(var(--accent))' }}>
-            <ListOrdered className="w-4 h-4 text-on-accent" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-ink font-bold text-sm leading-tight truncate">Running Order</p>
-            <p className="text-xs truncate text-fg-secondary">{resolveJudgeSeat(judgeInfo, category)?.judgeType}</p>
-          </div>
-          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-            {saving && <span className="text-xs text-fg-muted">Saving…</span>}
-            <AppearanceMenu />
-          </div>
-        </div>
-      </header>
+      <JudgeHeader
+        back={{ label: 'Back to dashboard', onClick: () => navigate('/judge/dashboard') }}
+        title="Running Order"
+        subtitle={resolveJudgeSeat(judgeInfo, category)?.judgeType}
+        status={saving ? <span className="type-caption text-fg-muted">Saving…</span> : null}
+      />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
         <div className="rounded-2xl border p-5 mb-6"

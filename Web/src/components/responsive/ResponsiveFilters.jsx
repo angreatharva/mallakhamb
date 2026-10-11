@@ -3,7 +3,7 @@ import { Filter, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import Dropdown from '@/components/auth/Dropdown';
-import { ADMIN_COLORS, FG, alpha } from '../../styles/tokens';
+import { FG, alpha } from '../../styles/tokens';
 import { getAgeGroupsForGender, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
 
 /**
@@ -26,10 +26,9 @@ const ageGroupsForGender = (selectedGender, supplied) => {
   return options.filter((option) => isAgeGroupValidForGender(option.value, selectedGender.value));
 };
 
-const C = ADMIN_COLORS;
-const elevated   = C.darkElevated;
-const border     = C.darkBorderSubtle;
-const borderMid  = C.darkBorderMid;
+const elevated   = 'rgb(var(--surface-raised))';
+const border     = 'var(--line)';
+const borderMid  = 'var(--line-strong)';
 const textPrimary   = 'var(--fg)';
 const textSecondary = 'var(--fg-muted)';
 const textMuted     = 'var(--fg-muted)';
@@ -60,7 +59,7 @@ const SearchInput = ({ value, onChange, placeholder, height = 44 }) => (
         boxSizing: 'border-box',
         transition: 'border-color 0.15s',
       }}
-      onFocus={e => { e.target.style.borderColor = `${alpha(C.saffron, 0x70)}`; }}
+      onFocus={e => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x70)}`; }}
       onBlur={e => { e.target.style.borderColor = borderMid; }}
     />
     {value && (
@@ -113,9 +112,9 @@ const ClearButton = ({ onClick, fullWidth = false }) => (
 // ─── Active filter count badge ────────────────────────────────────────────────
 const ActiveBadge = ({ count }) => count > 0 ? (
   <span style={{
-    background: `${alpha(C.saffron, 0x22)}`,
+    background: `${alpha('rgb(var(--accent))', 0x22)}`,
     color: FG.brandSoft,
-    border: `1px solid ${alpha(C.saffron, 0x44)}`,
+    border: `1px solid ${alpha('rgb(var(--accent))', 0x44)}`,
     borderRadius: 'var(--radius-control)',
     padding: '1px 8px',
     fontSize: 11,

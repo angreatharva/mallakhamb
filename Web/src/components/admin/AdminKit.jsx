@@ -59,11 +59,11 @@ export const DarkSearch = ({ value, onChange, placeholder }) => (
 
 /*
  * The old variants onto the Button primitive: the saffron primary is the one
- * solid; "success" (a confirming save) is solid too; purple, a secondary
- * action, is a line; danger is danger; ghost is a line. Small buttons keep the
+ * solid; "success" (a confirming save) is solid too; secondary (it was
+ * "purple") is a line; danger is danger; ghost is a line. Small buttons keep the
  * 44px touch floor (the primitive's sm grows to it on touch).
  */
-const VARIANT = { primary: 'solid', success: 'solid', purple: 'line', danger: 'danger', ghost: 'line' };
+const VARIANT = { primary: 'solid', success: 'solid', secondary: 'line', danger: 'danger', ghost: 'line' };
 
 export const DarkBtn = ({ children, onClick, disabled, variant = 'primary', size = 'md', type = 'button', className = '' }) => (
   <Button type={type} onClick={onClick} disabled={disabled} variant={VARIANT[variant] || 'solid'}
@@ -79,6 +79,6 @@ LoadingState.propTypes = { label: PropTypes.node };
 DarkSearch.propTypes = { value: PropTypes.string, onChange: PropTypes.func.isRequired, placeholder: PropTypes.string };
 DarkBtn.propTypes = {
   children: PropTypes.node, onClick: PropTypes.func, disabled: PropTypes.bool,
-  variant: PropTypes.oneOf(['primary', 'purple', 'success', 'danger', 'ghost']),
+  variant: PropTypes.oneOf(['primary', 'secondary', 'success', 'danger', 'ghost']),
   size: PropTypes.oneOf(['sm', 'md']), type: PropTypes.string, className: PropTypes.string,
 };

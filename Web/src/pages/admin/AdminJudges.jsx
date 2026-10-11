@@ -10,7 +10,7 @@ import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import Dropdown from '@/components/auth/Dropdown';
 import { useResponsive } from '../../hooks/useResponsive';
-import { ADMIN_COLORS, DATA_COLORS, FG, alpha } from '../../styles/tokens';
+import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { DarkCard, FadeIn, EmptyState, LoadingState, DarkBtn } from '@/components/admin/AdminKit';
 
@@ -31,9 +31,9 @@ const DarkInput = ({ label, required, error, hint, rightElement, id, ...props })
       <input
         id={inputId}
         className="w-full rounded-xl text-base mouse:text-sm text-ink placeholder-ink/30 min-h-[44px] transition-all duration-200"
-        style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid}`, paddingLeft: '0.875rem', paddingRight: rightElement ? '3rem' : '0.875rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
-        onFocus={(e) => { e.target.style.borderColor = `${alpha(ADMIN_COLORS.saffron, 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha(ADMIN_COLORS.saffron, 0x12)}`; }}
-        onBlur={(e) => { e.target.style.borderColor = error ? alpha(ADMIN_COLORS.red, 0x60) : ADMIN_COLORS.darkBorderMid; e.target.style.boxShadow = 'none'; }}
+        style={{ background: 'rgb(var(--ink) / 0.04)', border: `1px solid ${error ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'}`, paddingLeft: '0.875rem', paddingRight: rightElement ? '3rem' : '0.875rem', paddingTop: '0.625rem', paddingBottom: '0.625rem' }}
+        onFocus={(e) => { e.target.style.borderColor = `${alpha('rgb(var(--accent))', 0x50)}`; e.target.style.boxShadow = `0 0 0 3px ${alpha('rgb(var(--accent))', 0x12)}`; }}
+        onBlur={(e) => { e.target.style.borderColor = error ? alpha('rgb(var(--danger-fg))', 0x60) : 'var(--line-strong)'; e.target.style.boxShadow = 'none'; }}
         {...props}
       />
       {rightElement && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightElement}</div>}
@@ -170,7 +170,7 @@ const JudgeSearch = ({ api, value, onSelect, onClear, autoFocus = false, taken =
               title={heldSeat ? `Already ${heldSeat} on this panel` : undefined}
               onClick={() => { onSelect(account); setTerm(''); setResults([]); }}
               className="w-full text-left px-3 py-2.5 transition-colors border-b last:border-b-0 min-h-[44px] disabled:cursor-not-allowed enabled:hover:bg-ink/5"
-              style={{ borderColor: ADMIN_COLORS.darkBorderSubtle, opacity: heldSeat ? 0.45 : 1 }}
+              style={{ borderColor: 'var(--line)', opacity: heldSeat ? 0.45 : 1 }}
             >
               <p className="text-sm font-semibold text-ink">
                 {account.name}
@@ -234,7 +234,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
             </button>
           </div>
           <div className="p-6 space-y-4">
-            <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle, color: 'var(--fg-muted)' }}>
+            <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: 'var(--line)', color: 'var(--fg-muted)' }}>
               <span className="font-bold text-accent-fg">{seatLabel(judge.judgeType)}</span>
               {judge.gender && <> · {judge.gender}</>}
               {judge.ageGroup && <> · {judge.ageGroup}</>}
@@ -703,9 +703,9 @@ const Judges = () => {
   const filtersReady = !isSuperAdmin || selectedCompetition;
 
   const judgeTypeBadge = (jt) => {
-    if (jt === 'Senior Judge') return { bg: `${alpha(ADMIN_COLORS.purple, 0x20)}`, color: 'rgb(var(--accent-fg))' };
-    if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${alpha(ADMIN_COLORS.gold, 0x20)}`, color: FG.brandGold };
-    return { bg: `${alpha(ADMIN_COLORS.blue, 0x20)}`, color: DATA_COLORS.blueSoft };
+    if (jt === 'Senior Judge') return { bg: `${alpha('rgb(var(--accent))', 0x20)}`, color: 'rgb(var(--accent-fg))' };
+    if (SUPPORT_JUDGE_TYPES.includes(jt)) return { bg: `${alpha('rgb(var(--medal-gold))', 0x20)}`, color: FG.brandGold };
+    return { bg: `${alpha('rgb(var(--info-fg))', 0x20)}`, color: DATA_COLORS.blueSoft };
   };
 
   return (
@@ -952,7 +952,7 @@ const Judges = () => {
                           const canDelete = !!judge.judgeAccount && !REQUIRED_JUDGE_TYPES.includes(judge.judgeType);
                           return (
                             <div key={judge.judgeNo} className="rounded-xl border p-4 flex items-center justify-between gap-4"
-                              style={{ background: judge.isEmpty ? 'rgb(var(--ink) / 0.01)' : 'rgb(var(--ink) / 0.03)', borderColor: ADMIN_COLORS.darkBorderSubtle }}>
+                              style={{ background: judge.isEmpty ? 'rgb(var(--ink) / 0.01)' : 'rgb(var(--ink) / 0.03)', borderColor: 'var(--line)' }}>
                               <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: badge.bg }}>
                                   <span className="text-xs font-black" style={{ color: badge.color }}>{judge.judgeNo}</span>
@@ -969,7 +969,7 @@ const Judges = () => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0">
-                                <DarkBtn size="sm" variant={judge.judgeAccount ? 'purple' : 'success'} disabled={ageGroupStarted} onClick={() => handleEditJudge(judge)}>
+                                <DarkBtn size="sm" variant={judge.judgeAccount ? 'secondary' : 'success'} disabled={ageGroupStarted} onClick={() => handleEditJudge(judge)}>
                                   <Edit className="w-3.5 h-3.5" />
                                   {judge.judgeAccount ? 'Replace' : 'Assign'}
                                 </DarkBtn>
