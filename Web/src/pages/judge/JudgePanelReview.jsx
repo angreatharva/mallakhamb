@@ -339,6 +339,11 @@ const JudgePanelReview = () => {
               executionScore: b.execution || 0,
               bonusScore: b.bonus === 0.20 ? 0.20 : 0,
               total: parseFloat(entry.score) || 0,
+              // Each judge's own breakdown, so the Final Submit broadcast shows
+              // every card with its own marks. Totals-only slips (detailed:
+              // false) are left out: storing them would overwrite the element
+              // counts the server already holds for that judge.
+              ...(b.detailed ? { breakdown: entry.breakdown } : {}),
               submittedAt: entry.timestamp || new Date(),
               isChiefPrefilled: entry.judgeType === 'Senior Judge',
             };

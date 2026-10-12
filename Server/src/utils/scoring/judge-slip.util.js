@@ -128,6 +128,47 @@ function buildJudgeSlipPlayerScore({
   };
 }
 
+/**
+ * The breakdown that belongs to ONE judge's mark in a `playerScores` entry.
+ *
+ * `playerScore.breakdown` is the SUBMITTER's breakdown. A Final Submit carries
+ * every judge's total in `judgeScores` but only the Senior Judge's breakdown
+ * there, and broadcasting that breakdown under each judge's name made every
+ * card on Panel Review show the Senior Judge's Difficulty, Combination and
+ * Execution beside the judge's own total.
+ *
+ * Order: the judge's own slip breakdown; else the judge's slip section totals
+ * (`detailed: false` — element counts unknown); else the entry breakdown, but
+ * only when this judge is the only mark in the entry (a single-judge submit);
+ * else null, which tells listeners to keep what they already show.
+ *
+ * @param {Object} playerScore a `playerScores[]` entry
+ * @param {string} judgeType   'Senior Judge', 'Judge 1', …
+ * @returns {Object|null}
+ */
+function breakdownForJudge(playerScore, judgeType) {
+  const mapping = JUDGE_ROLE_MAP[judgeType];
+  if (!mapping || !playerScore) return null;
+
+  const slip = (playerScore.judgeSlips || []).find((s) => s && s.judgeRole === mapping.role);
+  if (slip) {
+    const own = slip.breakdown;
+    if (own && typeof own === 'object' && Object.keys(own).length > 0) return own;
+    return {
+      difficulty: { aClass: 0, bClass: 0, cClass: 0, total: Number(slip.difficultyScore) || 0 },
+      combination: { checked: {}, total: Number(slip.combinationScore) || 0 },
+      execution: Number(slip.executionScore) || 0,
+      bonus: Number(slip.bonusScore) || 0,
+      detailed: false,
+    };
+  }
+
+  const marks = Object.entries(playerScore.judgeScores || {})
+    .filter(([, value]) => value !== undefined && value !== null && Number(value) !== 0);
+  const soleMark = marks.length === 1 && marks[0][0] === mapping.field;
+  return soleMark ? (playerScore.breakdown || null) : null;
+}
+
 module.exports = {
   JUDGE_ROLE_MAP,
   PANEL_JUDGE_TYPES,
@@ -136,4 +177,5 @@ module.exports = {
   getJudgeRoleMapping,
   isPanelJudgeType,
   buildJudgeSlipPlayerScore,
+  breakdownForJudge,
 };

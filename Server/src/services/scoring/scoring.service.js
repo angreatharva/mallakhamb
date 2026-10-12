@@ -35,6 +35,7 @@ const { rankTeamChampionship } = require('../../utils/scoring/team-championship.
 const {
   JUDGE_SCORE_FIELDS,
   JUDGE_TYPE_BY_FIELD,
+  breakdownForJudge,
 } = require('../../utils/scoring/judge-slip.util');
 
 /**
@@ -1699,7 +1700,9 @@ class ScoringService {
           // slot while everything else looks for it in another.
           const judgeScores = playerScore.judgeScores || {};
 
-          // Emit for each judge score that was provided (include full breakdown for Panel Review)
+          // Emit for each judge score that was provided, each with THAT judge's
+          // breakdown — `playerScore.breakdown` is only the submitter's (see
+          // breakdownForJudge).
           for (const [field, judgeType] of Object.entries(JUDGE_TYPE_BY_FIELD)) {
             if (judgeScores[field] !== undefined && judgeScores[field] !== 0) {
               this.socketManager.emitToRoom(roomId, 'score_updated', {
@@ -1707,7 +1710,7 @@ class ScoringService {
                 playerName: playerScore.playerName,
                 judgeType: judgeType,
                 score: judgeScores[field],
-                breakdown: playerScore.breakdown || null,
+                breakdown: breakdownForJudge(playerScore, judgeType),
                 teamId: scoreData.teamId,
                 gender: scoreData.gender,
                 ageGroup: scoreData.ageGroup,

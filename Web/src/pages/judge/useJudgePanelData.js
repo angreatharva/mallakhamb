@@ -535,15 +535,23 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
       const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
       if (currentPlayerId && String(data.playerId) === currentPlayerId
         && isForThisPerformance(data) && PANEL_TYPES.includes(data.judgeType)) {
-        setPanelScores((prev) => ({
-          ...prev,
-          [data.judgeType]: {
-            judgeType: data.judgeType,
-            score: data.score,
-            breakdown: normalizeBreakdown(data.breakdown, data.score),
-            timestamp: data.timestamp || new Date().toISOString(),
-          },
-        }));
+        setPanelScores((prev) => {
+          // No breakdown in the event (a sheet-level save that carries only
+          // totals): keep the slip already on screen when its total is
+          // unchanged, rather than blanking its sections to zero.
+          const shown = prev[data.judgeType];
+          const keepShown = !data.breakdown && shown
+            && Number(shown.score) === Number(data.score);
+          return {
+            ...prev,
+            [data.judgeType]: {
+              judgeType: data.judgeType,
+              score: data.score,
+              breakdown: keepShown ? shown.breakdown : normalizeBreakdown(data.breakdown, data.score),
+              timestamp: data.timestamp || new Date().toISOString(),
+            },
+          };
+        });
         if (data.isFinalSubmit || data.isLocked) setFinalized(true);
       }
     });

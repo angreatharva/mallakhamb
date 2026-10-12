@@ -91,9 +91,31 @@ const AdminLots = () => {
     setTeams(next);
   }, []);
 
-  const availableAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
-
   const activeCompetitionId = isSuperAdmin ? selectedCompetition?.value : currentCompetition?._id;
+  const activeCompetition = isSuperAdmin
+    ? competitions.find((c) => c._id === selectedCompetition?.value)
+    : currentCompetition;
+
+  // The meet's own age groups, as on the Scores tab.
+  const availableAgeGroups = useAgeGroups(
+    selectedGender?.value || 'Male',
+    isSuperAdmin ? activeCompetition : null
+  );
+
+  // Only the competition types this meet runs: a Competition-I-only meet used
+  // to offer II and III as well, each an empty category to draw.
+  const competitionTypeOptions = useMemo(() => {
+    const offered = activeCompetition?.competitionTypes;
+    if (!offered?.length) return COMPETITION_TYPE_OPTIONS;
+    return COMPETITION_TYPE_OPTIONS.filter((option) => offered.includes(option.value));
+  }, [activeCompetition]);
+
+  // A type the newly chosen meet does not run cannot stay selected.
+  useEffect(() => {
+    if (selectedCompetitionType && !competitionTypeOptions.some((o) => o.value === selectedCompetitionType.value)) {
+      setSelectedCompetitionType(null);
+    }
+  }, [competitionTypeOptions, selectedCompetitionType]);
 
   const filtersComplete = !!(activeCompetitionId && selectedGender && selectedAgeGroup && selectedCompetitionType);
 
@@ -255,7 +277,7 @@ const AdminLots = () => {
           </div>
           <div className="md:col-span-2">
             <label className="block type-tag mb-2 text-accent-fg">Competition</label>
-            <Dropdown options={COMPETITION_TYPE_OPTIONS} value={selectedCompetitionType} onChange={setSelectedCompetitionType}
+            <Dropdown options={competitionTypeOptions} value={selectedCompetitionType} onChange={setSelectedCompetitionType}
               placeholder="Select competition type" />
           </div>
         </div>
