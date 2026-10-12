@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { BrowserRouter as Router, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { MotionConfig } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
@@ -17,6 +17,8 @@ import { applyLook, onLookClaim } from '@/utils/ui/look';
 import { toastOptions as lookToastOptions } from '@/components/ui/toast';
 import { loadLookFonts } from '@/styles/fonts';
 import { CornerAppearanceMenu } from '@/components/layout/AppearanceMenu';
+import SignOutOnBackDialog from '@/components/auth/SignOutOnBackDialog';
+import { useSignOutOnBack } from '@/hooks/useSignOutOnBack';
 
 /* Toasts in the look (components/ui/toast.js), with the durations they always had. */
 const TOAST_OPTIONS = {
@@ -28,7 +30,14 @@ const TOAST_OPTIONS = {
 
 function AppContent() {
   const { user, userType, loading, logout: handleLogout } = useAuth();
-  const location = useLocation();
+  /*
+   * Back from a signed-in screen asks to sign out instead of reopening login
+   * or the choosers (hooks/useSignOutOnBack). While that Back is being undone,
+   * `location` is the screen the user left, not the URL the browser briefly
+   * shows, so the routes and the chrome below never flash the chooser.
+   */
+  const backGuard = useSignOutOnBack({ signedInRole: user ? userType : null });
+  const { location } = backGuard;
   /*
    * Declared up here, above the `loading` early-return below, because a hook
    * after a conditional return changes the hook order between renders — the
@@ -95,8 +104,10 @@ function AppContent() {
         {(isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage || isHeaderlessPage) && <CornerAppearanceMenu />}
 
         <div className={!shouldHideNavbar ? 'pt-16' : ''}>
-          <AppRoutes />
+          <AppRoutes location={location} />
         </div>
+
+        <SignOutOnBackDialog open={backGuard.prompting && Boolean(user)} onClose={backGuard.dismiss} />
 
         {/*
           * Toasts move to the top CENTRE on phones, and are held clear of the

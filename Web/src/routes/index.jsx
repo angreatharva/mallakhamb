@@ -126,12 +126,18 @@ const JudgeLayout = () => (
   </ProtectedRoute>
 );
 
-export default function AppRoutes() {
+/**
+ * @param {{ location?: import('react-router-dom').Location }} props -
+ *   the location to draw. App passes it on EVERY render, never only some of
+ *   the time: `<Routes>` wraps its output in an extra provider when it gets
+ *   one, so toggling the prop would remount the whole screen.
+ */
+export default function AppRoutes({ location }) {
   return (
     // Outer boundary still covers the top-level public routes (Home,
     // PublicScores, password flows), which are lazy and sit outside any layout.
     <Suspense fallback={<PageLoader />}>
-      <Routes>
+      <Routes location={location}>
         <Route path="/" element={<Home />} />
         <Route path="/scores" element={<PublicScores />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -234,4 +240,8 @@ export default function AppRoutes() {
     </Suspense>
   );
 }
+
+AppRoutes.propTypes = {
+  location: PropTypes.object,
+};
 
