@@ -30,7 +30,7 @@ import { expect } from '@playwright/test';
  * @param {import('@playwright/test').Page} page - on /coach/payment
  */
 export const alreadySubmitted = async (page) => {
-  const confirmation = page.getByRole('heading', { name: /Team Already Submitted|Payment Successful/ });
+  const confirmation = page.getByRole('heading', { name: /Team Already Submitted|Payment Successful|Team Submitted Successfully/ });
   const payable = page.locator('#discount-code');
   const payButton = page.getByRole('button', { name: /Pay ₹|Submit Team/ });
 
@@ -92,7 +92,7 @@ export const submitWithDiscount = async (page, code) => {
 
   // Submission is one-way, so the confirmation panel is the honest end of it.
   await expect(
-    page.getByRole('heading', { name: /Payment Successful|Team Already Submitted/ }),
+    page.getByRole('heading', { name: /Payment Successful|Team Submitted Successfully|Team Already Submitted/ }),
     'the entry was not submitted — the redemption failed after the quote succeeded'
   ).toBeVisible({ timeout: 60_000 });
 };

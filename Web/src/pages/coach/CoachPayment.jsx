@@ -39,7 +39,13 @@ const CoachPayment = () => {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [paymentComplete, setPaymentComplete] = useState(false);
+  /*
+   * How this page came to be showing a submitted team: 'paid' or 'free' when
+   * the coach submitted it on this visit, 'already' when it was submitted
+   * before they arrived. The refetch after a submit sees `isSubmitted` too, so
+   * that alone can't tell a fresh success from a return visit.
+   */
+  const [submittedVia, setSubmittedVia] = useState(null);
 
   /*
    * Discount code.
@@ -126,9 +132,9 @@ const CoachPayment = () => {
       setTeam(teamData);
       setDiscountEnabled(payload?.discount?.enabled === true);
 
-      // Check if team is already submitted
+      // Submitted before this visit — unless this visit is what submitted it.
       if (teamData?.isSubmitted) {
-        setPaymentComplete(true);
+        setSubmittedVia((prev) => prev ?? 'already');
       }
     } catch {
       toast.error('Failed to load team data');
@@ -181,7 +187,7 @@ const CoachPayment = () => {
     try {
       setProcessing(true);
       await coachAPI.redeemDiscountCode(discountCode.trim());
-      setPaymentComplete(true);
+      setSubmittedVia('free');
       toast.success('Discount applied. Team submitted for the competition.');
       await fetchTeamData();
     } catch (error) {
@@ -232,7 +238,7 @@ const CoachPayment = () => {
           try {
             setProcessing(true);
             await coachAPI.verifyPaymentAndSubmit(response);
-            setPaymentComplete(true);
+            setSubmittedVia('paid');
             toast.success('Payment successful! Team submitted for competition.');
             // Refresh team data to get updated submission status
             await fetchTeamData();
@@ -355,21 +361,24 @@ const CoachPayment = () => {
     );
   }
 
-  if (paymentComplete) {
-    const isAlreadySubmitted = team?.isSubmitted && team?.paymentStatus === 'completed';
+  if (submittedVia) {
+    const isAlreadySubmitted = submittedVia === 'already';
+    const COPY = {
+      already: { tag: 'Submitted', title: 'Team Already Submitted' },
+      paid: { tag: 'Paid', title: 'Payment Successful!' },
+      free: { tag: 'Submitted', title: 'Team Submitted Successfully!' },
+    };
 
     return (
-      <PayMessage onBack={() => navigate('/coach/dashboard')} tag={isAlreadySubmitted ? 'Submitted' : 'Paid'} titleLevel={2}
-        title={isAlreadySubmitted ? 'Team Already Submitted' : 'Payment Successful!'}>
+      <PayMessage onBack={() => navigate('/coach/dashboard')} tag={COPY[submittedVia].tag} titleLevel={2}
+        title={COPY[submittedVia].title}>
         <p className="type-body text-fg-muted m-0">
           {isAlreadySubmitted
             ? `Your team "${team?.name}" has already been submitted for the competition.`
             : `Your team "${team?.name}" has been successfully submitted for the competition.`
           }
         </p>
-        {isAlreadySubmitted && (
-          <Notice tone="info">To make any changes to your team, please contact the admin.</Notice>
-        )}
+        <Notice tone="info">To make any changes to your team, please contact the admin.</Notice>
       </PayMessage>
     );
   }
