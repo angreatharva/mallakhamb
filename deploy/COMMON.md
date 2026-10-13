@@ -1,7 +1,7 @@
 # Mallakhamb — Production Move: Common Plan (any platform)
 
 Status: **PLAN ONLY — nothing in here has been executed.**
-Written: 2026-10-11 (supersedes the shared parts of the 2026-09-27 AWS plan). Owner: Atharva Angre.
+Written: 2026-10-11 (supersedes the shared parts of the 2026-09-27 AWS plan). **Revised 2026-10-13:** active + warm standby (§4a), recovery objectives (§4b), meet-mode backups, new drills and alerts, after reviewing an external OCI plan (README §Review). Owner: Atharva Angre.
 
 This document holds everything that is **the same whichever cloud is chosen**. Each platform plan names the order:
 
@@ -39,7 +39,7 @@ Read [deploy/README.md](README.md) first for the comparison and the decisions.
 | F5 | **High, still open** | `Server/.env_example` has `DISCOUNT_CODE_ENABLED=true` and a real-looking code. `Server/.env.scripts` (containing `SEED_ADMIN_PASSWORD`) is tracked in git. | git | Free registration and account exposure if the repo is or was readable by others |
 | F6 | Info | In production the API redirects any request whose `X-Forwarded-Proto` isn't `https`. **This includes `/metrics` and the health routes.** | `createApp.js` | Local checks must send `-H 'X-Forwarded-Proto: https'`. **Never** add a Caddy `health_uri` (Caddy would see a redirect, call the app down and return 503) |
 | F7 | Resolved | `/api/health/metrics` was removed on 2026-10-03. Metrics are at the token-gated **`GET /metrics`** (404 when `METRICS_TOKEN` is unset, 401 for a wrong token). | `createApp.js`, `metrics-auth.middleware.js` | Grafana Cloud scrapes `/metrics` from outside, so **the reverse proxy must not block it** |
-| F8 | Info | No Socket.IO Redis adapter; cache and token-revocation list are in memory. | `socket.manager.js` | **Exactly one Node process on one server.** No cluster mode, no second instance, no load balancer |
+| F8 | Info | No Socket.IO Redis adapter; cache and token-revocation list are in memory. | `socket.manager.js` | **Exactly one Node process serving at a time.** No cluster mode, no second *active* instance, no load balancer. A *stopped* standby is fine (§4a, F17) |
 | F9 | Info | Logs go to `Server/logs/` (`error-%DATE%.log`, `combined-%DATE%.log`, 14-day rotation). | `logger.js` | The deploy script links that folder to `/var/log/mallakhamb` |
 | F10 | Info | `npm start` doesn't migrate; `npm run prepare:db` (= `startup.js --migrate --no-serve`) does. | `scripts/startup.js` | The deploy script runs the release step, so `MIGRATE_ON_START=false` |
 | F11 | Info | `ALLOW_TEST_TOKEN=true` enables a test-token path. | `auth.middleware.js` | Must never exist in production. The env script refuses it |
@@ -48,6 +48,10 @@ Read [deploy/README.md](README.md) first for the comparison and the decisions.
 | F14 | **Urgent** | **The domain registration expires on 2026-11-14.** | RDAP (Verisign) | Everything on the domain, the old site and email included, stops if it isn't renewed |
 | F15 | Info | Monitoring (deploy/monitoring) is sized for Render: dashboards and alerts assume **0.1 CPU / 512 MiB**; the hosted scrape job and both synthetic checks point at `*.onrender.com`. | `deploy/monitoring/dashboards/build-dashboards.js` (`LIMITS`), `alerts/apply-alerts.js`, `synthetics/apply-checks.js` | After the move, CPU alerts fire constantly (thresholds 10× too low) and the checks watch the wrong host. Host-level failures (disk full, VM memory) aren't watched at all |
 | F16 | Info | MongoDB **transactions** are used (`super-admin.service.js`), which require a replica set. | `Server/src/services/user/super-admin.service.js` | One more reason to keep the database on Atlas rather than self-hosting it on the VM |
+| F17 | **Design constraint** (checked 2026-10-13) | **Two API servers can't serve traffic at the same time today.** Each process keeps its own: Socket.IO rooms (no Redis adapter), the express-rate-limit counters (default MemoryStore), the response cache (`cache.service.js`, in-memory LRU), request coalescing, the OTP/reset-token sweeps, and the logout/revocation list (`token-invalidation.service.js` uses Redis only if `REDIS_URL` is set). | `socket.manager.js`, `security.middleware.js`, `cache.service.js`, `token-invalidation.service.js` | Behind a load balancer, a judge on server 1 and the Scorer on server 2 wouldn't see each other's slips, rate limits would double, and a logged-out token could still work on the other server. **So: one active server; a second one is a warm standby** (§4a). Active-active needs the code work in §4a first |
+| F18 | Info | Atlas **Flex** limits: **5 GB** data + indexes, **500 ops/s** cap, **one daily snapshot**, **no on-demand snapshots**, no custom schedule. | MongoDB Atlas docs (README §Sources) | The database's own recovery point is up to 24 h old. Anything tighter (D9) comes from our own `mongodump`s, never from a "snapshot now" button |
+| F19 | Info | The `app_info` metric's `version` label reads `RENDER_GIT_COMMIT`, so off Render it would always say `dev`. | `Server/src/infrastructure/prometheus/registry.js` | Grafana couldn't show which release is live. Fixed by C1.11 |
+| F20 | Verified OK | Payment processing is already idempotent: a unique index on `metadata.razorpay_payment_id` makes a retried webhook or a double callback a no-op. | `payment.service.js`, `Transaction` model | Nothing to add for failover or retries |
 
 ---
 
@@ -63,6 +67,8 @@ Read [deploy/README.md](README.md) first for the comparison and the decisions.
 | D6 | Is the GitHub repo public? | Decides how serious F5 is |
 | D7 | Ship server logs off the machine? | **No** by default. Logs stay on the server for 14 days. Shipping them to a third party needs a check that they hold no personal data |
 | D8 | Cutover date | A weekday morning IST with no competition and no registration deadline within ±7 days |
+| **D9** | **Recovery objectives** (RPO = how much data may be lost; RTO = how long it may be down) | The proposed values are in §4b. If **15 minutes on every day** is required instead, the database must move to Atlas **M10 + continuous cloud backup** (about $60+/month, plus backup storage) |
+| D10 | Warm standby server (§4a) | **Yes on OCI** (free: the 2 OCPU / 12 GB pool split as 1 + 1). Optional on AWS (+ about $16/month) |
 
 ---
 
@@ -101,6 +107,35 @@ Phones / laptops (India)
      └─ synthetic checks from Mumbai + Hyderabad on <API_HOST> and <APP_HOST>
 DNS: stays at BigRock (only A/CNAME records change). Email: untouched at BigRock.
 ```
+
+### 4a. One active server + one warm standby (and why not two active ones)
+
+| Design | Verdict | Reason |
+|---|---|---|
+| Two API servers **active together** behind a load balancer | **Not now** | F17: live scoring splits between servers; rate limits, cache and logout list diverge. On OCI the free load balancer is also capped at **10 Mbps (~1.25 MB/s) shared by all users**: 50 phones opening the app at a venue (roughly 0.5–1.5 MB each on a first visit) would queue for 20–60 s, with live scoring in the same pipe. It also needs manually uploaded TLS certificates renewed every 90 days |
+| **One active + one warm standby** in a different fault domain | **Adopted (OCI; optional on AWS)** | No code change. The standby holds the same release and the same secrets, with its service stopped. Failover = move the public IP + one command (`mallakhamb-promote`), so **RTO ≈ 10 min** instead of a 1–2 h rebuild. It's also the box for OS-upgrade trials and restore drills |
+| Kubernetes / Docker Compose | **Not now** | One Node process per server. systemd + release folders already give atomic switch and one-command rollback; containers would add a registry, ARM image builds and a second log path, for no gain at this size |
+
+Reaching **active-active later** needs these code changes, as their own project:
+1. `@socket.io/redis-adapter`
+2. a Redis store for express-rate-limit
+3. `REDIS_URL` for token invalidation (already supported)
+4. cache invalidation over Redis pub/sub
+5. sticky sessions at the load balancer
+6. a Redis service that isn't itself a single point of failure
+7. a load balancer without the 10 Mbps cap
+
+### 4b. Recovery objectives (proposed; decision D9)
+
+| Situation | RPO (data that may be lost) | RTO (time down) | How |
+|---|---|---|---|
+| Competition day, in meet hours | **≤ 15 min** | ≤ 10 min (server loss) | "Meet mode": a `mongodump` every 15 min while the meet runs (C4.12, C8.3) + warm standby |
+| Any other day | ≤ 24 h | ≤ 10 min (server loss) | Nightly dump + the Flex daily snapshot (F18) + warm standby |
+| Bad data (a wrong edit, a bad migration) | back to the last dump | 30–60 min (measured in drill C6D) | Restore into a side database, check, then swap |
+| Whole cloud account lost | ≤ 24 h (≤ 15 min on meet days) | 2–3 h | Rebuild on the other platform; the DB is on Atlas, so it doesn't move |
+| Atlas outage | 0 | as long as Atlas is down | Out of our hands. Watch status.mongodb.com; the API answers "not ready" |
+
+Judges' paper slips are the last line of defence for the minutes between dumps. **Tell chief judges to keep them until results are published.**
 
 ---
 
@@ -209,18 +244,19 @@ Every change here also works on Render. Ship it to Render production first (C1.9
 - [ ] **C1.5 (optional) F3:** `EMAIL_FROM` falls back to `EMAIL_USER`. Only needed if SMTP relays are ever used.
 - [ ] **C1.6 Shared server files** in `deploy/server/` (contents in C4):
   - `Caddyfile.api`, `Caddyfile.web`, `mallakhamb.service`
-  - `bin/mallakhamb-render-env`, `bin/mallakhamb-envcheck`, `bin/mallakhamb-deploy`, `bin/mallakhamb-rollback`, `bin/mallakhamb-backup`, `bin/mallakhamb-counts`
-  - `mallakhamb-backup.service`, `mallakhamb-backup.timer`, `alloy/config.alloy`, `README.md`
+  - `bin/mallakhamb-render-env`, `bin/mallakhamb-envcheck`, `bin/mallakhamb-deploy`, `bin/mallakhamb-rollback`, `bin/mallakhamb-backup`, `bin/mallakhamb-counts`, `bin/mallakhamb-promote`, `bin/mallakhamb-demote`
+  - `mallakhamb-backup.service`/`.timer`, `mallakhamb-backup-meet.service`/`.timer`, `alloy/config.alloy`, `README.md`
+  - Every script passes `shellcheck` (add a CI step). They run as root on production, so a quoting slip must be caught before it ships.
 - [ ] **C1.7 Monitoring source changes. Prepared and committed, NOT applied** (applied at cutover, C7):
   1. `dashboards/build-dashboards.js`: `LIMITS` gets a **platform preset** chosen by an argument (`render` | `oci` | `aws`):
 
-     | Limit | render | oci (A1 2 OCPU / 12 GB) | aws (t4g.small 2 vCPU / 2 GiB) |
-     |---|---|---|---|
-     | `cpu_limit` (cores the **Node process** can use; one event loop = 1 core) | 0.1 | 1 | 1 |
-     | `mem_limit` (process RSS budget) | 512 MiB | 4 GiB | 1.5 GiB |
-     | `atlas_conn_limit` | 500 | 500 (Flex) | 500 (Flex) |
+     | Limit | render | oci (A1 1 OCPU / 6 GB per VM) | oci-single (fallback: 2 OCPU / 12 GB) | aws (t4g.small 2 vCPU / 2 GiB) |
+     |---|---|---|---|---|
+     | `cpu_limit` (cores the **Node process** can use; one event loop = 1 core) | 0.1 | 1 | 1 | 1 |
+     | `mem_limit` (process RSS budget) | 512 MiB | 3 GiB | 4 GiB | 1.5 GiB |
+     | `atlas_conn_limit` | 500 | 500 (Flex) | 500 (Flex) | 500 (Flex) |
 
-     Add a **Host** row to the Runtime dashboard (selector `scrape_job="mallakhamb-host"`): CPU busy %, memory used %, root-disk used %, load, network, and **"last backup age"** (`time() - mallakhamb_backup_last_success_timestamp_seconds`).
+     Add a **Host** row to the Runtime dashboard (selector `scrape_job="mallakhamb-host"`): CPU busy %, memory used %, root-disk used %, inodes used %, load, network, OOM kills, **"last backup age"** (`time() - mallakhamb_backup_last_success_timestamp_seconds`), and a **"Release"** table (`mallakhamb_release_info` by `sha` and `role`, showing active and standby side by side).
   2. `alerts/apply-alerts.js`:
      - *CPU saturated* and *Memory near limit* thresholds = 80% / 85% of the preset.
      - Descriptions no longer say "512 MB / Render".
@@ -232,15 +268,20 @@ Every change here also works on Render. Ship it to Render production first (C1.9
      | Host memory high | `1 - node_memory_MemAvailable_bytes{scrape_job="mallakhamb-host"} / node_memory_MemTotal_bytes{scrape_job="mallakhamb-host"}` > 0.85 | 10m | warning |
      | Disk filling | `1 - node_filesystem_avail_bytes{scrape_job="mallakhamb-host",mountpoint="/"} / node_filesystem_size_bytes{scrape_job="mallakhamb-host",mountpoint="/"}` > 0.80 | 10m | warning |
      | Backup stale | `time() - mallakhamb_backup_last_success_timestamp_seconds{scrape_job="mallakhamb-host"}` > 93600 (26 h) | 10m | warning |
+     | Out-of-memory kill | `increase(node_vmstat_oom_kill{scrape_job="mallakhamb-host"}[15m])` > 0 | 0m | critical |
+     | Inodes running out | `node_filesystem_files_free{scrape_job="mallakhamb-host",mountpoint="/"} / node_filesystem_files{scrape_job="mallakhamb-host",mountpoint="/"}` < 0.10 | 10m | warning |
+     | Standby missing (OCI) | `absent(up{scrape_job="mallakhamb-host-standby"})` | 30m | warning |
+     | Standby behind the active (OCI) | `count(count by (sha) (mallakhamb_release_info))` > 1 | 2h | warning |
 
-     Regenerate `mallakhamb-rules.yaml`.
+     The disk alert also gets a **critical** twin at > 90% (the starter thresholds in the external review say warn at 75% and page at 85%; ours are 80% and 90%, because a 50 GB disk with 14-day log rotation grows slowly). Regenerate `mallakhamb-rules.yaml`.
   3. `synthetics/apply-checks.js`: targets come from two constants, `API_URL = https://<API_HOST>/api/health/ready` and `WEB_URL = https://<APP_HOST>/`.
   4. `deploy/monitoring/PLAN.md`: a new section "Move to <platform>" listing these changes; record sheet updated at cutover.
+- [ ] **C1.11 Fix F19.** In `registry.js`: `version: (env.GIT_COMMIT || env.RENDER_GIT_COMMIT || 'dev').slice(0, 7)`. The deploy script provides `GIT_COMMIT` (C4.8). Add a Jest case. It's harmless on Render.
 - [ ] **C1.8 Test gate:**
   - `cd Server && npm test`, and `cd Web && npm test && npm run lint && npm run build`, all green.
   - `npm run docs:openapi:check` passes.
   - The known-failing `admin.routes` test is fixed or skipped with a written reason.
-- [ ] **C1.9 Ship C1.1–C1.5 to Render.** You merge to `master`, which deploys to Render. **Verify on production:**
+- [ ] **C1.9 Ship C1.1–C1.5 and C1.11 to Render.** You merge to `master`, which deploys to Render. **Verify on production:**
   - judge live updates (proves C1.1 on the onrender URL)
   - login, logout, one OTP email
   - nothing changes for Razorpay until `RAZORPAY_WEBHOOK_SECRET` is set (the fallback)
@@ -407,7 +448,12 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   fi
 
   /usr/local/bin/mallakhamb-render-env
-  (cd "$REL/Server" && sudo -u mallakhamb node scripts/startup.js --migrate --no-serve)   # = npm run prepare:db
+  ROLE=active; [ -f /etc/mallakhamb/STANDBY ] && ROLE=standby
+  release_metric() {   # Grafana shows which release each server holds (C1.7 "Release" table)
+    printf '# HELP mallakhamb_release_info Release deployed on this server\n# TYPE mallakhamb_release_info gauge\nmallakhamb_release_info{sha="%s",role="%s"} 1\n' "${SHA:0:7}" "$ROLE" > /var/lib/alloy/textfile/.release.tmp
+    mv /var/lib/alloy/textfile/.release.tmp /var/lib/alloy/textfile/mallakhamb_release.prom
+  }
+  printf "GIT_COMMIT=%s\n" "$SHA" > /etc/mallakhamb/release.env     # read by the service unit (C1.11 / F19)
 
   PREV="$(readlink -f "$BASE/current" || true)"
   # keep the previous build's own chunks so tabs still open on the old version don't go blank
@@ -416,6 +462,18 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
       [ -e "$REL/Web/dist/assets/$f" ] || cp "$PREV/Web/dist/assets/$f" "$REL/Web/dist/assets/$f"
     done < "$PREV/Web/.own-assets"
   fi
+
+  if [ "$ROLE" = standby ]; then
+    # Standby: never migrates (the active already did), never serves. Prove the release can
+    # start against production config + database without changing anything, then switch the folder.
+    (cd "$REL/Server" && sudo -u mallakhamb node scripts/startup.js --check)
+    ln -sfn "$REL" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
+    echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric
+    echo "STANDBY UPDATED $SHA (service not started)"
+    exit 0
+  fi
+
+  (cd "$REL/Server" && sudo -u mallakhamb node scripts/startup.js --migrate --no-serve)   # = npm run prepare:db
   ln -sfn "$REL" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
   systemctl restart mallakhamb
 
@@ -432,12 +490,14 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
     fi
     exit 1
   fi
-  echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"
+  echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric
   CUR="$(readlink -f "$BASE/current")"
   ls -1dt "$BASE"/releases/*/ | sed 's#/$##' | grep -vx "$CUR" | tail -n +5 | xargs -r rm -rf   # live + 4 newest others
   echo "DEPLOYED $SHA"
   ```
   - Migrations aren't undone by a rollback. Each migration must stay compatible with the previous release; that's the repo's existing rule.
+  - **With a standby (D10): deploy to the active first, then to the standby.** The standby's `startup.js --check` then proves the release boots against the already-migrated database. If it fails, the active is still fine; fix it before the next meet.
+  - Old releases are cleaned up on the active only. On the standby they're replaced over time as new releases arrive.
 - [ ] **C4.9 `/usr/local/bin/mallakhamb-rollback`** (0755):
   ```bash
   #!/usr/bin/env bash
@@ -462,6 +522,8 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   WorkingDirectory=/opt/mallakhamb/current/Server
   # "-" = a secret-store outage at boot must not stop the service; the last good env file is used
   ExecStartPre=-+/usr/local/bin/mallakhamb-render-env
+  # GIT_COMMIT for the app_info metric (C1.11); written by mallakhamb-deploy
+  EnvironmentFile=-/etc/mallakhamb/release.env
   ExecStart=/usr/bin/node scripts/startup.js
   Restart=always
   RestartSec=5
@@ -511,27 +573,36 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   ```
   The web site file (OCI only) is in the OCI plan. To apply: `sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy`.
   **Add a host to Caddy only after its DNS answers with this server's IP.** Otherwise Let's Encrypt fails and Caddy backs off for a long time.
-- [ ] **C4.12 `/usr/local/bin/mallakhamb-backup`** (0755), plus a systemd service and timer:
+- [ ] **C4.12 `/usr/local/bin/mallakhamb-backup [daily|meet]`** (0755), plus systemd services and timers:
   ```bash
   #!/usr/bin/env bash
   set -euo pipefail
+  KIND="${1:-daily}"; case "$KIND" in daily|meet) ;; *) echo "usage: mallakhamb-backup [daily|meet]" >&2; exit 1;; esac
+  [ -f /etc/mallakhamb/STANDBY ] && { echo "standby: backups run on the active server only"; exit 0; }
   . /etc/mallakhamb/platform.sh
   BACKUP_URI="$(sed -n "s/^BACKUP_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
   [ -n "$BACKUP_URI" ] || { echo "BACKUP_URI missing" >&2; exit 1; }
   STAMP=$(date -u +%Y-%m-%dT%H%MZ)
   FILE=$(mktemp --suffix=.archive.gz); trap 'rm -f "$FILE"' EXIT
-  mongodump --uri="$BACKUP_URI" --archive="$FILE" --gzip --quiet
+  # read from a secondary so a dump during a meet doesn't compete with live scoring on the primary
+  mongodump --uri="$BACKUP_URI" --readPreference=secondaryPreferred --archive="$FILE" --gzip --quiet
   [ -s "$FILE" ] || { echo "empty dump" >&2; exit 1; }
-  upload_backup "$FILE" "daily/${STAMP}.archive.gz"
-  if [ "$(date -u +%d)" = "01" ]; then upload_backup "$FILE" "monthly/${STAMP}.archive.gz"; fi
+  upload_backup "$FILE" "${KIND}/${STAMP}.archive.gz"
+  if [ "$KIND" = daily ] && [ "$(date -u +%d)" = "01" ]; then upload_backup "$FILE" "monthly/${STAMP}.archive.gz"; fi
   T=/var/lib/alloy/textfile
   printf '# HELP mallakhamb_backup_last_success_timestamp_seconds Unix time of the last good database backup\n# TYPE mallakhamb_backup_last_success_timestamp_seconds gauge\nmallakhamb_backup_last_success_timestamp_seconds %s\n' "$(date +%s)" > "$T/.backup.tmp"
   mv "$T/.backup.tmp" "$T/mallakhamb_backup.prom"
-  echo "backup ok: daily/${STAMP}.archive.gz ($(stat -c %s "$FILE") bytes)"
+  echo "backup ok: ${KIND}/${STAMP}.archive.gz ($(stat -c %s "$FILE") bytes)"
   ```
-  - `mallakhamb-backup.service`: `Type=oneshot`, `ExecStart=/usr/local/bin/mallakhamb-backup`.
-  - `mallakhamb-backup.timer`: `OnCalendar=*-*-* 20:30:00 UTC` (02:00 IST), `Persistent=true`, `WantedBy=timers.target`.
-  - Then `sudo systemctl daemon-reload && sudo systemctl enable --now mallakhamb-backup.timer`.
+  - **Nightly:**
+    - `mallakhamb-backup.service`: `Type=oneshot`, `ExecStart=/usr/local/bin/mallakhamb-backup daily`.
+    - `mallakhamb-backup.timer`: `OnCalendar=*-*-* 20:30:00 UTC` (02:00 IST), `Persistent=true`, `WantedBy=timers.target`.
+    - Run `sudo systemctl daemon-reload && sudo systemctl enable --now mallakhamb-backup.timer`.
+  - **Meet mode (RPO ≤ 15 min, §4b):**
+    - `mallakhamb-backup-meet.service`: `Type=oneshot`, `ExecStart=/usr/local/bin/mallakhamb-backup meet`.
+    - `mallakhamb-backup-meet.timer`: `OnCalendar=*-*-* 02..15:00/15:00 UTC` (every 15 min, 07:30–21:15 IST), `Persistent=false`. **Verify** with `systemd-analyze calendar --iterations=5 "*-*-* 02..15:00/15:00 UTC"`.
+    - **Installed but NOT enabled.** It's switched on and off per meet (C8.3), so a quiet month doesn't fill object storage with identical dumps.
+    - Object storage needs a `meet/` lifecycle rule (35 days), same as `daily/` [PLATFORM].
 - [ ] **C4.13 `/usr/local/bin/mallakhamb-counts <uri>`** (0755) prints each collection with its document count, for comparing copies:
   ```bash
   #!/usr/bin/env bash
@@ -554,7 +625,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   - `/etc/alloy/config.alloy`:
     ```alloy
     prometheus.exporter.unix "host" {
-      set_collectors = ["cpu", "loadavg", "meminfo", "filesystem", "diskstats", "netdev", "pressure", "stat", "time", "uname", "textfile"]
+      set_collectors = ["cpu", "loadavg", "meminfo", "filesystem", "diskstats", "netdev", "pressure", "stat", "time", "uname", "vmstat", "textfile"]
       filesystem {
         mount_points_exclude = "^/(dev|proc|run|sys|snap|boot/efi)($|/)"
       }
@@ -602,6 +673,44 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   - Run `sudo reboot`, wait 2 min, and check health again.
 - [ ] **C4.16 Backup test:** `sudo systemctl start mallakhamb-backup.service && journalctl -u mallakhamb-backup -n 5` shows `backup ok`. The object is in the bucket, and the Host row's "last backup age" is a few minutes.
 
+- [ ] **C4.17 Standby scripts** (D10; installed on **both** servers so either can take either role).
+  `/usr/local/bin/mallakhamb-promote`, run on the standby **after** the public IP has been moved to it:
+  ```bash
+  #!/usr/bin/env bash
+  set -euo pipefail
+  [ -f /etc/mallakhamb/STANDBY ] || { echo "already active" >&2; exit 1; }
+  rm -f /etc/mallakhamb/STANDBY
+  shopt -s nullglob
+  for f in /etc/caddy/sites-standby/*.caddy; do cp "$f" /etc/caddy/sites/; done
+  caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy      # certificates are issued now that the IP is here
+  /usr/local/bin/mallakhamb-render-env
+  systemctl enable --now mallakhamb
+  for i in $(seq 1 60); do
+    curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null && break
+    sleep 3
+  done
+  curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null || { echo "API NOT READY — check journalctl -u mallakhamb" >&2; exit 1; }
+  sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host"/' /etc/default/alloy && systemctl restart alloy
+  sed -i 's/role="standby"/role="active"/' /var/lib/alloy/textfile/mallakhamb_release.prom 2>/dev/null || true
+  systemctl enable --now mallakhamb-backup.timer
+  echo "PROMOTED — this server is now the active. If a meet is running: systemctl enable --now mallakhamb-backup-meet.timer"
+  ```
+  `/usr/local/bin/mallakhamb-demote` makes a server a standby. Run it on a recovered old active **before** it gets any public IP, and on a fresh standby once:
+  ```bash
+  #!/usr/bin/env bash
+  set -euo pipefail
+  touch /etc/mallakhamb/STANDBY
+  systemctl disable --now mallakhamb mallakhamb-backup.timer mallakhamb-backup-meet.timer 2>/dev/null || true
+  mkdir -p /etc/caddy/sites-standby
+  shopt -s nullglob
+  for f in /etc/caddy/sites/*.caddy; do mv "$f" /etc/caddy/sites-standby/; done
+  systemctl reload caddy
+  sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host-standby"/' /etc/default/alloy && systemctl restart alloy
+  sed -i 's/role="active"/role="standby"/' /var/lib/alloy/textfile/mallakhamb_release.prom 2>/dev/null || true
+  echo "DEMOTED — this server is now the standby (service stopped, no sites served)"
+  ```
+  Why the production site files sit in `sites-standby/` until promotion: the standby can't obtain certificates for hosts whose DNS points at the other server. Caddy would keep failing and **back off for hours**, so a failover would have no HTTPS. Copying them in at promotion makes Caddy request fresh certificates within seconds. Let's Encrypt allows 5 duplicate certificates per week per host set, far more than drills use.
+
 **Done when:** everything in C4.15 and C4.16 passes, including after the reboot.
 
 ---
@@ -633,7 +742,7 @@ The new server runs the staging hostnames against **rehearsal data** with **Razo
 
 ### C6B. Functional test on real devices
 Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://<STAGING_APP_HOST>`.
-- [ ] **Public:** home, `/scores` with all filters, Team Championship, `/docs/COP-Mallakhamb.pdf`, refresh on a deep link (`/coach/dashboard`), and an unknown path showing the app's 404.
+- [ ] **Public:** home, `/scores` with all filters, Team Championship, refresh on a deep link (`/coach/dashboard`), and an unknown path showing the app's 404.
 - [ ] **Coach:**
   - register, with the OTP email arriving (Gmail API)
   - login, then level → competition
@@ -660,6 +769,17 @@ Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://
   - `http://` redirects to `https://`.
   - From your laptop, `mongosh "<FLEX URI>"` is **refused** (IP not allowlisted).
 - [ ] **Monitoring:** the staging scrape and host metrics flow. Run `sudo systemctl stop alloy` for 12 min, check that a *Host metrics missing* preview fires, then start it again.
+- [ ] **Database-outage drill.** It proves the app fails cleanly and recovers by itself.
+  1. Remove the server's IP from the Atlas access list for **5 minutes**.
+  2. Expect:
+     - `/api/health/ready` answers "not ready" within ~30 s (it doesn't hang)
+     - pages show an error instead of spinning forever
+     - the staging scrape keeps working (`/metrics` doesn't need the DB)
+     - the "DB checkout failing" alert preview fires
+  3. Put the IP back. Within ~1 min `/api/health/ready` is ready again **without restarting the service**, and a judge panel can carry on.
+
+  If the app needs a restart to recover, that's a defect to fix before go-live.
+- [ ] **Meet-mode backups.** Run `sudo systemctl start mallakhamb-backup-meet.service` once: an object appears under `meet/` and "last backup age" resets.
 
 ### C6C. Load test (8 panels)
 - [ ] Add your laptop IP to Atlas temporarily.
@@ -680,13 +800,22 @@ Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://
 ### C6D. Restore drill
 - [ ] Restore last night's backup from object storage into `<db>_restoretest` [PLATFORM: download command], run `mallakhamb-counts` against it, compare with the source, then drop it. **Record how long it took.**
 
-### C6E. Rebuild drill (recommended)
-- [ ] Build a second instance from scratch or from the image backup [PLATFORM], deploy the same SHA, and point `staging-api` at it.
-  - Health must pass.
-  - Then point `staging-api` back and delete the test instance.
+### C6E. Rebuild drill, which also creates the standby (D10)
+- [ ] Build a second instance from the image backup [PLATFORM], **in a different fault domain**, and deploy the same SHA.
+  - With a standby (D10): it **becomes the standby** and is kept (the platform plan explains how).
+  - Without one: point `staging-api` at it, check health, point it back, and delete it.
   - **Record the time.** This proves the server is replaceable.
 
-**Done when:** every C6B box is ticked on both phones, C6C passes, and C6D restores. Any failure → fix → repeat that section.
+### C6F. Failover drill (with a standby)
+- [ ] With a judge panel running on staging:
+  1. Stop the active's service (`sudo systemctl stop mallakhamb`).
+  2. Move the public IP to the standby [PLATFORM] and run `sudo mallakhamb-promote` there.
+  3. Expect: every screen reconnects to the new server, slips entered after the switch save, and no data is lost.
+  4. Then demote and move back (`mallakhamb-demote` on the new standby, `mallakhamb-promote` on the original).
+  - **Record the failover time.** It is the real RTO for a server loss (§4b); the target is ≤ 10 min.
+  - Users have to **sign in again only if** their token was revoked before the switch: the logout list is in memory (F17).
+
+**Done when:** every C6B box is ticked on both phones, C6C passes, C6D restores, and (with a standby) C6F meets its target. Any failure → fix → repeat that section.
 
 ---
 
@@ -718,7 +847,7 @@ Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://
 | 32 | **DNS** at BigRock: <br>**A:** `api` A → server IP; apex A → server IP; `www` CNAME → [PLATFORM target] <br>**B:** add `app` → [PLATFORM target] and `server` A → server IP. <br>**Nothing else.** | `nslookup <host> ns1.md-in-89.bigrockservers.com` **and** `nslookup <host> 8.8.8.8` both show the new target (wait up to ~5 min) |
 | 40 | Caddy: add the production site files (`api.caddy` for `<API_HOST>`; OCI also `web.caddy` with `<APP_HOST>` and the apex redirect), then `caddy validate` + `reload` | `journalctl -u caddy` shows "certificate obtained" for each host |
 | 45 | [PLATFORM] web production build: OCI → set `web.env` to production values; AWS → run the web deploy with production values | the bundle contains `<API_HOST>` |
-| 48 | `sudo mallakhamb-deploy $(cat /opt/mallakhamb/DEPLOYED_SHA)` (applies prod env, runs prepare:db against `<db>`, restarts; on OCI it rebuilds web because `web.env` changed) | `DEPLOYED …` |
+| 48 | `sudo mallakhamb-deploy $(cat /opt/mallakhamb/DEPLOYED_SHA)` (applies prod env, runs prepare:db against `<db>`, restarts; on OCI it rebuilds web because `web.env` changed). With a standby: run the same command there **afterwards**, and add the production site files to its `/etc/caddy/sites-standby/`, **not** `sites/` | `DEPLOYED …`; on the standby `STANDBY UPDATED …` |
 | 50 | `sudo mallakhamb-envcheck` | **`rzp_live_`**, DB = `<cluster>/<db>`, `CORS_ORIGINS=https://<APP_HOST>`, rate limit and discount as Render |
 | 52 | Razorpay live → Webhooks → **Add** `https://<API_HOST>/api/webhooks/razorpay` (same events, the new secret). **Disable** (don't delete) the old one | saved |
 | 55 | **Monitoring:** <br>(1) re-enable the hosted job `mallakhamb-api` with URL `https://<API_HOST>/metrics` and the **production** token. <br>(2) `MK_SCRAPE_JOB="mallakhamb-host"` in `/etc/default/alloy` → `sudo systemctl restart alloy`. <br>(3) Apply the C1.7 dashboards (platform preset), alerts and synthetics from the Grafana console. <br>(4) Delete the staging scrape job. | `count(up{scrape_job="mallakhamb-api"})` = **1** and the value = 1; `up{scrape_job="mallakhamb-host"}` = 1; all rules evaluate |
@@ -735,6 +864,8 @@ Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://
 - [ ] The ₹1 payment is reflected **and** its webhook returned 200.
 - [ ] No new errors in `/var/log/mallakhamb/error-*.log` since T+48.
 - [ ] Exactly one `up{scrape_job="mallakhamb-api"}` series, equal to 1.
+- [ ] The RPO/RTO in §4b are agreed in writing (D9), and C6D (restore) and, with a standby, C6F (failover) have been **done**, not just configured.
+- [ ] Grafana's "Release" table shows the same SHA on the active and the standby.
 
 ### C7.5 Rollback (available until the GO announcement)
 1. **DNS:** put back the exact records from C0.2 (`www` CNAME → apex, apex A and `api` A → `119.18.58.248`). Option B: just delete `app` and `server`.
@@ -759,18 +890,19 @@ Check at +2 h, +6 h, +24 h and +48 h:
 
 ### C8.2 Normal deploy
 - Never on a competition day or within 48 h before one.
-- `sudo mallakhamb-deploy <sha>` [PLATFORM: how to reach the server, or CI], then a smoke test (one login, public scores).
-- **Rollback:** `sudo mallakhamb-rollback`.
+- `sudo mallakhamb-deploy <sha>` [PLATFORM: how to reach the server, or CI] **on the active**, then a smoke test (one login, public scores). **Then the same command on the standby.**
+- **Rollback:** `sudo mallakhamb-rollback` on the active. On the standby, deploy the previous SHA.
 
 ### C8.3 Competition week
 | When | Action |
 |---|---|
 | T-7 | (AWS, national meet) resize per the AWS plan. A load test at the expected size for big meets. |
-| T-2 | **Freeze** deploys and infrastructure changes. Backup OK, no alerts. |
-| Morning | `/api/health/ready`, synthetics and Atlas all green. Ask panels to **log in in groups** (one panel every ~5 min). |
+| T-2 | **Freeze** deploys and infrastructure changes. Backup OK, no alerts. The standby shows the same SHA as the active (Release table) and is up. |
+| T-1 | **Meet mode on:** `sudo systemctl enable --now mallakhamb-backup-meet.timer` (on the active). Check with `systemctl list-timers \| grep meet`. Remind chief judges to keep paper slips until results are published (§4b). |
+| Morning | `/api/health/ready`, synthetics and Atlas all green. Ask panels to **log in in groups** (one panel every ~5 min). Keep the failover steps (C8.4 step 5) open on a laptop. |
 | During | Watch the *Competition day* dashboard. Switch features only through the secret store + `sudo systemctl restart mallakhamb`, never through a deploy. |
-| Each evening | `sudo systemctl start mallakhamb-backup.service` (an extra copy). |
-| After | Copy that day's backup to `monthly/` as the official results copy. |
+| Each evening | `sudo systemctl start mallakhamb-backup.service` (an extra full copy). |
+| After | **Meet mode off:** `sudo systemctl disable --now mallakhamb-backup-meet.timer`. Copy that day's backup to `monthly/` as the official results copy. |
 
 ### C8.4 Incident: API down
 1. Grafana: which alert? Synthetics vs scrape vs host metrics tells you DNS/TLS vs process vs machine.
@@ -778,14 +910,19 @@ Check at +2 h, +6 h, +24 h and +48 h:
 3. **Crash loop after a deploy** → `sudo mallakhamb-rollback`.
    **Config error** → fix the secret store, then `sudo systemctl restart mallakhamb`.
 4. **Database** → status.mongodb.com; check the server IP is still in the Atlas access list.
-5. **Machine gone** → the rebuild procedure (C6E): new instance, move the IP [PLATFORM], `sudo mallakhamb-deploy <DEPLOYED_SHA>`. **DNS doesn't change if the IP is kept.**
+5. **Machine gone or unresponsive:**
+   - **With a standby (≈ 10 min):** move the public IP to the standby [PLATFORM], then `sudo mallakhamb-promote` on it.
+   - **Without one:** the rebuild procedure (C6E): new instance, move the IP, `sudo mallakhamb-deploy <DEPLOYED_SHA>`.
+   - **DNS doesn't change either way, because the IP is kept.**
+   - When the old server comes back, run `sudo mallakhamb-demote` on it **before** giving it any public IP, so it can't serve or take backups alongside the new active.
 6. **Data damaged** → `sudo systemctl stop mallakhamb`, then restore from the Atlas snapshot or the object-storage dump. Verify counts, then start the service.
 
 ### C8.5 Monthly (non-competition weekday)
 - `sudo apt-get update && sudo apt-get -y upgrade`, and reboot if `/var/run/reboot-required` exists, then check health.
 - Check Caddy renewed its certificates (no errors in `journalctl -u caddy`).
 - Compare costs with expectations [PLATFORM].
-- Check `daily/` has every night and `monthly/` has the 1st.
+- Check `daily/` has every night and `monthly/` has the 1st. Check the bucket's total size is well under the free quota [PLATFORM].
+- **For the first 3 months after go-live: a restore drill (C6D) every month**, then quarterly. With a standby: patch and reboot the **standby first**, then the active, never both on the same day.
 
 ### C8.6 Quarterly / yearly
 - **Quarterly:**
@@ -829,4 +966,9 @@ Check at +2 h, +6 h, +24 h and +48 h:
 | Monitoring silent or noisy after the move | C1.7 presets, staging scrape job, the `count(up)=1` check, the silence window |
 | Server lost | stateless server; rebuild drill; IP kept so DNS doesn't change |
 | Bad deploy during a meet | freeze rules, one-command rollback, health-gated deploy |
-| Two API processes splitting judges | F8: one systemd service, no cluster mode |
+| Two API processes splitting judges | F8 / F17: one systemd service, no cluster mode, standby kept **stopped** (`STANDBY` flag, demote before it gets an IP) |
+| Up to a day of scores lost on a meet day | Meet-mode dumps every 15 min (§4b) + judges keep paper slips |
+| A server lost during a meet | Warm standby + `mallakhamb-promote`, rehearsed in C6F (RTO ≤ 10 min) |
+| Standby silently out of date | Deploy runs on both; Release table + "Standby behind" alert; `startup.js --check` on every standby deploy |
+| DB outage leaves the app stuck | DB-outage drill in C6B: the app must recover without a restart |
+| Memory leak or OOM goes unnoticed | OOM-kill alert + host memory alert |

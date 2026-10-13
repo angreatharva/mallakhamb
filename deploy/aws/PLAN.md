@@ -17,6 +17,8 @@ Alarms: EC2 status checks (auto-recover/reboot) → SNS email · AWS Budgets
 DNS: BigRock (unchanged nameservers). No Route 53.
 ```
 
+**Standby (D10) is optional on AWS:** a second t4g.small in another availability zone, built from the golden AMI and kept stopped-service with the COMMON C4.17 scripts. Failover = re-associate the Elastic IP + `mallakhamb-promote`. It costs about **+$16/month** (instance + disk; it reuses the same Elastic IP, but a standby needs its own public IP for updates, +$3.65). Without it, server loss means the AMI rebuild (~1 h).
+
 Why no Route 53: moving the nameservers would mean re-creating the BigRock email records (MX, `mail`, SPF) exactly (COMMON F13). With only A/CNAME edits at BigRock, email can't break. The apex can't be a CNAME to CloudFront, so the apex points at the EC2 IP and Caddy redirects it.
 
 ## 2. Cost (Mumbai, before 18% GST)
@@ -92,6 +94,7 @@ National meets on t4g.medium add about +$12 for that month. After 3 stable month
 - [ ] **A2.2 Backup bucket** `mallakhamb-backups-<ACCOUNT_ID>`: Block public access **ON**, versioning **ON**, SSE-S3.
   Lifecycle rules:
   - `daily/` → expire after **35 days**
+  - `meet/` → expire after **35 days** (meet-mode dumps, COMMON C4.12)
   - `monthly/` → expire after **400 days**
   - `cutover/` → none
   - noncurrent versions → delete after **30 days**

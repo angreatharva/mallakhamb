@@ -1,58 +1,70 @@
 # Mallakhamb — Oracle Cloud (OCI) Deployment Plan
 
 Status: **PLAN ONLY — nothing in here has been executed.**
-Written: 2026-10-11. Owner: Atharva Angre.
+Written 2026-10-11. **Revised 2026-10-13** after reviewing an external two-VM OCI architecture plan (what was adopted and rejected: [README §Review](../README.md#review-of-the-external-oci-architecture-plan-2026-10-13)).
+Owner: Atharva Angre.
 Shared steps live in [deploy/COMMON.md](../COMMON.md). This file only holds what is specific to Oracle Cloud.
 
 ---
 
-## 1. What Oracle's free tier gives you (checked 2026-10-11)
+## 1. What Oracle's free tier gives you (checked 2026-10-11 / 2026-10-13)
 
-Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports (README §Sources).
+Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports (README §Sources). **The tenancy's own *Governance → Limits, Quotas and Usage* page overrides any document, this one included.** Check it before creating anything (O1.8).
 
 ### 1.1 Always Free: the full list, and what Mallakhamb uses
 
 | Service | Always Free amount | Use it? | Why |
 |---|---|---|---|
-| **Ampere A1 compute (Arm)** | **1,500 OCPU-hours + 9,000 GB-hours / month = 2 OCPU + 12 GB RAM**, as one VM or two 1-OCPU VMs. This was **halved from 4 OCPU / 24 GB on 2026-06-15** and enforced from **2026-08-18**. | **Yes: one VM, 2 OCPU / 12 GB** | About 4× the CPU and 6× the RAM of the AWS t4g.small, for ₹0 |
-| AMD micro VMs | 2 × (1/8 OCPU, 1 GB RAM, 50 Mbps) | No | Too small to build the web app; would only add something to look after |
-| Block storage | **200 GB total** (boot + data), **5 volume backups** | Yes: 60 GB boot volume, weekly backups (3 kept + 1 golden) | |
-| Object storage | 20 GB (on a paid account: 10 GB Standard + 10 GB Infrequent + 10 GB Archive), 50,000 requests/month | **Yes: database backups** | Dumps are a few MB each |
+| **Ampere A1 compute (Arm)** | **1,500 OCPU-hours + 9,000 GB-hours / month = 2 OCPU + 12 GB RAM**, as one VM or two 1-OCPU VMs. This was **halved from 4 OCPU / 24 GB on 2026-06-15** and enforced from **2026-08-18** | **Yes: two VMs of 1 OCPU / 6 GB** in different fault domains: **one active, one warm standby** (COMMON §4a) | A Node process uses one core however many it's given, so the second OCPU buys more as a standby than as spare capacity |
+| AMD micro VMs | 2 × (1/8 OCPU, 1 GB RAM, 50 Mbps) | No | Too small to build the web app |
+| Block storage | **200 GB total** (boot + data), **5 volume backups** | Yes: 2 × **50 GB** boot = 100 GB; weekly backups of the active (3 kept) + 1 golden = 4 | Leave the other 100 GB unallocated |
+| Object storage | 20 GB (on a paid account: 10 GB Standard + 10 GB Infrequent + 10 GB Archive), 50,000 requests/month | **Yes: database backups** | A dump is a few MB. Meet mode adds ~50 dumps per meet day; checked monthly (COMMON C8.5) |
 | Outbound data | **10 TB / month** | Yes | Far more than needed |
-| Load balancer | 1 flexible LB, **10 Mbps**; 1 network LB | **No** | 10 Mbps would slow page loads, and there's only one server |
-| VCN networking | 2 VCNs; outbound **port 25 blocked** | Yes (1 VCN) | Port 25 doesn't matter: email goes through the Gmail API over HTTPS |
-| Public IP | one per instance; reserved IPs available (README §Sources) | Yes: **reserved**, so a rebuilt server keeps its IP | |
+| Load balancer | 1 flexible LB at **10 Mbps (~1.25 MB/s) shared by everyone**; 1 network LB | **No** | One active server needs no balancing (F17). At a venue, 50 phones opening the app together (roughly 0.5–1.5 MB of JavaScript and fonts each on a first visit) would queue for 20–60 s, and live scoring would share the same pipe. TLS certificates would have to be uploaded to it by hand every 90 days |
+| VCN networking | 2 VCNs; outbound **port 25 blocked** | Yes (1 VCN) | Port 25 doesn't matter: email goes through the Gmail API over HTTPS. **No NAT gateway** (not assumed free): both VMs have public IPs, with every inbound port except 80/443 closed |
+| Public IP | one per VNIC; reserved IPs available | Yes: **reserved** production IP that moves between the two VMs at failover | |
 | Bastion | free | **Yes**: SSH without opening port 22 to the internet | |
 | Vault | software keys free; 150 secrets | **Yes**: one secret holds the whole env file | |
+| Quota policies | free | **Yes**: hard limits so nothing paid can be created by mistake (O1.7) | A budget only *warns*; a quota *blocks* |
 | Certificates | 5 CAs, 150 certificates | No | Caddy gets free Let's Encrypt certificates |
-| Monitoring / Notifications | 500 M datapoints; 1,000 notification emails/month | Optional | Grafana Cloud already does this; OCI's agent metrics help watch idle-reclaim risk |
-| Logging | 10 GB/month | No (D7) | Logs stay on the server |
+| Monitoring / Notifications | 500 M datapoints; 1,000 notification emails/month | Optional | Grafana Cloud does this; OCI's agent metrics help watch idle-reclaim risk |
+| Logging | 10 GB/month | No (D7) | Logs stay on the servers |
 | Email Delivery | 3,000 emails/month | No | Gmail API is already live |
 | Autonomous DB (JSON, Mongo API) | 2 × (1 OCPU, 20 GB, max 20 sessions) | **No** | Not real MongoDB: aggregation pipelines, `arrayFilters` and the `__v`-guarded score merge would all need proving. 20 sessions is below our pool of 10–100. Atlas stays (F16) |
 | MySQL HeatWave, NoSQL | 1 DB system / 133 M ops | No | Not our database |
 | APM, Connector Hub, Resource Manager | small free quotas | No | |
 
+**Not done, and why (from the external review):**
+- **Self-hosting MongoDB on these VMs** gives either one copy, or a two-member/arbiter replica set that can't keep a write majority when a member is lost.
+- **Three proper data members plus the app** don't fit in 2 OCPU / 12 GB.
+- The app also uses **transactions** (F16).
+
+The database stays on **Atlas**.
+
 ### 1.2 The rules that decide this plan
 
 | Rule | Effect | What this plan does |
 |---|---|---|
-| **Idle reclaim:** an Always Free VM whose 95th-percentile CPU, network **and** memory are all below 20% for 7 days may be **stopped** | Mallakhamb is idle most of the year, so the server **would be stopped** between competitions | **Upgrade the account to Pay As You Go (PAYG).** Oracle's reclamation notice says PAYG accounts aren't reclaimed, and Always Free usage stays ₹0. Budget alerts at ₹1 catch any charge. Never use "fake load" scripts |
+| **Idle reclaim:** an Always Free VM whose 95th-percentile CPU, network **and** memory are all below 20% for 7 days may be **stopped** | Both VMs are idle most of the year, the standby always | **Upgrade the account to Pay As You Go (PAYG).** Oracle's reclamation notice says PAYG accounts aren't reclaimed, and Always Free usage stays ₹0. **Never** run "fake load" to dodge the policy |
 | **Home region is permanent** and Always Free works only there | Choosing wrong can't be undone | **India West (Mumbai) `ap-mumbai-1`**, next to Atlas (AWS Mumbai) |
-| **Out of host capacity** for A1 is common | The VM may not be creatable at first | Retry over a few hours or days; PAYG accounts usually get capacity. **Don't** take a larger or paid shape to get round it |
-| **Terms change without notice** (A1 halved in June 2026, no announcement) | Free resources can shrink again | The server is stateless (DB on Atlas, backups off-box, scripts in git). Escape hatch: §6 |
-| Paid-account A1 allowance is disputed (docs say 2/12 for all; some support emails say 4/24 on PAYG) | Running more than 2/12 might be billed | **Stay at 2 OCPU / 12 GB.** Check Cost Analysis = ₹0 |
-| OCI's **Ubuntu images ship their own iptables rules** (only SSH open), and Oracle advises against UFW | Ports 80/443 stay closed even with the cloud firewall open | Use `iptables` + `netfilter-persistent` (O5.3), **not UFW** |
+| **Out of host capacity** for A1 is common | VMs may not be creatable at first | Retry over hours or days; PAYG accounts usually get capacity. **Don't** take a paid shape to get round it (the quota policy makes that impossible anyway) |
+| **Terms change without notice** (A1 halved in June 2026) | Free resources can shrink again | Servers are stateless; escape hatch §6 |
+| Paid-account A1 allowance is disputed (docs: 2/12 for all; some support emails: 4/24 on PAYG) | More than 2/12 might be billed | **2 × (1 OCPU / 6 GB) = exactly 2/12.** The quota policy enforces it; Cost Analysis must read ₹0 |
+| OCI's **Ubuntu images ship their own iptables rules** (only SSH open), and Oracle advises against UFW | Ports 80/443 stay closed even with the cloud firewall open | `iptables` + `netfilter-persistent` (O5.3), **not UFW** |
+| Mumbai has **one availability domain** with **three fault domains** | Two VMs in one fault domain can fail together | Active in **FD-1**, standby in **FD-2** |
 
 ### 1.3 Cost
 
 | Item | ₹ / month |
 |---|---|
-| OCI (compute, storage, IP, Vault, Bastion, object storage, egress) | **0**, if usage stays within Always Free |
+| OCI (2 VMs, storage, IPs, Vault, Bastion, object storage, egress) | **0**, if usage stays within Always Free (enforced by O1.7, watched by O1.4) |
 | MongoDB Atlas Flex | ~700–2,700 (usage-based, capped) |
 | Grafana Cloud | 0 (existing free stack) |
 | Domain (GoDaddy renewal, yearly ÷ 12) | ~100–150 |
 | BigRock hosting | existing cost, kept for email (COMMON F13) |
 | **Total new spend** | **≈ ₹800–2,900 / month**, ≈ ₹10–35k / year including GST |
+
+If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M10 + continuous backup: about $60+/month plus backup storage.
 
 ---
 
@@ -62,18 +74,19 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
 |---|---|---|
 | 1 | Protect the present | COMMON **C0** |
 | 2 | Code changes (shipped to Render first) | COMMON **C1** |
-| 3 | OCI account | **O1** |
+| 3 | OCI account, guards | **O1** |
 | 4 | Atlas Flex | COMMON **C2** |
-| 5 | Network, instance, IP | **O2–O4** |
+| 5 | Network, the active VM (`mallakhamb-a`), IPs | **O2–O4** |
 | 6 | Access + host firewall | **O5** |
 | 7 | Identity, Vault, Object Storage, CLI | **O6** |
-| 8 | DNS staging records (`staging`, `staging-api` → reserved IP) | COMMON **C3** |
+| 8 | DNS staging records (`staging`, `staging-api` → production reserved IP) | COMMON **C3** |
 | 9 | `platform.sh`, `web.env`, web site file | **O7** |
 | 10 | Server software layer + monitoring | COMMON **C4, C5** |
-| 11 | Volume backups | **O8** |
-| 12 | Rehearsal | COMMON **C6** (OCI notes in O9) |
-| 13 | Cutover | COMMON **C7** (OCI values in O10) |
-| 14 | Run it, then decommission | COMMON **C8, C9** + **O11** |
+| 11 | Volume backups + golden image | **O8** |
+| 12 | Rehearsal: C6A–C6D | COMMON **C6** (OCI notes in O9) |
+| 13 | **Standby VM** (`mallakhamb-b`) = drill C6E, then failover drill C6F | **O12**, COMMON **C6E/C6F** |
+| 14 | Cutover | COMMON **C7** (OCI values in O10) |
+| 15 | Run it, then decommission | COMMON **C8, C9** + **O11**, **O13** |
 
 ---
 
@@ -85,19 +98,23 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
 | Account type | PAYG (date upgraded: ) |
 | Admin users (2, MFA) | |
 | Compartment | `mallakhamb` |
+| Quota policy | `mallakhamb-free-only` |
 | VCN / public subnet | `mallakhamb-vcn` 10.0.0.0/16 / `public-subnet` 10.0.0.0/24 |
-| Instance name / OCID | `mallakhamb-api-prod` / |
-| Reserved public IP | |
+| VM A (starts as active) | `mallakhamb-a`, FD-1, OCID: |
+| VM B (starts as standby) | `mallakhamb-b`, FD-2, OCID: |
+| Production reserved IP (follows the active) | `mallakhamb-ip` = |
+| Standby IP (follows the standby) | `mallakhamb-ip-standby` (reserved if free, else ephemeral) = |
 | Bastion | `mallakhamb-bastion` |
 | Dynamic group | `mallakhamb-api-dg` |
 | Vault / key / secret OCID | `mallakhamb-vault` / `mallakhamb-key` / `mallakhamb-api-env` = |
 | Object storage namespace / bucket | ` ` / `mallakhamb-backups` |
 | Boot volume backup policy | `mallakhamb-weekly` |
 | Golden boot volume backup | |
+| Last failover drill (date, minutes) | |
 
 ---
 
-## O1 — Account (Day 1–2, ~1 h + capacity wait)
+## O1 — Account and guards (Day 1–2, ~1.5 h + capacity wait)
 
 - [ ] **O1.1 Sign up** at oracle.com/cloud/free with the **association's role mailbox** (not a personal one).
   - Phone and card verification are required, even for free.
@@ -112,61 +129,84 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
 - [ ] **O1.4 Budget alarms:** Billing → *Budgets* → create `mallakhamb-guard`, target the root compartment, monthly amount ₹100.
   - Alert rule 1: **actual spend > 1%** (≈ ₹1), email to the role mailbox and the owner.
   - Alert rule 2: **forecast > 100%**.
-  - This is the alarm that tells you Oracle has started charging.
+  - A budget is an **alarm, not a cap**. O1.7 is the cap.
 - [ ] **O1.5 Compartment:** Identity → Compartments → create `mallakhamb`. **Everything below goes in this compartment.**
 - [ ] **O1.6** Tenancy details: record the **object storage namespace**.
+- [ ] **O1.7 Quota policy: the hard guard.** Governance → *Quota policies* → Create `mallakhamb-free-only` in the **root** compartment:
+  ```
+  zero compute-core quotas in tenancy
+  zero compute-memory quotas in tenancy
+  set compute-core quota standard-a1-core-count to 2 in tenancy
+  set compute-memory quota standard-a1-memory-count to 12 in tenancy
+  set block-storage quota total-storage-gb to 200 in tenancy
+  zero load-balancer quotas in tenancy
+  zero database quotas in tenancy
+  ```
+  - The policy editor validates every statement. If a quota name is rejected, look it up in the editor's list of quota names for that family and use the A1 name shown there; don't drop the line.
+  - **Verify:**
+    - Try to create a VM with any non-A1 shape (e.g. VM.Standard.E5.Flex): it **must fail** with a quota error. Cancel it.
+    - Try to create an A1 VM with 3 OCPUs: it must fail too.
+  - When this policy is right, a mis-click can't cost money.
+- [ ] **O1.8 Limits check:** Governance → *Limits, Quotas and Usage*.
+  - Service *Compute*: the `standard-a1-core-count` limit is ≥ 2 and memory ≥ 12 GB in AD-1.
+  - Service *Block Volume*: total storage is ≥ 200 GB.
+  - Take a **screenshot** of each and store it with the record sheet.
 
 ## O2 — Network (Day 2, ~20 min)
 
 - [ ] **O2.1** Networking → VCNs → **Start VCN Wizard → "Create VCN with Internet Connectivity"**:
   - name `mallakhamb-vcn`, compartment `mallakhamb`
   - VCN 10.0.0.0/16, public subnet 10.0.0.0/24, private subnet 10.0.1.0/24 (unused)
+  - The wizard also creates a NAT gateway for the private subnet. **Delete the NAT gateway** and its route rule, since NAT isn't assumed free and nothing uses it. Keep the internet gateway.
 - [ ] **O2.2** Public subnet → its **Default Security List** → Ingress rules:
   - **Add** TCP **80** from `0.0.0.0/0`
   - **Add** TCP **443** from `0.0.0.0/0`
   - **Change** the TCP 22 rule from `0.0.0.0/0` to `10.0.0.0/16` (only the Bastion inside the VCN may reach SSH)
   - Keep the ICMP rules (path-MTU discovery needs them)
   - Egress: keep the default allow-all
+  - No rule for 5000 (Node), 12345 (Alloy) or 27017 (MongoDB). They're never reachable from outside.
 
-## O3 — Instance (Day 2; may need retries)
+## O3 — The active VM `mallakhamb-a` (Day 2; may need retries)
 
 - [ ] **O3.1** Compute → Instances → **Create instance**:
 
   | Setting | Value |
   |---|---|
-  | Name / compartment | `mallakhamb-api-prod` / `mallakhamb` |
-  | Placement | AD-1 (Mumbai has one) |
+  | Name / compartment | `mallakhamb-a` / `mallakhamb` |
+  | Placement | AD-1 (Mumbai has one), **fault domain FAULT-DOMAIN-1** (pick it explicitly, not "Let Oracle choose") |
   | Image | **Canonical Ubuntu 24.04** (the aarch64 build is picked automatically for Ampere) |
-  | Shape | **Ampere → VM.Standard.A1.Flex, 2 OCPU, 12 GB**. It must show "Always Free-eligible" |
+  | Shape | **Ampere → VM.Standard.A1.Flex, 1 OCPU, 6 GB**. It must show "Always Free-eligible" |
   | Networking | `mallakhamb-vcn` / public subnet / **assign a public IPv4** (ephemeral; replaced in O4) |
-  | SSH keys | **Generate a key pair for me** → download both keys → store in the password manager |
-  | Boot volume | Specify a custom size: **60 GB**, default performance (Balanced). Total must stay ≤ 200 GB |
+  | SSH keys | **Generate a key pair for me** → download both keys → store in the password manager (the same key is used for B) |
+  | Boot volume | **50 GB** (the default), performance Balanced. The two VMs total 100 GB ≤ 200 GB |
   | Advanced → Management | Instance metadata: **only version 2 endpoints** (legacy v1 disabled) |
   | Advanced → Oracle Cloud Agent | **Compute Instance Monitoring ON**; Bastion plugin ON if offered |
   | Availability | "Restore instance lifecycle state after infrastructure maintenance" **ON**; live migration "Let Oracle choose" |
-- [ ] **O3.2** If you get **"Out of capacity"**: wait and retry (a few times a day). Never pick a bigger or paid shape to get round it.
+- [ ] **O3.2** If you get **"Out of capacity"**: wait and retry (a few times a day). Never pick another shape.
 - [ ] **O3.3** **Verify:**
-  - the instance is *Running*
-  - the shape shows 2 OCPU / 12 GB
+  - the instance is *Running* with 1 OCPU / 6 GB in FAULT-DOMAIN-1
   - after 48 h, Billing → *Cost Analysis* = ₹0
 
-## O4 — Reserved public IP (Day 2, ~10 min)
+## O4 — Public IPs (Day 2, ~15 min)
 
-- [ ] **O4.1** Networking → IP management → **Reserved public IPs → Reserve**: `mallakhamb-ip`, compartment `mallakhamb`.
-- [ ] **O4.2** Instance → *Attached VNICs* → primary VNIC → *IPv4 Addresses* → primary private IP → **Edit**:
+- [ ] **O4.1** Networking → IP management → **Reserved public IPs → Reserve**:
+  - `mallakhamb-ip`: the **production** address, which always sits on whichever VM is active.
+  - Also `mallakhamb-ip-standby`, if the tenancy shows it at ₹0. Otherwise the standby uses an ephemeral IP (O12.2).
+- [ ] **O4.2** On `mallakhamb-a` → *Attached VNICs* → primary VNIC → *IPv4 Addresses* → primary private IP → **Edit**:
   1. Set public IP to **No public IP** → Update.
   2. **Edit** again → **Reserved public IP** → `mallakhamb-ip` → Update.
-- [ ] **O4.3** Record the IP. Add `<IP>/32` to the **Atlas** access list for Flex (COMMON C2.3), and also for the old cluster if its list isn't open.
-- [ ] **O4.4** After 48 h, check Cost Analysis is still ₹0. If the reserved IP is ever charged, switch back to an ephemeral IP: it survives stop/start and is only lost if the instance is terminated.
+- [ ] **O4.3** Record both IPs. Add **both** `/32`s to the **Atlas** access list for Flex (COMMON C2.3), and to the old cluster if its list isn't open.
+- [ ] **O4.4** After 48 h, check Cost Analysis is still ₹0. If a reserved IP is ever charged, release `mallakhamb-ip-standby` first; the production one is the one that matters.
 
 ## O5 — Access and host firewall (Day 2, ~30 min)
 
 - [ ] **O5.1 Bastion:** Identity & Security → **Bastion → Create**: `mallakhamb-bastion`, target `mallakhamb-vcn` / public subnet, CIDR allowlist = your current public IP `/32`. Widen it only if your ISP changes your IP often; every session still needs your SSH key.
-- [ ] **O5.2 Connect** (each time you need a shell): Bastion → **Create session** → type **SSH port forwarding**, target = the instance's private IP, port 22, your SSH public key, TTL ≤ 3 h. Then *Copy SSH command* and run it on your laptop, which opens a tunnel such as `-L 2222:10.0.0.x:22`. In a second terminal:
+- [ ] **O5.2 Connect** (each time you need a shell): Bastion → **Create session** → type **SSH port forwarding**, target = the VM's **private** IP, port 22, your SSH public key, TTL ≤ 3 h. Then *Copy SSH command* and run it on your laptop, which opens a tunnel such as `-L 2222:10.0.0.x:22`. In a second terminal:
   ```bash
   ssh -i <instance-private-key> -p 2222 ubuntu@localhost
   ```
-  **Emergency access** if both the Bastion and SSH fail: Instance → *Console connection* (serial console).
+  - Private IPs don't change at failover, so a session to each VM always works.
+  - **Emergency access** if both the Bastion and SSH fail: Instance → *Console connection* (serial console).
 - [ ] **O5.3 Host firewall** on the VM. **Do not install or enable UFW.**
   ```bash
   sudo iptables -L INPUT --line-numbers            # note the line of the REJECT rule
@@ -180,8 +220,8 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
 
 ## O6 — Identity, Vault, Object Storage, CLI (Day 3, ~1 h)
 
-- [ ] **O6.1 Dynamic group:** Identity → Domains → Default → **Dynamic groups → Create** `mallakhamb-api-dg`, rule:
-  `ALL {instance.id = '<instance OCID>'}`
+- [ ] **O6.1 Dynamic group:** Identity → Domains → Default → **Dynamic groups → Create** `mallakhamb-api-dg`, rule (B is added in O12):
+  `ANY {instance.id = '<mallakhamb-a OCID>'}`
 - [ ] **O6.2 Policy** `mallakhamb-api-policy`, in compartment `mallakhamb`:
   ```
   Allow dynamic-group mallakhamb-api-dg to read secret-bundles in compartment mallakhamb
@@ -189,17 +229,19 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
   Allow dynamic-group mallakhamb-api-dg to manage objects in compartment mallakhamb where all {target.bucket.name='mallakhamb-backups', any {request.permission='OBJECT_CREATE', request.permission='OBJECT_INSPECT', request.permission='OBJECT_READ'}}
   Allow service objectstorage-ap-mumbai-1 to manage object-family in compartment mallakhamb
   ```
-  - The server can create and read backups but **never delete** them.
+  - The servers can create and read backups but **never delete** them.
   - The last line lets lifecycle rules expire old backups.
 - [ ] **O6.3 Vault:** Identity & Security → **Vault → Create** `mallakhamb-vault`. Leave *virtual private vault* **unchecked**; that kind isn't free.
   Then **Master encryption keys → Create** `mallakhamb-key`, **Protection mode: Software** (free), AES-256.
 - [ ] **O6.4 Secret:** Vault → **Secrets → Create** `mallakhamb-api-env`, key `mallakhamb-key`, type template **Plain-Text**.
   - Contents: the full **staging** env (COMMON §5), one `KEY='value'` per line.
-  - **The master copy of this file lives in the password manager.** Always edit it there, then paste the **whole** file as a new secret version. Never type a partial file.
+  - **The master copy lives in the password manager.** Always edit it there, then paste the **whole** file as a new secret version. Never type a partial file.
+  - Both VMs read the same secret, so they can never drift apart.
 - [ ] **O6.5 Object Storage:** Storage → **Buckets → Create** `mallakhamb-backups`: Standard tier, **private**, Oracle-managed encryption, **versioning off**. Retention rules and versioning can't be combined; the retention rule is the stronger protection.
   - **Retention rules → Create:** time-bound **30 days** (unlocked). Objects can't be deleted or overwritten for 30 days, by anyone.
   - **Lifecycle policy rules:**
     - `delete-daily`: Delete, prefix `daily/`, **35 days**
+    - `delete-meet`: Delete, prefix `meet/`, **35 days**
     - `delete-monthly`: Delete, prefix `monthly/`, **400 days**
     - `cutover/`: no rule (kept)
 - [ ] **O6.6 OCI CLI on the VM** (over the Bastion):
@@ -258,7 +300,7 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
           file_server
       }
       handle {
-          # app routes → index.html; real files (/docs/COP-Mallakhamb.pdf, /vite.svg) are served as they are
+          # app routes → index.html; real files (/favicon.svg, /appearance-init.js) are served as they are
           header Cache-Control "no-cache"
           try_files {path} /index.html
           file_server
@@ -278,78 +320,142 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
         redir https://<APP_HOST>{uri} permanent
     }
     ```
-- [ ] **O7.4** Now run COMMON **C3** (staging DNS: both `staging` and `staging-api` are **A → the reserved IP**), then **C4** and **C5**. In C4.11 the staging site files are `staging-api.caddy` and `staging-web.caddy`.
+- [ ] **O7.4** Now run COMMON **C3** (staging DNS: both `staging` and `staging-api` are **A → `mallakhamb-ip`**), then **C4** and **C5**. In C4.11 the staging site files are `staging-api.caddy` and `staging-web.caddy`.
   **Extra verify:**
   - `https://<STAGING_APP_HOST>/coach/dashboard` returns the app (200)
   - `https://<STAGING_APP_HOST>/assets/does-not-exist.js` returns **404**, not index.html
   - `curl -I https://<STAGING_APP_HOST>` shows the five headers
 
-## O8 — Volume backups (Day 4, ~10 min)
+## O8 — Volume backups and the golden image (Day 4, ~10 min)
 
 - [ ] **O8.1** Storage → **Backup policies → Create** `mallakhamb-weekly` (compartment `mallakhamb`): schedule **weekly, Sunday 21:00 UTC, incremental, keep 3**.
-- [ ] **O8.2** Boot volume of `mallakhamb-api-prod` → *Backup policy* → assign `mallakhamb-weekly`.
-- [ ] **O8.3** After C4 passes: boot volume → **Create manual backup** `golden-<date>`. Weekly 3 + golden 1 = 4, within the 5 free.
+- [ ] **O8.2** Boot volume of **`mallakhamb-a`** → *Backup policy* → assign `mallakhamb-weekly`.
+  - **No policy on B.** It's a copy of A and can be re-cloned, so it doesn't spend the 5-backup allowance.
+  - After a failover the roles swap but the policy stays on A's volume. That's fine: either volume restores to a working server.
+- [ ] **O8.3** After C4 passes: A's boot volume → **Create manual backup** `golden-<date>`. Weekly 3 + golden 1 = 4 of the 5 free.
 - [ ] **O8.4** The boot volume holds `/etc/mallakhamb/app.env`, so these backups contain secrets. They stay inside your own tenancy; never copy them out.
 
 ## O9 — Rehearsal notes (COMMON C6)
 
+- **C6C load test:** run it against the **1-OCPU** active. Pass criteria:
+  - Node process CPU < 60% of one core **and host CPU < 70%** (Caddy and Alloy share that core)
+  - host memory < 70% of 6 GB
+
+  If the host CPU fails at 8 panels: first make sure no web build or backup ran during the test. If it still fails, go back to one 2-OCPU VM and drop the standby (the "single VM" fallback in §5).
 - **C6D restore drill:**
   ```bash
   sudo bash -c '. /etc/mallakhamb/platform.sh; "$OCI" os object get --namespace "$OS_NAMESPACE" --bucket-name "$BACKUP_BUCKET" --name daily/<file> --file /tmp/restore.archive.gz'
   mongorestore --uri="<FLEX URI as mallakhamb_staging>" --archive=/tmp/restore.archive.gz --gzip --nsFrom='<db>.*' --nsTo='<db>_restoretest.*' --drop
   ```
-- **C6E rebuild drill:**
-  1. Create a new instance from the golden boot-volume backup (Boot volumes → restore → create instance).
-  2. **Move the reserved IP** to it (O4.2 steps), and add its OCID to the dynamic-group rule.
-  3. Run `sudo mallakhamb-deploy <sha>` and check health.
-  4. Move the IP back and terminate the test instance **and its boot volume**. Two boot volumes would eat into the 200 GB.
-- **C6C load test:** the Node process is still one event loop, so watch *process CPU vs 1 core*, not host CPU. The VM has headroom; the event loop is the limit.
+- **C6E** = O12 below. **C6F** = the failover procedure in O13, done on staging.
 
 ## O10 — Cutover values (COMMON C7)
 
 | C7 step | OCI action |
 |---|---|
-| T+30 secret store | Vault → `mallakhamb-api-env` → **Create secret version** with the full **production** file from the password manager |
-| T+32 DNS, Option A | At BigRock: `api` A → reserved IP; apex A → reserved IP; **delete** the `www` CNAME and **add** `www` A → reserved IP. Nothing else |
-| T+32 DNS, Option B | Add `app` A → reserved IP and `server` A → reserved IP |
-| T+40 Caddy | Add `api.caddy` (`<API_HOST>`) and `web.caddy` (`<APP_HOST>`, plus the apex redirect for Option A), then validate and reload |
-| T+45 web build | Edit `/etc/mallakhamb/web.env`: `VITE_API_URL='https://<API_HOST>/api'`; **keep** `VITE_STORAGE_KEY` |
-| T+48 deploy | `sudo mallakhamb-deploy $(cat /opt/mallakhamb/DEPLOYED_SHA)` rebuilds the web app, because `web.env` changed |
+| T+30 secret store | Vault → `mallakhamb-api-env` → **Create secret version** with the full **production** file from the password manager. Both VMs pick it up on their next deploy or start |
+| T+32 DNS, Option A | At BigRock: `api` A → `mallakhamb-ip`; apex A → `mallakhamb-ip`; **delete** the `www` CNAME and **add** `www` A → `mallakhamb-ip`. Nothing else |
+| T+32 DNS, Option B | Add `app` A → `mallakhamb-ip` and `server` A → `mallakhamb-ip` |
+| T+40 Caddy | On the **active**: add `api.caddy` (`<API_HOST>`) and `web.caddy` (`<APP_HOST>`, plus the apex redirect for Option A), then validate and reload. On the **standby**: put the same two files in `/etc/caddy/sites-standby/` |
+| T+45 web build | On **both**, edit `/etc/mallakhamb/web.env`: `VITE_API_URL='https://<API_HOST>/api'`; **keep** `VITE_STORAGE_KEY` |
+| T+48 deploy | `sudo mallakhamb-deploy $(cat /opt/mallakhamb/DEPLOYED_SHA)` on the **active**, **then** on the **standby** (it rebuilds the web app because `web.env` changed) |
 | Rollback DNS | Restore the C0.2 records (`www` CNAME → apex; apex and `api` A → `119.18.58.248`) |
 
 ## O11 — OCI-specific operations
 
 - **Monthly:**
-  - Billing → Cost Analysis = **₹0** for OCI; the budget alert hasn't fired.
+  - Billing → Cost Analysis = **₹0** for OCI; the budget alert hasn't fired; the quota policy is unchanged.
   - Read every Oracle email: maintenance, reclamation, policy changes.
-  - Compute → the instance → **Maintenance**: if a maintenance reboot falls within a competition week, **reschedule it** or do it early on a quiet day.
+  - Compute → **each** instance → **Maintenance**: if a maintenance reboot falls within a competition week, **reschedule it** or do it early on a quiet day.
+  - Bucket size (Storage → Buckets → `mallakhamb-backups` → *Approximate size*) is well under 10 GB.
+  - **Patch the standby first**, check it (`startup.js --check` via a standby deploy), then patch the active **on a different day**.
 - **Before every competition:**
-  - The instance is *Running*, with no scheduled maintenance in the meet window.
-  - The account is still PAYG and nothing is flagged.
-- **DNS TTL:** after C9, keep the `www` / apex / `api` TTL at **600 s** (not 3600), so the escape hatch (§6) can move traffic within minutes.
+  - Both instances are *Running*; neither has maintenance scheduled in the meet window.
+  - The standby holds the same SHA as the active (Grafana Release table).
+  - The account is still PAYG.
+- **DNS TTL:** after C9, keep the `www` / apex / `api` TTL at **600 s** (not 3600), so the escape hatch (§6) can move traffic within minutes. Failover between A and B needs no DNS change at all.
 - **Never:**
-  - resize A1 above 2 OCPU / 12 GB
-  - create a second A1 VM (except during a drill, then delete it)
+  - resize either VM, or create a third A1 VM (the quota policy blocks it)
   - add block volumes beyond the 200 GB
-  - turn on a virtual private vault or the 10 Mbps load balancer "just to try"
+  - enable the 10 Mbps load balancer or a virtual private vault "just to try"
+  - start the `mallakhamb` service on the standby (COMMON F17)
+
+## O12 — The standby VM `mallakhamb-b` (= COMMON C6E; Day 7, ~45 min)
+
+- [ ] **O12.1 Create B from A's golden backup:**
+  1. Storage → Boot volume backups → `golden-<date>` → **Restore** → new boot volume `mallakhamb-b-boot` (50 GB).
+  2. Compute → **Create instance** from that boot volume:
+     - name `mallakhamb-b`, **fault domain FAULT-DOMAIN-2**, VM.Standard.A1.Flex **1 OCPU / 6 GB**
+     - same subnet, same SSH key, metadata v2 only
+     - public IP: `mallakhamb-ip-standby` (if reserved in O4.1) or ephemeral
+  3. Add B's public IP to the Atlas access list if it isn't there yet.
+
+  The quota policy allows this, since the total becomes exactly 2 OCPU / 12 GB. If it refuses, A is bigger than 1/6; fix A first.
+- [ ] **O12.2 Make it a standby, within the first hour.** The clone booted with A's enabled services. Over a Bastion session to B's **private** IP:
+  ```bash
+  sudo mallakhamb-demote          # COMMON C4.17: STANDBY flag, service + backup timers off, sites → sites-standby, Alloy label standby
+  sudo mallakhamb-deploy "PASTE-THE-FULL-SHA-FROM-A"   # A: cat /opt/mallakhamb/DEPLOYED_SHA. Prints "STANDBY UPDATED … (service not started)"
+  systemctl is-active mallakhamb  # must print "inactive"
+  ```
+- [ ] **O12.3** Identity → Dynamic group `mallakhamb-api-dg` → change the rule to
+  `ANY {instance.id = '<mallakhamb-a OCID>', instance.id = '<mallakhamb-b OCID>'}`.
+  **Verify** on B: `sudo bash -c '. /etc/mallakhamb/platform.sh; fetch_env_file | cut -d= -f1'` lists the key names.
+- [ ] **O12.4 Verify in Grafana:**
+  - `up{scrape_job="mallakhamb-host-standby"}` = 1
+  - the Release table shows A `role=active` and B `role=standby` with the **same** sha
+  - *Standby missing* and *Standby behind* stay Normal
+- [ ] **O12.5** Then run the failover drill (COMMON **C6F**) using O13, on the staging hosts, and record the time.
+
+## O13 — Failover runbook (A → B; the same with letters swapped for B → A)
+
+Use this when the active is down, unresponsive or unrecoverable, or during the C6F drill. **Target: ≤ 10 minutes.** Two people: one in the OCI console, one on the Bastion.
+
+| # | Where | Step | Check |
+|---|---|---|---|
+| 1 | Console | `mallakhamb-a` → VNIC → primary private IP → **Edit → No public IP** → Update. This works even if A is hung | `mallakhamb-ip` shows *Available* |
+| 2 | Console | `mallakhamb-b` → VNIC → primary private IP → **Edit → No public IP** → Update (releases B's standby IP), then **Edit → Reserved public IP → `mallakhamb-ip`** | B's public IP = `mallakhamb-ip` |
+| 3 | Bastion → B (private IP) | `sudo mallakhamb-promote` | prints `PROMOTED`; Caddy logs "certificate obtained" for each production host |
+| 4 | Laptop / phone | `https://<API_HOST>/api/health/ready`, open `https://<APP_HOST>`, and one judge screen | all respond; judge screens reconnect by themselves |
+| 5 | B | During a meet: `sudo systemctl enable --now mallakhamb-backup-meet.timer` | `systemctl list-timers` shows it |
+| 6 | Grafana | `up{scrape_job="mallakhamb-api"}` = 1 (the hosted scrape follows the IP); `up{scrape_job="mallakhamb-host"}` comes from B | alerts resolve |
+| 7 | **Later, when A is reachable** | Bastion → A (private IP): `sudo mallakhamb-demote` **before** giving A any public IP. Then Console: A → **Reserved `mallakhamb-ip-standby`** (or ephemeral, and update Atlas). Then `sudo mallakhamb-deploy <sha on B>` | A shows `role=standby` in Grafana with the same sha |
+| 8 | Record sheet | date, cause, minutes taken | |
+
+What users notice:
+- Up to ~10 minutes of "can't connect", then the app works again.
+- Judge screens reconnect by themselves.
+- Anyone whose token was **revoked** before the failover could use it again until it expires, because the logout list is in memory (F17). Note it and move on; it's minor.
+
+## 5. Single-VM fallback
+
+If B can't be created (capacity), or the C6C load test shows 1 OCPU is too tight:
+- Run **one VM of 2 OCPU / 12 GB** (resize A: stop → edit shape → start; the quota allows 2/12).
+- Skip O12/O13.
+- Apply the dashboards and alerts with the **`oci-single`** preset (COMMON C1.7), and don't apply the two standby alerts.
+- For server loss, use the rebuild procedure (C6E without keeping the copy): RTO ~1 h instead of ~10 min.
+
+Everything else in this plan is unchanged.
 
 ## 6. Escape hatch: if Oracle changes the deal or stops the account
 
-The server holds nothing that can't be rebuilt: code in git, the env file in the password manager, the database on Atlas, backups in object storage **and** Atlas snapshots.
+The servers hold nothing that can't be rebuilt: code in git, the env file in the password manager, the database on Atlas, backups in object storage **and** Atlas snapshots.
 1. Build a server on the other platform: [AWS plan](../aws/PLAN.md) A1–A7 plus COMMON C4, or Render Starter. Allow ~2–3 h.
 2. Copy the latest dump from OCI object storage. If OCI is unreachable, use Atlas's own snapshot; the database itself never moves.
 3. Point `www` / apex / `api` at the new server at BigRock. With TTL 600, users follow within ~10 min.
-4. Change the Grafana hosted-scrape URL if the host changed (it doesn't, if DNS names are kept), and set `MK_PLATFORM`.
+4. Set `MK_PLATFORM`. The Grafana hosted-scrape URL doesn't change if the DNS names are kept.
 
 ## 7. OCI-specific risks
 
 | Risk | Mitigation |
 |---|---|
-| Server stopped as "idle" | PAYG upgrade (O1.3) |
-| Surprise charges on PAYG | ₹1 budget alert (O1.4); stay within 2/12, 200 GB, 1 VM |
-| A1 capacity not available | Retry; PAYG; the AWS plan as the alternative |
-| Oracle cuts the free tier again | Stateless server + escape hatch (§6), rehearsed by drill C6E |
+| Servers stopped as "idle" | PAYG upgrade (O1.3) |
+| Surprise charges on PAYG | Quota policy blocks anything outside 2/12 A1, 200 GB, no LB, no DB (O1.7); ₹1 budget alert (O1.4) |
+| A1 capacity not available | Retry; PAYG; single-VM fallback (§5); the AWS plan |
+| Oracle cuts the free tier again | Stateless servers + escape hatch (§6) |
 | Account suspended | Same as above. The database and its snapshots are at Atlas, outside OCI |
-| Host maintenance reboot during a meet | Maintenance check before each meet (O11); services auto-start (systemd); the IP is kept |
+| The active's host fails or hangs | Standby in another fault domain + O13 (≤ 10 min, rehearsed in C6F) |
+| Host maintenance reboot during a meet | Maintenance check on both before each meet (O11); systemd auto-start; the reserved IP stays |
+| A recovered old active serving alongside the new one | O13 step 7: demote **before** it gets any public IP; without a public IP it can't take traffic anyway |
+| Standby drifts (old release, stale OS) | Deploy to both (COMMON C8.2); Release table + *Standby behind* alert; standby patched first each month |
 | Firewall blocks 80/443 after an image update | O5.3 verification after reboot; checked by the synthetic monitors |
 | No CDN in front of the web app | Users are in India and the server is in Mumbai; Caddy compresses (zstd/gzip) and caches hashed assets for a year. Enough at this scale |
