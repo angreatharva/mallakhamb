@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "mcp__claude-in-chrome__computer",
+      "Bash(node -e ' *)",
+      "Bash(npx eslint *)",
+      "Bash(npx vitest *)",
+      "mcp__claude-in-chrome__browser_batch",
+      "Bash(curl -s https://api.ipify.org)",
+      "mcp__claude-in-chrome__tabs_create_mcp",
+      "mcp__claude-in-chrome__tabs_close_mcp",
+      "Bash(bash -n \"D:/Mallakhamb-Repo/Mallakhamb-master/deploy/oci/scripts/02-platform.sh\")",
+      "mcp__claude-in-chrome__tabs_context_mcp"
     ]
   }
 }
