@@ -1,0 +1,29 @@
+<STAGING_APP_HOST> {
+    root * /opt/mallakhamb/current/Web/dist
+    encode zstd gzip
+    header {
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "frame-ancestors 'none'"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        Strict-Transport-Security "max-age=31536000"
+        -Server
+    }
+    handle /assets/* {
+        header Cache-Control "public, max-age=31536000, immutable"
+        file_server
+    }
+    handle {
+        # app routes → index.html; real files (/favicon.svg, /appearance-init.js) are served as they are
+        header Cache-Control "no-cache"
+        try_files {path} /index.html
+        file_server
+    }
+    log {
+        output file /var/log/caddy/web-access.log {
+            roll_size 50MiB
+            roll_keep 5
+        }
+    }
+}

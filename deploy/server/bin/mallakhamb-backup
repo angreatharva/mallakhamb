@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+KIND="${1:-daily}"; case "$KIND" in daily|meet) ;; *) echo "usage: mallakhamb-backup [daily|meet]" >&2; exit 1;; esac
+[ -f /etc/mallakhamb/STANDBY ] && { echo "standby: backups run on the active server only"; exit 0; }
+. /etc/mallakhamb/platform.sh
+BACKUP_URI="$(sed -n "s/^BACKUP_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
+[ -n "$BACKUP_URI" ] || { echo "BACKUP_URI missing" >&2; exit 1; }
+STAMP=$(date -u +%Y-%m-%dT%H%MZ)
+FILE=$(mktemp --suffix=.archive.gz); trap 'rm -f "$FILE"' EXIT
+# read from a secondary so a dump during a meet doesn't compete with live scoring on the primary
+mongodump --uri="$BACKUP_URI" --readPreference=secondaryPreferred --archive="$FILE" --gzip --quiet
+[ -s "$FILE" ] || { echo "empty dump" >&2; exit 1; }
+upload_backup "$FILE" "${KIND}/${STAMP}.archive.gz"
+if [ "$KIND" = daily ] && [ "$(date -u +%d)" = "01" ]; then upload_backup "$FILE" "monthly/${STAMP}.archive.gz"; fi
+T=/var/lib/alloy/textfile
+printf '# HELP mallakhamb_backup_last_success_timestamp_seconds Unix time of the last good database backup\n# TYPE mallakhamb_backup_last_success_timestamp_seconds gauge\nmallakhamb_backup_last_success_timestamp_seconds %s\n' "$(date +%s)" > "$T/.backup.tmp"
+mv "$T/.backup.tmp" "$T/mallakhamb_backup.prom"
+echo "backup ok: ${KIND}/${STAMP}.archive.gz ($(stat -c %s "$FILE") bytes)"

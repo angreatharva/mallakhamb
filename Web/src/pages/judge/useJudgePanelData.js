@@ -6,6 +6,7 @@
  * identity, and the same live panel feed — only what they render differs.
  */
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import apiConfig from '@/config/api.config';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
@@ -469,7 +470,7 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
   // Live panel feed
   useEffect(() => {
     if (!judgeInfo || !selectedCompetitionType) return;
-    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const socketUrl = apiConfig.getSocketUrl();
     const token = secureStorage.getItem('judge_token');
 
     const newSocket = io(socketUrl, { auth: { token }, withCredentials: true });

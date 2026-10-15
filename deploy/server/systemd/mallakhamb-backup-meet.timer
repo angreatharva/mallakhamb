@@ -1,0 +1,9 @@
+[Unit]
+Description=Mallakhamb meet-mode backup every 15 min, 07:30-21:15 IST (enable per meet only)
+
+[Timer]
+OnCalendar=*-*-* 02..15:00/15:00 UTC
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -11,6 +11,13 @@ class ApiConfig {
     return this.baseUrl;
   }
 
+  // Socket.IO server origin: the base URL minus its TRAILING /api path.
+  // A plain .replace('/api', '') hits the first "/api", which for an
+  // api.<domain> host is inside "//api." and yields "https:/.<domain>/api".
+  getSocketUrl() {
+    return this.baseUrl.replace(/\/api\/?$/, '');
+  }
+
   isUsingNgrok() {
     return this.baseUrl.includes('ngrok');
   }

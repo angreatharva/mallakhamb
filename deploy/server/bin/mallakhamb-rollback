@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+BASE=/opt/mallakhamb; CUR="$(readlink -f "$BASE/current")"
+PREV="$(ls -1dt "$BASE"/releases/*/ | sed 's#/$##' | grep -vx "$CUR" | head -n1)"
+[ -n "$PREV" ] || { echo "no previous release" >&2; exit 1; }
+ln -sfn "$PREV" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
+systemctl restart mallakhamb && echo "rolled back to $PREV"

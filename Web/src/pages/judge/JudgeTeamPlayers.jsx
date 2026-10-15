@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import apiConfig from '@/config/api.config';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { User, CheckCircle, ChevronRight, Users, Lock
@@ -269,7 +270,7 @@ const JudgeTeamPlayers = () => {
   useEffect(() => {
     if (!categoryParams) return;
 
-    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const socketUrl = apiConfig.getSocketUrl();
     const token = secureStorage.getItem('judge_token');
     const socket = io(socketUrl, { auth: { token }, withCredentials: true });
 

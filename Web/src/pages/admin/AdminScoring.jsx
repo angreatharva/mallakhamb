@@ -1,5 +1,6 @@
 // AdminScoring.jsx - Dark theme version
 import { useState, useEffect } from 'react';
+import apiConfig from '@/config/api.config';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
@@ -59,7 +60,7 @@ const AdminScoring = () => {
     const [confirmDialogConfig, setConfirmDialogConfig] = useState({ title: '', message: '', shouldLock: false });
 
     useEffect(() => {
-        const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+        const socketUrl = apiConfig.getSocketUrl();
         // Both branches of this ternary used to read 'admin_token'. Storage is
         // role-scoped, so on /superadmin/scoring that key is empty and the socket
         // handshake went out with token: null — the superadmin's live score feed

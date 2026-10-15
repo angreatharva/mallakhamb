@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import apiConfig from '@/config/api.config';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Users, ChevronDown, ChevronRight, Info, Save } from 'lucide-react';
@@ -147,7 +148,7 @@ const JudgeSequence = () => {
   useEffect(() => {
     if (!judgeInfo || !categoryParams) return;
 
-    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const socketUrl = apiConfig.getSocketUrl();
     const token = secureStorage.getItem('judge_token');
     const socket = io(socketUrl, { auth: { token }, withCredentials: true });
 

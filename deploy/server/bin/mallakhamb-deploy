@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SHA="${1:?usage: mallakhamb-deploy <full-40-char-sha>}"
+[[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "need the full 40-char sha" >&2; exit 1; }
+BASE=/opt/mallakhamb
+. /etc/mallakhamb/platform.sh
+[ -n "${GIT_SSH_COMMAND:-}" ] && export GIT_SSH_COMMAND
+WEBTAG=""
+[ -f /etc/mallakhamb/web.env ] && WEBTAG="-$(sha256sum /etc/mallakhamb/web.env | cut -c1-8)"
+REL="$BASE/releases/${SHA}${WEBTAG}"        # a changed web.env means a new release, which rebuilds the web app
+
+[ -d "$BASE/repo.git" ] || git clone --mirror "$REPO_URL" "$BASE/repo.git"
+git -C "$BASE/repo.git" remote update --prune
+git -C "$BASE/repo.git" cat-file -e "${SHA}^{commit}"
+
+if [ ! -f "$REL/.complete" ]; then
+  rm -rf "$REL" && mkdir -p "$REL"
+  git -C "$BASE/repo.git" archive "$SHA" Server Web | tar -x -C "$REL"
+  (cd "$REL/Server" && npm ci --omit=dev --no-audit --no-fund)
+  ln -sfn /etc/mallakhamb/app.env "$REL/Server/.env"
+  rm -rf "$REL/Server/logs" && ln -sfn /var/log/mallakhamb "$REL/Server/logs"
+  if [ -n "$WEBTAG" ]; then
+    ( set -a; . /etc/mallakhamb/web.env; set +a
+      cd "$REL/Web" && npm ci --no-audit --no-fund && npm run build
+      host="${VITE_API_URL#https://}"; host="${host%%/*}"
+      grep -rqF "$host" dist/assets || { echo "web build does not contain $host" >&2; exit 1; }
+      (cd dist/assets && ls -1) > .own-assets          # written to $REL/Web/.own-assets
+      rm -rf node_modules )
+  else
+    rm -rf "$REL/Web"
+  fi
+  touch "$REL/.complete"
+fi
+
+/usr/local/bin/mallakhamb-render-env
+ROLE=active; [ -f /etc/mallakhamb/STANDBY ] && ROLE=standby
+release_metric() {   # Grafana shows which release each server holds (C1.7 "Release" table)
+  printf '# HELP mallakhamb_release_info Release deployed on this server\n# TYPE mallakhamb_release_info gauge\nmallakhamb_release_info{sha="%s",role="%s"} 1\n' "${SHA:0:7}" "$ROLE" > /var/lib/alloy/textfile/.release.tmp
+  mv /var/lib/alloy/textfile/.release.tmp /var/lib/alloy/textfile/mallakhamb_release.prom
+}
+printf "GIT_COMMIT=%s\n" "$SHA" > /etc/mallakhamb/release.env     # read by the service unit (C1.11 / F19)
+
+PREV="$(readlink -f "$BASE/current" || true)"
+# keep the previous build's own chunks so tabs still open on the old version don't go blank
+if [ -n "$WEBTAG" ] && [ -n "$PREV" ] && [ -f "$PREV/Web/.own-assets" ]; then
+  while read -r f; do
+    [ -e "$REL/Web/dist/assets/$f" ] || cp "$PREV/Web/dist/assets/$f" "$REL/Web/dist/assets/$f"
+  done < "$PREV/Web/.own-assets"
+fi
+
+if [ "$ROLE" = standby ]; then
+  # Standby: never migrates (the active already did), never serves. Prove the release can
+  # start against production config + database without changing anything, then switch the folder.
+  (cd "$REL/Server" && sudo -u mallakhamb node scripts/startup.js --check)
+  ln -sfn "$REL" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
+  echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric
+  echo "STANDBY UPDATED $SHA (service not started)"
+  exit 0
+fi
+
+(cd "$REL/Server" && sudo -u mallakhamb node scripts/startup.js --migrate --no-serve)   # = npm run prepare:db
+ln -sfn "$REL" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
+systemctl restart mallakhamb
+
+ok=""
+for i in $(seq 1 60); do
+  curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null && { ok=1; break; }
+  sleep 3
+done
+if [ -z "$ok" ]; then
+  echo "HEALTH CHECK FAILED — rolling back to $PREV" >&2
+  if [ -n "$PREV" ] && [ -d "$PREV" ]; then
+    ln -sfn "$PREV" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
+    systemctl restart mallakhamb
+  fi
+  exit 1
+fi
+echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric
+CUR="$(readlink -f "$BASE/current")"
+ls -1dt "$BASE"/releases/*/ | sed 's#/$##' | grep -vx "$CUR" | tail -n +5 | xargs -r rm -rf   # live + 4 newest others
+echo "DEPLOYED $SHA"

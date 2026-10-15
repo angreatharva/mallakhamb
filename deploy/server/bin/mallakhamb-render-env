@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+. /etc/mallakhamb/platform.sh
+tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
+fetch_env_file | sed '/^[[:space:]]*$/d' > "$tmp"
+if grep -vqE "^[A-Z][A-Z0-9_]*='[^']*'$" "$tmp"; then echo "ERROR: a line is not KEY='value'" >&2; exit 1; fi
+for k in NODE_ENV PORT MONGODB_URI BACKUP_URI JWT_SECRET CORS_ORIGINS CLIENT_URL RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET KEEP_ALIVE METRICS_TOKEN EMAIL_PROVIDER; do
+  grep -q "^${k}=" "$tmp" || { echo "ERROR: ${k} missing" >&2; exit 1; }
+done
+if grep -q "^ALLOW_TEST_TOKEN=" "$tmp"; then echo "ERROR: ALLOW_TEST_TOKEN must not exist" >&2; exit 1; fi
+install -m 640 -o root -g mallakhamb "$tmp" /etc/mallakhamb/app.env
+echo "env rendered: $(grep -c . /etc/mallakhamb/app.env) keys"

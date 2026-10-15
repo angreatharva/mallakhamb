@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ -f /etc/mallakhamb/STANDBY ] || { echo "already active" >&2; exit 1; }
+rm -f /etc/mallakhamb/STANDBY
+shopt -s nullglob
+for f in /etc/caddy/sites-standby/*.caddy; do cp "$f" /etc/caddy/sites/; done
+caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy      # certificates are issued now that the IP is here
+/usr/local/bin/mallakhamb-render-env
+systemctl enable --now mallakhamb
+for i in $(seq 1 60); do
+  curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null && break
+  sleep 3
+done
+curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null || { echo "API NOT READY — check journalctl -u mallakhamb" >&2; exit 1; }
+sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host"/' /etc/default/alloy && systemctl restart alloy
+sed -i 's/role="standby"/role="active"/' /var/lib/alloy/textfile/mallakhamb_release.prom 2>/dev/null || true
+systemctl enable --now mallakhamb-backup.timer
+echo "PROMOTED — this server is now the active. If a meet is running: systemctl enable --now mallakhamb-backup-meet.timer"

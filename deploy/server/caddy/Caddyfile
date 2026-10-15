@@ -1,0 +1,4 @@
+{
+    # No ACME email yet. Add "email <role mailbox>" here if certificate issuance needs it (ZeroSSL fallback).
+}
+import /etc/caddy/sites/*.caddy

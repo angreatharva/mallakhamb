@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+touch /etc/mallakhamb/STANDBY
+systemctl disable --now mallakhamb mallakhamb-backup.timer mallakhamb-backup-meet.timer 2>/dev/null || true
+mkdir -p /etc/caddy/sites-standby
+shopt -s nullglob
+for f in /etc/caddy/sites/*.caddy; do mv "$f" /etc/caddy/sites-standby/; done
+systemctl reload caddy
+sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host-standby"/' /etc/default/alloy && systemctl restart alloy
+sed -i 's/role="active"/role="standby"/' /var/lib/alloy/textfile/mallakhamb_release.prom 2>/dev/null || true
+echo "DEMOTED — this server is now the standby (service stopped, no sites served)"

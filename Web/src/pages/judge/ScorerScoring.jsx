@@ -6,6 +6,7 @@
  * but cannot unlock scores (only superadmin has that permission).
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import apiConfig from '@/config/api.config';
 import { StatusTag } from '@/components/ui';
 import { JudgeHeader } from './judgeShared';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -332,7 +333,7 @@ const ScorerScoring = () => {
 
   useEffect(() => {
     if (!judgeInfo) return;
-    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const socketUrl = apiConfig.getSocketUrl();
     const token = secureStorage.getItem('judge_token');
 
     const newSocket = io(socketUrl, {

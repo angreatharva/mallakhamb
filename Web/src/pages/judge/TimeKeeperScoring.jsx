@@ -13,6 +13,7 @@
  * that did not reach the Scorer can be sent again.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import apiConfig from '@/config/api.config';
 import { JudgeHeader } from './judgeShared';
 import { STOPWATCH } from './stopwatchPalette';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -106,7 +107,7 @@ const TimeKeeperScoring = () => {
 
   useEffect(() => {
     if (!judgeInfo || !roomId) return undefined;
-    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const socketUrl = apiConfig.getSocketUrl();
     const s = io(socketUrl, { auth: { token: secureStorage.getItem('judge_token') }, withCredentials: true });
     setSocket(s);
     s.on('connect', () => {

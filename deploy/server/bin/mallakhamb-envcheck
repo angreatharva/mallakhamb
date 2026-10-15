@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+set -a; . /etc/mallakhamb/app.env; set +a
+strip() { printf '%s' "$1" | sed -E 's#^mongodb(\+srv)?://[^@]*@##; s#\?.*$##'; }
+echo "NODE_ENV            = $NODE_ENV        PORT = $PORT"
+echo "DB (host/name)      = $(strip "$MONGODB_URI")"
+echo "Backup DB           = $(strip "$BACKUP_URI")"
+echo "Razorpay key mode   = $(printf '%s' "$RAZORPAY_KEY_ID" | cut -c1-9)"
+echo "Webhook secret set  = $([ -n "${RAZORPAY_WEBHOOK_SECRET:-}" ] && echo yes || echo NO)"
+echo "CORS_ORIGINS        = $CORS_ORIGINS"
+echo "CLIENT_URL          = $CLIENT_URL"
+echo "CSRF / RATE_LIMIT   = ${CSRF_ENABLED:-unset(=true)} / ${RATE_LIMIT_ENABLED:-unset(=true)}"
+echo "DISCOUNT enabled    = ${DISCOUNT_CODE_ENABLED:-unset(=false)}"
+echo "MIGRATE_ON_START    = ${MIGRATE_ON_START:-unset}     KEEP_ALIVE = $KEEP_ALIVE"
+echo "EMAIL_PROVIDER      = $EMAIL_PROVIDER   refresh token shape ok = $(case "${GMAIL_REFRESH_TOKEN:-}" in 1//*) echo yes;; *) echo NO;; esac)"
+echo "METRICS_TOKEN set   = $([ -n "$METRICS_TOKEN" ] && echo yes || echo NO)"
+echo "API docs / debug    = ${ENABLE_API_DOCS:-unset} / ${ENABLE_DEBUG_ROUTES:-unset}"
