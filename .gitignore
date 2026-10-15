@@ -1,0 +1,5 @@
+
+# Filled-in OCI env files hold secrets (deploy/oci/scripts/03-env-secret.md)
+staging-app.env
+*-app.env
+!*.env.example
