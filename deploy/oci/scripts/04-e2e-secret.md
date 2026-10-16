@@ -1,5 +1,9 @@
 # Stage 4 — the throw-away database for the nightly e2e check (owner does this; ~10 min)
 
+> **Optional since 2026-10-16.** By default the nightly run uses the app's own Atlas login with the
+> database renamed to `<db>_e2e` (owner decision), so none of this is needed. Do it only to make the
+> e2e run *physically* unable to write the real database; then `install-e2e.sh --secret <ocid>`.
+
 The nightly lifecycle check (deploy/oci/PLAN.md O14) seeds a whole season into its **own** database,
 `<db>_e2e`, through a second, internal copy of the API, then drops it. It must not be able to touch the
 real database, so it gets an Atlas user that can only reach `<db>_e2e`. Secrets never go through chat
@@ -43,7 +47,7 @@ Staging today: real database `BRMC_dev` → e2e database **`BRMC_dev_e2e`**.
    ```
 
 5. Send Claude the printed `ocid1.vaultsecret...` (an ID, not a secret). Claude runs
-   `install-e2e.sh <ocid>` on both servers, a first run by hand on the standby, then on the active,
+   `install-e2e.sh --secret <ocid>` on both servers, a first run by hand on the standby, then on the active,
    and only then switches the timers on.
 
 The VMs' policy (`mallakhamb-prod-pol-app`) already allows `read secret-bundles` in the compartment,

@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
 # deploy/oci/PLAN.md O14 — install the nightly full-season lifecycle check on this server. Idempotent.
 #
-#   sudo bash install-e2e.sh <e2e secret OCID>              # install; the timer stays OFF
-#   sudo bash install-e2e.sh <e2e secret OCID> --enable     # ... and switch the timer on
+#   sudo bash install-e2e.sh                      # install; the timer stays OFF
+#   sudo bash install-e2e.sh --enable             # ... and switch the timer on
+#   sudo bash install-e2e.sh --secret <ocid> ...  # optional: a dedicated Atlas user (scripts/04-e2e-secret.md)
 #
-# The secret (mallakhamb-prod-bom-secret-e2e-env, deploy/oci/scripts/04-e2e-secret.md) holds one line,
-#   MONGODB_URI='mongodb+srv://mallakhamb_e2e:<password>@<cluster>/<db>_e2e?...'
-# for an Atlas user that can only touch <db>_e2e. Run it once by hand first: sudo systemctl start mallakhamb-e2e
+# Default (owner decision 2026-10-16): the run uses the app's own Atlas login with the database renamed
+# to <db>_e2e, and drops that database afterwards. Run it once by hand first: sudo systemctl start mallakhamb-e2e
 set -euo pipefail
-OCID="${1:?usage: install-e2e.sh <e2e secret OCID> [--enable]}"
-[[ "$OCID" =~ ^ocid1\.vaultsecret\. ]] || { echo "not a vault secret OCID: $OCID" >&2; exit 1; }
+OCID=""; ENABLE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --secret) OCID="${2:?--secret needs an OCID}"; shift 2 ;;
+    --enable) ENABLE=1; shift ;;
+    *) echo "usage: install-e2e.sh [--secret <ocid>] [--enable]" >&2; exit 1 ;;
+  esac
+done
+[ -z "$OCID" ] || [[ "$OCID" =~ ^ocid1\.vaultsecret\. ]] || { echo "not a vault secret OCID: $OCID" >&2; exit 1; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 install -m 0755 "$HERE/bin/mallakhamb-e2e" /usr/local/bin/mallakhamb-e2e
@@ -30,7 +37,7 @@ install -d -m 0755 /etc/systemd/system/mallakhamb-e2e.timer.d
 printf '[Timer]\nOnCalendar=\nOnCalendar=*-*-* %s UTC\n' "$WHEN" > /etc/systemd/system/mallakhamb-e2e.timer.d/time.conf
 systemctl daemon-reload
 
-if [ "${2:-}" = "--enable" ]; then
+if [ -n "$ENABLE" ]; then
   systemctl enable --now mallakhamb-e2e.timer >/dev/null
 fi
 echo "e2e installed on $(hostname): runs $WHEN UTC; timer $(systemctl is-enabled mallakhamb-e2e.timer 2>/dev/null || true)"

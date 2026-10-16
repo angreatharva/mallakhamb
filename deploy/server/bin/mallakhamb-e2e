@@ -4,10 +4,11 @@
 # The complete roster (12 meets, 12 teams, 110 athletes, 16 judges, 240 categories) through the real
 # API of THIS server's release, against a throw-away database, then verified and dropped:
 #   1. skip on meet days (/etc/mallakhamb/NO_E2E, or the meet backup timer is on)
-#   2. render /etc/mallakhamb/e2e.env = app.env + overrides; the database must end in "_e2e" and
-#      differ from the real one, or nothing runs
-#   3. start mallakhamb-e2e-api (127.0.0.1:5001, never in Caddy) → setup:api --drop --yes (verifySeed
-#      is its last step) → drop the database → stop the API
+#   2. render /etc/mallakhamb/e2e.env = app.env + overrides. The database is the app's own with
+#      "_e2e" appended (same login, same cluster), or a dedicated user's if a secret is configured;
+#      it must end in "_e2e" and differ from the real one, or nothing runs
+#   3. start mallakhamb-e2e-api (127.0.0.1:5001, never in Caddy) → empty the e2e database →
+#      setup:api --yes (verifySeed is its last step) → empty it again → stop the API
 #   4. write the result to the Alloy textfile (Grafana: "E2E failed", "E2E stale")
 # Never padded or looped to raise CPU: the reclaim question is answered by alerting, not by load.
 set -uo pipefail
@@ -61,9 +62,22 @@ fi
 # 2. the environment, and the two locks on the database
 db_of() { [[ "$1" =~ ^mongodb(\+srv)?://[^/]+/([^?]*) ]] && printf '%s' "${BASH_REMATCH[2]}"; }
 APP_URI=$(sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)
-E2E_URI=$("$OCI" secrets secret-bundle get --secret-id "$E2E_SECRET_OCID" \
-  --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p") \
-  || die "could not read the e2e secret"
+if [ -n "${E2E_SECRET_OCID:-}" ]; then
+  # Optional, stronger: a dedicated Atlas user that can only reach <db>_e2e (scripts/04-e2e-secret.md).
+  E2E_URI=$("$OCI" secrets secret-bundle get --secret-id "$E2E_SECRET_OCID" \
+    --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p") \
+    || die "could not read the e2e secret"
+else
+  # Default (owner decision 2026-10-16): the app's own login and cluster, database renamed to <db>_e2e.
+  # Without authSource a plain mongodb:// URI authenticates against the path's database, so pin it
+  # to the original before renaming; mongodb+srv (Atlas) authenticates against admin either way.
+  [[ "$APP_URI" =~ ^(mongodb(\+srv)?://[^/]+/)([^?]+)(\?.*)?$ ]] || die "cannot read the database name in the app MONGODB_URI"
+  base=${BASH_REMATCH[1]}; db=${BASH_REMATCH[3]}; query=${BASH_REMATCH[4]}
+  if [ -z "${BASH_REMATCH[2]}" ] && [[ "$query" != *authSource=* ]]; then
+    query="${query:-?}"; [ "$query" = "?" ] || query="$query&"; query="${query}authSource=$db"
+  fi
+  E2E_URI="${base}${db}_e2e${query}"
+fi
 APP_DB=$(db_of "$APP_URI"); E2E_DB=$(db_of "$E2E_URI")
 [ -n "$E2E_DB" ] || die "the e2e MONGODB_URI names no database"
 [[ "$E2E_DB" == *_e2e ]] || die "refusing: e2e database \"$E2E_DB\" does not end in _e2e"
@@ -113,13 +127,31 @@ as_app() {   # run in the release as the unprivileged user, with only the e2e en
     SEED_API_URL="$API/api" PERF_BASE_URL="$API" PERF_API_URL="$API" \
     bash -c "cd '$REL' && set -a && . '$ENV_FILE' && set +a && exec \"\$@\"" _ "$@"
 }
-as_app node scripts/setupApi.js --drop --yes
-rc=$?
+# Empty the e2e database (before and after the run). dropDatabase needs dbAdmin, which the app's own
+# login may not have; then every collection is dropped instead (readWrite can). The database the
+# driver actually connected to is checked again here, so a wrong URI can never empty a real one.
+clean_db() {   # $1 before|after
+  as_app node -e "
+    const mongoose = require('mongoose');
+    (async () => {
+      const c = await mongoose.connect(process.env.MONGODB_URI);
+      const name = c.connection.name;
+      if (!/_e2e\$/.test(name)) throw new Error('refusing to empty \"' + name + '\": not an _e2e database');
+      try { await c.connection.dropDatabase(); console.log('E2E: dropped ' + name + ' ($1)'); }
+      catch (e) {
+        if (!/not authorized|unauthorized/i.test(e.message)) throw e;
+        const cols = (await c.connection.db.listCollections().toArray()).map((x) => x.name).filter((n) => !n.startsWith('system.'));
+        for (const n of cols) await c.connection.db.dropCollection(n);
+        console.log('E2E: emptied ' + name + ' collection by collection (' + cols.length + ', $1)');
+      }
+      await c.disconnect();
+    })().catch((e) => { console.error('E2E: cleaning the database failed: ' + e.message); process.exit(1); });"
+}
 
-as_app node -e "require('mongoose').connect(process.env.MONGODB_URI)
-  .then((c) => c.connection.dropDatabase().then(() => c.disconnect()))
-  .then(() => console.log('E2E: dropped ' + process.env.MONGODB_URI.replace(/^.*\/([^/?]*).*$/, '\$1')))
-  .catch((e) => { console.error('E2E: drop failed: ' + e.message); process.exit(1); })" \
-  || { [ "$rc" = 0 ] && rc=3; }
+clean_db before || die "could not empty the e2e database before the run"
+# No --drop: the database was just emptied above (and the chain's own drop needs dbAdmin).
+as_app node scripts/setupApi.js --yes
+rc=$?
+clean_db after || { [ "$rc" = 0 ] && rc=3; }
 
 finish "$rc"
