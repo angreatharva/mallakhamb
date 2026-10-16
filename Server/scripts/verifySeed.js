@@ -31,6 +31,7 @@ const mongoose = require('mongoose');
 const { allMeets, LEVELS } = require('./lib/meets');
 const { allJudges } = require('./lib/judges');
 const { readPlan, planForPlace, seatsFor } = require('./lib/panel-plan');
+const { apparatusKey } = require('../src/config/cop-rules');
 
 const QUIET = process.argv.includes('--quiet');
 
@@ -90,7 +91,7 @@ async function verify() {
     .project({ competition: 1, gender: 1, ageGroup: 1, judgeType: 1, judgeAccount: 1 })
     .toArray();
   const scores = await db.collection('scores').find({})
-    .project({ competition: 1, gender: 1, ageGroup: 1, competitionType: 1, isLocked: 1, 'playerScores.isFinalized': 1 })
+    .project({ competition: 1, gender: 1, ageGroup: 1, competitionType: 1, isLocked: 1, lockedApparatus: 1, 'playerScores.isFinalized': 1, 'playerScores.apparatus': 1 })
     .toArray();
 
   const byId = Object.fromEntries(competitions.map((c) => [String(c._id), c]));
@@ -199,18 +200,23 @@ async function verify() {
 
   // ── scoring ────────────────────────────────────────────────────────────────
   //
-  // "Published" is the same two gates meetStatus applies: every athlete on the
-  // sheet finalized, AND the sheet locked. One without the other is a category
-  // that looks judged and is not.
+  // "Published" is the same two gates the public results apply
+  // (public.service.js): every athlete's row finalized, AND locked. Locked is
+  // per apparatus now — the Scorer's Save & Lock records the apparatus in
+  // `lockedApparatus` and deliberately no longer sets `isLocked`, which stays
+  // the admin's whole-sheet freeze. Checking `isLocked` alone reported every
+  // properly published category as unpublished (found by the nightly e2e run,
+  // deploy/oci/PLAN.md O14). One gate without the other is a category that
+  // looks judged and is not.
   const byCategory = new Map();
   for (const score of scores) {
     const key = `${score.competition}|${score.gender}|${score.ageGroup}|${score.competitionType}`;
-    const row = byCategory.get(key) || { docs: 0, locked: 0, rows: 0, finalized: 0, competition: score.competition };
-    row.docs += 1;
-    if (score.isLocked) row.locked += 1;
+    const row = byCategory.get(key) || { rows: 0, finalized: 0, locked: 0, competition: score.competition };
+    const lockedHere = new Set((score.lockedApparatus || []).map(apparatusKey));
     for (const entry of score.playerScores || []) {
       row.rows += 1;
       if (entry.isFinalized) row.finalized += 1;
+      if (score.isLocked || lockedHere.has(apparatusKey(entry.apparatus))) row.locked += 1;
     }
     byCategory.set(key, row);
   }
@@ -231,7 +237,7 @@ async function verify() {
 
   const unpublished = [];
   for (const [key, row] of byCategory) {
-    const published = row.rows > 0 && row.finalized === row.rows && row.locked === row.docs;
+    const published = row.rows > 0 && row.finalized === row.rows && row.locked === row.rows;
     const meet = byId[String(row.competition)];
     const category = key.split('|').slice(1).join(' ');
     if (!meet) orphaned.push(`${category} (competition ${row.competition})`);
