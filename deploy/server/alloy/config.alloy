@@ -1,0 +1,34 @@
+prometheus.exporter.unix "host" {
+  set_collectors = ["cpu", "loadavg", "meminfo", "filesystem", "diskstats", "netdev", "pressure", "stat", "time", "uname", "vmstat", "textfile"]
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|run|sys|snap|boot/efi)($|/)"
+  }
+  textfile {
+    directory = "/var/lib/alloy/textfile"
+  }
+}
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.host.receiver]
+}
+
+prometheus.relabel "host" {
+  rule {
+    target_label = "scrape_job"
+    replacement  = sys.env("MK_SCRAPE_JOB")
+  }
+  forward_to = [prometheus.remote_write.grafana.receiver]
+}
+
+prometheus.remote_write "grafana" {
+  endpoint {
+    url = sys.env("GRAFANA_PROM_URL")
+    basic_auth {
+      username = sys.env("GRAFANA_PROM_USER")
+      password = sys.env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+  external_labels = { platform = sys.env("MK_PLATFORM") }
+}
