@@ -11,7 +11,7 @@ Shared steps live in [deploy/COMMON.md](../COMMON.md). This file only holds what
 > - **O2 network built by hand**, not the wizard: one public subnet, IGW, no NAT, no private subnet. Scripts: `deploy/oci/scripts/02-platform.sh`, server layer `deploy/server/install.sh`, env secret `deploy/oci/scripts/03-env-secret.md`.
 > - **Staging hosts:** `api-137-23-63-84.sslip.io` / `app-137-23-63-84.sslip.io` (production stays on Render until a later cutover to mallakhambcompetition.com). Code is pulled with a **read-only** GitHub deploy key.
 > - **A1 capacity in Mumbai is scarce:** launch without a fault domain (or retry FD-2/FD-3 for app-02) every ~5–10 min from a detached Cloud Shell script; Cloud Shell sessions are recycled when idle, which kills the script.
-> - **Node 24 on both VMs since 2026-10-16** (Render runs 24; `engines.node` = `24.x` in Server and Web). That rolling pass left **app-02 active** (holds `pip-app-01` 137.23.63.84) and **app-01 standby** (`pip-app-02` 130.210.4.142); see O11 "Rolling maintenance pass".
+> - **Node 24 on both VMs since 2026-10-16** (Render runs 24; `engines.node` = `24.x` in Server and Web). After that rolling pass the roles were switched back the same day (67 s): **app-01 active** (`pip-app-01` 137.23.63.84), **app-02 standby** (`pip-app-02` 130.210.4.142); see O11 "Rolling maintenance pass".
 > - **Next after O12/O13 and Grafana (C5): O14, the nightly full-season lifecycle check.**
 
 ---
