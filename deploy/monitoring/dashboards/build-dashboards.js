@@ -333,6 +333,16 @@ const hostRow = (y) => [
   ts('OOM kills (1h)', [t(`sum by (instance) (increase(node_vmstat_oom_kill{${HS}}[1h]))`, '{{instance}}')], { h: 8, w: 12, x: 12, y: y + 23 }, {
     min: 0, bars: true, description: 'The kernel killed a process for memory. Alert "Out-of-memory kill" pages on any.',
   }),
+  // The nightly full-season lifecycle check (deploy/oci/PLAN.md O14), on both VMs.
+  stat('Nightly e2e: last pass', [t(`time() - mallakhamb_e2e_last_success_timestamp_seconds{${HS}} > 0`, '{{instance}}')], { h: 5, w: 12, x: 0, y: y + 31 }, {
+    unit: 's', steps: [green, { color: 'orange', value: 93600 }, { color: 'red', value: 172800 }],
+    description: 'Time since the nightly e2e run (setup:api --drop on a throw-away _e2e database, then verifySeed) last passed on each VM. Meet days are skipped on purpose (NO_E2E or the meet backup timer).',
+  }),
+  stat('Nightly e2e: last result', [t(`mallakhamb_e2e_last_exit_code{${HS}}`, '{{instance}}')], { h: 5, w: 12, x: 12, y: y + 31 }, {
+    steps: [green, { color: 'red', value: 1 }],
+    mappings: [{ type: 'value', options: { 0: { text: 'PASS', color: 'green' } } }, { type: 'range', options: { from: 1, to: 255, result: { text: 'FAIL', color: 'red' } } }],
+    description: 'Exit code of the last nightly run that was not skipped. FAIL → journalctl -u mallakhamb-e2e on that VM. Alert "E2E failed".',
+  }),
 ];
 
 // ------------------------------------------------------------------ runtime

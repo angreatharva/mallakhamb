@@ -1,0 +1,25 @@
+[Unit]
+Description=Mallakhamb nightly e2e API (internal 127.0.0.1:5001, throw-away _e2e database; deploy/oci/PLAN.md O14)
+# Started and stopped only by mallakhamb-e2e (the runner). Never enabled, never in Caddy;
+# port 5001 is closed by the host firewall and the OCI security list.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mallakhamb
+Group=mallakhamb
+WorkingDirectory=/opt/mallakhamb/current/Server
+# Rendered by mallakhamb-e2e before every run: app.env + overrides (PORT 5001, the _e2e database,
+# EMAIL_PROVIDER=none, no mail or payment credentials, a fresh JWT_SECRET, LOG_DIR of its own).
+EnvironmentFile=/etc/mallakhamb/e2e.env
+EnvironmentFile=-/etc/mallakhamb/release.env
+ExecStart=/usr/bin/node scripts/startup.js
+Restart=no
+KillSignal=SIGTERM
+TimeoutStopSec=40
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/log/mallakhamb-e2e

@@ -1,0 +1,11 @@
+[Unit]
+Description=Mallakhamb nightly e2e lifecycle check
+# install-e2e.sh sets the time per server so the two never overlap, and neither overlaps
+# the 02:00 IST backup: app-01 03:00 IST (21:30 UTC), app-02 04:00 IST (22:30 UTC).
+
+[Timer]
+OnCalendar=*-*-* 21:30:00 UTC
+Persistent=false
+
+[Install]
+WantedBy=timers.target

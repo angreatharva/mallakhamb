@@ -37,8 +37,11 @@ const line = (text = '') => process.stdout.write(`${text}\n`);
  * running `setup` twice — and a more tempting one, because the two commands
  * look independent. They are not: they seed the same meets, the same accounts
  * and the same squads.
+ *
+ * SETUP_LOCK_PATH moves it out of a read-only release folder (the nightly e2e
+ * run on the servers, deploy/oci/PLAN.md O14, runs as an unprivileged user).
  */
-const LOCK_PATH = path.join(SERVER_DIR, 'scripts', 'seed', '.setup-running');
+const LOCK_PATH = process.env.SETUP_LOCK_PATH || path.join(SERVER_DIR, 'scripts', 'seed', '.setup-running');
 
 /**
  * Refuse to start while another run is working on the same database.

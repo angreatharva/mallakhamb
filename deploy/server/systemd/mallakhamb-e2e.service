@@ -1,0 +1,11 @@
+[Unit]
+Description=Mallakhamb nightly full-season lifecycle check (deploy/oci/PLAN.md O14)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mallakhamb-e2e
+# The full roster takes 25–40 min; a hung run must not reach the next night.
+TimeoutStartSec=2h
+Nice=5

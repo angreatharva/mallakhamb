@@ -1078,6 +1078,113 @@ groups:
                 type: __expr__
                 uid: __expr__
         isPaused: false
+      - uid: mk-e2e-failed
+        title: E2E failed
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'The nightly full-season check failed on {{ $labels.instance }} (exit {{ $values.A.Value }}).'
+          description: >-
+            A real flow broke on that release (registration, squads, payment, panels, scoring or publishing), or the e2e
+            database/Atlas user is wrong. First look, on that VM: journalctl -u mallakhamb-e2e -n 200 (the step report
+            is at the end), then /var/log/mallakhamb-e2e. Fix before the next meet. Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '22'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'max by (instance) (mallakhamb_e2e_last_exit_code{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-e2e-stale
+        title: E2E stale
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'The nightly e2e timer has not fired on {{ $labels.instance }} for more than 26 hours.'
+          description: >-
+            Meet days still count as a run (skipped), so this means the timer itself stopped: systemctl status
+            mallakhamb-e2e.timer mallakhamb-e2e; a run longer than 2 h is killed (TimeoutStartSec). Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '21'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                time() - max by (instance)
+                (mallakhamb_e2e_last_run_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 93600
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
       - uid: mk-standby-missing
         title: Standby missing
         condition: C

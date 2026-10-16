@@ -84,8 +84,12 @@ class Logger {
      * started from. `path.join('logs', ...)` is resolved against `process.cwd()`,
      * so `node Server/server.js` from the repo root quietly wrote its logs to
      * the repo root instead.
+     *
+     * LOG_DIR overrides it for a second instance of the same release, which
+     * must not write into the real API's files (the nightly e2e copy,
+     * deploy/oci/PLAN.md O14).
      */
-    const LOG_DIR = path.join(__dirname, '..', '..', 'logs');
+    const LOG_DIR = process.env.LOG_DIR || path.join(__dirname, '..', '..', 'logs');
 
     // Add file transports with rotation
     if (isTest) {

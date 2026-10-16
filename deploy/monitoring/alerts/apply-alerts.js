@@ -44,7 +44,7 @@
     aws: { cpu: 1, mem: 1.5 * GIB, host: true, standby: false, failover: 'deploy/aws/PLAN.md' },
   };
   // Panel ids in the Runtime dashboard's Host row (build-dashboards.js hostRow).
-  const HOST_PANEL = { release: 12, backup: 13, cpu: 14, mem: 15, disk: 16, inodes: 17, oom: 20 };
+  const HOST_PANEL = { release: 12, backup: 13, cpu: 14, mem: 15, disk: 16, inodes: 17, oom: 20, e2ePass: 21, e2eResult: 22 };
 
   // The rules for one platform. Render keeps its exact wording and thresholds.
   const spec = (platform) => {
@@ -137,6 +137,13 @@
     ['mk-inodes', 'Inodes running out', fsRatio('node_filesystem_files_free', 'node_filesystem_files'), 'lt', 0.10, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.inodes,
       'Less than 10 % of inodes are free on the active server\'s root disk.',
       'Millions of small files, usually a temp or session directory. First look: sudo du -x --inodes / --max-depth=3 | sort -n | tail. Runbook: PLAN.md §8.'],
+    // The nightly full-season lifecycle check (deploy/oci/PLAN.md O14) runs on BOTH VMs.
+    ['mk-e2e-failed', 'E2E failed', 'max by (instance) (mallakhamb_e2e_last_exit_code{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})', 'gt', 0, '0m', 'warning', 'mallakhamb-runtime', HOST_PANEL.e2eResult,
+      'The nightly full-season check failed on {{ $labels.instance }} (exit {{ $values.A.Value }}).',
+      'A real flow broke on that release (registration, squads, payment, panels, scoring or publishing), or the e2e database/Atlas user is wrong. First look, on that VM: journalctl -u mallakhamb-e2e -n 200 (the step report is at the end), then /var/log/mallakhamb-e2e. Fix before the next meet. Runbook: PLAN.md §8.'],
+    ['mk-e2e-stale', 'E2E stale', 'time() - max by (instance) (mallakhamb_e2e_last_run_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})', 'gt', 93600, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.e2ePass,
+      'The nightly e2e timer has not fired on {{ $labels.instance }} for more than 26 hours.',
+      'Meet days still count as a run (skipped), so this means the timer itself stopped: systemctl status mallakhamb-e2e.timer mallakhamb-e2e; a run longer than 2 h is killed (TimeoutStartSec). Runbook: PLAN.md §8.'],
   );
   if (P.standby) RULES.push(
     ['mk-standby-missing', 'Standby missing', 'absent(up{scrape_job="mallakhamb-host-standby"})', 'gt', 0, '30m', 'warning', 'mallakhamb-runtime', HOST_PANEL.release,

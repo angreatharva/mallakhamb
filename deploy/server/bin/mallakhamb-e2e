@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# deploy/oci/PLAN.md O14 — the nightly full-season lifecycle check. Run by mallakhamb-e2e.timer (root).
+#
+# The complete roster (12 meets, 12 teams, 110 athletes, 16 judges, 240 categories) through the real
+# API of THIS server's release, against a throw-away database, then verified and dropped:
+#   1. skip on meet days (/etc/mallakhamb/NO_E2E, or the meet backup timer is on)
+#   2. render /etc/mallakhamb/e2e.env = app.env + overrides; the database must end in "_e2e" and
+#      differ from the real one, or nothing runs
+#   3. start mallakhamb-e2e-api (127.0.0.1:5001, never in Caddy) → setup:api --drop --yes (verifySeed
+#      is its last step) → drop the database → stop the API
+#   4. write the result to the Alloy textfile (Grafana: "E2E failed", "E2E stale")
+# Never padded or looped to raise CPU: the reclaim question is answered by alerting, not by load.
+set -uo pipefail
+. /etc/mallakhamb/platform.sh
+. /etc/mallakhamb/e2e.conf                     # E2E_SECRET_OCID (install-e2e.sh)
+
+REL=/opt/mallakhamb/current/Server
+ENV_FILE=/etc/mallakhamb/e2e.env
+PROM=/var/lib/alloy/textfile/mallakhamb_e2e.prom
+PRELOAD=/usr/local/lib/mallakhamb/e2e-forwarded-https.cjs
+API=http://127.0.0.1:5001
+START=$(date +%s)
+
+prev() { sed -n "s/^$1 \([0-9.]*\)$/\1/p" "$PROM" 2>/dev/null | head -1; }
+write_metrics() {   # $1 exit code, $2 1 if skipped
+  local ok_ts; ok_ts=$(prev mallakhamb_e2e_last_success_timestamp_seconds); ok_ts=${ok_ts:-0}
+  [ "$1" = 0 ] && [ "$2" = 0 ] && ok_ts=$(date +%s)
+  local code=$1; [ "$2" = 1 ] && code=$(prev mallakhamb_e2e_last_exit_code) && code=${code:-0}
+  {
+    echo "# HELP mallakhamb_e2e_last_run_timestamp_seconds Last time the nightly e2e timer fired (run or skip)"
+    echo "# TYPE mallakhamb_e2e_last_run_timestamp_seconds gauge"
+    echo "mallakhamb_e2e_last_run_timestamp_seconds $(date +%s)"
+    echo "# HELP mallakhamb_e2e_last_success_timestamp_seconds Last nightly e2e run that passed verifySeed"
+    echo "# TYPE mallakhamb_e2e_last_success_timestamp_seconds gauge"
+    echo "mallakhamb_e2e_last_success_timestamp_seconds $ok_ts"
+    echo "# HELP mallakhamb_e2e_last_exit_code Exit code of the last nightly e2e run that was not skipped (0 = passed)"
+    echo "# TYPE mallakhamb_e2e_last_exit_code gauge"
+    echo "mallakhamb_e2e_last_exit_code $code"
+    echo "# HELP mallakhamb_e2e_last_duration_seconds Duration of the last nightly e2e attempt"
+    echo "# TYPE mallakhamb_e2e_last_duration_seconds gauge"
+    echo "mallakhamb_e2e_last_duration_seconds $(( $(date +%s) - START ))"
+    echo "# HELP mallakhamb_e2e_skipped 1 if the last timer run was skipped (meet day)"
+    echo "# TYPE mallakhamb_e2e_skipped gauge"
+    echo "mallakhamb_e2e_skipped $2"
+  } > "$PROM.tmp" && chown root:alloy "$PROM.tmp" && chmod 0644 "$PROM.tmp" && mv "$PROM.tmp" "$PROM"
+}
+finish() {   # $1 exit code
+  systemctl stop mallakhamb-e2e-api 2>/dev/null || true
+  write_metrics "$1" 0
+  echo "E2E $( [ "$1" = 0 ] && echo PASSED || echo "FAILED (exit $1)" ) in $(( $(date +%s) - START )) s"
+  exit "$1"
+}
+die() { echo "E2E ERROR: $*" >&2; finish "${2:-1}"; }
+
+# 1. meet days
+if [ -f /etc/mallakhamb/NO_E2E ] || systemctl is-active --quiet mallakhamb-backup-meet.timer; then
+  echo "E2E SKIPPED: meet day (NO_E2E flag or the meet backup timer is on)"
+  write_metrics 0 1; exit 0
+fi
+
+# 2. the environment, and the two locks on the database
+db_of() { [[ "$1" =~ ^mongodb(\+srv)?://[^/]+/([^?]*) ]] && printf '%s' "${BASH_REMATCH[2]}"; }
+APP_URI=$(sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)
+E2E_URI=$("$OCI" secrets secret-bundle get --secret-id "$E2E_SECRET_OCID" \
+  --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p") \
+  || die "could not read the e2e secret"
+APP_DB=$(db_of "$APP_URI"); E2E_DB=$(db_of "$E2E_URI")
+[ -n "$E2E_DB" ] || die "the e2e MONGODB_URI names no database"
+[[ "$E2E_DB" == *_e2e ]] || die "refusing: e2e database \"$E2E_DB\" does not end in _e2e"
+[ "$E2E_DB" != "$APP_DB" ] || die "refusing: e2e database is the real one"
+[[ "$E2E_URI" != *"'"* ]] || die "the e2e MONGODB_URI contains a single quote"
+
+rnd() { openssl rand -hex "$1"; }
+OVERRIDES=(
+  "PORT='5001'"
+  "MONGODB_URI='$E2E_URI'"
+  "BACKUP_URI='$E2E_URI'"
+  "MIGRATE_ON_START='false'"
+  "RATE_LIMIT_ENABLED='false'"
+  "EMAIL_PROVIDER='none'"
+  "EMAIL_USER=''" "EMAIL_PASS=''" "GMAIL_CLIENT_ID=''" "GMAIL_CLIENT_SECRET=''" "GMAIL_REFRESH_TOKEN=''"
+  "RAZORPAY_KEY_ID=''" "RAZORPAY_KEY_SECRET=''" "RAZORPAY_WEBHOOK_SECRET=''"
+  "DISCOUNT_CODE_ENABLED='true'"
+  "DISCOUNT_CODE='E2E$(rnd 8 | tr a-f A-F)'"
+  "JWT_SECRET='$(rnd 32)'"
+  "METRICS_TOKEN=''"
+  "KEEP_ALIVE='false'"
+  "ENABLE_DEBUG_ROUTES='false'"
+  "LOG_DIR='/var/log/mallakhamb-e2e'"
+  # Throw-away accounts in a throw-away database: new passwords every night, kept only in this
+  # root:mallakhamb 0640 file (never on a command line, where ps would show them).
+  "SEED_ADMIN_PASSWORD='E2e-$(rnd 12)-Aa1!'"
+  "SEED_SUPERADMIN_PASSWORD='E2e-$(rnd 12)-Aa1!'"
+)
+keys=$(printf '%s\n' "${OVERRIDES[@]}" | cut -d= -f1 | paste -sd'|')
+tmp=$(mktemp)
+{ grep -vE "^(${keys})=" /etc/mallakhamb/app.env; printf '%s\n' "${OVERRIDES[@]}"; } > "$tmp"
+install -m 640 -o root -g mallakhamb "$tmp" "$ENV_FILE"; rm -f "$tmp"
+install -d -m 0750 -o mallakhamb -g mallakhamb /var/log/mallakhamb-e2e /run/mallakhamb-e2e
+echo "E2E: database $E2E_DB, release $(basename "$(readlink -f /opt/mallakhamb/current)" | cut -c1-7)"
+
+# 3. the run
+systemctl restart mallakhamb-e2e-api || die "mallakhamb-e2e-api did not start"
+for _ in $(seq 1 40); do
+  curl -fsS -H 'X-Forwarded-Proto: https' "$API/api/health/live" >/dev/null 2>&1 && break; sleep 3
+done
+curl -fsS -H 'X-Forwarded-Proto: https' "$API/api/health/live" >/dev/null || die "the e2e API never answered on $API"
+
+as_app() {   # run in the release as the unprivileged user, with only the e2e environment
+  runuser -u mallakhamb -- env -i PATH=/usr/bin:/bin HOME=/run/mallakhamb-e2e \
+    NODE_OPTIONS="--require $PRELOAD" E2E_API_ORIGIN="$API" \
+    SETUP_LOCK_PATH=/run/mallakhamb-e2e/.setup-running \
+    SEED_API_URL="$API/api" PERF_BASE_URL="$API" PERF_API_URL="$API" \
+    bash -c "cd '$REL' && set -a && . '$ENV_FILE' && set +a && exec \"\$@\"" _ "$@"
+}
+as_app node scripts/setupApi.js --drop --yes
+rc=$?
+
+as_app node -e "require('mongoose').connect(process.env.MONGODB_URI)
+  .then((c) => c.connection.dropDatabase().then(() => c.disconnect()))
+  .then(() => console.log('E2E: dropped ' + process.env.MONGODB_URI.replace(/^.*\/([^/?]*).*$/, '\$1')))
+  .catch((e) => { console.error('E2E: drop failed: ' + e.message); process.exit(1); })" \
+  || { [ "$rc" = 0 ] && rc=3; }
+
+finish "$rc"
