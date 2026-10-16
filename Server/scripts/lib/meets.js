@@ -80,8 +80,45 @@ function readMeets() {
     }
   }
 
-  cached = raw;
-  return raw;
+  cached = shiftSeason(raw, process.env.SEED_SEASON_LEAD_DAYS);
+  return cached;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Slide the whole season forward by whole weeks so its first meet starts at
+ * least `leadDays` from today — only when SEED_SEASON_LEAD_DAYS is set.
+ *
+ * The dates in meets.json are fixed, and the end-date lock freezes a meet once
+ * its end date has passed: a season seeded after its first Saturdays stops at
+ * "squads" with "closed ... and is now locked". The nightly e2e run
+ * (deploy/oci/PLAN.md O14) seeds every night, so it sets this. Whole weeks keep
+ * every meet on a Saturday and the ladder's spacing; a lead of 14 days keeps
+ * even the first fee deadline (7 days before) ahead. The file's `year` is the
+ * meets' identity and is left alone. Unset, nothing moves.
+ *
+ * @param {Object} raw - the parsed meets.json
+ * @param {string|undefined} leadDays
+ * @param {Date} [now]
+ * @returns {Object} raw, or a copy with shifted startDates
+ */
+function shiftSeason(raw, leadDays, now = new Date()) {
+  if (leadDays === undefined || leadDays === '') return raw;
+  const lead = Number(leadDays);
+  if (!Number.isInteger(lead) || lead < 0) {
+    throw new Error(`SEED_SEASON_LEAD_DAYS must be a whole number of days, got "${leadDays}".`);
+  }
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const first = Math.min(...raw.meets.map((m) => Date.parse(`${m.startDate}T00:00:00.000Z`)));
+  const behind = today + lead * DAY_MS - first;
+  if (behind <= 0) return raw;
+  const weeks = Math.ceil(behind / (7 * DAY_MS));
+  const meets = raw.meets.map((m) => ({
+    ...m,
+    startDate: new Date(Date.parse(`${m.startDate}T00:00:00.000Z`) + weeks * 7 * DAY_MS).toISOString().slice(0, 10),
+  }));
+  return { ...raw, meets, shiftedWeeks: weeks };
 }
 
 /** Every meet, in season order. */
@@ -118,4 +155,5 @@ module.exports = {
   levelByPlace,
   startDateOf,
   endDateOf,
+  shiftSeason,
 };

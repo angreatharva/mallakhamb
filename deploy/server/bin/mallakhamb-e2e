@@ -101,6 +101,8 @@ OVERRIDES=(
   "KEEP_ALIVE='false'"
   "ENABLE_DEBUG_ROUTES='false'"
   "LOG_DIR='/var/log/mallakhamb-e2e'"
+  # meets.json has fixed dates; slide the season (whole weeks) so no meet is already past its end-date lock
+  "SEED_SEASON_LEAD_DAYS='14'"
   # Throw-away accounts in a throw-away database: new passwords every night, kept only in this
   # root:mallakhamb 0640 file (never on a command line, where ps would show them).
   "SEED_ADMIN_PASSWORD='E2e-$(rnd 12)-Aa1!'"
