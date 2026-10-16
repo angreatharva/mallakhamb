@@ -493,6 +493,18 @@ About 25–40 min end to end (most of it in `scores`).
 - **Metrics** (Alloy textfile `mallakhamb_e2e.prom`): `mallakhamb_e2e_last_run_timestamp_seconds` (runs and skips), `…_last_success_timestamp_seconds`, `…_last_exit_code`, `…_last_duration_seconds`, `…_skipped`. **Alerts** (VM presets): *E2E failed* (`last_exit_code > 0`) and *E2E stale* (timer silent > 26 h; a meet-day skip counts as a run). Host row panels 21–22.
 - Plan item 3 checked: all 185 Server files and the 6 `Web/e2e/support` roster modules the chain loads are tracked, and every package is a runtime dependency (the VMs install with `--omit=dev`).
 
+**First runs (2026-10-16, by hand, standby first) — LIVE: timers enabled on both VMs the same day.** Runs 1–3 each found a real defect, fixed on this branch before run 4:
+1. `createSuperAdmin.js` ignored `SEED_SUPERADMIN_PASSWORD` while `seedApi.js` signs in with it → stopped at "admin".
+2. `meets.json` has fixed dates, and the end-date lock had already frozen Mumbai (ended 10-04) and Pune (10-11) → stopped at "squads". Fixed with `SEED_SEASON_LEAD_DAYS` (whole-week slide; the runner sets 14).
+3. `verifySeed` still read only `isLocked` after scoring moved to the per-apparatus lock (`lockedApparatus`) → "240 unpublished" on a fully published season.
+
+| Run | VM | Release | Result | Time |
+|---|---|---|---|---|
+| 4 | app-02 (standby) | 801b5fa | **PASSED** — 11/11 steps, 24/24 checks | 709 s |
+| 5 | app-01 (active, serving) | 801b5fa | **PASSED** — 11/11 steps, 24/24 checks | 708 s |
+
+Checked after both: `BRMC_dev` record counts identical to the baseline taken before run 1; no `BRMC_dev_e2e` left; every e2e API start logged `provider: none`, 0 real sends (this flow sends no mail at all); port 5001 unreachable from outside on both IPs; the five `mallakhamb_e2e_*` metrics in Grafana. While run 5 worked beside the live API, `GET /api/health/ready` stayed 200 on all 18 probes but slowed (avg 0.53 s, peak 1.8 s, vs ~0.13 s idle): the one OCPU and the Atlas cluster are shared — fine at 03:00 IST, and the reason meet days skip. ~12 min end to end, not 25–40. Found on the way, not O14's: every stop of the API exits **7** (graceful shutdown logs after ending the logger) — separate fix. The *E2E failed / stale* alerts are in the OCI preset, so they go live with the rest at the cutover (C7).
+
 **Verify**
 - A manual run prints `verifySeed` OK, `<db>_e2e` is gone afterwards, the real DB's counts (`mallakhamb-counts`) are unchanged, no email was sent (Gmail "Sent" is empty for the run window).
 - Grafana shows the two new metrics for both VMs; force a failure (wrong `SEED_ADMIN_PASSWORD`) and the *E2E failed* alert fires.
