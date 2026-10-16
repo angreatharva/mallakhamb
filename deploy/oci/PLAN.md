@@ -11,6 +11,7 @@ Shared steps live in [deploy/COMMON.md](../COMMON.md). This file only holds what
 > - **O2 network built by hand**, not the wizard: one public subnet, IGW, no NAT, no private subnet. Scripts: `deploy/oci/scripts/02-platform.sh`, server layer `deploy/server/install.sh`, env secret `deploy/oci/scripts/03-env-secret.md`.
 > - **Staging hosts:** `api-137-23-63-84.sslip.io` / `app-137-23-63-84.sslip.io` (production stays on Render until a later cutover to mallakhambcompetition.com). Code is pulled with a **read-only** GitHub deploy key.
 > - **A1 capacity in Mumbai is scarce:** launch without a fault domain (or retry FD-2/FD-3 for app-02) every ~5–10 min from a detached Cloud Shell script; Cloud Shell sessions are recycled when idle, which kills the script.
+> - **Node 24 on both VMs since 2026-10-16** (Render runs 24; `engines.node` = `24.x` in Server and Web). That rolling pass left **app-02 active** (holds `pip-app-01` 137.23.63.84) and **app-01 standby** (`pip-app-02` 130.210.4.142); see O11 "Rolling maintenance pass".
 > - **Next after O12/O13 and Grafana (C5): O14, the nightly full-season lifecycle check.**
 
 ---
@@ -376,11 +377,16 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   - Read every Oracle email: maintenance, reclamation, policy changes.
   - Compute → **each** instance → **Maintenance**: if a maintenance reboot falls within a competition week, **reschedule it** or do it early on a quiet day.
   - Bucket size (Storage → Buckets → `mallakhamb-backups` → *Approximate size*) is well under 10 GB.
-  - **Patch the standby first**, check it (`startup.js --check` via a standby deploy), then patch the active **on a different day**.
+  - **Patch the standby first**, check it (`startup.js --check` via a standby deploy), then patch the active **on a different day**, or the same day with the rolling pass below.
+- **Rolling maintenance pass (OS updates, kernel, Node major).** Done 2026-10-16 for Node 22 → 24 + kernel 7.0; staging was down **62 s**. A stays serving until step 3.
+  1. **Standby (B):** `apt-get upgrade` (and NodeSource `setup_<major>.x` + `apt-get install nodejs` for a Node change; re-pin `npm@11.6.2`) → reboot → `sudo rm "$(readlink -f /opt/mallakhamb/current)/.complete"` → `sudo mallakhamb-deploy $(cat /opt/mallakhamb/DEPLOYED_SHA)`. Releases are built once per SHA, so without removing `.complete` the old `node_modules` stay; the standby deploy ends with `startup.js --check` against the real config and database = the test.
+  2. Cloud Shell `failover-ip.sh move <B>` → on B `sudo mallakhamb-promote` → `https://<API_HOST>/api/health/ready` = 200.
+  3. On A `sudo mallakhamb-demote` → Cloud Shell `failover-ip.sh finish <A>` → **only then** patch A as in step 1. Between `move` and `finish` A has **no public IP and so no internet** (no NAT gateway): apt and NodeSource time out there.
+  4. Roles stay swapped; VM names never say active/standby. Fail back only if there is a reason to.
 - **Before every competition:**
   - Both instances are *Running*; neither has maintenance scheduled in the meet window.
   - The standby holds the same SHA as the active (Grafana Release table).
-  - The account is still PAYG.
+  - The account is still **Always Free** (never upgraded to PAYG).
 - **DNS TTL:** after C9, keep the `www` / apex / `api` TTL at **600 s** (not 3600), so the escape hatch (§6) can move traffic within minutes. Failover between A and B needs no DNS change at all.
 - **Never:**
   - resize either VM, or create a third A1 VM (the quota policy blocks it)
