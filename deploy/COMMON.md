@@ -717,11 +717,14 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
 
 ## PHASE C5 — Staging monitoring (Day 5, ~30 min)
 
-- [ ] **C5.1** Grafana Cloud → *Connections → Metrics Endpoint* → **add a second scrape job** `mallakhamb-api-staging`:
+- [x] **C5.1** Grafana Cloud → *Connections → Metrics Endpoint* → **add a second scrape job** `mallakhamb-api-staging`:
   - URL `https://<STAGING_API_HOST>/metrics`, Bearer = the staging `METRICS_TOKEN`, interval 60 s.
   - **Do not touch** the production job `mallakhamb-api` (Render).
-- [ ] **C5.2 Verify:** `up{scrape_job="mallakhamb-api-staging"}` = 1. Dashboards and alerts still show **only** the Render data, since they select `scrape_job="mallakhamb-api"`.
-- [ ] **C5.3** Generate the dashboards locally with the new platform preset into a temp folder, and import one copy named "… (staging preview)", with its selectors edited to the `-staging` jobs. Check every panel has data, then delete the preview. Production dashboards stay untouched until C7.
+  - *Done 2026-10-16 (OCI): `https://api-137-23-63-84.sslip.io/metrics`. One job only, on purpose: the URL is the reserved IP, so it follows whichever VM is active after a failover; the standby runs no API to scrape. Each VM is watched by name through Alloy.*
+- [x] **C5.2 Verify:** `up{scrape_job="mallakhamb-api-staging"}` = 1. Dashboards and alerts still show **only** the Render data, since they select `scrape_job="mallakhamb-api"`.
+  - *2026-10-16: up = 1 (128 series); production `mallakhamb-api` up = 1 (725 series), unchanged. The scrape showed three differences: `app_info` version `dev` (C1.11 not done yet), Node **v22** on OCI vs **v24** on Render (to resolve before C7), and service label `mallakhamb-api` vs `mallakhamb-server` (harmless).*
+- [x] **C5.3** Generate the dashboards locally with the new platform preset into a temp folder, and import one copy named "… (staging preview)", with its selectors edited to the `-staging` jobs. Check every panel has data, then delete the preview. Production dashboards stay untouched until C7.
+  - *2026-10-16: `build-dashboards.js --platform=oci --staging` writes the previews with `-staging` uids. Instead of importing, every panel query was run against Grafana directly (nothing to clean up): all have data except the six that only count real traffic (busiest routes, socket events and handler p95, logins, payment webhooks, scores by outcome), which are "No data" on an idle staging and on an idle production alike. The Host row was checked the same way (deploy/monitoring/PLAN.md "Move to OCI").*
 
 ---
 
