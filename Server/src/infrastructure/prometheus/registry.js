@@ -113,7 +113,8 @@ function createMetrics({ logger, env = process.env, collectDefaults = true } = {
     registers: [registry],
   });
   appInfo.set({
-    version: (env.RENDER_GIT_COMMIT || 'dev').slice(0, 7),
+    // GIT_COMMIT is written by mallakhamb-deploy on the VMs; Render sets its own.
+    version: (env.GIT_COMMIT || env.RENDER_GIT_COMMIT || 'dev').slice(0, 7),
     service: env.RENDER_SERVICE_NAME || 'mallakhamb-api',
     node: process.version,
   }, 1);

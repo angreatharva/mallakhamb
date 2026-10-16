@@ -89,6 +89,19 @@ describe('createMetrics', () => {
     });
     expect(await sample(metrics, 'app_info', { version: 'abcdef1', service: 'mallakhamb-server' })).toBe(1);
   });
+
+  test('app_info prefers GIT_COMMIT (the VM deploy) over RENDER_GIT_COMMIT', async () => {
+    const metrics = createMetrics({
+      collectDefaults: false,
+      env: { GIT_COMMIT: '7dd21b20ea426b051fe2902c6d02bfaf6fac89c8', RENDER_GIT_COMMIT: 'abcdef1234567890' },
+    });
+    expect(await sample(metrics, 'app_info', { version: '7dd21b2' })).toBe(1);
+  });
+
+  test('app_info says dev when no commit is known', async () => {
+    const metrics = createMetrics({ collectDefaults: false, env: {} });
+    expect(await sample(metrics, 'app_info', { version: 'dev', service: 'mallakhamb-api' })).toBe(1);
+  });
 });
 
 describe('business labels are forced through allow-lists', () => {

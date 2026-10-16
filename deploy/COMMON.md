@@ -276,7 +276,8 @@ Every change here also works on Render. Ship it to Render production first (C1.9
      The disk alert also gets a **critical** twin at > 90% (the starter thresholds in the external review say warn at 75% and page at 85%; ours are 80% and 90%, because a 50 GB disk with 14-day log rotation grows slowly). Regenerate `mallakhamb-rules.yaml`.
   3. `synthetics/apply-checks.js`: targets come from two constants, `API_URL = https://<API_HOST>/api/health/ready` and `WEB_URL = https://<APP_HOST>/`.
   4. `deploy/monitoring/PLAN.md`: a new section "Move to <platform>" listing these changes; record sheet updated at cutover.
-- [ ] **C1.11 Fix F19.** In `registry.js`: `version: (env.GIT_COMMIT || env.RENDER_GIT_COMMIT || 'dev').slice(0, 7)`. The deploy script provides `GIT_COMMIT` (C4.8). Add a Jest case. It's harmless on Render.
+- [x] **C1.11 Fix F19.** In `registry.js`: `version: (env.GIT_COMMIT || env.RENDER_GIT_COMMIT || 'dev').slice(0, 7)`. The deploy script provides `GIT_COMMIT` (C4.8). Add a Jest case. It's harmless on Render.
+  - *Done 2026-10-16 on `deploy/move-readiness`: two Jest cases (GIT_COMMIT wins; `dev` when nothing is set); full Server suite 69 suites / 901 tests green.*
 - [ ] **C1.8 Test gate:**
   - `cd Server && npm test`, and `cd Web && npm test && npm run lint && npm run build`, all green.
   - `npm run docs:openapi:check` passes.
