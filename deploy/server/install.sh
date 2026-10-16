@@ -64,6 +64,14 @@ chown mallakhamb:mallakhamb /var/log/mallakhamb && chmod 750 /var/log/mallakhamb
 chown root:mallakhamb /etc/mallakhamb && chmod 750 /etc/mallakhamb
 chmod 755 /var/lib/alloy/textfile   # chgrp alloy happens when Alloy is installed (C4.14)
 
+step "C4.4 repo access: read-only GitHub deploy key"
+mkdir -p -m 700 /root/.ssh
+[ -f /root/.ssh/mallakhamb_deploy ] || ssh-keygen -q -t ed25519 -N "" -C "mallakhamb-prod-oci-deploy (read-only)" -f /root/.ssh/mallakhamb_deploy
+grep -q "^github.com ssh-ed25519" /root/.ssh/known_hosts 2>/dev/null || ssh-keyscan -t ed25519 github.com 2>/dev/null >> /root/.ssh/known_hosts
+ssh-keygen -lf /root/.ssh/known_hosts | grep github.com   # must be SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU
+echo "deploy key (add to GitHub > repo > Settings > Deploy keys, write access UNCHECKED, if not there yet):"
+cat /root/.ssh/mallakhamb_deploy.pub
+
 step "O6.6 OCI CLI (instance principal)"
 if [ ! -x /opt/oci-cli/bin/oci ]; then
   python3 -m venv /opt/oci-cli && /opt/oci-cli/bin/pip install -q --upgrade pip oci-cli

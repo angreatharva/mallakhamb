@@ -2,11 +2,11 @@
 # Installed as /etc/mallakhamb/platform.sh (root:root 0644). Sourced, never executed.
 export OCI_CLI_AUTH=instance_principal
 OCI=/opt/oci-cli/bin/oci
-# The repo is private and has no deploy key yet: code arrives as a git bundle copied over the
-# Bastion (see install.sh). Switch to the GitHub URL + GIT_SSH_COMMAND once a read-only deploy key exists.
-REPO_URL="/opt/mallakhamb/mallakhamb.bundle"
-# REPO_URL="git@github.com:angreatharva/mallakhamb.git"
-# GIT_SSH_COMMAND="ssh -i /root/.ssh/mallakhamb_deploy -o IdentitiesOnly=yes"
+# Pulled over SSH with a READ-ONLY GitHub deploy key (/root/.ssh/mallakhamb_deploy, COMMON.md C4.4),
+# so it works while the repo is private. Never give this key write access: Render deploys master.
+# Fallback without the key: REPO_URL="/opt/mallakhamb/mallakhamb.bundle" (a git bundle copied over the Bastion).
+REPO_URL="git@github.com:angreatharva/mallakhamb.git"
+GIT_SSH_COMMAND="ssh -i /root/.ssh/mallakhamb_deploy -o IdentitiesOnly=yes"
 SECRET_OCID="__SECRET_OCID__"          # mallakhamb-prod-bom-secret-api-env, set by install.sh
 OS_NAMESPACE="bmfuwns4gjjr"
 BACKUP_BUCKET="mallakhamb-prod-bom-bkt-backups"

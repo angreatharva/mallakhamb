@@ -1,0 +1,15 @@
+[Unit]
+Description=TEMPORARY one-off: launch mallakhamb app-02 when Mumbai A1 capacity frees up
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# One run only: no Restart, no timer, no [Install] (never starts at boot). Hard stop after 72 h.
+Type=simple
+ExecStart=/usr/local/sbin/mallakhamb-launch-app-02
+Restart=no
+RuntimeMaxSec=72h
+StandardOutput=append:/var/log/mallakhamb-launch-app-02.log
+StandardError=append:/var/log/mallakhamb-launch-app-02.log
+NoNewPrivileges=true
+PrivateTmp=true

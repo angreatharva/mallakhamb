@@ -12,7 +12,9 @@ for i in $(seq 1 60); do
   sleep 3
 done
 curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null || { echo "API NOT READY — check journalctl -u mallakhamb" >&2; exit 1; }
-sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host"/' /etc/default/alloy && systemctl restart alloy
+if [ -f /etc/default/alloy ]; then   # Alloy arrives with monitoring (C4.14); skip until then
+  sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host"/' /etc/default/alloy && systemctl restart alloy
+fi
 sed -i 's/role="standby"/role="active"/' /var/lib/alloy/textfile/mallakhamb_release.prom 2>/dev/null || true
 systemctl enable --now mallakhamb-backup.timer
 echo "PROMOTED — this server is now the active. If a meet is running: systemctl enable --now mallakhamb-backup-meet.timer"

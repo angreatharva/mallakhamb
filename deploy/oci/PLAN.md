@@ -1,9 +1,17 @@
 # Mallakhamb — Oracle Cloud (OCI) Deployment Plan
 
-Status: **PLAN ONLY — nothing in here has been executed.**
-Written 2026-10-11. **Revised 2026-10-13** after reviewing an external two-VM OCI architecture plan (what was adopted and rejected: [README §Review](../README.md#review-of-the-external-oci-architecture-plan-2026-10-13)).
+Status: **BUILD IN PROGRESS (staging).** Written 2026-10-11. Revised 2026-10-13 after reviewing an external two-VM OCI architecture plan (what was adopted and rejected: [README §Review](../README.md#review-of-the-external-oci-architecture-plan-2026-10-13)).
 Owner: Atharva Angre.
 Shared steps live in [deploy/COMMON.md](../COMMON.md). This file only holds what is specific to Oracle Cloud.
+
+> **What was actually built differs from parts of this plan (2026-10-14/15). Where they disagree, this box wins.**
+> - **Always Free / Free Trial forever — never PAYG** (owner decision). O1.3 is dropped, so the idle-reclaim protection in §1.2 does **not** apply: handled by alerting + fast restart/failover (O11) and real nightly work (O14), **never fake load**.
+> - **Names:** `mallakhamb-prod-bom-<type>-<role>-<nn>` (e.g. compartment `mallakhamb-prod`, `…-vcn-01`, `…-vm-app-01/02`, `…-pip-app-01/02`, `…-kv-01`, `…-bkt-backups`); IAM `mallakhamb-prod-dg-app` / `mallakhamb-prod-pol-app`; Bastion `mallakhambprodbombastion01` (alphanumeric only). VM names never say active/standby — roles swap.
+> - **O1.7 quota is wrong as written:** A1 has per-AD *and* regional counters; also `set … standard-a1-core-regional-count to 2` and `standard-a1-memory-regional-count to 12`, or every launch fails `QuotaExceeded`. Block storage quota is **200** (100% of free), not 80%.
+> - **O2 network built by hand**, not the wizard: one public subnet, IGW, no NAT, no private subnet. Scripts: `deploy/oci/scripts/02-platform.sh`, server layer `deploy/server/install.sh`, env secret `deploy/oci/scripts/03-env-secret.md`.
+> - **Staging hosts:** `api-137-23-63-84.sslip.io` / `app-137-23-63-84.sslip.io` (production stays on Render until a later cutover to mallakhambcompetition.com). Code is pulled with a **read-only** GitHub deploy key.
+> - **A1 capacity in Mumbai is scarce:** launch without a fault domain (or retry FD-2/FD-3 for app-02) every ~5–10 min from a detached Cloud Shell script; Cloud Shell sessions are recycled when idle, which kills the script.
+> - **Next after O12/O13 and Grafana (C5): O14, the nightly full-season lifecycle check.**
 
 ---
 
@@ -110,7 +118,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 | Object storage namespace / bucket | ` ` / `mallakhamb-backups` |
 | Boot volume backup policy | `mallakhamb-weekly` |
 | Golden boot volume backup | |
-| Last failover drill (date, minutes) | |
+| Last failover drill (date, minutes) | **2026-10-16, both ways.** app-01→app-02: down 01:57:50→01:59:26 UTC (1 min 36 s), full swap incl. demote ≈ 4.5 min. app-02→app-01: down 02:01:37→02:02:50 (1 min 13 s). Target ≤ 10 min: PASS. Script `deploy/oci/scripts/failover-ip.sh` |
 
 ---
 
@@ -425,6 +433,54 @@ What users notice:
 - Up to ~10 minutes of "can't connect", then the app works again.
 - Judge screens reconnect by themselves.
 - Anyone whose token was **revoked** before the failover could use it again until it expires, because the logout list is in memory (F17). Note it and move on; it's minor.
+
+## O14 — Nightly full-season lifecycle check (after O13 and Grafana C5)
+
+**What:** every night, each VM runs the **complete roster** through the real API, against a **throw-away database**, then verifies and deletes it. It is a regression test of the real flows on the real infrastructure, and on the standby it proves the release there actually serves, not just that it is installed.
+**What it is not:** a way to defeat idle reclamation. Do **not** pad, loop or lengthen it to push CPU/memory over 20%. If the week's p95 crosses 20% on its own, that is a side effect of real work; if it does not, reclaim is handled by O11 alerting + restart/failover.
+
+**The roster (complete, not a sample)** — exactly `npm --prefix Server run setup:api -- --drop` ([seed chains](../../Server/scripts/setupApi.js)):
+
+| Step | Over the API | Volume |
+|---|---|---|
+| prepare, superadmin | bootstrap (migrations, first super admin) | — |
+| admin | `POST /superadmin/admins` (organiser) | 1 |
+| competitions | 3 per level: district Mumbai/Pune/Nashik, state Nagpur/Kolhapur/Aurangabad, national Delhi/Bengaluru/Chennai, international Goa/Hyderabad/Kolkata | 12 meets |
+| coaches | one team each, entered into the 3 meets at its level | 12 coaches / 12 teams / 36 entries |
+| players | register + join team | 110 athletes |
+| judges | register | 16 judges |
+| squads | squad places per meet entry (gender rule enforced) | — |
+| pay | discount-code redemption — verifies, never fakes (`paymentStatus` is never written directly) | 36 entries |
+| panels | seat panels from `seed/panel-plan.json` | 120 panels |
+| scores | judges score, Sr. Judge submits, results published | 240 categories |
+| verify | `scripts/verifySeed.js` | pass / fail |
+
+About 25–40 min end to end (most of it in `scores`).
+
+**Design**
+
+| Piece | Choice | Why |
+|---|---|---|
+| Where | each VM, staggered: app-01 03:00 IST (21:30 UTC), app-02 04:00 IST (22:30 UTC) | real work on both; never overlaps the 02:00 IST backup |
+| API instance | a **second, internal-only** copy of the same release: `mallakhamb-e2e.service`, `127.0.0.1:5001`, never in Caddy | the public API and its data are never touched; works on the standby where `mallakhamb.service` is stopped |
+| Database | `<db>_e2e` on the same Atlas cluster, its own user with `readWrite@<db>_e2e` **only** | the e2e copy physically cannot write the real DB |
+| Env | `/etc/mallakhamb/e2e.env` rendered from the app env with overrides: `PORT=5001`, `MONGODB_URI=<e2e uri>`, `RATE_LIMIT_ENABLED=false`, `EMAIL_PROVIDER=none`, `DISCOUNT_CODE_ENABLED=true`, `DISCOUNT_CODE=<e2e-only code>`, `SEED_API_URL=http://127.0.0.1:5001/api`, `SEED_ADMIN_PASSWORD`, `SEED_SUPERADMIN_PASSWORD` | rate limiting would throttle a 110-athlete run; email must never go to real addresses |
+| Runner | `mallakhamb-e2e.timer` → `/usr/local/bin/mallakhamb-e2e`: start e2e service → `setup:api -- --drop` → `verifySeed` → drop `<db>_e2e` → stop service → write `mallakhamb_e2e_last_success_timestamp_seconds` + duration to the Alloy textfile | no Jenkins: it needs its own server and 1–2 GB RAM (a third of a VM). A systemd timer is free and identical to the backup timers |
+| Meet days | `/etc/mallakhamb/NO_E2E` flag file skips the run; `mallakhamb-backup-meet.timer` enabled ⇒ skip automatically | never compete with live scoring for the one OCPU or for Atlas |
+| Alerts (Grafana) | *E2E stale* (> 26 h since last success, warning); *E2E failed* (last run exit ≠ 0, warning) | a broken flow is known the next morning, not on meet day |
+
+**Before it can run (code + data)**
+
+1. **`EMAIL_PROVIDER=none`** — the server only knows `nodemailer` / `resend` / `gmail-api` today. Add a `none` provider that logs the message and sends nothing, and make `config-manager` reject `none` when the env is the public API (`PORT=5000`) so it can never be switched on in production by accident. Jest cases for both.
+2. **Atlas:** create `<db>_e2e` user `mallakhamb_e2e` (`readWrite@<db>_e2e` only); both VM IPs are already on the access list.
+3. **Check the roster files are committed** (`Server/.gitignore` allow-lists `scripts/*` and `scripts/seed/*` file by file — a missing `!` line reads fine locally and is absent on the VM).
+4. **`--drop` safety:** the runner refuses to start unless the e2e `MONGODB_URI` database name ends in `_e2e`.
+5. Install via `deploy/server/install.sh` (new units + script), first run by hand, then enable the timer on both VMs.
+
+**Verify**
+- A manual run prints `verifySeed` OK, `<db>_e2e` is gone afterwards, the real DB's counts (`mallakhamb-counts`) are unchanged, no email was sent (Gmail "Sent" is empty for the run window).
+- Grafana shows the two new metrics for both VMs; force a failure (wrong `SEED_ADMIN_PASSWORD`) and the *E2E failed* alert fires.
+- After 7 nights: read OCI Monitoring CPU/memory p95 per VM and **record the numbers** in the record sheet — whether or not they cross 20%.
 
 ## 5. Single-VM fallback
 

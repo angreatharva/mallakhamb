@@ -6,6 +6,8 @@ mkdir -p /etc/caddy/sites-standby
 shopt -s nullglob
 for f in /etc/caddy/sites/*.caddy; do mv "$f" /etc/caddy/sites-standby/; done
 systemctl reload caddy
-sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host-standby"/' /etc/default/alloy && systemctl restart alloy
+if [ -f /etc/default/alloy ]; then   # Alloy arrives with monitoring (C4.14); skip until then
+  sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host-standby"/' /etc/default/alloy && systemctl restart alloy
+fi
 sed -i 's/role="active"/role="standby"/' /var/lib/alloy/textfile/mallakhamb_release.prom 2>/dev/null || true
 echo "DEMOTED — this server is now the standby (service stopped, no sites served)"
