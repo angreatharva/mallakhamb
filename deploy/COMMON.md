@@ -247,7 +247,7 @@ Every change here also works on Render. Ship it to Render production first (C1.9
   - `bin/mallakhamb-render-env`, `bin/mallakhamb-envcheck`, `bin/mallakhamb-deploy`, `bin/mallakhamb-rollback`, `bin/mallakhamb-backup`, `bin/mallakhamb-counts`, `bin/mallakhamb-promote`, `bin/mallakhamb-demote`
   - `mallakhamb-backup.service`/`.timer`, `mallakhamb-backup-meet.service`/`.timer`, `alloy/config.alloy`, `README.md`
   - Every script passes `shellcheck` (add a CI step). They run as root on production, so a quoting slip must be caught before it ships.
-- [ ] **C1.7 Monitoring source changes. Prepared and committed, NOT applied** (applied at cutover, C7):
+- [x] **C1.7 Monitoring source changes. Prepared and committed, NOT applied** (applied at cutover, C7). *Done 2026-10-16 on branch `deploy/move-readiness`; as built and checked against the live OCI host metrics: deploy/monitoring/PLAN.md "Move to OCI". The AWS preset has no standby rules (its standby is optional).*
   1. `dashboards/build-dashboards.js`: `LIMITS` gets a **platform preset** chosen by an argument (`render` | `oci` | `aws`):
 
      | Limit | render | oci (A1 1 OCPU / 6 GB per VM) | oci-single (fallback: 2 OCPU / 12 GB) | aws (t4g.small 2 vCPU / 2 GiB) |

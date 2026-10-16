@@ -468,6 +468,21 @@ Verified: full jest suite green (66 suites, 852 tests); `docs:openapi:check` 183
 
 ---
 
+## Move to OCI — prepared 2026-10-16 (COMMON.md C1.7), applied at the cutover (C7)
+
+Everything below is **committed but not live**. Production dashboards, alerts and uptime checks still describe Render, and the render preset regenerates them byte for byte (the rule hashes are unchanged), so nothing in Grafana moves until the cutover.
+
+| Piece | Change | At the cutover (COMMON C7, step 55) |
+|---|---|---|
+| `dashboards/build-dashboards.js` | `--platform=render\|oci\|oci-single\|aws` limits preset (default `render`). VM presets: `cpu_limit` = 1 core (one Node event loop), `mem_limit` = the API's RSS budget (OCI 3 GiB of the 6 GB VM), Atlas Flex wording, and a **Host** row on the Runtime dashboard (ids 11–20): Release table (sha + role per VM), last backup age, host CPU / memory / root disk / inodes %, load, network, OOM kills. One line per VM, active and standby. `--staging` writes "… (staging preview)" copies with `-staging` uids that select `mallakhamb-api-staging` (C5.3) | `node …/build-dashboards.js --platform=oci`, import the four files |
+| `alerts/apply-alerts.js` | `PLATFORM` constant (stays `'render'`). VM presets: *CPU saturated* at 80 % of one core, *Memory near limit* at 85 % of the budget, VM wording (journalctl / Bastion, not Render). **New rules** on the active (`scrape_job="mallakhamb-host"`): Host metrics missing, Host memory high (> 85 %), Disk filling (> 80 %) + Disk almost full (> 90 %, critical), Backup stale (> 26 h), Out-of-memory kill, Inodes running out (< 10 % free); OCI only: Standby missing (30 m), Standby behind the active (2 h). Render 13, OCI 22, oci-single / AWS 20 | set `PLATFORM = 'oci'`, paste |
+| `alerts/mallakhamb-rules.<platform>.yaml` | Generated per VM preset for review; `mallakhamb-rules.yaml` stays render | — |
+| `synthetics/apply-checks.js` | Targets are the constants `API_URL` and `WEB_URL` (still Render) | point them at the new hosts, paste |
+
+**Checked against live data (2026-10-16, both OCI VMs via Alloy):** every Host-row query and every new alert expression returns a value for each VM. Today none would fire: root disk 17 %, inodes 4 % used, host memory 9–11 %, last backup 7 h, one release on both. `node_vmstat_oom_kill` briefly doubled when Grafana's Asserts added an `asserts_env` label, so the OOM panel and rule sum by instance.
+
+---
+
 ## 7. Security
 
 - **Token:** lives only in Render (dashboard-owned) and the Grafana scrape job. Never in git, never in chat, never in a URL.
@@ -491,6 +506,19 @@ Verified: full jest suite green (66 suites, 852 tests); `docs:openapi:check` 183
 | Login failures spike | Logins by role | Brute force on one role → rate limits on (`RATE_LIMIT_ENABLED`); judges mistyping at venue start → ignore |
 | Payment webhook problem | Payment webhooks panel; Razorpay dashboard → Webhooks | `rejected_signature` → `RAZORPAY_WEBHOOK_SECRET` mismatch; `error` → logs |
 | Uptime check failing | Overview → *Outside-in* row: which check, and since when | `api-ready` failing while *API down* is quiet → the process is up but the database is unreachable, or Render routing/TLS is broken; `web-home` failing → static-site deploy or Render edge. Check Render → Events and the Render status page |
+
+**On the VMs (after the move; the rules carry the same first look in their description).** Reach the active over the Bastion (private IP); the standby the same way.
+
+| Alert | First look | Likely causes → action |
+|---|---|---|
+| Host metrics missing | `systemctl status alloy`; `journalctl -u alloy -n 50` | Alloy stopped, or its Grafana token was revoked (401 in the log) → restore the token in `/etc/default/alloy`. VM gone → fail over (deploy/oci/PLAN.md O13) |
+| Host memory high | Runtime → *Memory: % of plan*, then the Host row | API RSS high → as *Memory near limit*. API normal → another process (a stuck `mongodump`, a manual script): `ps aux --sort=-rss \| head` |
+| Disk filling / Disk almost full | `sudo du -xh / --max-depth=2 \| sort -h \| tail` | Journal (`sudo journalctl --vacuum-time=7d`), `/var/log/mallakhamb`, old releases in `/opt/mallakhamb/releases` (the deploy keeps the live one + 4) |
+| Backup stale | `systemctl status mallakhamb-backup.timer mallakhamb-backup`; `journalctl -u mallakhamb-backup -n 100` | Atlas unreachable, or the bucket refused the upload (instance-principal policy) → run `sudo mallakhamb-backup` and read the error |
+| Out-of-memory kill | `sudo journalctl -k \| grep -i oom` | Which process died. The API → every tablet reconnected; look for the leak as in *Memory near limit* |
+| Inodes running out | `sudo du -x --inodes / --max-depth=3 \| sort -n \| tail` | Millions of small files, usually a temp or session directory |
+| Standby missing | Over the Bastion on the standby: `systemctl status alloy` | Standby stopped or reclaimed → there is nothing to fail over to; rebuild it (deploy/oci/PLAN.md O12) |
+| Standby behind the active | Runtime → Host → *Release* | A deploy reached one server only → on the standby `sudo mallakhamb-deploy <the active's full sha>` |
 
 ---
 

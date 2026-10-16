@@ -2,9 +2,14 @@
 
 | File | What it is |
 |---|---|
-| `apply-alerts.js` | **Source of truth.** The 12 rules, the `owner-email` contact point and the `service=mallakhamb-api` notification route |
+| `apply-alerts.js` | **Source of truth.** The rules (13 on Render), the `owner-email` contact point and the `service=mallakhamb-api` notification route |
 | `mallakhamb-rules.yaml` | Generated from `apply-alerts.js` in Grafana's alert-rule export format, for reading and diffing. Don't edit it by hand |
-| `export-yaml.js` | Regenerates the YAML, or prints per-rule hashes with `--hashes` |
+| `mallakhamb-rules.<platform>.yaml` | The same for each VM preset (`oci` 22 rules, `oci-single` and `aws` 20): the host rules added. **Not live**; applied at the cutover |
+| `export-yaml.js` | Regenerates every YAML, or prints per-rule hashes with `--hashes [--platform=<p>]` |
+
+## Platform
+
+`PLATFORM` at the top of `apply-alerts.js` stays `'render'` until the cutover (COMMON.md C7, step 55). Then set it to `'oci'` (or the platform moved to) before pasting: that changes the CPU / memory thresholds and wording, and adds the host rules, which read Alloy's `scrape_job="mallakhamb-host"` and would fire at once on Render. See PLAN.md "Move to OCI".
 
 ## Change a rule
 

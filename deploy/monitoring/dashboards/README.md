@@ -6,6 +6,11 @@
 node deploy/monitoring/dashboards/build-dashboards.js
 ```
 
+That builds the **render** preset, which is what is live. Two options exist for the move off Render (COMMON.md C1.7, C5.3; PLAN.md "Move to OCI"):
+
+- `--platform=oci|oci-single|aws` sets the limits for a VM and adds the **Host** row to the Runtime dashboard. Write to a temp folder (`build-dashboards.js /tmp/oci --platform=oci`) until the cutover, so the committed render files stay as they are.
+- `--staging` (with a platform) writes "… (staging preview)" copies with `-staging` uids that read `scrape_job="mallakhamb-api-staging"`. They can be imported next to production without overwriting anything; delete them after the check.
+
 | File | uid | What it answers |
 |---|---|---|
 | `mallakhamb-api-overview.json` | `mallakhamb-api-overview` | Up? How busy, how fast, how many errors, which routes; capacity vs. every limit; outside-in checks |

@@ -1,28 +1,53 @@
 /**
  * Builds the four Grafana dashboards in this folder (deploy/monitoring/PLAN.md §3).
  *
- *   node deploy/monitoring/dashboards/build-dashboards.js
+ *   node deploy/monitoring/dashboards/build-dashboards.js [outDir] [--platform=render|oci|oci-single|aws] [--staging]
  *
  * This file is the source of truth; the *.json files are generated from it.
  * Import them as described in README.md.
  *
+ * --platform picks the limits preset (COMMON.md C1.7). The default, render, is
+ * what production runs today and reproduces the committed *.json byte for byte.
+ * The VM presets also add a Host row (Alloy, scrape_job="mallakhamb-host") to
+ * the Runtime dashboard. --staging selects the mallakhamb-api-staging scrape job
+ * and renames every uid/title to "… (staging preview)", so an import can never
+ * overwrite a production dashboard (COMMON.md C5.3).
+ *
  * Usage gauges are "% of a limit" with bands at 70 / 80 / 90 %. The fixed
- * limits are hidden dashboard constants (LIMITS below): if the Render plan or
- * the pool size changes, change them here and re-import.
+ * limits are hidden dashboard constants (LIMITS below): if the plan or the
+ * pool size changes, change the preset here and re-import.
  */
 const fs = require('fs');
 const path = require('path');
-const OUT = process.argv[2] || __dirname;
-const S = 'scrape_job="mallakhamb-api"';
+const args = process.argv.slice(2);
+const flag = (name) => (args.find((a) => a.startsWith(`--${name}=`)) || '').split('=')[1];
+const OUT = args.find((a) => !a.startsWith('--')) || __dirname;
+const STAGING = args.includes('--staging');
+const S = STAGING ? 'scrape_job="mallakhamb-api-staging"' : 'scrape_job="mallakhamb-api"';
 const DS = { type: 'prometheus', uid: '${datasource}' };
 const USAGE_DS = { type: 'prometheus', uid: '${usage_datasource}' };
 
+const GIB = 1024 * 1024 * 1024;
+// cpu: cores the Node process can use (one event loop = 1 core). mem: process RSS budget.
+// host: the server is a VM with Alloy (Host row). standby: a warm standby is part of the platform.
+const PRESETS = {
+  render: { cpu: '0.1', mem: 512 * 1024 * 1024, plan: 'Render free plan', atlas: 'M0', host: false, standby: false },
+  oci: { cpu: '1', mem: 3 * GIB, plan: 'OCI A1, 1 OCPU / 6 GB per VM', atlas: 'Flex', host: true, standby: true },
+  'oci-single': { cpu: '1', mem: 4 * GIB, plan: 'OCI A1 single VM, 2 OCPU / 12 GB', atlas: 'Flex', host: true, standby: false },
+  // The AWS standby is optional (deploy/aws/PLAN.md); set standby: true if it is built.
+  aws: { cpu: '1', mem: 1.5 * GIB, plan: 'AWS t4g.small, 2 vCPU / 2 GiB', atlas: 'Flex', host: true, standby: false },
+};
+const PLATFORM = flag('platform') || 'render';
+const P = PRESETS[PLATFORM];
+if (!P) throw new Error(`Unknown --platform=${PLATFORM}; use one of ${Object.keys(PRESETS).join(', ')}`);
+const memText = `${P.mem / GIB >= 1 ? `${P.mem / GIB} GiB` : `${P.mem / 1024 / 1024} MiB`}`;
+
 const LIMITS = [
   // name, value, label
-  ['cpu_limit', '0.1', 'CPU limit, cores (Render free plan)'],
-  ['mem_limit', String(512 * 1024 * 1024), 'Memory limit, bytes (Render free plan, 512 MiB)'],
+  ['cpu_limit', P.cpu, P.host ? `CPU limit, cores (one Node event loop; ${P.plan})` : `CPU limit, cores (${P.plan})`],
+  ['mem_limit', String(P.mem), P.host ? `Memory budget for the API process, bytes (${memText}; ${P.plan})` : `Memory limit, bytes (${P.plan}, ${memText})`],
   ['pool_max', '100', 'MongoDB pool max (DB_POOL_MAX)'],
-  ['atlas_conn_limit', '500', 'Atlas M0 connection cap'],
+  ['atlas_conn_limit', '500', `Atlas ${P.atlas} connection cap`],
   ['sm_included', '100000', 'Synthetic check executions included per month (free tier)'],
 ];
 
@@ -76,9 +101,10 @@ function ts(title, targets, gridPos, { unit = 'short', line, description, min, s
   });
 }
 
-function table(title, targets, gridPos, { unit = 'short', valueName = 'Value', hide = [], description, decimals } = {}) {
+function table(title, targets, gridPos, { unit = 'short', valueName = 'Value', hide = [], keep = [], description, decimals } = {}) {
   const excludeByName = { Time: true, __name__: true, job: true, scrape_job: true, instance: true };
   for (const h of hide) excludeByName[h] = true;
+  for (const k of keep) delete excludeByName[k];
   return base('table', title, targets, gridPos, {
     description,
     fieldConfig: { defaults: { unit, decimals, custom: { align: 'auto' } }, overrides: [] },
@@ -120,6 +146,11 @@ const text = (title, content, gridPos) => ({ id: ++id, type: 'text', title, grid
 const row = (title, y) => ({ id: ++id, type: 'row', title, collapsed: false, gridPos: { h: 1, w: 24, x: 0, y }, panels: [] });
 
 function dashboard({ uid, title, description, panels, refresh = '1m', from = 'now-6h', tags = [] }) {
+  if (STAGING) {
+    uid = `${uid}-staging`;
+    title = `${title} (staging preview)`;
+    tags = [...tags, 'staging-preview'];
+  }
   return {
     uid, title, description, tags: ['mallakhamb', ...tags],
     timezone: 'browser', editable: true, graphTooltip: 1, schemaVersion: 39, version: 1,
@@ -175,10 +206,14 @@ const PCT = {
   sm: '100 * sum(rate(probe_all_success_count[15m])) * 86400 * 30 / $sm_included',
 };
 const DESC = {
-  cpu: 'Process CPU as a share of the plan allowance (cpu_limit, 0.1 core on Render free). Alert "CPU saturated" fires at 80 % for 15 m.',
-  mem: 'Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert "Memory near limit" fires at ~81 % (435 MB) for 10 m.',
+  cpu: P.host
+    ? `Process CPU as a share of one core (cpu_limit = ${P.cpu}): Node runs one event loop, so 100 % here is saturated whatever the VM has. Alert "CPU saturated" fires at 80 % for 15 m.`
+    : 'Process CPU as a share of the plan allowance (cpu_limit, 0.1 core on Render free). Alert "CPU saturated" fires at 80 % for 15 m.',
+  mem: P.host
+    ? `Resident memory as a share of the API process budget (mem_limit, ${memText}; ${P.plan}). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert "Memory near limit" fires at 85 % for 10 m.`
+    : 'Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert "Memory near limit" fires at ~81 % (435 MB) for 10 m.',
   pool: 'MongoDB connections checked out as a share of DB_POOL_MAX (pool_max). Near 100 % means requests queue (alert "DB pool waiting").',
-  atlas: 'Connections this API holds open as a share of the Atlas M0 cap (500). Other clients (scripts, Compass) count against the same cap.',
+  atlas: `Connections this API holds open as a share of the Atlas ${P.atlas} cap (500). Other clients (scripts, Compass) count against the same cap.`,
   series: 'Active series vs. the series included in the Grafana Cloud plan. Over 100 % is billed or dropped.',
   sm: 'Synthetic check executions per month at the current rate (last 15 m, projected to 30 days), for every check in the account, vs. the monthly allowance (sm_included). Planned for the two Mallakhamb checks: 60,480, about 60 %.',
 };
@@ -219,7 +254,9 @@ const overview = dashboard({
     }),
     stat('Restarts (24h)', [t(`changes(process_start_time_seconds{${S}}[24h])`)], { h: 4, w: 4, x: 16, y: 0 }, {
       steps: [green, { color: 'orange', value: 2 }, { color: 'red', value: 4 }],
-      description: 'Every deploy is one restart. Several without a deploy = crash or out-of-memory (512 MB).',
+      description: P.host
+        ? 'Every deploy is one restart (mallakhamb-deploy). Several without a deploy = crash or out-of-memory kill; see Runtime → Host → OOM kills.'
+        : 'Every deploy is one restart. Several without a deploy = crash or out-of-memory (512 MB).',
     }),
     table('Version', [instant(`app_info{${S}}`)], { h: 4, w: 4, x: 20, y: 0 }, { hide: ['Value'] }),
 
@@ -255,17 +292,57 @@ const overview = dashboard({
       min: 0, description: '1 = passed, 0 = failed. Alert "Uptime check failing" fires when both probes fail one check for 5 m.',
     }),
     ts('Check duration by probe', [t(`probe_duration_seconds{${SM}}`, '{{job}} / {{probe}}')], { h: 4, w: 12, x: 0, y: 41 }, {
-      unit: 's', min: 0, description: 'Full request time as a tablet in India would see it, with DNS, TLS and the Render proxy included.',
+      unit: 's', min: 0, description: `Full request time as a tablet in India would see it, with DNS, TLS and the ${P.host ? 'Caddy' : 'Render'} proxy included.`,
     }),
   ],
 });
+
+// ------------------------------------------------------------------ host (VM presets only)
+// Alloy on each VM (deploy/server/alloy/config.alloy). The active reports as
+// mallakhamb-host, a warm standby as mallakhamb-host-standby; both are drawn,
+// one line per VM. Panel ids are referenced by the host alerts in
+// alerts/apply-alerts.js (HOST_PANEL there): keep the two in step.
+const HS = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby"';
+const hostPct = {
+  cpu: `100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{${HS},mode="idle"}[5m])))`,
+  mem: `100 * (1 - node_memory_MemAvailable_bytes{${HS}} / node_memory_MemTotal_bytes{${HS}})`,
+  disk: `100 * (1 - node_filesystem_avail_bytes{${HS},mountpoint="/"} / node_filesystem_size_bytes{${HS},mountpoint="/"})`,
+  inodes: `100 * (1 - node_filesystem_files_free{${HS},mountpoint="/"} / node_filesystem_files{${HS},mountpoint="/"})`,
+};
+const hostRow = (y) => [
+  row('Host: the VMs (Alloy; active = mallakhamb-host, standby = mallakhamb-host-standby)', y),
+  table('Release', [instant(`mallakhamb_release_info{${HS}}`)], { h: 6, w: 12, x: 0, y: y + 1 }, {
+    hide: ['Value', 'platform'], keep: ['instance'],
+    description: 'Which commit each VM holds, and its role. Active and standby should show the same sha (alert "Standby behind the active").',
+  }),
+  stat('Last backup age', [t(`time() - mallakhamb_backup_last_success_timestamp_seconds{${HS}}`, '{{instance}}')], { h: 6, w: 12, x: 12, y: y + 1 }, {
+    unit: 's', steps: [green, { color: 'orange', value: 93600 }, { color: 'red', value: 172800 }],
+    description: 'Time since mallakhamb-backup last succeeded. The nightly backup runs on the active; alert "Backup stale" fires above 26 h. A standby keeps the age it was cloned with.',
+  }),
+  pctTs('Host CPU busy %', [t(hostPct.cpu, '{{instance}}')], { h: 8, w: 12, x: 0, y: y + 7 }, { description: 'All cores, every process on the VM. Dashed lines: 70 / 80 / 90 %.' }),
+  pctTs('Host memory used %', [t(hostPct.mem, '{{instance}}')], { h: 8, w: 12, x: 12, y: y + 7 }, {
+    description: '1 − MemAvailable / MemTotal. Alert "Host memory high" fires above 85 % for 10 m on the active. Dashed lines: 70 / 80 / 90 %.',
+  }),
+  pctTs('Root disk used %', [t(hostPct.disk, '{{instance}}')], { h: 8, w: 8, x: 0, y: y + 15 }, { description: 'Alerts "Disk filling" at 80 % (warning) and 90 % (critical).' }),
+  pctTs('Inodes used %', [t(hostPct.inodes, '{{instance}}')], { h: 8, w: 8, x: 8, y: y + 15 }, { description: 'Alert "Inodes running out" below 10 % free.' }),
+  ts('Load (1m)', [t(`node_load1{${HS}}`, '{{instance}}')], { h: 8, w: 8, x: 16, y: y + 15 }, { min: 0, description: 'Runnable + waiting tasks. Above the core count for long = the VM is the bottleneck.' }),
+  ts('Network', [
+    t(`sum by (instance) (rate(node_network_receive_bytes_total{${HS},device!="lo"}[5m]))`, '{{instance}} in'),
+    t(`sum by (instance) (rate(node_network_transmit_bytes_total{${HS},device!="lo"}[5m]))`, '{{instance}} out'),
+  ], { h: 8, w: 12, x: 0, y: y + 23 }, { unit: 'Bps', min: 0 }),
+  ts('OOM kills (1h)', [t(`sum by (instance) (increase(node_vmstat_oom_kill{${HS}}[1h]))`, '{{instance}}')], { h: 8, w: 12, x: 12, y: y + 23 }, {
+    min: 0, bars: true, description: 'The kernel killed a process for memory. Alert "Out-of-memory kill" pages on any.',
+  }),
+];
 
 // ------------------------------------------------------------------ runtime
 id = 0;
 const runtime = dashboard({
   uid: 'mallakhamb-runtime',
   title: 'Mallakhamb Runtime (Node.js)',
-  description: 'CPU, memory, event loop and GC against the Render free plan (0.1 CPU, 512 MB). Swap for jvm_* panels after the Spring Boot port. PLAN.md §3.2',
+  description: P.host
+    ? `CPU, memory, event loop and GC of the API process (one core, ${memText} budget; ${P.plan}), then the VMs themselves (Host row). Swap for jvm_* panels after the Spring Boot port. PLAN.md §3.2`
+    : 'CPU, memory, event loop and GC against the Render free plan (0.1 CPU, 512 MB). Swap for jvm_* panels after the Spring Boot port. PLAN.md §3.2',
   tags: ['runtime'],
   panels: [
     stat('Uptime', [t(`time() - process_start_time_seconds{${S}}`)], { h: 4, w: 6, x: 0, y: 0 }, { unit: 's' }),
@@ -287,6 +364,7 @@ const runtime = dashboard({
     ts('Active handles / requests', [
       t(`sum(nodejs_active_handles_total{${S}})`, 'handles'), t(`sum(nodejs_active_requests_total{${S}})`, 'requests'),
     ], { h: 8, w: 12, x: 12, y: 20 }, { min: 0, description: 'Handles include sockets: tablets connected over Socket.IO show up here.' }),
+    ...(P.host ? hostRow(28) : []),
   ],
 });
 

@@ -1,0 +1,1080 @@
+# GENERATED from apply-alerts.js by export-yaml.js. Do not edit by hand.
+# Platform preset: oci-single. NOT live: applied at the cutover (COMMON.md C7).
+# Grafana alert-rule file-provisioning format. Routing (not part of this file):
+#   service=mallakhamb-api → contact point owner-email, group by alertname,
+#   critical repeats every 1h, warning every 4h.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: mallakhamb-api
+    folder: Mallakhamb
+    interval: 1m
+    rules:
+      - uid: mk-api-down
+        title: API down
+        condition: C
+        for: 3m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: 'Mallakhamb API is DOWN: Grafana Cloud cannot scrape /metrics.'
+          description: >-
+            First look, over the Bastion on the active: systemctl status mallakhamb caddy; journalctl -u mallakhamb -n
+            200. Likely: a failed deploy (sudo mallakhamb-rollback), a missing env var (sudo mallakhamb-envcheck), or
+            METRICS_TOKEN differs between the server and the Grafana scrape job. If the VM itself is gone: rebuild from
+            the golden backup, deploy/oci/PLAN.md §5. Runbook: PLAN.md §8 "API down / Scrape missing".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-api-overview
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'up{scrape_job="mallakhamb-api"}'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-scrape-missing
+        title: Scrape missing
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: No scrape results at all for mallakhamb-api for 10 minutes.
+          description: >-
+            The Grafana Cloud scrape job itself has stopped or was renamed (Connections → Metrics Endpoint →
+            mallakhamb-api). Runbook: PLAN.md §8 "API down / Scrape missing".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-api-overview
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'absent(up{scrape_job="mallakhamb-api"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-high-5xx
+        title: High 5xx
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: 'More than 2 % of API requests are failing with 5xx ({{ humanizePercentage $values.A.Value }}).'
+          description: >-
+            First look: API overview → "Errors by route", then journalctl -u mallakhamb on the active by correlation id.
+            One route = a recent commit; every route = the database (Database dashboard). Runbook: PLAN.md §8 "High
+            5xx".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-api-overview
+          __panelId__: '13'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                ((sum(rate(http_server_requests_seconds_count{scrape_job="mallakhamb-api",outcome="SERVER_ERROR"}[5m]))
+                or vector(0)) /
+                clamp_min(sum(rate(http_server_requests_seconds_count{scrape_job="mallakhamb-api"}[5m])), 1e-9)) and
+                on() (sum(rate(http_server_requests_seconds_count{scrape_job="mallakhamb-api"}[5m])) > 0.05)
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.02
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-slow-api
+        title: Slow API
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'API p95 latency is above 1.5 s ({{ humanizeDuration $values.A.Value }}).'
+          description: >-
+            First look: API overview → "Slowest routes", and the Runtime dashboard. Usually a heavy synchronous handler
+            (results, exports) blocking the one event loop, or long GC. Runbook: PLAN.md §8 "Slow API / Event loop
+            blocked".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-api-overview
+          __panelId__: '8'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                histogram_quantile(0.95, sum by (le)
+                (rate(http_server_requests_seconds_bucket{scrape_job="mallakhamb-api"}[5m])))
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 1.5
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-event-loop
+        title: Event loop blocked
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'Event-loop lag p99 is above 200 ms ({{ humanizeDuration $values.A.Value }}).'
+          description: >-
+            Every request and socket event waits behind this. First look: Runtime → CPU and GC; API overview → "Slowest
+            routes". Runbook: PLAN.md §8 "Slow API / Event loop blocked".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '8'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'nodejs_eventloop_lag_p99_seconds{scrape_job="mallakhamb-api"}'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.2
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-memory
+        title: Memory near limit
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'API memory is above 85 % of its 4 GiB budget ({{ humanize1024 $values.A.Value }}B).'
+          description: >-
+            Past the budget the VM swaps, then the kernel may kill the process, which drops every live tablet connection
+            (systemd restarts it). First look: Runtime → RSS and heap, then the Host row. Runbook: PLAN.md §8 "Memory
+            near limit / Restart loop".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '6'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'process_resident_memory_bytes{scrape_job="mallakhamb-api"}'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 3650722202
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-cpu
+        title: CPU saturated
+        condition: C
+        for: 15m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: API CPU is above 80 % of one core (the Node event loop) for 15 minutes.
+          description: >-
+            Expected briefly during a meet. Persistent → one handler is hogging the event loop (API overview → "Slowest
+            routes"); more cores will not help a single event loop. Runbook: PLAN.md §8 "CPU saturated".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '5'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'rate(process_cpu_seconds_total{scrape_job="mallakhamb-api"}[5m])'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.8
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-restart-loop
+        title: Restart loop
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: The API restarted more than twice in 30 minutes.
+          description: >-
+            A deploy is one restart; more means crashes or out-of-memory kills. First look: journalctl -u mallakhamb on
+            the active, then Runtime → Host → OOM kills. Runbook: PLAN.md §8 "Memory near limit / Restart loop".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-api-overview
+          __panelId__: '5'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'changes(process_start_time_seconds{scrape_job="mallakhamb-api"}[30m])'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 2
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-db-checkout
+        title: DB checkout failing
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: The API cannot get MongoDB connections from its pool.
+          description: >-
+            First look: Database dashboard → checkout failures by reason; Atlas status page; Atlas network access list.
+            Runbook: PLAN.md §8 "DB checkout failing / DB pool waiting".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-database
+          __panelId__: '7'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'sum(increase(mongodb_driver_pool_checkout_failed_total{scrape_job="mallakhamb-api"}[5m])) or vector(0)'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-db-pool-waiting
+        title: DB pool waiting
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: Requests have been queueing for a MongoDB connection for 10 minutes.
+          description: >-
+            The pool is exhausted or Atlas is slow to answer. First look: Database dashboard. To find the slow
+            collection, set DB_MONITOR_COMMANDS=true for up to an hour (never on a competition day). Runbook: PLAN.md §8
+            "DB checkout failing / DB pool waiting".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-database
+          __panelId__: '6'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'max_over_time(mongodb_driver_pool_waitqueuesize{scrape_job="mallakhamb-api"}[5m])'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-login-failures
+        title: Login failures spike
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'More than 25 failed logins in 5 minutes ({{ $values.A.Value }}).'
+          description: >-
+            First look: Competition day → "Logins by role / outcome". Judges mistyping at venue start → ignore. One role
+            failing steadily → possible guessing; check RATE_LIMIT_ENABLED. Runbook: PLAN.md §8 "Login failures spike".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-competition-day
+          __panelId__: '12'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                sum(increase(mallakhamb_auth_logins_total{scrape_job="mallakhamb-api",outcome="failure"}[5m])) or
+                vector(0)
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 25
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-payment-webhook
+        title: Payment webhook problem
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: A Razorpay webhook was rejected or failed in the last 15 minutes.
+          description: >-
+            First look: Competition day → "Payment webhooks", and Razorpay dashboard → Webhooks. rejected_signature →
+            RAZORPAY_WEBHOOK_SECRET mismatch; error → journalctl -u mallakhamb on the active. Runbook: PLAN.md §8
+            "Payment webhook problem".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-competition-day
+          __panelId__: '13'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                sum(increase(mallakhamb_payment_webhooks_total{scrape_job="mallakhamb-api",outcome=~"rejected_signature|error"}[15m]))
+                or vector(0)
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-uptime-check
+        title: Uptime check failing
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: 'Outside-in check {{ $labels.job }} is failing from both Mumbai and Hyderabad.'
+          description: >-
+            This is what a tablet in India sees, including DNS, TLS and Caddy. api-ready → GET /api/health/ready (needs
+            the database); web-home → the SPA. First look: API overview → "Outside-in" row, then on the active:
+            systemctl status caddy mallakhamb. If /metrics still scrapes (API down is quiet), suspect DNS, the
+            certificate (journalctl -u caddy) or the database. Runbook: PLAN.md §8 "Uptime check failing".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-api-overview
+          __panelId__: '24'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'count by (job) (probe_success{job=~"api-ready|web-home"} == 0)'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-host-missing
+        title: Host metrics missing
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: No host metrics from the active server for 10 minutes.
+          description: >-
+            Alloy on the active has stopped (systemctl status alloy; journalctl -u alloy), its Grafana token was
+            revoked, or the VM is down; check "API down" too. If the VM is gone: rebuild from the golden backup,
+            deploy/oci/PLAN.md §5. Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '14'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'absent(up{scrape_job="mallakhamb-host"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-host-memory
+        title: Host memory high
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'The active server is using more than 85 % of its memory ({{ humanizePercentage $values.A.Value }}).'
+          description: >-
+            First look: Runtime → "Memory: % of plan" (is it the API?) and the Host row. Something besides the API (a
+            stuck mongodump, a runaway script) shows as host memory without API RSS. Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '15'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                1 - node_memory_MemAvailable_bytes{scrape_job="mallakhamb-host"} /
+                node_memory_MemTotal_bytes{scrape_job="mallakhamb-host"}
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.85
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-disk-filling
+        title: Disk filling
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'The active server''s root disk is more than 80 % full ({{ humanizePercentage $values.A.Value }}).'
+          description: >-
+            First look: sudo du -xh / --max-depth=2 | sort -h | tail; journalctl --disk-usage; /var/log/mallakhamb;
+            /opt/mallakhamb/releases (the deploy keeps the live one + 4). Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '16'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                1 - node_filesystem_avail_bytes{scrape_job="mallakhamb-host",mountpoint="/"} /
+                node_filesystem_size_bytes{scrape_job="mallakhamb-host",mountpoint="/"}
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.8
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-disk-critical
+        title: Disk almost full
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: 'The active server''s root disk is more than 90 % full ({{ humanizePercentage $values.A.Value }}).'
+          description: >-
+            At 100 % MongoDB tools, logging and deploys fail. Free space now (see "Disk filling"); sudo journalctl
+            --vacuum-time=7d is safe. Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '16'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                1 - node_filesystem_avail_bytes{scrape_job="mallakhamb-host",mountpoint="/"} /
+                node_filesystem_size_bytes{scrape_job="mallakhamb-host",mountpoint="/"}
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.9
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-backup-stale
+        title: Backup stale
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: The last successful backup on the active is more than 26 hours old.
+          description: >-
+            First look: systemctl status mallakhamb-backup.timer mallakhamb-backup; journalctl -u mallakhamb-backup -n
+            100. Usually Atlas unreachable or the bucket upload refused. Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '13'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'time() - mallakhamb_backup_last_success_timestamp_seconds{scrape_job="mallakhamb-host"}'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 93600
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-oom-kill
+        title: Out-of-memory kill
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: The kernel killed a process for memory on the active server.
+          description: >-
+            If it was the API, every tablet lost its connection (systemd restarted it). First look: sudo journalctl -k |
+            grep -i oom, then Runtime → RSS and the Host row. Runbook: PLAN.md §8 "Memory near limit / Restart loop".
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '20'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'sum by (instance) (increase(node_vmstat_oom_kill{scrape_job="mallakhamb-host"}[15m]))'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-inodes
+        title: Inodes running out
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: Less than 10 % of inodes are free on the active server's root disk.
+          description: >-
+            Millions of small files, usually a temp or session directory. First look: sudo du -x --inodes /
+            --max-depth=3 | sort -n | tail. Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '17'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                node_filesystem_files_free{scrape_job="mallakhamb-host",mountpoint="/"} /
+                node_filesystem_files{scrape_job="mallakhamb-host",mountpoint="/"}
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 0.1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false

@@ -16,6 +16,12 @@
  *   gauge shows the live share against the included amount.
  */
 (async () => {
+  // The two targets (COMMON.md C1.7). Production stays on Render until the
+  // cutover (COMMON.md C7, step 55); then point these at https://<API_HOST> and
+  // https://<APP_HOST> and paste again.
+  const API_URL = 'https://mallakhamb-server.onrender.com/api/health/ready';
+  const WEB_URL = 'https://mallakhamb-web.onrender.com/';
+
   // Public probes nearest the venues: Mumbai (16) and Hyderabad (101).
   // Looked up by name below so a renumbering on Grafana's side can't break it.
   const PROBES = ['Mumbai', 'Hyderabad'];
@@ -30,14 +36,14 @@
   const CHECKS = [
     {
       job: 'api-ready',
-      target: 'https://mallakhamb-server.onrender.com/api/health/ready',
+      target: API_URL,
       frequency: 120000, // 2 min
       timeout: 10000,
       settings: http([200]),
     },
     {
       job: 'web-home',
-      target: 'https://mallakhamb-web.onrender.com/',
+      target: WEB_URL,
       frequency: 300000, // 5 min
       timeout: 10000,
       settings: http([200]),
