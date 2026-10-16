@@ -11,6 +11,7 @@ const NodemailerAdapter = require('./nodemailer.adapter');
 const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 const ResendAdapter = require('./resend.adapter');
 const GmailApiAdapter = require('./gmail-api.adapter');
+const NoneAdapter = require('./none.adapter');
 const { generateOTPEmail } = require('./templates/otp.template');
 const { generatePasswordResetEmail } = require('./templates/password-reset.template');
 const { generateNotificationEmail } = require('./templates/notification.template');
@@ -57,6 +58,8 @@ class EmailService {
           this.config.get('email.gmailApi'),
           this.logger
         );
+      } else if (providerType === 'none') {
+        this.provider = new NoneAdapter(null, this.logger);
       } else {
         // Default to nodemailer
         this.provider = new NodemailerAdapter(

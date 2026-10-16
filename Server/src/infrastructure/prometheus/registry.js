@@ -54,7 +54,7 @@ const LOGIN_ROLES = new Set(['admin', 'coach', 'judge', 'player']);
 const LOGIN_OUTCOMES = new Set(['success', 'failure', 'locked']);
 const WEBHOOK_EVENTS = new Set(['payment.captured', 'payment.failed', 'order.paid']);
 const WEBHOOK_OUTCOMES = new Set(['processed', 'ignored', 'rejected_signature', 'error']);
-const EMAIL_PROVIDERS = new Set(['resend', 'nodemailer']);
+const EMAIL_PROVIDERS = new Set(['resend', 'nodemailer', 'none']);
 const SCORE_OUTCOMES = new Set(['accepted', 'rejected']);
 
 const pick = (allowed, value, fallback = 'other') =>

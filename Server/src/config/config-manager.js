@@ -237,6 +237,17 @@ class ConfigManager {
           errors.push('GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN and EMAIL_USER are required when using gmail-api provider');
         }
       }
+    } else if (this.config.email.provider === 'none') {
+      /*
+       * "none" sends nothing, so OTPs and password resets would vanish. It is
+       * for the nightly lifecycle check on a throw-away database only
+       * (deploy/oci/PLAN.md O14): in production the database name must end in
+       * "_e2e", the same rule the runner checks before --drop.
+       */
+      const dbName = ConfigManager.databaseName(this.config.database.uri);
+      if (this.config.server.nodeEnv === 'production' && !dbName.endsWith('_e2e')) {
+        errors.push(`EMAIL_PROVIDER=none is only allowed on a throw-away database (name ending in "_e2e"); this one is "${dbName || '(none in MONGODB_URI)'}"`);
+      }
     }
 
     /*
@@ -290,6 +301,17 @@ class ConfigManager {
    * @param {string} defaultValue - Default value if not set
    * @returns {string}
    */
+  /**
+   * The database name in a MongoDB URI (the path), or '' if there is none.
+   * Credentials can't hide a '/', since a URI must percent-encode it.
+   * @param {string} uri
+   * @returns {string}
+   */
+  static databaseName(uri) {
+    const m = /^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]*)/.exec(uri || '');
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
   getString(key, defaultValue = '') {
     const value = process.env[key];
     return value !== undefined && value !== '' ? value : defaultValue;
