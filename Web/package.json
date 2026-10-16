@@ -2,6 +2,9 @@
   "name": "mallakhambindia",
   "private": true,
   "version": "0.0.0",
+  "engines": {
+    "node": "24.x"
+  },
   "type": "module",
   "scripts": {
     "looks": "node scripts/build-looks.mjs",

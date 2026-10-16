@@ -344,7 +344,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
 - [ ] **C4.2 Packages:**
   ```bash
   sudo apt-get install -y git jq unzip curl ca-certificates gnupg
-  curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/ns.sh && sudo bash /tmp/ns.sh && sudo apt-get install -y nodejs && node -v   # v22.x
+  curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/ns.sh && sudo bash /tmp/ns.sh && sudo apt-get install -y nodejs && node -v   # v24.x, the same major as Render (package.json engines)
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
   sudo mkdir -p /etc/apt/keyrings && curl -fsSL https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/grafana.gpg

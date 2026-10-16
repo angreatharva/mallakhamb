@@ -56,6 +56,9 @@
   ],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",

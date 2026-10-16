@@ -36,12 +36,12 @@ done
 netfilter-persistent save >/dev/null
 iptables -L INPUT --line-numbers -n
 
-step "C4.2 packages: git jq node22 caddy mongodb-tools mongosh"
+step "C4.2 packages: git jq node24 caddy mongodb-tools mongosh"
 apt-get install -y -q git jq unzip curl ca-certificates gnupg python3-venv
-if ! node -v 2>/dev/null | grep -q '^v22\.'; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/ns.sh && bash /tmp/ns.sh && apt-get install -y -q nodejs
+if ! node -v 2>/dev/null | grep -q '^v24\.'; then   # same major as Render (package.json engines 24.x)
+  curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/ns.sh && bash /tmp/ns.sh && apt-get install -y -q nodejs
 fi
-# Same npm major as the one that writes the lockfiles (dev machines run npm 11). Node 22 ships
+# The exact npm that writes the lockfiles (dev machines run npm 11.6.2). Node 22 shipped
 # npm 10, whose stricter `npm ci` rejects the lock ("Missing: @emnapi/core ... from lock file").
 NPM_VERSION=11.6.2
 [ "$(npm -v)" = "$NPM_VERSION" ] || npm install -g --no-audit --no-fund "npm@$NPM_VERSION" >/dev/null
