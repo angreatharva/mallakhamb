@@ -22,11 +22,14 @@ const createSuperAdmin = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
-    // Super Admin credentials
+    // Super Admin credentials. The same variables and defaults as seedApi.js, which signs in with
+    // them right after this step: a password overridden on one side only made `setup:api` stop at
+    // "admin" (found by the nightly e2e run, deploy/oci/PLAN.md O14, which uses a fresh one each night).
+    const passwordFromEnv = Boolean(process.env.SEED_SUPERADMIN_PASSWORD);
     const superAdminData = {
       name: 'Atharva Angre',
-      email: 'Superadmin@gmail.com',
-      password: 'Superadmin@2026',
+      email: process.env.SEED_SUPERADMIN_EMAIL || 'Superadmin@gmail.com',
+      password: process.env.SEED_SUPERADMIN_PASSWORD || 'Superadmin@2026',
       role: 'superadmin',
       isActive: true
     };
@@ -53,7 +56,7 @@ const createSuperAdmin = async () => {
       console.log('✅ Super Admin created successfully!');
       console.log('Super Admin Credentials:');
       console.log('- Email:', superAdminData.email);
-      console.log('- Password:', superAdminData.password);
+      console.log('- Password:', passwordFromEnv ? '(from SEED_SUPERADMIN_PASSWORD)' : superAdminData.password);
       console.log('- Role:', superAdminData.role);
       console.log('\n⚠️  Please change the password after first login!');
     }
