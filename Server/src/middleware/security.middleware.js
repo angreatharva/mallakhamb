@@ -13,6 +13,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
 const { COOKIE_NAMES } = require('../utils/security/cookie.util');
+const { AuthorizationError } = require('../errors');
 
 /**
  * Generate a cryptographically secure nonce for CSP.
@@ -165,7 +166,10 @@ function createCorsMiddleware(container) {
           callback(null, true);
         } else {
           logger.warn('CORS blocked request', { origin, nodeEnv });
-          callback(new Error('Not allowed by CORS'));
+          // 403, not the 500 a plain Error became: a foreign origin is a refused
+          // client, not a server fault, and it must not count as a 5xx
+          // (Grafana's "High 5xx"). The request still stops here.
+          callback(new AuthorizationError('Not allowed by CORS'));
         }
         return;
       }

@@ -766,7 +766,7 @@ Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://
 - [ ] **Razorpay test-mode webhook:**
   - Add `https://<STAGING_API_HOST>/api/webhooks/razorpay` in the test-mode dashboard, with the staging `RAZORPAY_WEBHOOK_SECRET` and the same events as live.
   - After a test payment the delivery log shows **200** (proves C1.3).
-- [ ] **Security checks:**
+- [x] **Security checks:** *(2026-10-17, staging: `/metrics` 401, `/api/docs` 404, `http://` → 308 https on both hosts, foreign-origin preflight gets no ACAO — and is now a **403**, not a 500. Not run: the laptop `mongosh` refusal, which needs the production cluster URI.)*
   - `/metrics` returns 401 without the token.
   - `/api/docs` returns 404.
   - A CORS preflight from `https://evil.example` gets no matching `Access-Control-Allow-Origin`.
@@ -783,7 +783,7 @@ Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://
   3. Put the IP back. Within ~1 min `/api/health/ready` is ready again **without restarting the service**, and a judge panel can carry on.
 
   If the app needs a restart to recover, that's a defect to fix before go-live.
-- [ ] **Meet-mode backups.** Run `sudo systemctl start mallakhamb-backup-meet.service` once: an object appears under `meet/` and "last backup age" resets.
+- [x] **Meet-mode backups.** Run `sudo systemctl start mallakhamb-backup-meet.service` once: an object appears under `meet/` and "last backup age" resets. *(2026-10-17: `meet/2026-10-17T0914Z.archive.gz`, 39 KB; "last backup age" reset to 0; the meet timer stays disabled outside a meet.)*
 
 ### C6C. Load test (8 panels)
 - [ ] Add your laptop IP to Atlas temporarily.
@@ -802,7 +802,7 @@ Use an Android phone (Chrome), an **iPhone (Safari)** and a laptop, at `https://
   - set `MONGODB_URI` back to `<db>_rehearsal` and restart
 
 ### C6D. Restore drill
-- [ ] Restore last night's backup from object storage into `<db>_restoretest` [PLATFORM: download command], run `mallakhamb-counts` against it, compare with the source, then drop it. **Record how long it took.**
+- [x] Restore last night's backup from object storage into `<db>_restoretest` [PLATFORM: download command], run `mallakhamb-counts` against it, compare with the source, then drop it. **Record how long it took.** *(2026-10-17, staging: `sudo mallakhamb-restore-drill` (new, `deploy/server/bin/`) restored `daily/2026-10-16T2030Z` into `BRMC_dev_restoretest`, 13/13 collections equal to the live database, dropped. **9 s** (download 4, restore 4, compare 1) for a 40 KB database: rerun on the production database at C7.)*
 
 ### C6E. Rebuild drill, which also creates the standby (D10)
 - [ ] Build a second instance from the image backup [PLATFORM], **in a different fault domain**, and deploy the same SHA.

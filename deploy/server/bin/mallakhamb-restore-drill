@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# deploy/COMMON.md C6D — the restore drill. Run as root on the ACTIVE server (where the backups are made):
+#   sudo mallakhamb-restore-drill [object name]      # default: the newest daily/ backup
+#
+# Downloads a backup from the bucket, restores it into <db>_restoretest (never anywhere else), compares
+# every collection's count with the live database, drops the copy and prints how long each phase took.
+# The URI reaches mongorestore through a 0600 config file, never the command line (ps would show it).
+set -euo pipefail
+. /etc/mallakhamb/platform.sh
+T0=$(date +%s); WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
+URI=$(sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)
+[[ "$URI" =~ ^mongodb(\+srv)?://[^/]+/([^?]+) ]] || { echo "cannot read the database name in MONGODB_URI" >&2; exit 1; }
+DB=${BASH_REMATCH[2]}; TEST="${DB}_restoretest"
+
+OBJ="${1:-$("$OCI" os object list --namespace "$OS_NAMESPACE" --bucket-name "$BACKUP_BUCKET" --prefix daily/ --all \
+  --query 'data[].name' --raw-output | tr -d '[]", ' | grep -v '^$' | sort | tail -1)}"
+[ -n "$OBJ" ] || { echo "no daily/ backup in the bucket" >&2; exit 1; }
+echo "drill: $OBJ → $TEST"
+
+"$OCI" os object get --namespace "$OS_NAMESPACE" --bucket-name "$BACKUP_BUCKET" --name "$OBJ" --file "$WORK/b.archive.gz" >/dev/null
+T1=$(date +%s); echo "downloaded $(stat -c %s "$WORK/b.archive.gz") bytes in $((T1 - T0)) s"
+
+umask 077; printf 'uri: "%s"\n' "$URI" > "$WORK/cfg.yaml"
+mongorestore --config="$WORK/cfg.yaml" --archive="$WORK/b.archive.gz" --gzip --quiet \
+  --nsInclude="${DB}.*" --nsFrom="${DB}.*" --nsTo="${TEST}.*" --drop
+T2=$(date +%s); echo "restored in $((T2 - T1)) s"
+
+# Count both databases with the release's own driver, as the unprivileged user.
+cd /opt/mallakhamb/current/Server
+runuser -u mallakhamb -- env -i PATH=/usr/bin:/bin HOME=/tmp MONGODB_URI="$URI" SRC="$DB" DST="$TEST" node -e "
+const m = require('mongoose');
+(async () => {
+  const c = await m.connect(process.env.MONGODB_URI);
+  const count = async (name) => {
+    const db = c.connection.client.db(name); const out = {};
+    for (const { name: n } of await db.listCollections().toArray()) out[n] = await db.collection(n).countDocuments({});
+    return out;
+  };
+  const [src, dst] = [await count(process.env.SRC), await count(process.env.DST)];
+  let diff = 0;
+  for (const n of [...new Set([...Object.keys(src), ...Object.keys(dst)])].sort()) {
+    const same = src[n] === dst[n]; if (!same) diff += 1;
+    console.log((same ? '  same   ' : '  DIFF   ') + n.padEnd(28) + ' live ' + String(src[n] ?? '-').padStart(6) + '   restored ' + String(dst[n] ?? '-').padStart(6));
+  }
+  if (!/_restoretest\$/.test(process.env.DST)) throw new Error('refusing to drop ' + process.env.DST);
+  await c.connection.client.db(process.env.DST).dropDatabase();
+  console.log(diff ? diff + ' collection(s) differ: changed since the backup was taken, or a bad restore' : 'every collection matches the live database');
+  console.log('dropped ' + process.env.DST);
+  await m.disconnect();
+})().catch((e) => { console.error(e.message); process.exit(1); });" < /dev/null
+T3=$(date +%s); echo "RESTORE DRILL done in $((T3 - T0)) s (download $((T1 - T0)) s, restore $((T2 - T1)) s, compare+drop $((T3 - T2)) s)"
