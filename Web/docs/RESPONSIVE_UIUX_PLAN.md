@@ -327,6 +327,10 @@ The full chain then re-ran from scratch, strictly one run at a time:
 
 An earlier chain that had been "stopped" turned out to be still running beside the later ones. Overlapping runs share the audit accounts, which cannot be signed in twice, so their results were discarded. Final numbers are in the report; 405 unit tests pass.
 
+*The switch on every page.* Asked to confirm the switch is on every single page, `appearance-everywhere.spec.js` checked it page by page, as one device across all six roles. Five pages had none: the running order, the judge profile, the score sheet, the add-player payment and the bare `/admin/teams` panel. They have no header of their own, and most redirect when opened by URL. All five are fixed. The check now passes 114/114: every page shows the switch, every page follows the one choice, open tabs follow live, and a reload keeps it.
+
+Its first run "found" the choice lost at every sign-in. The cause was the e2e sign-in helper's `localStorage.clear()`, which starts each role as a new device, not the app.
+
 ### Phase 10 log
 
 *One shared viewport store.* Every `useResponsive()` (20 call sites) used to:

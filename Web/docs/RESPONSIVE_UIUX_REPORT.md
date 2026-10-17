@@ -14,7 +14,7 @@ Branch `feat/responsive-appearance` · plan: [RESPONSIVE_UIUX_PLAN.md](RESPONSIV
 
 | Check | Result |
 |---|---|
-| Visual baseline (all routes × 375/768/820/1024/1366 × dark/light, `threshold: 0`) | Every batch re-run guarded; refactors (Phases 8, 9.4, 10) **pixel-identical**, every intended change classified and reviewed. Final run on the merged branch: **pixel-identical in all six areas** |
+| Visual baseline (all routes × 375/768/820/1024/1366 × dark/light, `threshold: 0`) | Every batch re-run guarded; refactors (Phases 8, 9.4, 10) **pixel-identical**, every intended change classified and reviewed. Final run on the merged branch: **pixel-identical in all six areas**; after the switch reached the pages that had none, 20 screenshots (judge profile and the bare admin Teams panel, every width, both appearances) changed **only inside the switch's own 36–44px corner** and were accepted |
 | Contrast (WCAG 1.4.3), every text element, every route, 1366 + 375 | **88/88 light, 88/88 dark** (the audit now waits out running animations — a toast read mid-fade had measured a false 1.31:1) |
 | Overflow · touch targets · console, all routes | Chromium at 15 widths (320–1920) in both appearances, plus phone landscape (667–932 × 375) and tablet landscape (1024/1180 × 768): **clean in all six areas** after one fix (the coach header ran 5px past a 320px screen once the switch joined it). Final run: Chromium 15 widths, light and dark, **6/6 areas clean each**; tablet portrait, phone landscape and tablet landscape **6/6 each** |
 | Real devices (`E2E_DEVICES=1`): iPhone 13, iPad Mini, iPad Pro 11 (+landscape) on WebKit; Galaxy S24, Tab S4, Z Fold 7, Tab S9 landscape on Chromium, both appearances | **48/48 area-runs clean** (8 profiles × 6 areas). Their console lines are requests the browser cancels when the audit moves on — see Known limitations |
@@ -24,12 +24,19 @@ Branch `feat/responsive-appearance` · plan: [RESPONSIVE_UIUX_PLAN.md](RESPONSIV
 | Score sheet (`responsive-score-sheet.spec.js`) | no sideways scroll at any width; 0 clipped fields; cards below 1024, table from 1024; follows a live resize |
 | Judge slip walk, 320 + 375 + 768, both appearances | three tabs; nothing under the Submit bar; stepper tap areas answer outside their boxes; COP viewer locks and releases |
 | Appearance persistence | Light survives logout and reload; on reload `data-appearance` is only ever `light` |
+| The switch everywhere, one choice everywhere (`appearance-everywhere.spec.js`) — one browser as one device: Light chosen once on Home, then every page of all six areas at 375 and 1366, signing in as each role, plus the pages that need something chosen first (score sheet, add-player payment, running order, team athletes) | **114/114**: the switch on every page, every page drawn in the chosen appearance. Dark chosen on the judge profile flips a second open tab live; a reload keeps it; Match device follows the OS both ways |
 | Keyboard focus | every Tab stop on every route shows a visible change on focus — outline, ring or border — in both appearances, **6/6 areas** |
 | Unit tests · lint · build | **405 unit tests pass** · 0 lint errors · build clean |
 
 ## Re-verification after merging master (2026-10-02/03)
 
 `master` was merged in (`d56b6c6`). Its judge-panel change came over whole: per-section mismatch chips (`isOff`), Final Submit no longer locked by a tolerance breach, and the COP §3.4 base-score notice — restyled with the branch's tokens, with `PanelAlerts.test` naming the token instead of a hex. Then every check above was re-run from scratch on the final code (`1c187b4`), **one run at a time**: the audit accounts cannot be signed in from two browsers at once, so results from any window in which two runs overlapped were thrown away, not counted.
+
+After `master` took the branch (`3fab1e9`, with master's new monitoring server), the checks the last fixes touched ran again on the merged code:
+- pixel gate identical for judge, admin and super admin (one admin chooser shot caught mid-load re-ran identical twice);
+- the every-page check 114/114;
+- the score sheet 5/5;
+- for judge, admin and super admin: the 15 widths, contrast in both appearances, keyboard focus, iPhone and Android — all clean.
 
 **Screens no audit had reached.** The route audits open each URL with nothing chosen, so they never saw a results board (it needs a category), the judge's running order (it redirects without one), or the panel review and its dialogs (they need a scored athlete, or a panel that disagrees). Two specs now reach them the way a person does: `deep-screens.spec.js` chooses the filters and opens the tabs; `judge-deep-screens.spec.js` goes through the judge dashboard's "Set Sequence" and the scoring screen's own hand-over to the panel review, and asserts the page stayed put — its first version measured the team page while believing it was on the review. To hold the review open on a meet whose scores are all finalized, and to open the alerts, it changes the scores response **in the browser only**; nothing is saved or submitted.
 
@@ -44,6 +51,7 @@ Found and fixed:
 - **The Mismatch, Tolerance and Senior-Judge-edit dialogs** closed with a 32×32 ✕ that had **no accessible name** → "Close", 44px on touch.
 - **In the Senior Judge's edit dialog, a tap just below "−" pressed "+".** Its compact picker squeezed the count to ~20px, and the two steppers' tap extensions overlapped there. On touch it is now the slip's own picker; compact stays for the mouse.
 - **The steppers' tap extensions reached 43px, not 44** — a 1px border ate one of the 15px. Now 16px.
+- **Five pages had no Light/Dark switch**: the running order (above), the judge profile, the score sheet (admin and super admin), the super admin's add-player payment, and the bare Teams panel at `/admin/teams`. The navbar is hidden on admin and judge routes, these draw no header of their own, and most redirect when opened by URL — so Phase 9.3's "every shell" missed them and no audit showed them. Each now carries it: in its top row (profile), beside the Live pill (score sheet), or in the corner (the two with no header). The score sheet's "Back to Scores" was 40px wide on phones → 44.
 
 The audits themselves were corrected on the way, each after a false reading was traced to its cause:
 - the contrast audit read a toast mid-fade (1.31:1);
@@ -73,6 +81,7 @@ The audits themselves were corrected on the way, each after a false reading was 
 - **Not merged on purpose:** `design-system/index.jsx`'s `GlassCard`/`FadeIn`/`GradientText` differ from the `cards/`/`animations/`/`ornaments/` versions; an `AccountControls` cluster would restyle every shell's Log out.
 - **The Senior Judge's edit dialog: the Difficulty numbers are narrower than 44px on small phones** — 30×44 at 320px, 38×44 at 360, 41×44 at 375, 44×44 from 390. They are the slip's own 2×5 grid inside a dialog's padding; WCAG 2.2 AA (2.5.8) asks for 24×24. `judge-deep-screens.spec.js` accepts exactly these buttons at ≥24×44 and fails anything else that small.
 - **The judge slip's Difficulty number grid is 35×44px at 320px only** (44×44 from 360px). That passes WCAG 2.2 AA (2.5.8 asks for 24×24); the 2×5 grid stays as tuned in judge trials rather than becoming a scrolling row.
+- **The Scorer's and Time Keeper's screens were not opened in a browser.** No TRIALS account sits in those seats, so no check can reach them; the switch is in their headers beside the Live pill (Phase 9.3), by the code. Seat the audit judge as Scorer or Time Keeper and `appearance-everywhere.spec.js` can be extended to them.
 - **WebKit device runs log a few "Network Error" / "access control checks" console lines.** They are requests the browser cancels when the audit moves on (sign-in hops between pages): replayed with every failed request logged, each is "Load request cancelled", and the same screens loaded without moving on show zero errors and their full data. Chromium cancels the same requests silently. The app already catches them (`verifyCopRulesAgainstServer` logs a warning).
 - **`master` tracks 132 baseline PNGs in `Web/.visual-baseline/`.** This branch's pixel gate reads its baselines from outside the repo (`../.mallakhamb-visual-baseline/`), so those files are unused here. Keeping or deleting them is the owner's call.
 - **Run the audits one at a time.** They share the audit accounts, which cannot be signed in from two browsers at once; on Windows a stopped background shell can keep running, so check for leftover `playwright` processes before trusting a result.
@@ -94,6 +103,7 @@ npx playwright test e2e/appearance-persistence.spec.js --project=chromium
 npx playwright test e2e/focus-visible.spec.js --project=chromium
 npx playwright test e2e/deep-screens.spec.js --project=chromium        # DEEP_WIDTHS=
 npx playwright test e2e/judge-deep-screens.spec.js --project=chromium  # needs the audit judge seated as Senior Judge
+npx playwright test e2e/appearance-everywhere.spec.js --project=chromium
 ```
 
 ## Commits
@@ -135,4 +145,7 @@ npx playwright test e2e/judge-deep-screens.spec.js --project=chromium  # needs t
 - `d0effc2` test(e2e): the contrast audit waits out running animations before it reads colours
 - `272f6b0` fix(web): the judge's running order, panel review and its dialogs on touch screens
 - `1c187b4` test(e2e): measure the judge screens behind state; the audit stops racing
+- `ca9410a` docs(web): responsive report — the merge with master, the fixes it found, the final run
+- `c5d09a2` fix(web): the Light/Dark switch on the four pages that had none
+- `e104fc2` test(e2e): the switch is on every page, and one choice carries across the site
 - (this report update)
