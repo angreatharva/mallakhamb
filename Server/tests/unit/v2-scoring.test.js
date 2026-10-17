@@ -7,14 +7,14 @@
  *   - §3.2.1: Difficulty cascade (Competition I, {A:0, B:5, C:2} → 3.00)
  *   - §4.2: 3-judge panel simple average — no tolerance check
  *   - §4.3: 4-judge panel as 5-judge equivalent — no high/low drop but tolerance check
- *   - Tie-breaks by panel size: 3 judges on time, 4/5 judges on the senior
- *     judge's mark then the panel mean
+ *   - Tie-breaks by panel size: 3 judges on time; 4/5 judges by COP 1.12.1-1.12.3
+ *     (base score, then average of the four judges, then (that average + Chief) / 2)
  *   - §11: Hanging Mallakhamb / Female hard block
  */
 
 const { calculateIndividualScore } = require('../../src/utils/scoring/calculation.util');
 const { resolveDifficultyValue, getTolerance, getTimeDeduction, isApparatusAllowedForGender } = require('../../src/config/cop-rules');
-const { applyTieBreaker, determineTieBreakerWinner, areTied } = require('../../src/utils/scoring/tie-breaker.util');
+const { applyTieBreaker, determineTieBreakerWinner, areTied, baseScoreOf } = require('../../src/utils/scoring/tie-breaker.util');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. Five-Judge Panel — within tolerance (v2 §12 worked example #1)
@@ -324,14 +324,17 @@ describe('Tie-Breaks on a 3-judge panel (1 senior + 2 evaluation)', () => {
   });
 });
 
-describe('Tie-Breaks on a 4-judge panel (1 senior + 3 evaluation)', () => {
+describe('Tie-Breaks on a 4-judge panel (1 senior + 3 evaluation) — COP §1.12', () => {
+  // The Sr. Judge is the Chief AND fills the vacant fourth evaluation slot.
   const panel = (seniorJudge, judge1, judge2, judge3, extra = {}) => ({
     finalScore: 8.00,
     panelSize: 4,
     judgeScores: { seniorJudge, judge1, judge2, judge3, ...extra }
   });
 
-  test('step 1: the higher senior judge score takes the placing', () => {
+  test('1.12.1: the higher base score takes the placing', () => {
+    // A: four slots [8.0, 8.0, 8.0, 8.5] → middle two 8.0 → (8.0 + 8.5) / 2 = 8.25
+    // B: four slots [8.0, 8.0, 8.0, 8.2] → middle two 8.0 → (8.0 + 8.2) / 2 = 8.10
     const result = determineTieBreakerWinner(
       panel(8.5, 8.0, 8.0, 8.0),
       panel(8.2, 8.0, 8.0, 8.0)
@@ -339,75 +342,106 @@ describe('Tie-Breaks on a 4-judge panel (1 senior + 3 evaluation)', () => {
 
     expect(result.winner).toBe('A');
     expect(result.step).toBe(1);
-    expect(result.reason).toBe('senior_judge_score');
+    expect(result.reason).toBe('base_score');
   });
 
-  test('step 2: senior judges agree, so the mean of all four decides', () => {
-    // A: (8.0 + 8.6 + 8.0 + 8.0) / 4 = 8.15   B: 32.0 / 4 = 8.00
+  test('1.12.2: base scores agree, so the average of the four judges decides', () => {
+    // A slots [8.0, 8.0, 8.6, 8.0], B slots [8.0, 8.0, 8.0, 8.0]: middle two
+    // are 8.0 for both, so both base scores are 8.0.
+    // Average of four: A 32.6 / 4 = 8.15, B 32.0 / 4 = 8.00.
     const result = determineTieBreakerWinner(
-      panel(8.0, 8.6, 8.0, 8.0),
+      panel(8.0, 8.0, 8.0, 8.6),
       panel(8.0, 8.0, 8.0, 8.0)
     );
 
     expect(result.winner).toBe('A');
     expect(result.step).toBe(2);
-    expect(result.reason).toBe('panel_average');
+    expect(result.reason).toBe('four_judge_average');
   });
 
-  test('the mean is over the four seats that sat — an empty J4 is not counted', () => {
-    // A carries a stray judge4 mark; a 4-judge panel has no J4, so it is ignored.
-    // A: 32.0 / 4 = 8.00, B: 32.2 / 4 = 8.05 → B places higher.
+  test('a stray judge4 mark is ignored — the fourth slot is the Sr. Judge', () => {
+    // A: slots [8.0, 8.0, 8.0, 8.0] (the 10 is not read) → average 8.00
+    // B: slots [8.0, 8.0, 8.2, 8.0] → same base score 8.0, average 8.05
     const result = determineTieBreakerWinner(
       panel(8.0, 8.0, 8.0, 8.0, { judge4: 10 }),
-      panel(8.0, 8.2, 8.0, 8.0)
+      panel(8.0, 8.0, 8.0, 8.2)
     );
 
     expect(result.winner).toBe('B');
-    expect(result.reason).toBe('panel_average');
+    expect(result.reason).toBe('four_judge_average');
   });
 
-  test('same senior score and same mean stays tied', () => {
+  test('the same marks in different seats stay tied', () => {
     const result = determineTieBreakerWinner(
       panel(8.0, 8.4, 7.6, 8.0),
       panel(8.0, 7.6, 8.4, 8.0)
     );
 
     expect(result.winner).toBe('tie');
-    expect(result.reason).toBe('identical_panel_average');
+    expect(result.step).toBe(3);
+    expect(result.reason).toBe('identical_panel_scores');
   });
 });
 
-describe('Tie-Breaks on a 5-judge panel (1 senior + 4 evaluation)', () => {
+describe('Tie-Breaks on a 5-judge panel (1 Chief + 4 evaluation) — COP §1.12', () => {
   const panel = (seniorJudge, judge1, judge2, judge3, judge4) => ({
     finalScore: 8.00,
     panelSize: 5,
     judgeScores: { seniorJudge, judge1, judge2, judge3, judge4 }
   });
 
-  test('step 1: the higher senior judge score takes the placing', () => {
+  test('the base score is COP §2.1.3 — worked example: Chief 9.40, judges 8.90/9.10/9.00/9.50 → 9.225', () => {
+    expect(baseScoreOf(panel(9.40, 8.90, 9.10, 9.00, 9.50))).toBeCloseTo(9.225, 6);
+  });
+
+  test('the base score is calculated even when it was not applied to the final score', () => {
+    // The §2.1.2 example is within tolerance (final = 8.10), yet the tie-break
+    // still reads its base score: (8.10 + 8.30) / 2 = 8.20.
+    expect(baseScoreOf(panel(8.30, 7.50, 7.90, 8.30, 8.40))).toBeCloseTo(8.20, 6);
+  });
+
+  test('1.12.1: the higher base score takes the placing', () => {
+    // A: middle two (8.0, 8.0) → (8.0 + 8.4) / 2 = 8.20
+    // B: middle two (9.0, 9.0) → (9.0 + 7.0) / 2 = 8.00
     const result = determineTieBreakerWinner(
       panel(8.4, 8.0, 8.0, 8.0, 8.0),
-      panel(8.0, 9.0, 9.0, 9.0, 9.0)
+      panel(7.0, 9.0, 9.0, 9.0, 9.0)
     );
 
     expect(result.winner).toBe('A');
     expect(result.step).toBe(1);
-    expect(result.reason).toBe('senior_judge_score');
+    expect(result.reason).toBe('base_score');
   });
 
-  test('step 2: senior judges agree, so the mean of all five decides', () => {
-    // A: 40.5 / 5 = 8.10   B: 40.0 / 5 = 8.00
+  test('1.12.2: base scores agree, so the plain average of all four judges decides', () => {
+    // Middle two are (8.0, 8.0) for both → base 8.0 each.
+    // Average of four (Chief excluded, nothing dropped): A 32.6 / 4 = 8.15, B 32.0 / 4 = 8.00.
     const result = determineTieBreakerWinner(
-      panel(8.0, 8.0, 8.0, 8.0, 8.5),
+      panel(8.0, 7.9, 8.0, 8.0, 8.7),
       panel(8.0, 8.0, 8.0, 8.0, 8.0)
     );
 
     expect(result.winner).toBe('A');
     expect(result.step).toBe(2);
-    expect(result.reason).toBe('panel_average');
+    expect(result.reason).toBe('four_judge_average');
   });
 
-  test('an identical panel stays tied — no random draw decides a placing', () => {
+  test('1.12.3: equal average of four, so (average + Chief) / 2 decides', () => {
+    // A: judges [7.0, 8.0, 8.2, 9.0], Chief 8.0 → middle (8.0, 8.2) avg 8.1 → base 8.05
+    // B: judges [7.6, 8.0, 8.0, 8.6], Chief 8.1 → middle (8.0, 8.0) avg 8.0 → base 8.05
+    // Average of four: A 32.2 / 4 = 8.05, B 32.2 / 4 = 8.05 → equal
+    // Step 3: A (8.05 + 8.0) / 2 = 8.025, B (8.05 + 8.1) / 2 = 8.075 → B
+    const result = determineTieBreakerWinner(
+      panel(8.0, 7.0, 8.0, 8.2, 9.0),
+      panel(8.1, 7.6, 8.0, 8.0, 8.6)
+    );
+
+    expect(result.winner).toBe('B');
+    expect(result.step).toBe(3);
+    expect(result.reason).toBe('four_judge_average_with_chief');
+  });
+
+  test('an identical panel stays tied — no lucky draw (COP 1.12.4 is not applied)', () => {
     const identical = () => panel(8.0, 8.0, 8.0, 8.0, 8.0);
 
     expect(determineTieBreakerWinner(identical(), identical()).winner).toBe('tie');
@@ -423,7 +457,17 @@ describe('Tie-Breaks on a 5-judge panel (1 senior + 4 evaluation)', () => {
     const result = determineTieBreakerWinner(withoutPanelSize(8.3), withoutPanelSize(8.1));
 
     expect(result.winner).toBe('A');
-    expect(result.reason).toBe('senior_judge_score');
+    expect(result.reason).toBe('base_score');
+  });
+
+  test('a panel whose marks cannot be read leaves the tie standing', () => {
+    const result = determineTieBreakerWinner(
+      panel(8.0, 8.0, 8.0, 8.0, 8.0),
+      { finalScore: 8.00, panelSize: 5, judgeScores: { seniorJudge: 8.0 } }
+    );
+
+    expect(result.winner).toBe('tie');
+    expect(result.reason).toBe('panel_scores_unavailable');
   });
 });
 
@@ -454,7 +498,7 @@ describe('Tie-Break ordering and annotation', () => {
     expect(sorted[1].judgeScores.seniorJudge).toBe(8.4);
     expect(sorted[1].tieBreakInfo).toEqual({
       resolvedAtStep: 1,
-      method: 'senior_judge_score',
+      method: 'base_score',
       unresolved: false
     });
     // The competitor who was never tied carries no explanation.

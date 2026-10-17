@@ -224,7 +224,7 @@ const playerScoreSchema = new mongoose.Schema({
   // the point at which a placing is frozen and has to be storable.
   tieBreakResolution: {
     step: { type: Number, default: null },        // 1 or 2
-    method: { type: String, default: null },      // 'faster_time' | 'senior_judge_score' | 'panel_average' | 'identical_time' | 'identical_panel_average'
+    method: { type: String, default: null },      // 'faster_time' | 'base_score' | 'four_judge_average' | 'four_judge_average_with_chief' | 'identical_time' | 'identical_panel_scores'
     resolvedAt: { type: Date, default: null }
   }
 });

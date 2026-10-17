@@ -20,10 +20,11 @@ import { averageSlipBreakdown, describeSlipAverage } from '@/utils/scoring/copRu
 /** How a tie was settled, in words a results desk can read. */
 const TIE_BREAK_LABELS = {
   faster_time: 'Placed on the faster time',
-  senior_judge_score: 'Placed on the senior judge score',
-  panel_average: 'Placed on the panel average',
+  base_score: 'Placed on the base score',
+  four_judge_average: 'Placed on the average of the four judges',
+  four_judge_average_with_chief: 'Placed on the four-judge average with the chief judge',
   identical_time: 'Tied — identical time',
-  identical_panel_average: 'Tied — identical panel average',
+  identical_panel_scores: 'Tied — identical panel scores',
   time_unavailable: 'Tied — no time recorded',
   panel_scores_unavailable: 'Tied — panel scores unavailable',
 };

@@ -8,28 +8,31 @@
  *   3 judges (1 senior + 2 evaluation)
  *     1. Lower time wins.
  *
- *   4 judges (1 senior + 3 evaluation)
- *     1. Higher senior judge score wins.
- *     2. Higher mean of all four judges (sum / 4) wins.
+ *   4 and 5 judges — COP Mallakhamb §1.12 (Server/docs/COP Mallakhamb.pdf)
+ *     1. (1.12.1) Higher base score wins. The base score is COP §2.1.3:
+ *        (average of the two middle scores of the four judges + Chief) / 2,
+ *        calculated here for every tied competitor, whether or not the base
+ *        score was applied to their final score.
+ *     2. (1.12.2) Higher average score of the four judges wins — the plain
+ *        mean of all four evaluation marks, Chief excluded, nothing dropped.
+ *     3. (1.12.3) Higher (average of the four judges + Chief) / 2 wins.
  *
- *   5 judges (1 senior + 4 evaluation)
- *     1. Higher senior judge score wins.
- *     2. Higher mean of all five judges (sum / 5) wins.
+ * "The four judges" are the four evaluation slots. A 5-judge panel has four
+ * evaluators (J1–J4). A 4-judge panel has three, and the Sr. Judge fills the
+ * vacant fourth slot — the same convention calculation.util.js scores it with
+ * and the Scorer sheet draws (Judge 4 mirrors the Sr. Judge).
  *
- * The mean in step 2 is taken over the WHOLE panel, senior judge included —
- * that is what "all judges score / 4" means — so it is not the same number as
- * `executionAverage`, which excludes the senior judge and drops the high and
- * low marks.
- *
- * If a step cannot separate two competitors — identical time, or an identical
- * senior score AND an identical panel mean, or the field a step needs is
- * missing — the tie stands. Both take the same placing and the next placing is
- * skipped (1, 1, 3). Nothing here is decided randomly: ranking the same data
- * twice returns the same order.
+ * COP 1.12.4 (lucky draw) is deliberately NOT implemented. If no step can
+ * separate two competitors — identical time, identical marks at every step,
+ * or the field a step needs is missing — the tie stands. Both take the same
+ * placing and the next placing is skipped (1, 1, 3). Nothing here is decided
+ * randomly: ranking the same data twice returns the same order.
  *
  * Team Championship ranks on summed team totals and does not enter this
  * engine — see `calculateTeamRankings` in ranking.util.js.
  */
+
+const { calculateIndividualScore } = require('./calculation.util');
 
 const EPSILON = 1e-6;
 
@@ -167,45 +170,42 @@ function determineTieBreakerWinner(playerA, playerB, competitionType = 'Competit
     };
   }
 
-  // Four- and five-judge panels: the senior judge decides first.
-  const seniorA = seniorScoreOf(playerA);
-  const seniorB = seniorScoreOf(playerB);
+  // Four- and five-judge panels: COP 1.12.1 – 1.12.3, in order.
+  const steps = [
+    { reason: 'base_score', value: baseScoreOf },
+    { reason: 'four_judge_average', value: fourJudgeAverageOf },
+    { reason: 'four_judge_average_with_chief', value: fourJudgeAverageWithChiefOf }
+  ];
 
-  if (Math.abs(seniorA - seniorB) > EPSILON) {
-    return {
-      winner: seniorA > seniorB ? 'A' : 'B',
-      reason: 'senior_judge_score',
-      step: 1,
-      isTieBreaker: true
-    };
-  }
+  for (let index = 0; index < steps.length; index++) {
+    const { reason, value } = steps[index];
+    const step = index + 1;
+    const valueA = value(playerA, sizeA);
+    const valueB = value(playerB, sizeB);
 
-  // Senior judge agrees too: fall back to the mean of the whole panel.
-  const meanA = panelMean(playerA, sizeA);
-  const meanB = panelMean(playerB, sizeB);
+    if (valueA === null || valueB === null) {
+      return {
+        winner: 'tie',
+        reason: 'panel_scores_unavailable',
+        step,
+        isTieBreaker: true
+      };
+    }
 
-  if (meanA === null || meanB === null) {
-    return {
-      winner: 'tie',
-      reason: 'panel_scores_unavailable',
-      step: 2,
-      isTieBreaker: true
-    };
-  }
-
-  if (Math.abs(meanA - meanB) > EPSILON) {
-    return {
-      winner: meanA > meanB ? 'A' : 'B',
-      reason: 'panel_average',
-      step: 2,
-      isTieBreaker: true
-    };
+    if (Math.abs(valueA - valueB) > EPSILON) {
+      return {
+        winner: valueA > valueB ? 'A' : 'B',
+        reason,
+        step,
+        isTieBreaker: true
+      };
+    }
   }
 
   return {
     winner: 'tie',
-    reason: 'identical_panel_average',
-    step: 2,
+    reason: 'identical_panel_scores',
+    step: steps.length,
     isTieBreaker: true
   };
 }
@@ -265,25 +265,85 @@ function seniorScoreOf(player) {
 }
 
 /**
- * Mean of every mark on the panel, senior judge included: "all judges / N".
- *
- * Only the seats the panel actually has are counted, so a 4-judge panel
- * divides by 4 and never dilutes itself with an empty `judge4` slot.
+ * The four evaluation slots of a 4- or 5-judge panel: J1–J4 on a 5-judge
+ * panel; J1–J3 plus the Sr. Judge in the vacant fourth slot on a 4-judge one.
  *
  * @param {Object} player
  * @param {number|null} panelSize
- * @returns {number|null} null when the panel size is unknown
+ * @returns {Array<number>|null} null when the panel size is not 4 or 5
  */
-function panelMean(player, panelSize) {
+function fourJudgeMarksOf(player, panelSize) {
   const size = panelSize || panelSizeOf(player);
-  if (!size) {
+  const [senior, judge1, judge2, judge3, judge4] = judgeMarksOf(player);
+
+  if (size === 5) return [judge1, judge2, judge3, judge4];
+  if (size === 4) return [judge1, judge2, judge3, senior];
+  return null;
+}
+
+/**
+ * COP 1.12.1 / 2.1.3 — the base score:
+ * (average of the two middle scores of the four judges + Chief) / 2.
+ *
+ * The middle-two average is taken from calculation.util.js, so the tie-break
+ * reads a panel the same way the score itself was calculated. Only the seats
+ * the panel has are passed, so a stray mark in an empty slot is ignored.
+ *
+ * @param {Object} player
+ * @param {number|null} panelSize
+ * @returns {number|null} null when the panel cannot be read
+ */
+function baseScoreOf(player, panelSize) {
+  const size = panelSize || panelSizeOf(player);
+  if (size !== 4 && size !== 5) {
     return null;
   }
 
-  const [senior, ...evaluation] = judgeMarksOf(player);
-  const marks = [senior, ...evaluation.slice(0, size - 1)];
+  const [seniorJudge, judge1, judge2, judge3, judge4] = judgeMarksOf(player);
+  const seats = size === 5
+    ? { seniorJudge, judge1, judge2, judge3, judge4 }
+    : { seniorJudge, judge1, judge2, judge3 };
 
-  return marks.reduce((sum, mark) => sum + mark, 0) / size;
+  const { method, executionAverage } = calculateIndividualScore(seats, size);
+  if (!method) {
+    return null;
+  }
+
+  return (executionAverage + seniorJudge) / 2;
+}
+
+/**
+ * COP 1.12.2 — the average score of the four judges: the plain mean of all
+ * four evaluation marks. The Chief is excluded and nothing is dropped, which
+ * is what makes it a different number from the middle-two average.
+ *
+ * @param {Object} player
+ * @param {number|null} panelSize
+ * @returns {number|null}
+ */
+function fourJudgeAverageOf(player, panelSize) {
+  const marks = fourJudgeMarksOf(player, panelSize);
+  if (!marks) {
+    return null;
+  }
+
+  return marks.reduce((sum, mark) => sum + mark, 0) / marks.length;
+}
+
+/**
+ * COP 1.12.3 — (average score of the four judges + Chief Judge score) / 2.
+ *
+ * @param {Object} player
+ * @param {number|null} panelSize
+ * @returns {number|null}
+ */
+function fourJudgeAverageWithChiefOf(player, panelSize) {
+  const average = fourJudgeAverageOf(player, panelSize);
+  if (average === null) {
+    return null;
+  }
+
+  return (average + seniorScoreOf(player)) / 2;
 }
 
 /**
@@ -367,6 +427,8 @@ module.exports = {
   // Exported for testing and for callers that need the same reading of a score
   panelSizeOf,
   seniorScoreOf,
-  panelMean,
+  baseScoreOf,
+  fourJudgeAverageOf,
+  fourJudgeAverageWithChiefOf,
   timeInSeconds
 };
