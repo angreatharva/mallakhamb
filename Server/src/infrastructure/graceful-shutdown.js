@@ -16,6 +16,10 @@ class GracefulShutdownHandler {
     this.socketManager = null;
     this.dbConnection = null;
     this.redisClient = null;
+    // Set once flushLogsAndMetrics() has ended the winston logger. Writing to
+    // an ended logger emits 'error' (write after end); with nobody listening
+    // that throws, and thrown inside Node's fatal-exception handler it exits 7.
+    this.logsEnded = false;
     this.shutdownTimeout = 30000; // 30 seconds max wait for in-flight requests
   }
 
@@ -45,25 +49,25 @@ class GracefulShutdownHandler {
   setupSignalHandlers() {
     // Handle SIGTERM (sent by process managers like PM2, Docker, Kubernetes)
     process.on('SIGTERM', () => {
-      this.logger.info('SIGTERM signal received');
+      this.log('info', 'SIGTERM signal received');
       this.shutdown('SIGTERM');
     });
 
     // Handle SIGINT (Ctrl+C in terminal)
     process.on('SIGINT', () => {
-      this.logger.info('SIGINT signal received');
+      this.log('info', 'SIGINT signal received');
       this.shutdown('SIGINT');
     });
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      this.logger.error('Uncaught exception', { error: error.message, stack: error.stack });
+      this.log('error', 'Uncaught exception', { error: error.message, stack: error.stack });
       this.shutdown('uncaughtException', 1);
     });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
-      this.logger.error('Unhandled promise rejection', { reason, promise });
+      this.log('error', 'Unhandled promise rejection', { reason, promise });
       this.shutdown('unhandledRejection', 1);
     });
   }
@@ -76,7 +80,7 @@ class GracefulShutdownHandler {
   async shutdown(signal, exitCode = 0) {
     // Prevent multiple shutdown attempts
     if (this.isShuttingDown) {
-      this.logger.warn('Shutdown already in progress, ignoring signal', { signal });
+      this.log('warn', 'Shutdown already in progress, ignoring signal', { signal });
       return;
     }
 
@@ -101,17 +105,16 @@ class GracefulShutdownHandler {
       // Step 4.5: Disconnect Redis (Phase 2A)
       await this.closeRedisConnection();
 
-      // Step 5: Flush logs and metrics
-      await this.flushLogsAndMetrics();
-
+      // Step 5: Flush logs and metrics — last, so nothing logs after the end
       const duration = Date.now() - startTime;
       this.logger.info('Graceful shutdown completed', { signal, duration, exitCode });
+      await this.flushLogsAndMetrics();
 
       // Step 6: Exit with appropriate code
       process.exit(exitCode);
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error('Error during graceful shutdown', { 
+      this.log('error', 'Error during graceful shutdown', { 
         signal, 
         duration, 
         error: error.message,
@@ -286,14 +289,34 @@ class GracefulShutdownHandler {
       if (winstonLogger && typeof winstonLogger.end === 'function') {
         await new Promise((resolve) => {
           winstonLogger.on('finish', resolve);
+          this.logsEnded = true;
           winstonLogger.end();
         });
-        this.logger.info('Logs flushed');
       }
     } catch (error) {
       // Don't throw here, just log the error
       console.error('Error flushing logs and metrics:', error.message);
     }
+  }
+
+  /**
+   * Log through the app logger, or to the console once it has been ended.
+   * @param {'info'|'warn'|'error'} level
+   * @param {string} message
+   * @param {Object} [meta]
+   */
+  log(level, message, meta = {}) {
+    if (!this.logsEnded) {
+      try {
+        this.logger[level](message, meta);
+        return;
+      } catch (_) {
+        // fall through to the console
+      }
+    }
+    const line = `[shutdown] ${level}: ${message} ${JSON.stringify(meta)}`;
+    if (level === 'info') console.log(line);
+    else console.error(line);
   }
 
   /**
