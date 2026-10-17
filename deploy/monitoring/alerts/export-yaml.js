@@ -16,11 +16,13 @@ const path = require('path');
 const crypto = require('crypto');
 const yaml = require(path.join(__dirname, '../../../Server/node_modules/js-yaml'));
 
-const { spec, PLATFORMS, buildRule, GROUP, ROUTE } = require('./apply-alerts');
+const { spec, PLATFORMS, buildRule, GROUP, ROUTE, STAGING_GROUP, stagingRules } = require('./apply-alerts');
 
 if (process.argv.includes('--hashes')) {
   const platform = (process.argv.find((a) => a.startsWith('--platform=')) || '--platform=render').split('=')[1];
-  for (const r of spec(platform).RULES.map(buildRule)) {
+  // --staging: the mallakhamb-oci-staging group (the nightly e2e alerts before the cutover)
+  const list = process.argv.includes('--staging') ? stagingRules() : spec(platform).RULES.map(buildRule);
+  for (const r of list) {
     const a = r.data.find((d) => d.refId === 'A').model;
     const c = r.data.find((d) => d.refId === 'C').model.conditions[0].evaluator;
     const key = JSON.stringify([r.title, r.for, r.noDataState, r.execErrState, r.labels.severity,
@@ -54,6 +56,27 @@ for (const platform of PLATFORMS) {
   ].join('\n');
 
   const out = path.join(__dirname, platform === 'render' ? 'mallakhamb-rules.yaml' : `mallakhamb-rules.${platform}.yaml`);
+  fs.writeFileSync(out, header + yaml.dump(doc, { lineWidth: 120, noRefs: true, quotingType: '"' }));
+  console.log(`wrote ${out} (${rules.length} rules)`);
+}
+
+// The staging group, live next to Render's until the cutover (apply-alerts.js STAGING_GROUP).
+{
+  const rules = stagingRules();
+  const doc = {
+    apiVersion: 1,
+    groups: [{
+      orgId: 1, name: STAGING_GROUP, folder: 'Mallakhamb', interval: '1m',
+      rules: rules.map(({ folderUID, ruleGroup, ...r }) => ({ ...r, isPaused: false })),
+    }],
+  };
+  const header = [
+    '# GENERATED from apply-alerts.js by export-yaml.js. Do not edit by hand.',
+    `# Group ${STAGING_GROUP}: the nightly e2e alerts for the OCI staging servers, LIVE now`,
+    "# (pasted with PLATFORM='render'); deleted at the cutover, when the main group carries them.",
+    '',
+  ].join('\n');
+  const out = path.join(__dirname, 'mallakhamb-rules.staging.yaml');
   fs.writeFileSync(out, header + yaml.dump(doc, { lineWidth: 120, noRefs: true, quotingType: '"' }));
   console.log(`wrote ${out} (${rules.length} rules)`);
 }

@@ -184,9 +184,27 @@
     ],
   };
 
+  /*
+   * Until the cutover (COMMON.md C7) the OCI servers are staging and GROUP is
+   * Render's. The nightly e2e check (deploy/oci/PLAN.md O14) already runs on
+   * them, so its two alerts live now in a small group of their own: copies of
+   * the OCI rules with a "-stg" uid, without the dashboard link (Render's
+   * Runtime dashboard has no e2e panels). At the cutover PLATFORM='oci' puts
+   * the originals in GROUP and this paste deletes the staging group.
+   */
+  const STAGING_GROUP = 'mallakhamb-oci-staging';
+  const stagingRules = () => spec('oci').RULES
+    .filter(([uid]) => uid.startsWith('mk-e2e-'))
+    .map((r) => {
+      const rule = buildRule([`${r[0]}-stg`, ...r.slice(1)]);
+      delete rule.annotations.__dashboardUid__;
+      delete rule.annotations.__panelId__;
+      return { ...rule, ruleGroup: STAGING_GROUP };
+    });
+
   // Loaded by export-yaml.js under Node: hand over the spec, apply nothing.
   if (typeof window === 'undefined') {
-    module.exports = { spec, PLATFORMS: Object.keys(PRESETS), buildRule, GROUP, FOLDER_UID, ROUTE };
+    module.exports = { spec, PLATFORMS: Object.keys(PRESETS), buildRule, GROUP, FOLDER_UID, ROUTE, STAGING_GROUP, stagingRules };
     return;
   }
   const { RULES } = spec(PLATFORM);
@@ -214,6 +232,15 @@
   await call('ruleGroup', `/api/v1/provisioning/folder/${FOLDER_UID}/rule-groups/${GROUP}`, 'PUT', {
     title: GROUP, folderUid: FOLDER_UID, interval: 60, rules: RULES.map(buildRule),
   });
+
+  const stagingUrl = `/api/v1/provisioning/folder/${FOLDER_UID}/rule-groups/${STAGING_GROUP}`;
+  if (PLATFORM === 'render') {
+    await call('stagingGroup', stagingUrl, 'PUT', {
+      title: STAGING_GROUP, folderUid: FOLDER_UID, interval: 60, rules: stagingRules(),
+    });
+  } else {
+    await call('stagingGroup', stagingUrl, 'DELETE');
+  }
 
   console.table(out);
 })();
