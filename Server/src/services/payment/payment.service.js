@@ -11,8 +11,29 @@ class PaymentService {
     this.metrics = metrics || noopMetrics;
   }
 
+  /**
+   * Check a webhook's X-Razorpay-Signature.
+   *
+   * Razorpay signs webhook bodies with the secret entered in its dashboard
+   * (Settings → Webhooks), which is NOT the API key secret — that one signs the
+   * checkout callback (razorpay.gateway.js verifyPaymentSignature). This used
+   * to read only the key secret, so webhooks verified only if someone had typed
+   * the key secret into the webhook form (deploy/COMMON.md F4).
+   *
+   * RAZORPAY_WEBHOOK_SECRET is used when set. Unset, the key secret still
+   * works as before, with a one-time warning, so an existing deployment keeps
+   * reconciling until the webhook secret is configured.
+   */
   verifySignature(rawBody, signature) {
-    const secret = this.config.get('razorpay.keySecret');
+    const webhookSecret = this.config.get('razorpay.webhookSecret');
+    let secret = webhookSecret;
+    if (!secret) {
+      secret = this.config.get('razorpay.keySecret');
+      if (secret && !this.warnedKeySecretFallback) {
+        this.warnedKeySecretFallback = true;
+        this.logger.warn('RAZORPAY_WEBHOOK_SECRET is not set: verifying webhooks with the key secret. Set the webhook secret from Razorpay → Webhooks.');
+      }
+    }
     if (!secret) throw new ValidationError('Razorpay secret is not configured');
     if (!signature) throw new AuthenticationError('Missing Razorpay signature');
 

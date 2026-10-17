@@ -109,7 +109,11 @@ class ConfigManager {
       },
       razorpay: {
         keyId: this.getString('RAZORPAY_KEY_ID', ''),
-        keySecret: this.getString('RAZORPAY_KEY_SECRET', '')
+        keySecret: this.getString('RAZORPAY_KEY_SECRET', ''),
+        // The secret typed into Razorpay → Webhooks, which signs webhook bodies.
+        // Not the key secret (that one signs the checkout callback). Optional
+        // for now: unset, webhooks fall back to the key secret (F4).
+        webhookSecret: this.getString('RAZORPAY_WEBHOOK_SECRET', '')
       },
       payments: {
         /**
