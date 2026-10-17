@@ -9,7 +9,9 @@ node deploy/monitoring/dashboards/build-dashboards.js
 That builds the **render** preset, which is what is live. Two options exist for the move off Render (COMMON.md C1.7, C5.3; PLAN.md "Move to OCI"):
 
 - `--platform=oci|oci-single|aws` sets the limits for a VM and adds the **Host** row to the Runtime dashboard. Write to a temp folder (`build-dashboards.js /tmp/oci --platform=oci`) until the cutover, so the committed render files stay as they are.
-- `--staging` (with a platform) writes "… (staging preview)" copies with `-staging` uids that read `scrape_job="mallakhamb-api-staging"`. They can be imported next to production without overwriting anything; delete them after the check.
+- `--staging` (with a platform) writes "… (OCI staging)" copies with `-staging` uids that read `scrape_job="mallakhamb-api-staging"`, tagged `staging` and the platform. They import next to production without overwriting anything.
+
+**Live OCI set:** `oci-staging/` holds the four OCI dashboards, built with `build-dashboards.js deploy/monitoring/dashboards/oci-staging --platform=oci --staging`. They were imported into the **Mallakhamb** folder on 2026-10-17, next to the Render set. Their uids are `mallakhamb-api-overview-staging`, `mallakhamb-runtime-staging`, `mallakhamb-database-staging` and `mallakhamb-competition-day-staging`. The panels that count only real traffic (socket events, score submits, logins, payment webhooks, error routes, pool checkout failures) and the `DB_MONITOR_COMMANDS` panels stay "No data" until the OCI API sees that traffic. At C7 the production set is rebuilt with `--platform=oci` and these copies are deleted.
 
 | File | uid | What it answers |
 |---|---|---|

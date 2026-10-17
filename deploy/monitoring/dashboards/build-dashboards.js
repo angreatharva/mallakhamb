@@ -10,7 +10,7 @@
  * what production runs today and reproduces the committed *.json byte for byte.
  * The VM presets also add a Host row (Alloy, scrape_job="mallakhamb-host") to
  * the Runtime dashboard. --staging selects the mallakhamb-api-staging scrape job
- * and renames every uid/title to "… (staging preview)", so an import can never
+ * and renames every uid/title to "… (OCI staging)", so an import can never
  * overwrite a production dashboard (COMMON.md C5.3).
  *
  * Usage gauges are "% of a limit" with bands at 70 / 80 / 90 %. The fixed
@@ -147,9 +147,10 @@ const row = (title, y) => ({ id: ++id, type: 'row', title, collapsed: false, gri
 
 function dashboard({ uid, title, description, panels, refresh = '1m', from = 'now-6h', tags = [] }) {
   if (STAGING) {
+    // Kept in the Mallakhamb folder next to the Render set until the C7 cutover.
     uid = `${uid}-staging`;
-    title = `${title} (staging preview)`;
-    tags = [...tags, 'staging-preview'];
+    title = `${title} (${PLATFORM === 'render' ? '' : `${PLATFORM.toUpperCase()} `}staging)`;
+    tags = [...tags, 'staging', PLATFORM];
   }
   return {
     uid, title, description, tags: ['mallakhamb', ...tags],
