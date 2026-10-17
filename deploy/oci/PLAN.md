@@ -132,16 +132,16 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   - Identity & Security → Domains → Default → turn on **MFA** for administrators.
   - Add the **second admin** user, in the Administrators group, with MFA.
   - Never create API keys for the admin users.
-- [ ] **O1.3 Upgrade to Pay As You Go:** Billing & Cost Management → *Upgrade and Manage Payment* → PAYG.
+- [x] **O1.3 Upgrade to Pay As You Go:** Billing & Cost Management → *Upgrade and Manage Payment* → PAYG. *(DROPPED: owner decision, Always Free forever, never PAYG.)*
   - Use a **credit card with online/international use enabled**; some Indian cards fail verification.
   - **Verify:** the console banner no longer says "Free Tier".
 - [ ] **O1.4 Budget alarms:** Billing → *Budgets* → create `mallakhamb-guard`, target the root compartment, monthly amount ₹100.
   - Alert rule 1: **actual spend > 1%** (≈ ₹1), email to the role mailbox and the owner.
   - Alert rule 2: **forecast > 100%**.
   - A budget is an **alarm, not a cap**. O1.7 is the cap.
-- [ ] **O1.5 Compartment:** Identity → Compartments → create `mallakhamb`. **Everything below goes in this compartment.**
-- [ ] **O1.6** Tenancy details: record the **object storage namespace**.
-- [ ] **O1.7 Quota policy: the hard guard.** Governance → *Quota policies* → Create `mallakhamb-free-only` in the **root** compartment:
+- [x] **O1.5 Compartment:** Identity → Compartments → create `mallakhamb`. **Everything below goes in this compartment.** *(`mallakhamb-prod`)*
+- [x] **O1.6** Tenancy details: record the **object storage namespace**. *(`bmfuwns4gjjr`)*
+- [x] **O1.7 Quota policy: the hard guard.** Governance → *Quota policies* → Create `mallakhamb-free-only` in the **root** compartment: *(`mallakhamb-prod-quota-free-tier`, with the regional A1 counters; block storage 200 GB)*
   ```
   zero compute-core quotas in tenancy
   zero compute-memory quotas in tenancy
@@ -156,18 +156,18 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
     - Try to create a VM with any non-A1 shape (e.g. VM.Standard.E5.Flex): it **must fail** with a quota error. Cancel it.
     - Try to create an A1 VM with 3 OCPUs: it must fail too.
   - When this policy is right, a mis-click can't cost money.
-- [ ] **O1.8 Limits check:** Governance → *Limits, Quotas and Usage*.
+- [x] **O1.8 Limits check:** Governance → *Limits, Quotas and Usage*.
   - Service *Compute*: the `standard-a1-core-count` limit is ≥ 2 and memory ≥ 12 GB in AD-1.
   - Service *Block Volume*: total storage is ≥ 200 GB.
   - Take a **screenshot** of each and store it with the record sheet.
 
 ## O2 — Network (Day 2, ~20 min)
 
-- [ ] **O2.1** Networking → VCNs → **Start VCN Wizard → "Create VCN with Internet Connectivity"**:
+- [x] **O2.1** Networking → VCNs → **Start VCN Wizard → "Create VCN with Internet Connectivity"**: *(built by hand instead of the wizard: see the box at the top)*
   - name `mallakhamb-vcn`, compartment `mallakhamb`
   - VCN 10.0.0.0/16, public subnet 10.0.0.0/24, private subnet 10.0.1.0/24 (unused)
   - The wizard also creates a NAT gateway for the private subnet. **Delete the NAT gateway** and its route rule, since NAT isn't assumed free and nothing uses it. Keep the internet gateway.
-- [ ] **O2.2** Public subnet → its **Default Security List** → Ingress rules:
+- [x] **O2.2** Public subnet → its **Default Security List** → Ingress rules:
   - **Add** TCP **80** from `0.0.0.0/0`
   - **Add** TCP **443** from `0.0.0.0/0`
   - **Change** the TCP 22 rule from `0.0.0.0/0` to `10.0.0.0/16` (only the Bastion inside the VCN may reach SSH)
@@ -177,7 +177,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 
 ## O3 — The active VM `mallakhamb-a` (Day 2; may need retries)
 
-- [ ] **O3.1** Compute → Instances → **Create instance**:
+- [x] **O3.1** Compute → Instances → **Create instance**: *(`mallakhamb-prod-bom-vm-app-01`)*
 
   | Setting | Value |
   |---|---|
@@ -191,32 +191,32 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   | Advanced → Management | Instance metadata: **only version 2 endpoints** (legacy v1 disabled) |
   | Advanced → Oracle Cloud Agent | **Compute Instance Monitoring ON**; Bastion plugin ON if offered |
   | Availability | "Restore instance lifecycle state after infrastructure maintenance" **ON**; live migration "Let Oracle choose" |
-- [ ] **O3.2** If you get **"Out of capacity"**: wait and retry (a few times a day). Never pick another shape.
-- [ ] **O3.3** **Verify:**
+- [x] **O3.2** If you get **"Out of capacity"**: wait and retry (a few times a day). Never pick another shape.
+- [x] **O3.3** **Verify:**
   - the instance is *Running* with 1 OCPU / 6 GB in FAULT-DOMAIN-1
   - after 48 h, Billing → *Cost Analysis* = ₹0
 
 ## O4 — Public IPs (Day 2, ~15 min)
 
-- [ ] **O4.1** Networking → IP management → **Reserved public IPs → Reserve**:
+- [x] **O4.1** Networking → IP management → **Reserved public IPs → Reserve**: *(`pip-app-01` 137.23.63.84, `pip-app-02` 130.210.4.142)*
   - `mallakhamb-ip`: the **production** address, which always sits on whichever VM is active.
   - Also `mallakhamb-ip-standby`, if the tenancy shows it at ₹0. Otherwise the standby uses an ephemeral IP (O12.2).
-- [ ] **O4.2** On `mallakhamb-a` → *Attached VNICs* → primary VNIC → *IPv4 Addresses* → primary private IP → **Edit**:
+- [x] **O4.2** On `mallakhamb-a` → *Attached VNICs* → primary VNIC → *IPv4 Addresses* → primary private IP → **Edit**:
   1. Set public IP to **No public IP** → Update.
   2. **Edit** again → **Reserved public IP** → `mallakhamb-ip` → Update.
-- [ ] **O4.3** Record both IPs. Add **both** `/32`s to the **Atlas** access list for Flex (COMMON C2.3), and to the old cluster if its list isn't open.
+- [x] **O4.3** Record both IPs. Add **both** `/32`s to the **Atlas** access list for Flex (COMMON C2.3), and to the old cluster if its list isn't open.
 - [ ] **O4.4** After 48 h, check Cost Analysis is still ₹0. If a reserved IP is ever charged, release `mallakhamb-ip-standby` first; the production one is the one that matters.
 
 ## O5 — Access and host firewall (Day 2, ~30 min)
 
-- [ ] **O5.1 Bastion:** Identity & Security → **Bastion → Create**: `mallakhamb-bastion`, target `mallakhamb-vcn` / public subnet, CIDR allowlist = your current public IP `/32`. Widen it only if your ISP changes your IP often; every session still needs your SSH key.
-- [ ] **O5.2 Connect** (each time you need a shell): Bastion → **Create session** → type **SSH port forwarding**, target = the VM's **private** IP, port 22, your SSH public key, TTL ≤ 3 h. Then *Copy SSH command* and run it on your laptop, which opens a tunnel such as `-L 2222:10.0.0.x:22`. In a second terminal:
+- [x] **O5.1 Bastion:** Identity & Security → **Bastion → Create**: `mallakhamb-bastion`, target `mallakhamb-vcn` / public subnet, CIDR allowlist = your current public IP `/32`. Widen it only if your ISP changes your IP often; every session still needs your SSH key. *(`mallakhambprodbombastion01`; allowlist 0.0.0.0/0, the session and key are the control)*
+- [x] **O5.2 Connect** (each time you need a shell): Bastion → **Create session** → type **SSH port forwarding**, target = the VM's **private** IP, port 22, your SSH public key, TTL ≤ 3 h. Then *Copy SSH command* and run it on your laptop, which opens a tunnel such as `-L 2222:10.0.0.x:22`. In a second terminal:
   ```bash
   ssh -i <instance-private-key> -p 2222 ubuntu@localhost
   ```
   - Private IPs don't change at failover, so a session to each VM always works.
   - **Emergency access** if both the Bastion and SSH fail: Instance → *Console connection* (serial console).
-- [ ] **O5.3 Host firewall** on the VM. **Do not install or enable UFW.**
+- [x] **O5.3 Host firewall** on the VM. **Do not install or enable UFW.** *(iptables in install.sh)*
   ```bash
   sudo iptables -L INPUT --line-numbers            # note the line of the REJECT rule
   N=$(sudo iptables -L INPUT --line-numbers | awk '/REJECT/ {print $1; exit}')
@@ -229,9 +229,9 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 
 ## O6 — Identity, Vault, Object Storage, CLI (Day 3, ~1 h)
 
-- [ ] **O6.1 Dynamic group:** Identity → Domains → Default → **Dynamic groups → Create** `mallakhamb-api-dg`, rule (B is added in O12):
+- [x] **O6.1 Dynamic group:** Identity → Domains → Default → **Dynamic groups → Create** `mallakhamb-api-dg`, rule (B is added in O12): *(`mallakhamb-prod-dg-app`)*
   `ANY {instance.id = '<mallakhamb-a OCID>'}`
-- [ ] **O6.2 Policy** `mallakhamb-api-policy`, in compartment `mallakhamb`:
+- [x] **O6.2 Policy** `mallakhamb-api-policy`, in compartment `mallakhamb`: *(`mallakhamb-prod-pol-app`)*
   ```
   Allow dynamic-group mallakhamb-api-dg to read secret-bundles in compartment mallakhamb
   Allow dynamic-group mallakhamb-api-dg to read buckets in compartment mallakhamb
@@ -240,20 +240,20 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   ```
   - The servers can create and read backups but **never delete** them.
   - The last line lets lifecycle rules expire old backups.
-- [ ] **O6.3 Vault:** Identity & Security → **Vault → Create** `mallakhamb-vault`. Leave *virtual private vault* **unchecked**; that kind isn't free.
+- [x] **O6.3 Vault:** Identity & Security → **Vault → Create** `mallakhamb-vault`. Leave *virtual private vault* **unchecked**; that kind isn't free.
   Then **Master encryption keys → Create** `mallakhamb-key`, **Protection mode: Software** (free), AES-256.
-- [ ] **O6.4 Secret:** Vault → **Secrets → Create** `mallakhamb-api-env`, key `mallakhamb-key`, type template **Plain-Text**.
+- [x] **O6.4 Secret:** Vault → **Secrets → Create** `mallakhamb-api-env`, key `mallakhamb-key`, type template **Plain-Text**. *(`mallakhamb-prod-bom-secret-api-env`)*
   - Contents: the full **staging** env (COMMON §5), one `KEY='value'` per line.
   - **The master copy lives in the password manager.** Always edit it there, then paste the **whole** file as a new secret version. Never type a partial file.
   - Both VMs read the same secret, so they can never drift apart.
-- [ ] **O6.5 Object Storage:** Storage → **Buckets → Create** `mallakhamb-backups`: Standard tier, **private**, Oracle-managed encryption, **versioning off**. Retention rules and versioning can't be combined; the retention rule is the stronger protection.
+- [x] **O6.5 Object Storage:** Storage → **Buckets → Create** `mallakhamb-backups`: Standard tier, **private**, Oracle-managed encryption, **versioning off**. Retention rules and versioning can't be combined; the retention rule is the stronger protection. *(`mallakhamb-prod-bom-bkt-backups`)*
   - **Retention rules → Create:** time-bound **30 days** (unlocked). Objects can't be deleted or overwritten for 30 days, by anyone.
   - **Lifecycle policy rules:**
     - `delete-daily`: Delete, prefix `daily/`, **35 days**
     - `delete-meet`: Delete, prefix `meet/`, **35 days**
     - `delete-monthly`: Delete, prefix `monthly/`, **400 days**
     - `cutover/`: no rule (kept)
-- [ ] **O6.6 OCI CLI on the VM** (over the Bastion):
+- [x] **O6.6 OCI CLI on the VM** (over the Bastion):
   ```bash
   sudo apt-get install -y python3-venv
   sudo python3 -m venv /opt/oci-cli && sudo /opt/oci-cli/bin/pip install --upgrade pip oci-cli
@@ -263,7 +263,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 
 ## O7 — Platform files (Day 3, ~20 min)
 
-- [ ] **O7.1 `/etc/mallakhamb/platform.sh`** (root:root, 0644), the hooks that COMMON C4 calls:
+- [x] **O7.1 `/etc/mallakhamb/platform.sh`** (root:root, 0644), the hooks that COMMON C4 calls:
   ```bash
   # Oracle Cloud hooks for the shared mallakhamb-* scripts (deploy/COMMON.md C4.5)
   export OCI_CLI_AUTH=instance_principal
@@ -284,13 +284,13 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   }
   ```
   **Verify:** `sudo bash -c '. /etc/mallakhamb/platform.sh; fetch_env_file | cut -d= -f1'` lists the key **names** (never print values).
-- [ ] **O7.2 `/etc/mallakhamb/web.env`** (root:root, 0644; not secret). Staging values:
+- [x] **O7.2 `/etc/mallakhamb/web.env`** (root:root, 0644; not secret). Staging values:
   ```bash
   VITE_API_URL='https://<STAGING_API_HOST>/api'
   VITE_STORAGE_KEY='<random value — keep the same one in production>'
   ```
   Because this file exists, `mallakhamb-deploy` builds the web app on the server (COMMON C4.8).
-- [ ] **O7.3 Web site file** `/etc/caddy/sites/staging-web.caddy`. The production `web.caddy` is the same with `<APP_HOST>`, added at cutover.
+- [x] **O7.3 Web site file** `/etc/caddy/sites/staging-web.caddy`. The production `web.caddy` is the same with `<APP_HOST>`, added at cutover.
   ```caddyfile
   <STAGING_APP_HOST> {
       root * /opt/mallakhamb/current/Web/dist
@@ -329,7 +329,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
         redir https://<APP_HOST>{uri} permanent
     }
     ```
-- [ ] **O7.4** Now run COMMON **C3** (staging DNS: both `staging` and `staging-api` are **A → `mallakhamb-ip`**), then **C4** and **C5**. In C4.11 the staging site files are `staging-api.caddy` and `staging-web.caddy`.
+- [x] **O7.4** Now run COMMON **C3** (staging DNS: both `staging` and `staging-api` are **A → `mallakhamb-ip`**), then **C4** and **C5**. In C4.11 the staging site files are `staging-api.caddy` and `staging-web.caddy`. *(C3 skipped: staging uses sslip.io until the domain is decided)*
   **Extra verify:**
   - `https://<STAGING_APP_HOST>/coach/dashboard` returns the app (200)
   - `https://<STAGING_APP_HOST>/assets/does-not-exist.js` returns **404**, not index.html
@@ -337,12 +337,12 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 
 ## O8 — Volume backups and the golden image (Day 4, ~10 min)
 
-- [ ] **O8.1** Storage → **Backup policies → Create** `mallakhamb-weekly` (compartment `mallakhamb`): schedule **weekly, Sunday 21:00 UTC, incremental, keep 3**.
-- [ ] **O8.2** Boot volume of **`mallakhamb-a`** → *Backup policy* → assign `mallakhamb-weekly`.
+- [x] **O8.1** Storage → **Backup policies → Create** `mallakhamb-weekly` (compartment `mallakhamb`): schedule **weekly, Sunday 21:00 UTC, incremental, keep 3**. *(`mallakhamb-prod-bom-bkp-weekly`)*
+- [x] **O8.2** Boot volume of **`mallakhamb-a`** → *Backup policy* → assign `mallakhamb-weekly`.
   - **No policy on B.** It's a copy of A and can be re-cloned, so it doesn't spend the 5-backup allowance.
   - After a failover the roles swap but the policy stays on A's volume. That's fine: either volume restores to a working server.
-- [ ] **O8.3** After C4 passes: A's boot volume → **Create manual backup** `golden-<date>`. Weekly 3 + golden 1 = 4 of the 5 free.
-- [ ] **O8.4** The boot volume holds `/etc/mallakhamb/app.env`, so these backups contain secrets. They stay inside your own tenancy; never copy them out.
+- [x] **O8.3** After C4 passes: A's boot volume → **Create manual backup** `golden-<date>`. Weekly 3 + golden 1 = 4 of the 5 free. *(`mallakhamb-prod-bom-bvb-app-golden-20261015`)*
+- [x] **O8.4** The boot volume holds `/etc/mallakhamb/app.env`, so these backups contain secrets. They stay inside your own tenancy; never copy them out.
 
 ## O9 — Rehearsal notes (COMMON C6)
 
@@ -396,7 +396,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 
 ## O12 — The standby VM `mallakhamb-b` (= COMMON C6E; Day 7, ~45 min)
 
-- [ ] **O12.1 Create B from A's golden backup:**
+- [x] **O12.1 Create B from A's golden backup:** *(app-02, FD-2, 2026-10-15)*
   1. Storage → Boot volume backups → `golden-<date>` → **Restore** → new boot volume `mallakhamb-b-boot` (50 GB).
   2. Compute → **Create instance** from that boot volume:
      - name `mallakhamb-b`, **fault domain FAULT-DOMAIN-2**, VM.Standard.A1.Flex **1 OCPU / 6 GB**
@@ -405,20 +405,20 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   3. Add B's public IP to the Atlas access list if it isn't there yet.
 
   The quota policy allows this, since the total becomes exactly 2 OCPU / 12 GB. If it refuses, A is bigger than 1/6; fix A first.
-- [ ] **O12.2 Make it a standby, within the first hour.** The clone booted with A's enabled services. Over a Bastion session to B's **private** IP:
+- [x] **O12.2 Make it a standby, within the first hour.** The clone booted with A's enabled services. Over a Bastion session to B's **private** IP:
   ```bash
   sudo mallakhamb-demote          # COMMON C4.17: STANDBY flag, service + backup timers off, sites → sites-standby, Alloy label standby
   sudo mallakhamb-deploy "PASTE-THE-FULL-SHA-FROM-A"   # A: cat /opt/mallakhamb/DEPLOYED_SHA. Prints "STANDBY UPDATED … (service not started)"
   systemctl is-active mallakhamb  # must print "inactive"
   ```
-- [ ] **O12.3** Identity → Dynamic group `mallakhamb-api-dg` → change the rule to
+- [x] **O12.3** Identity → Dynamic group `mallakhamb-api-dg` → change the rule to
   `ANY {instance.id = '<mallakhamb-a OCID>', instance.id = '<mallakhamb-b OCID>'}`.
   **Verify** on B: `sudo bash -c '. /etc/mallakhamb/platform.sh; fetch_env_file | cut -d= -f1'` lists the key names.
-- [ ] **O12.4 Verify in Grafana:**
+- [x] **O12.4 Verify in Grafana:**
   - `up{scrape_job="mallakhamb-host-standby"}` = 1
   - the Release table shows A `role=active` and B `role=standby` with the **same** sha
   - *Standby missing* and *Standby behind* stay Normal
-- [ ] **O12.5** Then run the failover drill (COMMON **C6F**) using O13, on the staging hosts, and record the time.
+- [x] **O12.5** Then run the failover drill (COMMON **C6F**) using O13, on the staging hosts, and record the time. *(2026-10-16, both ways, about 1 to 1.5 min)*
 
 ## O13 — Failover runbook (A → B; the same with letters swapped for B → A)
 

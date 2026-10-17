@@ -221,7 +221,7 @@ Web build values (not secret; they end up in the JavaScript bundle):
 
 Every change here also works on Render. Ship it to Render production first (C1.9) and prove it there.
 
-- [ ] **C1.1 Fix F1.**
+- [x] **C1.1 Fix F1.** *(Done 2026-10-15, 3c628e1: `getSocketUrl()` in api.config.js, used in 8 files.)*
   - Add one helper, e.g. `getSocketBaseUrl()` in `Web/src/config/api.config.js`, returning `baseUrl.replace(/\/api\/?$/, '')` (strips only a **trailing** `/api`).
   - Use it in all 7 files.
   - Vitest cases:
@@ -231,18 +231,18 @@ Every change here also works on Render. Ship it to Render production first (C1.9
     - `http://localhost:5000/api` → `http://localhost:5000`
     - a trailing slash is also stripped
   - **Verify:** `grep -rn "replace('/api'" Web/src` → nothing.
-- [ ] **C1.2 Fix F2.** Add `https://<API_HOST> wss://<API_HOST> https://<STAGING_API_HOST> wss://<STAGING_API_HOST>` to `connect-src` in `Web/index.html`. **Keep** the onrender entries until C9 (rollback needs them).
-- [ ] **C1.3 Fix F4.**
+- [x] **C1.2 Fix F2.** Add `https://<API_HOST> wss://<API_HOST> https://<STAGING_API_HOST> wss://<STAGING_API_HOST>` to `connect-src` in `Web/index.html`. **Keep** the onrender entries until C9 (rollback needs them). *(Staging host added 2026-10-15; the production `<API_HOST>` is added when the domain is decided, C3.)*
+- [x] **C1.3 Fix F4.** *(Done 2026-10-17: webhook secret used when set, key-secret fallback warns once; 6 Jest cases.)*
   - Add `razorpay.webhookSecret` (`RAZORPAY_WEBHOOK_SECRET`) to `config-manager.js`.
   - `verifySignature` uses it when set, and falls back to the key secret with a one-time warning.
   - Jest: the webhook secret passes; the key secret fails when a webhook secret is set; the fallback works when it's unset.
-- [ ] **C1.4 Fix F5.**
+- [x] **C1.4 Fix F5.** *(Done 2026-10-17: `.env_example` code is a placeholder and OFF. `.env.scripts` stays tracked: its password is blank and always was. **Staging still uses the old public code**, and production must be checked: C0.9.)*
   - Placeholder discount code and `DISCOUNT_CODE_ENABLED=false` in `.env_example`.
   - `git rm --cached Server/.env.scripts` and add it to `.gitignore`.
   - Change the password of any real account that used the seed password.
   - `npm run env:check` must still pass; update `checkEnv.js` if it expects `.env.scripts`.
 - [ ] **C1.5 (optional) F3:** `EMAIL_FROM` falls back to `EMAIL_USER`. Only needed if SMTP relays are ever used.
-- [ ] **C1.6 Shared server files** in `deploy/server/` (contents in C4):
+- [x] **C1.6 Shared server files** in `deploy/server/` (contents in C4): *(All in `deploy/server/`, installed by `install.sh`, `install-alloy.sh`, `install-e2e.sh`. Not done: a shellcheck CI step; the repo has no CI yet.)*
   - `Caddyfile.api`, `Caddyfile.web`, `mallakhamb.service`
   - `bin/mallakhamb-render-env`, `bin/mallakhamb-envcheck`, `bin/mallakhamb-deploy`, `bin/mallakhamb-rollback`, `bin/mallakhamb-backup`, `bin/mallakhamb-counts`, `bin/mallakhamb-promote`, `bin/mallakhamb-demote`
   - `mallakhamb-backup.service`/`.timer`, `mallakhamb-backup-meet.service`/`.timer`, `alloy/config.alloy`, `README.md`
@@ -278,7 +278,7 @@ Every change here also works on Render. Ship it to Render production first (C1.9
   4. `deploy/monitoring/PLAN.md`: a new section "Move to <platform>" listing these changes; record sheet updated at cutover.
 - [x] **C1.11 Fix F19.** In `registry.js`: `version: (env.GIT_COMMIT || env.RENDER_GIT_COMMIT || 'dev').slice(0, 7)`. The deploy script provides `GIT_COMMIT` (C4.8). Add a Jest case. It's harmless on Render.
   - *Done 2026-10-16 on `deploy/move-readiness`: two Jest cases (GIT_COMMIT wins; `dev` when nothing is set); full Server suite 69 suites / 901 tests green.*
-- [ ] **C1.8 Test gate:**
+- [x] **C1.8 Test gate:** *(2026-10-17: Server 926/926, Web 492/492, lint 0 errors, build OK, before each merge to master.)*
   - `cd Server && npm test`, and `cd Web && npm test && npm run lint && npm run build`, all green.
   - `npm run docs:openapi:check` passes.
   - The known-failing `admin.routes` test is fixed or skipped with a written reason.
@@ -333,7 +333,7 @@ A **new** Flex cluster rather than an in-place upgrade: the old cluster stays un
 
 Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS Session Manager].
 
-- [ ] **C4.1 Updates, time and swap:**
+- [x] **C4.1 Updates, time and swap:** *(`deploy/server/install.sh`, on both VMs.)*
   ```bash
   sudo apt-get update && sudo apt-get -y upgrade
   timedatectl        # must show Time zone: Etc/UTC, System clock synchronized: yes
@@ -342,7 +342,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   sudo sed -i 's/^#\?SystemMaxUse=.*/SystemMaxUse=500M/' /etc/systemd/journald.conf && sudo systemctl restart systemd-journald
   grep -R "Automatic-Reboot" /etc/apt/apt.conf.d/50unattended-upgrades   # must be "false" or commented
   ```
-- [ ] **C4.2 Packages:**
+- [x] **C4.2 Packages:** *(install.sh; Node 24 since 2026-10-16.)*
   ```bash
   sudo apt-get install -y git jq unzip curl ca-certificates gnupg
   curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/ns.sh && sudo bash /tmp/ns.sh && sudo apt-get install -y nodejs && node -v   # v24.x, the same major as Render (package.json engines)
@@ -354,7 +354,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   ```
   - **MongoDB Database Tools** and **mongosh**: from mongodb.com/try/download, choose the **Ubuntu 24.04 ARM64** `.deb` of each (22.04 ARM64 if 24.04 isn't listed), then `sudo apt-get install -y ./<file>.deb`.
   - **Verify:** `mongodump --version && mongosh --version`.
-- [ ] **C4.3 User and folders:**
+- [x] **C4.3 User and folders:**
   ```bash
   sudo useradd --system --home-dir /opt/mallakhamb --shell /usr/sbin/nologin mallakhamb
   sudo mkdir -p /opt/mallakhamb/releases /var/log/mallakhamb /etc/mallakhamb /var/lib/alloy/textfile
@@ -363,7 +363,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   sudo chown root:mallakhamb /etc/mallakhamb && sudo chmod 750 /etc/mallakhamb
   sudo chown root:alloy /var/lib/alloy/textfile && sudo chmod 755 /var/lib/alloy/textfile
   ```
-- [ ] **C4.4 Repo access:**
+- [x] **C4.4 Repo access:** *(read-only deploy key)*
   - **Public repo:** HTTPS clone, no key.
   - **Private repo:**
     ```bash
@@ -371,11 +371,11 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
     ```
     Add the `.pub` to GitHub → repo → *Deploy keys*, **read-only**. Then
     `sudo ssh-keyscan -t ed25519 github.com | sudo tee -a /root/.ssh/known_hosts`, and compare the fingerprint with GitHub's published one.
-- [ ] **C4.5 `/etc/mallakhamb/platform.sh`** (root:root, 0644). The platform plan supplies it. It must define:
+- [x] **C4.5 `/etc/mallakhamb/platform.sh`** (root:root, 0644). The platform plan supplies it. It must define:
   - `REPO_URL` and, for a private repo, `GIT_SSH_COMMAND`
   - `fetch_env_file`: prints the full env as `KEY='value'` lines to stdout, returns non-zero on any failure
   - `upload_backup <local-file> <object-key>`
-- [ ] **C4.6 `/usr/local/bin/mallakhamb-render-env`** (0755). Writes the env file **only when it is complete**; on any failure the previous file stays.
+- [x] **C4.6 `/usr/local/bin/mallakhamb-render-env`** (0755). Writes the env file **only when it is complete**; on any failure the previous file stays.
   ```bash
   #!/usr/bin/env bash
   set -euo pipefail
@@ -390,7 +390,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   install -m 640 -o root -g mallakhamb "$tmp" /etc/mallakhamb/app.env
   echo "env rendered: $(grep -c . /etc/mallakhamb/app.env) keys"
   ```
-- [ ] **C4.7 `/usr/local/bin/mallakhamb-envcheck`** (0755) prints a safe summary with no secrets. **Run it before every go-live.**
+- [x] **C4.7 `/usr/local/bin/mallakhamb-envcheck`** (0755) prints a safe summary with no secrets. **Run it before every go-live.**
   ```bash
   #!/usr/bin/env bash
   set -euo pipefail
@@ -410,7 +410,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   echo "METRICS_TOKEN set   = $([ -n "$METRICS_TOKEN" ] && echo yes || echo NO)"
   echo "API docs / debug    = ${ENABLE_API_DOCS:-unset} / ${ENABLE_DEBUG_ROUTES:-unset}"
   ```
-- [ ] **C4.8 `/usr/local/bin/mallakhamb-deploy <full-sha>`** (0755). The only way code reaches the server.
+- [x] **C4.8 `/usr/local/bin/mallakhamb-deploy <full-sha>`** (0755). The only way code reaches the server.
   - It builds the web app on the server **only if `/etc/mallakhamb/web.env` exists** (OCI). AWS builds the web app in CI instead.
   - `web.env` holds only `VITE_API_URL` and `VITE_STORAGE_KEY`, in `KEY='value'` form. It is **not** secret, and the build never sees `app.env`.
   ```bash
@@ -499,7 +499,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   - Migrations aren't undone by a rollback. Each migration must stay compatible with the previous release; that's the repo's existing rule.
   - **With a standby (D10): deploy to the active first, then to the standby.** The standby's `startup.js --check` then proves the release boots against the already-migrated database. If it fails, the active is still fine; fix it before the next meet.
   - Old releases are cleaned up on the active only. On the standby they're replaced over time as new releases arrive.
-- [ ] **C4.9 `/usr/local/bin/mallakhamb-rollback`** (0755):
+- [x] **C4.9 `/usr/local/bin/mallakhamb-rollback`** (0755):
   ```bash
   #!/usr/bin/env bash
   set -euo pipefail
@@ -509,7 +509,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   ln -sfn "$PREV" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
   systemctl restart mallakhamb && echo "rolled back to $PREV"
   ```
-- [ ] **C4.10 `/etc/systemd/system/mallakhamb.service`:**
+- [x] **C4.10 `/etc/systemd/system/mallakhamb.service`:**
   ```ini
   [Unit]
   Description=Mallakhamb API
@@ -542,7 +542,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   ```
   - It runs node directly; `npm start` doesn't pass SIGTERM through reliably.
   - Run `sudo systemctl daemon-reload && sudo systemctl enable mallakhamb`. **Don't start it yet.**
-- [ ] **C4.11 Caddy.** `/etc/caddy/Caddyfile` imports the site files; start with the **staging** hosts only.
+- [x] **C4.11 Caddy.** `/etc/caddy/Caddyfile` imports the site files; start with the **staging** hosts only. *(staging sslip.io hosts)*
   ```caddyfile
   {
       email <owner email>
@@ -574,7 +574,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   ```
   The web site file (OCI only) is in the OCI plan. To apply: `sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy`.
   **Add a host to Caddy only after its DNS answers with this server's IP.** Otherwise Let's Encrypt fails and Caddy backs off for a long time.
-- [ ] **C4.12 `/usr/local/bin/mallakhamb-backup [daily|meet]`** (0755), plus systemd services and timers:
+- [x] **C4.12 `/usr/local/bin/mallakhamb-backup [daily|meet]`** (0755), plus systemd services and timers:
   ```bash
   #!/usr/bin/env bash
   set -euo pipefail
@@ -604,13 +604,13 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
     - `mallakhamb-backup-meet.timer`: `OnCalendar=*-*-* 02..15:00/15:00 UTC` (every 15 min, 07:30–21:15 IST), `Persistent=false`. **Verify** with `systemd-analyze calendar --iterations=5 "*-*-* 02..15:00/15:00 UTC"`.
     - **Installed but NOT enabled.** It's switched on and off per meet (C8.3), so a quiet month doesn't fill object storage with identical dumps.
     - Object storage needs a `meet/` lifecycle rule (35 days), same as `daily/` [PLATFORM].
-- [ ] **C4.13 `/usr/local/bin/mallakhamb-counts <uri>`** (0755) prints each collection with its document count, for comparing copies:
+- [x] **C4.13 `/usr/local/bin/mallakhamb-counts <uri>`** (0755) prints each collection with its document count, for comparing copies:
   ```bash
   #!/usr/bin/env bash
   set -euo pipefail
   mongosh "${1:?uri}" --quiet --eval 'db.getCollectionNames().sort().forEach(c => print(c.padEnd(34), db[c].countDocuments({})))'
   ```
-- [ ] **C4.14 Grafana Alloy (host metrics only).**
+- [x] **C4.14 Grafana Alloy (host metrics only).** *(live 2026-10-16, both VMs)*
   - Grafana Cloud → *Administration → Cloud access policies* → new policy `mallakhamb-alloy`, scope **metrics:write** only. Create a token and store it in the password manager.
   - From *Connections → Hosted Prometheus*, copy the **remote-write URL** and **username** (numeric).
   - `/etc/default/alloy` (root:alloy, 0640):
@@ -663,7 +663,7 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   - Run `sudo systemctl enable --now alloy && sudo systemctl status alloy`.
   - **Verify** in Grafana Explore: `up{scrape_job="mallakhamb-host-staging"}` = 1, and `count({scrape_job="mallakhamb-host-staging"})` stays under ~600 series.
   - The Alloy UI listens on `127.0.0.1:12345` only; never open it.
-- [ ] **C4.15 First deploy:** `sudo /usr/local/bin/mallakhamb-deploy <full sha of move-ready-1>`.
+- [x] **C4.15 First deploy:** `sudo /usr/local/bin/mallakhamb-deploy <full sha of move-ready-1>`. *(2026-10-15; both VMs now run current master)*
   **Verify:**
   - `DEPLOYED …` is printed, and `sudo mallakhamb-envcheck` shows the **staging** values (`rzp_test_`, `<db>_rehearsal`).
   - `curl -s https://<STAGING_API_HOST>/api/health/ready` returns ready.
@@ -672,9 +672,9 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   - `curl -s -o /dev/null -w '%{http_code}' http://<STAGING_API_HOST>/api/health/live` returns **308** (Caddy redirects to HTTPS).
   - `ls /var/log/mallakhamb` shows today's `combined-*.log`.
   - Run `sudo reboot`, wait 2 min, and check health again.
-- [ ] **C4.16 Backup test:** `sudo systemctl start mallakhamb-backup.service && journalctl -u mallakhamb-backup -n 5` shows `backup ok`. The object is in the bucket, and the Host row's "last backup age" is a few minutes.
+- [x] **C4.16 Backup test:** `sudo systemctl start mallakhamb-backup.service && journalctl -u mallakhamb-backup -n 5` shows `backup ok`. The object is in the bucket, and the Host row's "last backup age" is a few minutes.
 
-- [ ] **C4.17 Standby scripts** (D10; installed on **both** servers so either can take either role).
+- [x] **C4.17 Standby scripts** (D10; installed on **both** servers so either can take either role). *(promote/demote; failover drilled both ways, C6F)*
   `/usr/local/bin/mallakhamb-promote`, run on the standby **after** the public IP has been moved to it:
   ```bash
   #!/usr/bin/env bash
