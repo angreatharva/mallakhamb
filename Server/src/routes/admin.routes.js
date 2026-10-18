@@ -24,6 +24,7 @@ const { handleValidationErrors } = require('../middleware/validation.middleware'
 const adminValidator = require('../validators/admin.validator');
 const scoringValidator = require('../validators/scoring.validator');
 const performanceOrderValidator = require('../validators/performance-order.validator');
+const tieBreakDrawValidator = require('../validators/tie-break-draw.validator');
 const { 
   auditUserCreated, auditUserUpdated, auditCompetitionCreated, auditCompetitionUpdated, auditCompetitionDeleted,
   auditScoreUpdated, auditUserDeleted, auditPaymentCompleted
@@ -52,6 +53,7 @@ function createAdminRoutes(container) {
   // Get controller from DI container
   const adminController = container.resolve('adminController');
   const performanceOrderController = container.resolve('performanceOrderController');
+  const tieBreakDrawController = container.resolve('tieBreakDrawController');
 
   // ==================== Public Authentication Routes ====================
 
@@ -590,6 +592,42 @@ function createAdminRoutes(container) {
     performanceOrderValidator.setPlayerOrder(),
     handleValidationErrors,
     performanceOrderController.setPlayerOrder
+  );
+
+  // ==================== Lucky Draw (COP 1.12.4) ====================
+  // A tie the rules cannot break is settled by a physical draw at the venue;
+  // the admin records the order it produced and the ranking follows it.
+
+  /**
+   * @route   POST /api/admin/tie-break/draws
+   * @desc    Record the drawn order for one tied group of athletes
+   * @access  Admin, SuperAdmin
+   */
+  router.post(
+    '/tie-break/draws',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    requireUnlockedCompetition(),
+    tieBreakDrawValidator.recordDraw(),
+    handleValidationErrors,
+    tieBreakDrawController.recordDraw
+  );
+
+  /**
+   * @route   DELETE /api/admin/tie-break/draws
+   * @desc    Remove a recorded draw (the group awaits a draw again)
+   * @access  Admin, SuperAdmin
+   */
+  router.delete(
+    '/tie-break/draws',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    requireUnlockedCompetition(),
+    tieBreakDrawValidator.clearDraw(),
+    handleValidationErrors,
+    tieBreakDrawController.clearDraw
   );
 
   // ==================== Age Group Management ====================

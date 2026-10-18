@@ -23,6 +23,7 @@ const TIE_BREAK_LABELS = {
   base_score: 'Placed on the base score',
   four_judge_average: 'Placed on the average of the four judges',
   four_judge_average_with_chief: 'Placed on the four-judge average with the chief judge',
+  lucky_draw: 'Placed by lucky draw',
   identical_time: 'Tied — identical time',
   identical_panel_scores: 'Tied — identical panel scores',
   time_unavailable: 'Tied — no time recorded',
@@ -90,7 +91,9 @@ const PlayerCard = ({ player, rank, podium = false, className = '' }) => {
     bonus: Number(sb.originality) || 0,
   };
   const tieBreak = player.tieBreakInfo;
-  const tieLabel = tieBreak ? TIE_BREAK_LABELS[tieBreak.method] : null;
+  const tieLabel = tieBreak?.awaitingLuckyDraw
+    ? 'Tied — lucky draw to be held'
+    : (tieBreak ? TIE_BREAK_LABELS[tieBreak.method] : null);
 
   return (
     <article

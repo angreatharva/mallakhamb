@@ -11,6 +11,7 @@ import { ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRa
 import { logger } from '@/infrastructure/logger';
 import { Button, Heading, Tabs, TextLink } from '@/components/ui';
 import PlayerRankingBoard from '@/components/scores/PlayerRankingBoard';
+import LuckyDrawPanel from '@/components/scores/LuckyDrawPanel';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromIndividualScores, filterRows } from '@/components/scores/scoreRows';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
@@ -238,6 +239,32 @@ const Scores = () => {
     }
   };
 
+  /*
+   * The lucky draw (COP 1.12.4) is held at the venue; these record its result.
+   * The board then reloads, because the server is what applies the order.
+   */
+  const recordLuckyDraw = async (group, order) => {
+    try {
+      await api.recordTieBreakDraw({ ...categoryParams(), order });
+      toast.success('Lucky draw recorded');
+      await fetchIndividualScores();
+    } catch (error) {
+      logger.error('Failed to record lucky draw:', error);
+      toast.error(error.response?.data?.message || 'Failed to record the lucky draw');
+    }
+  };
+
+  const clearLuckyDraw = async (group) => {
+    try {
+      await api.clearTieBreakDraw({ ...categoryParams(), groupKey: group.key });
+      toast.success('Lucky draw cleared');
+      await fetchIndividualScores();
+    } catch (error) {
+      logger.error('Failed to clear lucky draw:', error);
+      toast.error(error.response?.data?.message || 'Failed to clear the lucky draw');
+    }
+  };
+
   const fetchTeamRankings = async () => {
     setLoading(true);
     try {
@@ -402,6 +429,7 @@ const Scores = () => {
                           <span className="text-ink/70">Individual rankings for: </span>
                           <span className="font-bold text-ink">{categoryLabel}</span>
                         </InfoBanner>
+                        <LuckyDrawPanel rows={scores} onRecord={recordLuckyDraw} onClear={clearLuckyDraw} />
                         <div className="mb-4"><DarkSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search players by name or team…" /></div>
 
                         <div className="flex items-center gap-2 px-1 mb-4">

@@ -23,6 +23,13 @@ export const createAdminAPI = (basePath = '/admin') => ({
   getTeamScores: (params) => api.get(`${basePath}/scores/team`, { params }),
   getIndividualScores: (params) => api.get(`${basePath}/scores/individual`, { params }),
   getTeamRankings: (params) => api.get(`${basePath}/scores/team-rankings`, { params }),
+  /**
+   * Record the physical lucky draw for one tied group (COP 1.12.4), first place first.
+   * @param {{gender, ageGroup, competitionType, apparatus, order: string[], competition?: string}} data
+   */
+  recordTieBreakDraw: (data) => api.post(`${basePath}/tie-break/draws`, data),
+  /** @param {{gender, ageGroup, competitionType, apparatus, groupKey: string, competition?: string}} data */
+  clearTieBreakDraw: (data) => api.delete(`${basePath}/tie-break/draws`, { data }),
   getSubmittedTeams: (params) => api.get(`${basePath}/teams/submitted`, { params }),
   saveJudges: (data) => api.post(`${basePath}/judges/bulk`, data),
   getJudges: (params) => api.get(`${basePath}/judges`, { params }),

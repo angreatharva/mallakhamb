@@ -136,6 +136,7 @@ function buildApp() {
         // is being CONSTRUCTED — which fails the whole suite at load rather
         // than in one test.
         case 'performanceOrderController':
+        case 'tieBreakDrawController':
           return new Proxy({}, { get: () => (req, res) => res.json({ success: true }) });
         default:
           return {};

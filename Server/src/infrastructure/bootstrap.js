@@ -13,6 +13,7 @@ const ScoreRepository = require('../repositories/score.repository');
 const TransactionRepository = require('../repositories/transaction.repository');
 const AuditLogRepository = require('../repositories/audit-log.repository');
 const PerformanceOrderRepository = require('../repositories/performance-order.repository');
+const TieBreakDrawRepository = require('../repositories/tie-break-draw.repository');
 const RefreshTokenRepository = require('../repositories/refresh-token.repository');
 
 const CacheService = require('../services/cache/cache.service');
@@ -36,6 +37,7 @@ const PerformanceOrderService = require('../services/competition/performance-ord
 const TeamService = require('../services/team/team.service');
 const ScoringService = require('../services/scoring/scoring.service');
 const CalculationService = require('../services/scoring/calculation.service');
+const TieBreakDrawService = require('../services/scoring/tie-break-draw.service');
 const PaymentService = require('../services/payment/payment.service');
 
 const createCompetitionController = require('../controllers/competition.controller');
@@ -50,6 +52,7 @@ const createJudgeController = require('../controllers/judge.controller');
 const createSuperAdminController = require('../controllers/super-admin.controller');
 const createPaymentController = require('../controllers/payment.controller');
 const createPerformanceOrderController = require('../controllers/performance-order.controller');
+const createTieBreakDrawController = require('../controllers/tie-break-draw.controller');
 
 const HealthMonitor = require('./health-monitor');
 const { createMetrics } = require('./prometheus/registry');
@@ -102,6 +105,7 @@ function bootstrap() {
   container.register('transactionRepository', (c) => new TransactionRepository(c.resolve('logger')), 'singleton');
   container.register('auditLogRepository', (c) => new AuditLogRepository(c.resolve('logger')), 'singleton');
   container.register('performanceOrderRepository', (c) => new PerformanceOrderRepository(c.resolve('logger')), 'singleton');
+  container.register('tieBreakDrawRepository', (c) => new TieBreakDrawRepository(c.resolve('logger')), 'singleton');
   container.register('refreshTokenRepository', (c) => new RefreshTokenRepository(c.resolve('logger')), 'singleton');
 
   container.register('cacheService', (c) => new CacheService(c.resolve('config'), c.resolve('logger')), 'singleton');
@@ -199,6 +203,7 @@ function bootstrap() {
     competitionRepository: c.resolve('competitionRepository'),
     scoreRepository: c.resolve('scoreRepository'),
     adminService: c.resolve('adminService'),
+    tieBreakDrawRepository: c.resolve('tieBreakDrawRepository'),
     logger: c.resolve('logger'),
   }), 'singleton');
   container.register('competitionService', (c) => new CompetitionService(
@@ -296,8 +301,15 @@ function bootstrap() {
     c.resolve('calculationService'),
     // `submitScore` validates the team a score is filed against.
     c.resolve('teamRepository'),
-    c.resolve('metrics')
+    c.resolve('metrics'),
+    c.resolve('tieBreakDrawRepository')
   ), 'singleton');
+  // Validates a draw against the standing scoringService ranks; one-way.
+  container.register('tieBreakDrawService', (c) => new TieBreakDrawService({
+    tieBreakDrawRepository: c.resolve('tieBreakDrawRepository'),
+    scoringService: c.resolve('scoringService'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
 
   container.register('competitionController', (c) => createCompetitionController(c), 'singleton');
   container.register('teamController', (c) => createTeamController(c), 'singleton');
@@ -311,6 +323,7 @@ function bootstrap() {
   container.register('superAdminController', (c) => createSuperAdminController(c), 'singleton');
   container.register('paymentController', (c) => createPaymentController(c), 'singleton');
   container.register('performanceOrderController', (c) => createPerformanceOrderController(c), 'singleton');
+  container.register('tieBreakDrawController', (c) => createTieBreakDrawController(c), 'singleton');
 
   container.register('cacheWarmer', (c) => new CacheWarmer(
     c.resolve('competitionService'),

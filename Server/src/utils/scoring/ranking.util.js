@@ -7,7 +7,7 @@
  * Requirements: 1.5, 1.8
  */
 
-const { applyTieBreaker, areTied } = require('./tie-breaker.util');
+const { applyTieBreaker, areTied, separatedByLuckyDraw } = require('./tie-breaker.util');
 const { apparatusKey } = require('../../config/cop-rules');
 
 /**
@@ -81,15 +81,17 @@ function calculateTeamRankings(teams, competitionType = 'Competition II') {
  * 
  * @param {Array<Object>} players - Array of player objects with finalScore and other properties
  * @param {string} competitionType - Type of competition ('Competition I' or 'Competition II')
+ * @param {Object} [options]
+ * @param {Array<{order: Array<string>}>} [options.draws] - lucky draws recorded for this standing
  * @returns {Array<Object>} Players with rank assigned
  */
-function calculateIndividualRankings(players, competitionType = 'Competition II') {
+function calculateIndividualRankings(players, competitionType = 'Competition II', { draws = [] } = {}) {
   if (!players || players.length === 0) {
     return [];
   }
 
   // Apply tie-breaker sorting
-  const sortedPlayers = applyTieBreaker(players, competitionType);
+  const sortedPlayers = applyTieBreaker(players, competitionType, { draws });
 
   // Assign ranks with tie handling
   let currentRank = 1;
@@ -97,8 +99,12 @@ function calculateIndividualRankings(players, competitionType = 'Competition II'
 
   const rankedPlayers = sortedPlayers.map((player, index) => {
     // Check if this player is tied with the previous player
-    if (previousPlayer !== null && areTied(player, previousPlayer, competitionType)) {
-      // Same rank as previous player (exact tie)
+    if (
+      previousPlayer !== null &&
+      areTied(player, previousPlayer, competitionType) &&
+      !separatedByLuckyDraw(player, previousPlayer)
+    ) {
+      // Same rank as previous player (exact tie, no lucky draw recorded)
     } else if (previousPlayer !== null) {
       // Different rank
       currentRank = index + 1;
@@ -130,9 +136,12 @@ function calculateIndividualRankings(players, competitionType = 'Competition II'
  *
  * @param {Array<Object>} players
  * @param {string} competitionType
+ * @param {Object} [options]
+ * @param {Array<{apparatus: string, order: Array<string>}>} [options.draws] -
+ *   lucky draws recorded for this category; each applies to its own apparatus
  * @returns {Array<Object>} players with an apparatus-relative `rank`
  */
-function calculateIndividualRankingsByApparatus(players, competitionType = 'Competition II') {
+function calculateIndividualRankingsByApparatus(players, competitionType = 'Competition II', { draws = [] } = {}) {
   if (!players || players.length === 0) return [];
 
   const groups = new Map();
@@ -142,9 +151,9 @@ function calculateIndividualRankingsByApparatus(players, competitionType = 'Comp
     groups.get(key).push(player);
   }
 
-  return [...groups.values()].flatMap(
-    (group) => calculateIndividualRankings(group, competitionType)
-  );
+  return [...groups.entries()].flatMap(([key, group]) => calculateIndividualRankings(group, competitionType, {
+    draws: (draws || []).filter((draw) => apparatusKey(draw.apparatus) === key)
+  }));
 }
 
 /*

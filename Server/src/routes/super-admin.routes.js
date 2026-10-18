@@ -3,6 +3,7 @@ const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireSuperAdmin } = require('../middleware/auth.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const performanceOrderValidator = require('../validators/performance-order.validator');
+const tieBreakDrawValidator = require('../validators/tie-break-draw.validator');
 
 function createSuperAdminRoutes(container) {
   const router = express.Router();
@@ -61,6 +62,11 @@ function createSuperAdminRoutes(container) {
   router.post('/lots/draw', performanceOrderValidator.drawLots(), handleValidationErrors, performanceOrderController.drawLots);
   router.put('/lots/teams', performanceOrderValidator.setTeamOrder(), handleValidationErrors, performanceOrderController.setTeamOrder);
   router.put('/lots/players', performanceOrderValidator.setPlayerOrder(), handleValidationErrors, performanceOrderController.setPlayerOrder);
+
+  // Lucky draw (COP 1.12.4). Same handlers as /api/admin; competitionId is sent explicitly.
+  const tieBreakDrawController = container.resolve('tieBreakDrawController');
+  router.post('/tie-break/draws', tieBreakDrawValidator.recordDraw(), handleValidationErrors, tieBreakDrawController.recordDraw);
+  router.delete('/tie-break/draws', tieBreakDrawValidator.clearDraw(), handleValidationErrors, tieBreakDrawController.clearDraw);
 
   // Judge management routes (reuse admin controller methods)
   router.get('/judge-accounts', adminController.searchJudgeAccounts);

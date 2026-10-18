@@ -32,6 +32,9 @@ class PublicService {
     this.competitionRepository = dependencies.competitionRepository;
     this.scoreRepository = dependencies.scoreRepository;
     this.adminService = dependencies.adminService;
+    // Recorded lucky draws (COP 1.12.4). Optional so harnesses that build this
+    // service without it still rank — every unbroken tie then stays tied.
+    this.tieBreakDrawRepository = dependencies.tieBreakDrawRepository || null;
     this.logger = dependencies.logger;
   }
 
@@ -192,9 +195,13 @@ class PublicService {
        * out with `rank` and `tieBreakInfo` on them and every consumer renders
        * the same order.
        */
+      const draws = this.tieBreakDrawRepository
+        ? await this.tieBreakDrawRepository.findForStanding(competitionId, filters)
+        : [];
       rankPlayerRows(
         formattedScores.flatMap((score) => score.playerScores),
-        toCompetitionTypeDisplay(filters.competitionType)
+        toCompetitionTypeDisplay(filters.competitionType),
+        { draws }
       );
 
       this.logger.info('Public scores retrieved', {

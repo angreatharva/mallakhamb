@@ -67,9 +67,12 @@ function enrichPlayerScore(playerScore) {
  * @param {Array<Object>} rows - player rows carrying finalScore, apparatus,
  *   panelSize, judgeScores and time
  * @param {string} [competitionType]
+ * @param {Object} [options]
+ * @param {Array<{apparatus: string, order: Array<string>}>} [options.draws] -
+ *   lucky draws recorded for this category (TieBreakDraw documents)
  * @returns {Array<Object>} the same row objects, now ranked
  */
-function rankPlayerRows(rows, competitionType = 'Competition II') {
+function rankPlayerRows(rows, competitionType = 'Competition II', { draws = [] } = {}) {
   if (!rows || rows.length === 0) {
     return rows || [];
   }
@@ -78,7 +81,8 @@ function rankPlayerRows(rows, competitionType = 'Competition II') {
   // row it came from by identity.
   const ranked = calculateIndividualRankingsByApparatus(
     rows.map((row, index) => ({ ...row, __rowIndex: index })),
-    competitionType
+    competitionType,
+    { draws }
   );
 
   for (const result of ranked) {

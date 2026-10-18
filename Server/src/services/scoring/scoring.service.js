@@ -84,7 +84,9 @@ class ScoringService {
     // with seven arguments still do.
     teamRepository = null,
     // Prometheus metrics; optional and last for the same reason.
-    metrics = noopMetrics
+    metrics = noopMetrics,
+    // Recorded lucky draws (COP 1.12.4); optional and last for the same reason.
+    tieBreakDrawRepository = null
   ) {
     this.scoreRepository = scoreRepository;
     this.competitionRepository = competitionRepository;
@@ -97,6 +99,7 @@ class ScoringService {
     this.calculationService = calculationService;
     this.teamRepository = teamRepository;
     this.metrics = metrics || noopMetrics;
+    this.tieBreakDrawRepository = tieBreakDrawRepository;
   }
 
   /**
@@ -847,10 +850,14 @@ class ScoringService {
       const individualScores = Array.from(playerScoresMap.values());
 
       // Ranked on the server so this feed and the public one agree on placings
-      // and on how each tie was settled.
+      // and on how each tie was settled — lucky draws included.
+      const draws = this.tieBreakDrawRepository
+        ? await this.tieBreakDrawRepository.findForStanding(competitionId, { gender, ageGroup, competitionType })
+        : [];
       rankPlayerRows(
         individualScores.flatMap((player) => player.scores),
-        query.competitionType
+        query.competitionType,
+        { draws }
       );
 
       this.logger.info('Individual scores retrieved', { 

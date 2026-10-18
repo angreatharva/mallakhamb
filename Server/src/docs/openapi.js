@@ -1514,6 +1514,26 @@ function buildPaths() {
     responses: { 200: ok('Order set', ref('RunningOrder')), ...VALIDATION_ERROR },
   }));
 
+  // Lucky draw (COP 1.12.4): the physical draw's result for a tie the rules left standing.
+  const drawStanding = { ...categoryBody, apparatus: { type: 'string', enum: APPARATUS } };
+  const drawOrder = { type: 'array', items: S.id, minItems: 2, maxItems: 100, description: 'Player ids, first place first' };
+  const drawGroupKey = { type: 'string', description: 'tieBreakInfo.tieGroupKey of the group: sorted player ids, comma-joined' };
+
+  add('/api/admin/tie-break/draws', 'post', op({
+    tag: 'Scores', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminRecordTieBreakDraw',
+    summary: 'Record the lucky draw for one tied group',
+    description: 'Only for a group the rules leave tied right now (tieBreakInfo.awaitingLuckyDraw). Recording again replaces the order.',
+    requestBody: jsonBody(inline({ ...drawStanding, order: drawOrder, notes: { type: 'string', maxLength: 500 } }, ['gender', 'ageGroup', 'competitionType', 'apparatus', 'order'])),
+    responses: { 200: ok('Recorded'), ...VALIDATION_ERROR },
+  }));
+
+  add('/api/admin/tie-break/draws', 'delete', op({
+    tag: 'Scores', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminClearTieBreakDraw',
+    summary: 'Remove a recorded lucky draw',
+    requestBody: jsonBody(inline({ ...drawStanding, groupKey: drawGroupKey }, ['gender', 'ageGroup', 'competitionType', 'apparatus', 'groupKey'])),
+    responses: { 200: ok('Cleared'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  }));
+
   add('/api/admin/age-groups/start', 'post', op({
     tag: 'Admin', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminStartAgeGroup',
     summary: 'Open a category for scoring',
@@ -2177,6 +2197,18 @@ function buildPaths() {
     tag: 'Running order', operationId: 'superAdminSetPlayerOrder', summary: 'Set one team\'s athlete order',
     requestBody: jsonBody(inline({ competitionId: S.id, ...categoryBody, teamId: S.id, playerIds: { type: 'array', items: S.id } })),
     responses: { 200: ok('Order set', ref('RunningOrder')), ...VALIDATION_ERROR },
+  });
+
+  sa('/api/superadmin/tie-break/draws', 'post', {
+    tag: 'Scores', operationId: 'superAdminRecordTieBreakDraw', summary: 'Record the lucky draw for one tied group',
+    requestBody: jsonBody(inline({ competitionId: S.id, ...categoryBody, apparatus: { type: 'string', enum: APPARATUS }, order: { type: 'array', items: S.id, minItems: 2, maxItems: 100 } })),
+    responses: { 200: ok('Recorded'), ...VALIDATION_ERROR },
+  });
+
+  sa('/api/superadmin/tie-break/draws', 'delete', {
+    tag: 'Scores', operationId: 'superAdminClearTieBreakDraw', summary: 'Remove a recorded lucky draw',
+    requestBody: jsonBody(inline({ competitionId: S.id, ...categoryBody, apparatus: { type: 'string', enum: APPARATUS }, groupKey: { type: 'string' } })),
+    responses: { 200: ok('Cleared'), ...VALIDATION_ERROR, ...NOT_FOUND },
   });
 
   return paths;

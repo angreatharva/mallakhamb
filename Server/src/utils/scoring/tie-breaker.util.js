@@ -6,7 +6,8 @@
  * them decides how the tie is broken:
  *
  *   3 judges (1 senior + 2 evaluation)
- *     1. Lower time wins.
+ *     1. Lower time wins. The Senior Judge's mark is not used.
+ *     2. Same time: lucky draw.
  *
  *   4 and 5 judges — COP Mallakhamb §1.12 (Server/docs/COP Mallakhamb.pdf)
  *     1. (1.12.1) Higher base score wins. The base score is COP §2.1.3:
@@ -16,18 +17,26 @@
  *     2. (1.12.2) Higher average score of the four judges wins — the plain
  *        mean of all four evaluation marks, Chief excluded, nothing dropped.
  *     3. (1.12.3) Higher (average of the four judges + Chief) / 2 wins.
+ *     4. (1.12.4) Still level: lucky draw.
  *
  * "The four judges" are the four evaluation slots. A 5-judge panel has four
  * evaluators (J1–J4). A 4-judge panel has three, and the Sr. Judge fills the
  * vacant fourth slot — the same convention calculation.util.js scores it with
  * and the Scorer sheet draws (Judge 4 mirrors the Sr. Judge).
  *
- * COP 1.12.4 (lucky draw) is deliberately NOT implemented. If no step can
- * separate two competitors — identical time, identical marks at every step,
- * or the field a step needs is missing — the tie stands. Both take the same
- * placing and the next placing is skipped (1, 1, 3). Nothing here is decided
- * randomly: ranking the same data twice returns the same order.
+ * The lucky draw is drawn PHYSICALLY at the venue. Nothing here is random: the
+ * admin records the drawn order (models/TieBreakDraw.js) and the engine places
+ * the group in that order. A recorded draw applies only to the exact set of
+ * athletes it was drawn for, and only while the rules still cannot separate
+ * them; if a score changes and the group changes, the draw stops applying and
+ * the group is flagged as awaiting a new one. A tie caused by missing data
+ * (no time, unreadable marks) is never sent to a draw — the data is fixed.
  *
+ * Until a draw is recorded the tie stands: the group shares the placing and the
+ * next placing is skipped (1, 1, 3). Ranking the same data twice returns the
+ * same order.
+ *
+ * The rules apply to every individual standing — Competition I, II and III.
  * Team Championship ranks on summed team totals and does not enter this
  * engine — see `calculateTeamRankings` in ranking.util.js.
  */
@@ -37,6 +46,12 @@ const { calculateIndividualScore } = require('./calculation.util');
 const EPSILON = 1e-6;
 
 /**
+ * A tie the rules leave standing goes to a lucky draw only when every rule was
+ * actually applied and found the two level. Missing data is not a draw.
+ */
+const LUCKY_DRAW_ELIGIBLE_REASONS = Object.freeze(['identical_time', 'identical_panel_scores']);
+
+/**
  * Apply the tie-break rules to a list of competitors in one standing.
  *
  * Callers must pass competitors who are actually racing each other: one
@@ -44,6 +59,7 @@ const EPSILON = 1e-6;
  * grouping.
  *
  * Each competitor is expected to carry:
+ *   - playerId    — who it is; matches a recorded lucky draw
  *   - finalScore  (number)  — primary sort key
  *   - panelSize   (3|4|5)   — inferred from the judge marks when absent
  *   - judgeScores ({ seniorJudge, judge1..judge4 })
@@ -52,9 +68,12 @@ const EPSILON = 1e-6;
  * @param {Array<Object>} players
  * @param {string} competitionType - accepted for call compatibility; the rules
  *   are the same for every competition type.
+ * @param {Object} [options]
+ * @param {Array<{order: Array<string>}>} [options.draws] - lucky draws
+ *   recorded for THIS standing; each `order` lists player ids, first place first
  * @returns {Array<Object>} Sorted copies, with `tieBreakInfo` on tied entries
  */
-function applyTieBreaker(players, competitionType = 'Competition II') {
+function applyTieBreaker(players, competitionType = 'Competition II', { draws = [] } = {}) {
   if (!players || players.length === 0) {
     return [];
   }
@@ -71,7 +90,7 @@ function applyTieBreaker(players, competitionType = 'Competition II') {
 
   annotateTieGroups(items, competitionType);
 
-  return items;
+  return resolveLuckyDraws(items, competitionType, draws);
 }
 
 /**
@@ -111,6 +130,138 @@ function annotateTieGroups(sorted, competitionType) {
 
     start = end;
   }
+}
+
+/**
+ * The last step: groups the rules could not separate.
+ *
+ * A group is a run of neighbours that the rules leave tied. When every tie in
+ * it is a genuine "identical" result and a recorded draw names exactly these
+ * athletes, the group is placed in the drawn order. Otherwise it stays tied,
+ * flagged `awaitingLuckyDraw` when a draw is what it needs.
+ *
+ * Every member of a tied group carries its `tieGroupKey`, which is what the
+ * admin sends back when recording the draw.
+ *
+ * @param {Array<Object>} sorted - in rule order
+ * @param {string} competitionType
+ * @param {Array<{order: Array<string>}>} draws
+ * @returns {Array<Object>} the standing, drawn groups reordered
+ */
+function resolveLuckyDraws(sorted, competitionType, draws) {
+  const result = [];
+  let start = 0;
+
+  while (start < sorted.length) {
+    let end = start + 1;
+    let eligible = true;
+    while (end < sorted.length) {
+      const outcome = determineTieBreakerWinner(sorted[end - 1], sorted[end], competitionType);
+      if (outcome.winner !== 'tie') break;
+      if (!LUCKY_DRAW_ELIGIBLE_REASONS.includes(outcome.reason)) eligible = false;
+      end++;
+    }
+
+    const group = sorted.slice(start, end);
+    start = end;
+
+    if (group.length < 2) {
+      result.push(...group);
+      continue;
+    }
+
+    const key = tieGroupKey(group.map(playerKeyOf));
+    const drawStep = panelSizeOf(group[0]) === 3 && group.every((p) => panelSizeOf(p) === 3) ? 2 : 4;
+    const draw = eligible ? findDraw(draws, key) : null;
+
+    if (!draw) {
+      for (const member of group) {
+        member.tieBreakInfo = {
+          ...member.tieBreakInfo,
+          unresolved: true,
+          awaitingLuckyDraw: eligible,
+          tieGroupKey: key
+        };
+      }
+      result.push(...group);
+      continue;
+    }
+
+    const position = new Map(draw.order.map((id, index) => [String(id), index + 1]));
+    group.sort((a, b) => position.get(playerKeyOf(a)) - position.get(playerKeyOf(b)));
+    for (const member of group) {
+      member.tieBreakInfo = {
+        resolvedAtStep: drawStep,
+        method: 'lucky_draw',
+        unresolved: false,
+        awaitingLuckyDraw: false,
+        luckyDrawPosition: position.get(playerKeyOf(member)),
+        tieGroupKey: key
+      };
+    }
+    result.push(...group);
+  }
+
+  return result;
+}
+
+/**
+ * The recorded draw for exactly this group of athletes, if there is one.
+ *
+ * @param {Array<{order: Array<string>}>} draws
+ * @param {string} key - tieGroupKey of the group
+ * @returns {Object|null}
+ */
+function findDraw(draws, key) {
+  for (const draw of draws || []) {
+    const order = (draw?.order || []).map(String);
+    if (new Set(order).size === order.length && tieGroupKey(order) === key) {
+      return { ...draw, order };
+    }
+  }
+  return null;
+}
+
+/**
+ * Identity of a tie group: its athletes' ids, sorted, so the same people give
+ * the same key whatever order they were listed in.
+ *
+ * @param {Array<string>} playerIds
+ * @returns {string}
+ */
+function tieGroupKey(playerIds) {
+  return [...playerIds].map(String).sort().join(',');
+}
+
+/**
+ * The athlete's id as a string, whether the row holds an ObjectId, a string or
+ * a populated document.
+ *
+ * @param {Object} player
+ * @returns {string}
+ */
+function playerKeyOf(player) {
+  const id = player?.playerId?._id ?? player?.playerId;
+  return id === undefined || id === null ? '' : String(id);
+}
+
+/**
+ * True when two neighbours share a placing on the rules but a recorded lucky
+ * draw has separated them.
+ *
+ * @param {Object} playerA
+ * @param {Object} playerB
+ * @returns {boolean}
+ */
+function separatedByLuckyDraw(playerA, playerB) {
+  const a = playerA?.tieBreakInfo;
+  const b = playerB?.tieBreakInfo;
+  return Boolean(
+    a && b &&
+    a.method === 'lucky_draw' && b.method === 'lucky_draw' &&
+    a.tieGroupKey === b.tieGroupKey &&
+    a.luckyDrawPosition !== b.luckyDrawPosition
+  );
 }
 
 /**
@@ -424,6 +575,10 @@ module.exports = {
   applyTieBreaker,
   determineTieBreakerWinner,
   areTied,
+  separatedByLuckyDraw,
+  tieGroupKey,
+  playerKeyOf,
+  LUCKY_DRAW_ELIGIBLE_REASONS,
   // Exported for testing and for callers that need the same reading of a score
   panelSizeOf,
   seniorScoreOf,
