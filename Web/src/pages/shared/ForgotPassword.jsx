@@ -15,6 +15,7 @@ const PORTAL_NAME = { player: 'Player', coach: 'Coach', admin: 'Admin', superadm
 const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sentTo, setSentTo] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,8 +35,15 @@ const ForgotPassword = () => {
       await Promise.race([authAPI.forgotPassword(identifier, accountTypeFor(portal)), timeout]);
       setSent(true);
       // The server answers the same for every address, so neither can we.
-      toast.success('Check your email for the code.', { id: 'forgot-password' });
-      setTimeout(() => navigate(withPortal('/reset-password', portal), { state: { email: identifier } }), 2000);
+      setSentTo(identifier);
+      if (isPlayer) {
+        // A player's code may come by email OR from their coach (no email on
+        // the account), so they choose where to go next rather than being sent.
+        toast.success('Request sent.', { id: 'forgot-password' });
+      } else {
+        toast.success('Check your email for the code.', { id: 'forgot-password' });
+        setTimeout(() => navigate(withPortal('/reset-password', portal), { state: { email: identifier } }), 2000);
+      }
     } catch (err) {
       logger.error('❌ Forgot password error:', err);
       let msg = 'An error occurred. Please try again.';
@@ -90,7 +98,7 @@ const ForgotPassword = () => {
         )}
 
         <Button type="submit" size="lg" block loading={loading} disabled={sent} icon={loading || sent ? null : Send}>
-          {loading ? 'Sending OTP…' : sent ? 'OTP Sent — Redirecting…' : 'Send OTP'}
+          {loading ? 'Sending OTP…' : sent ? (isPlayer ? 'Sent' : 'OTP Sent — Redirecting…') : 'Send OTP'}
         </Button>
 
         {loading && (
@@ -100,10 +108,24 @@ const ForgotPassword = () => {
         )}
       </form>
 
-      {sent && (
-        <Notice tone="success" title={isPlayer ? 'If that account has an email, a 6-digit code is on its way' : 'If that email has an account, a 6-digit code is on its way'} role="status" aria-live="polite" className="ui-fade-in">
+      {sent && !isPlayer && (
+        <Notice tone="success" title="If that email has an account, a 6-digit code is on its way" role="status" aria-live="polite" className="ui-fade-in">
           Redirecting to reset page…
         </Notice>
+      )}
+
+      {sent && isPlayer && (
+        <div className="grid gap-3 ui-fade-in" role="status" aria-live="polite">
+          <Notice tone="success" title="Request sent">
+            If your account has an email, a 6-digit code is on its way to it. If it has no email, your coach has been asked to approve a reset — they will give you a code.
+          </Notice>
+          <Button as={Link} to={withPortal('/reset-password', portal)} state={{ email: sentTo }} variant="line" block>
+            I got a code by email
+          </Button>
+          <Button as={Link} to="/reset-password/coach" variant="line" block>
+            My coach gave me a code
+          </Button>
+        </div>
       )}
 
       {error && !sent && (

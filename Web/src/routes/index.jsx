@@ -32,6 +32,7 @@ import {
   JudgeSequence,
   ForgotPassword,
   AccountProfile,
+  CoachCodeReset,
   ResetPassword,
   PublicScores,
   LookSpecimen,
@@ -143,6 +144,7 @@ export default function AppRoutes({ location }) {
         <Route path="/scores" element={<PublicScores />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-password/coach" element={<CoachCodeReset />} />
         {LookSpecimen && <Route path="/__look" element={<LookSpecimen />} />}
 
         {/* Player Routes */}

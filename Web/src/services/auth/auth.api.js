@@ -13,6 +13,8 @@ export const authAPI = {
   forgotPassword: (identifier, userType) => api.post('/auth/forgot-password', { identifier, userType }),
   verifyOTP: (identifier, otp, userType) => api.post('/auth/verify-otp', { identifier, otp, userType }),
   resetPasswordWithOTP: (identifier, otp, password, userType) => api.post('/auth/reset-password-otp', { identifier, otp, password, userType }),
+  // A player with no email: Player ID + the code their coach was given on approving.
+  resetWithCoachCode: (identifier, code, password) => api.post('/auth/reset-password-coach', { identifier, code, password }),
   getAssignedCompetitions: () => api.get('/auth/competitions/assigned'),
   setCompetition: (competitionId) => api.post('/auth/set-competition', { competitionId }),
 };

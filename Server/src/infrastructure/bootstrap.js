@@ -24,6 +24,7 @@ const TokenService = require('../services/auth/token.service');
 const OTPService = require('../services/auth/otp.service');
 const AuthenticationService = require('../services/auth/authentication.service');
 const AccountService = require('../services/auth/account.service');
+const AccountRequestService = require('../services/auth/account-request.service');
 const AuthorizationService = require('../services/auth/authorization.service');
 const PlayerService = require('../services/user/player.service');
 const CoachService = require('../services/user/coach.service');
@@ -49,6 +50,7 @@ const createCoachController = require('../controllers/coach.controller');
 const createAdminController = require('../controllers/admin.controller');
 const createPublicController = require('../controllers/public.controller');
 const createAuthController = require('../controllers/auth.controller');
+const createAccountRequestController = require('../controllers/account-request.controller');
 const createPlayerController = require('../controllers/player.controller');
 const createJudgeController = require('../controllers/judge.controller');
 const createSuperAdminController = require('../controllers/super-admin.controller');
@@ -148,6 +150,15 @@ function bootstrap() {
     tokenService: c.resolve('tokenService'),
     otpService: c.resolve('otpService'),
     config: c.resolve('config'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+  container.register('accountRequestService', (c) => new AccountRequestService({
+    accountRequestRepository: c.resolve('accountRequestRepository'),
+    playerRepository: c.resolve('playerRepository'),
+    teamRepository: c.resolve('teamRepository'),
+    auditLogRepository: c.resolve('auditLogRepository'),
+    accountService: c.resolve('accountService'),
+    tokenService: c.resolve('tokenService'),
     logger: c.resolve('logger'),
   }), 'singleton');
   container.register('authorizationService', (c) => new AuthorizationService(
@@ -332,6 +343,7 @@ function bootstrap() {
   container.register('adminController', (c) => createAdminController(c), 'singleton');
   container.register('publicController', (c) => createPublicController(c), 'singleton');
   container.register('authController', (c) => createAuthController(c), 'singleton');
+  container.register('accountRequestController', (c) => createAccountRequestController(c), 'singleton');
   container.register('playerController', (c) => createPlayerController(c), 'singleton');
   container.register('judgeController', (c) => createJudgeController(c), 'singleton');
   container.register('superAdminController', (c) => createSuperAdminController(c), 'singleton');

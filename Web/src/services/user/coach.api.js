@@ -11,6 +11,12 @@ export const coachAPI = {
   selectCompetition: (data) => api.post('/coaches/select-competition', data),
   registerTeamForCompetition: (teamId, competitionId) => api.post(`/coaches/team/${teamId}/register-competition`, { competitionId }),
   getDashboard: () => api.get('/coaches/dashboard'),
+  // Resets and email additions from players on this coach's teams who have no email.
+  accountRequests: {
+    list: () => api.get('/coaches/account-requests'),
+    approve: (id) => api.post(`/coaches/account-requests/${id}/approve`),
+    reject: (id) => api.post(`/coaches/account-requests/${id}/reject`),
+  },
   searchPlayers: (query) => api.get(`/coaches/search-players?query=${query}`),
   addPlayerToAgeGroup: (data) => api.post('/coaches/add-player', data),
   removePlayerFromAgeGroup: (playerId) => api.delete(`/coaches/remove-player/${playerId}`),

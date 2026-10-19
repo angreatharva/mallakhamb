@@ -787,6 +787,14 @@ function buildPaths() {
     responses: { 200: ok('OTP accepted'), ...VALIDATION_ERROR },
   }));
 
+  add('/api/auth/reset-password-coach', 'post', op({
+    tag: 'Auth', auth: false, operationId: 'resetPasswordCoach',
+    summary: 'Reset a password with the code from your coach',
+    description: 'For a player registered without an email: "Forgot password" with their Player ID opens a request, their coach approves it and is shown a 6-digit code (24 h) to hand over. Every failure answers the same; five wrong codes void the approval.',
+    requestBody: jsonBody(inline({ identifier: IDENTIFIER, code: S.str, password: { type: 'string', minLength: 8 } }, ['identifier', 'code', 'password'])),
+    responses: { 200: ok('Password changed'), ...VALIDATION_ERROR },
+  }));
+
   add('/api/auth/reset-password-otp', 'post', op({
     tag: 'Auth', auth: false, operationId: 'resetPasswordOtp',
     summary: 'Reset a password with an OTP',
@@ -889,6 +897,50 @@ function buildPaths() {
     requestBody: loginBody,
     responses: { 200: ok('Logged in', ref('LoginResponse')), 401: errorResponse('Bad credentials') },
   }));
+
+  // ── Approving resets and email additions for players with no email (plan Part C) ──
+  const ACCOUNT_REQUEST = {
+    type: 'object',
+    properties: {
+      id: S.id,
+      kind: { type: 'string', enum: ['password-reset', 'email-change'] },
+      status: { type: 'string', enum: ['awaiting-coach', 'approved'] },
+      createdAt: { type: 'string', format: 'date-time' },
+      expiresAt: { type: 'string', format: 'date-time' },
+      newEmail: S.email,
+      newEmailType: { type: 'string', enum: ['self', 'guardian'] },
+      codeExpiresAt: { type: 'string', format: 'date-time' },
+      player: inline({ id: S.id, firstName: S.str, lastName: S.str, loginId: S.str, team: S.str }, []),
+    },
+  };
+  const DECISION = inline({
+    status: { type: 'string', enum: ['approved', 'done', 'rejected'] },
+    code: { type: 'string', description: 'Password reset only: the one-time code for the player. Shown once.' },
+    codeExpiresAt: { type: 'string', format: 'date-time' },
+  }, []);
+  const accountRequestRoutes = (prefix, roles, tag, idBase, who) => {
+    add(`${prefix}/account-requests`, 'get', op({
+      tag, roles, operationId: `${idBase}AccountRequests`,
+      summary: 'Resets and email additions waiting for approval',
+      description: who,
+      responses: { 200: ok('Open requests', { type: 'array', items: ACCOUNT_REQUEST }) },
+    }));
+    add(`${prefix}/account-requests/{requestId}/approve`, 'post', op({
+      tag, roles, operationId: `${idBase}ApproveAccountRequest`,
+      summary: 'Approve a request',
+      description: 'A password reset returns a one-time 6-digit code (24 h) to hand to the player; approving again replaces it. An email addition is applied now. Written to the audit log.',
+      parameters: [pathParam('requestId', 'Account request')],
+      responses: { 200: ok('Approved', DECISION), 403: errorResponse('Not this approver’s player'), 404: errorResponse('No such open request') },
+    }));
+    add(`${prefix}/account-requests/{requestId}/reject`, 'post', op({
+      tag, roles, operationId: `${idBase}RejectAccountRequest`,
+      summary: 'Turn a request down',
+      parameters: [pathParam('requestId', 'Account request')],
+      responses: { 200: ok('Rejected', DECISION), 403: errorResponse('Not this approver’s player'), 404: errorResponse('No such open request') },
+    }));
+  };
+  accountRequestRoutes('/api/coaches', 'coach', 'Coaches', 'coach', 'Requests from players on any of this coach’s teams.');
+  accountRequestRoutes('/api/superadmin', 'superadmin', 'Super admin', 'superAdmin', 'Every open request: the fallback for a player on no team or a coach who cannot be reached.');
 
   add('/api/coaches/profile', 'get', op({
     tag: 'Coaches', roles: 'coach', operationId: 'coachProfile',

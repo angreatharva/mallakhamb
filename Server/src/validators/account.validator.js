@@ -1,5 +1,5 @@
 const { body } = require('express-validator');
-const { password } = require('./common.validator');
+const { accountIdentifier, objectId, password } = require('./common.validator');
 const { GENDERS } = require('../config/cop-rules');
 
 /**
@@ -66,7 +66,19 @@ const confirmEmailChange = () => [
     .withMessage('The code is 6 digits'),
 ];
 
+/** A coach or super admin deciding one request. */
+const decideRequest = () => [objectId('requestId', 'param')];
+
+/** The player's half of a coach-approved reset: Player ID, the code, a new password. */
+const completeCoachReset = () => [
+  accountIdentifier(),
+  body('code').trim().matches(/^\d{6}$/).withMessage('The code is 6 digits'),
+  password('password'),
+];
+
 module.exports = {
+  decideRequest,
+  completeCoachReset,
   updateMe,
   changePassword,
   requestEmailChange,

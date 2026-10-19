@@ -36,6 +36,10 @@ function createAuthController(container) {
     forgotPassword: asyncHandler(async (req, res) => {
       // `identifier` is an email or a Player ID (see accountIdentifier).
       await authenticationService.forgotPassword(req.body.identifier, req.body.userType);
+      // A player with no email gets a request their coach can approve instead.
+      if (!req.body.userType || req.body.userType === 'player') {
+        await container.resolve('accountRequestService').openPasswordResetIfNoEmail(req.body.identifier);
+      }
       // Always same message — prevents email and Player ID enumeration
       res.json({
         success: true,

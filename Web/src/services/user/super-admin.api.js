@@ -21,6 +21,12 @@ export const superAdminAPI = {
   updateAdmin: (adminId, data) => api.put(`/superadmin/admins/${adminId}`, data),
   deleteAdmin: (adminId) => api.delete(`/superadmin/admins/${adminId}`),
   getAllCoaches: () => api.get('/superadmin/coaches'),
+  // Every open request from a player with no email (no team, or coach unreachable).
+  accountRequests: {
+    list: () => api.get('/superadmin/account-requests'),
+    approve: (id) => api.post(`/superadmin/account-requests/${id}/approve`),
+    reject: (id) => api.post(`/superadmin/account-requests/${id}/reject`),
+  },
   updateCoachStatus: (coachId, data) => api.put(`/superadmin/coaches/${coachId}/status`, data),
   deleteTeam: (teamId) => api.delete(`/superadmin/teams/${teamId}`),
   deleteJudge: (judgeId) => api.delete(`/superadmin/judges/${judgeId}`),

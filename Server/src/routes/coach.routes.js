@@ -23,6 +23,7 @@ const { requireCoach } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
 const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
+const accountValidators = require('../validators/account.validator');
 const { createUserRateLimitMiddleware } = require('../middleware/security.middleware');
 
 /**
@@ -351,6 +352,24 @@ function createCoachRoutes(container) {
     handleValidationErrors,
     coachController.redeemDiscountAndSubmit
   );
+
+  /**
+   * @route   GET  /api/coaches/account-requests
+   * @route   POST /api/coaches/account-requests/:requestId/approve|reject
+   * @desc    Password resets and email additions waiting on this coach, from
+   *          players on their teams who registered without an email. The
+   *          service checks the player is on the coach's team at decision time.
+   * @access  Authenticated coaches
+   */
+  // Resolved per request: harnesses that build this router without the
+  // account-request pieces need not register them.
+  const requests = ['list', 'approve', 'reject'].reduce((handlers, name) => ({
+    ...handlers,
+    [name]: (req, res, next) => container.resolve('accountRequestController').coach[name](req, res, next),
+  }), {});
+  router.get('/account-requests', authMiddleware, coachAuth, requests.list);
+  router.post('/account-requests/:requestId/approve', authMiddleware, coachAuth, accountValidators.decideRequest(), handleValidationErrors, requests.approve);
+  router.post('/account-requests/:requestId/reject', authMiddleware, coachAuth, accountValidators.decideRequest(), handleValidationErrors, requests.reject);
 
   return router;
 }

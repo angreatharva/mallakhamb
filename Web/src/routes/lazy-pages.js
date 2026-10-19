@@ -25,6 +25,8 @@ export const JudgePanelReview = lazy(() => import('@/pages/judge/JudgePanelRevie
 export const JudgeSequence = lazy(() => import('@/pages/judge/JudgeSequence'));
 export const ForgotPassword = lazy(() => import('@/pages/shared/ForgotPassword'));
 // The account page behind the top-right menu, for every role but the judge (JudgeProfile).
+// A no-email player's reset with the code their coach was given.
+export const CoachCodeReset = lazy(() => import('@/pages/shared/CoachCodeReset'));
 export const AccountProfile = lazy(() => import('@/pages/shared/AccountProfile'));
 export const ResetPassword = lazy(() => import('@/pages/shared/ResetPassword'));
 export const NotFound = lazy(() => import('@/pages/shared/NotFound'));

@@ -15,6 +15,7 @@ import { countedScoresFor } from '@/utils/scoring/teamSize';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import PerformancePanel from '@/components/performance/PerformancePanel';
+import AccountRequestsPanel from '@/components/account/AccountRequestsPanel';
 import {
   Button, Dialog, EmptyState, Heading, IconButton, Input, Notice, Panel, SpecList, Stat, StatusTag, Tag,
 } from '@/components/ui';
@@ -557,6 +558,9 @@ const CoachDashboard = () => {
       <div className="max-w-6xl mx-auto px-[var(--pad)] pb-12 pt-24 grid gap-6">
         <CompetitionDisplay />
         <CompetitionLockBanner />
+
+        {/* Players with no email who need their coach: resets and email additions. Only when there are any. */}
+        <AccountRequestsPanel api={coachAPI.accountRequests} hideWhenEmpty />
 
         {/* Team header */}
         <Panel className="grid gap-4">

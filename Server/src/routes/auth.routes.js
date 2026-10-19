@@ -110,6 +110,19 @@ function createAuthRoutes(container) {
   router.post('/me/email/confirm', authMiddleware, accountValidators.confirmEmailChange(), handleValidationErrors, authController.confirmEmailChange);
   router.delete('/me/email', authMiddleware, authController.cancelEmailChange);
 
+  /**
+   * @route   POST /api/auth/reset-password-coach
+   * @desc    A player with no email resets their password with the code their
+   *          coach was given on approving the request.
+   * @access  Public
+   */
+  router.post(
+    '/reset-password-coach',
+    accountValidators.completeCoachReset(),
+    handleValidationErrors,
+    (req, res, next) => container.resolve('accountRequestController').completePasswordReset(req, res, next)
+  );
+
   router.post('/logout', authMiddleware, authController.logout);
 
   /**

@@ -2,6 +2,7 @@ const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireSuperAdmin } = require('../middleware/auth.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
+const accountValidators = require('../validators/account.validator');
 const performanceOrderValidator = require('../validators/performance-order.validator');
 const tieBreakDrawValidator = require('../validators/tie-break-draw.validator');
 
@@ -74,6 +75,18 @@ function createSuperAdminRoutes(container) {
   router.post('/judges', adminController.createSingleJudge);
   router.put('/judges/:judgeId', adminController.updateJudge);
   router.post('/judges/bulk', adminController.saveJudges);
+
+  // Every open request from a player with no email: the fallback for a player
+  // on no team, or a coach who cannot be reached.
+  // Resolved per request: harnesses that build this router without the
+  // account-request pieces need not register them.
+  const requests = ['list', 'approve', 'reject'].reduce((handlers, name) => ({
+    ...handlers,
+    [name]: (req, res, next) => container.resolve('accountRequestController').superAdmin[name](req, res, next),
+  }), {});
+  router.get('/account-requests', requests.list);
+  router.post('/account-requests/:requestId/approve', accountValidators.decideRequest(), handleValidationErrors, requests.approve);
+  router.post('/account-requests/:requestId/reject', accountValidators.decideRequest(), handleValidationErrors, requests.reject);
 
   return router;
 }
