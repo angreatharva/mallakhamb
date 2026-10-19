@@ -1,6 +1,11 @@
 /**
- * Squad sizes a coach may declare when creating a team, and how many scores
- * each counts toward the Team Championship (per apparatus).
+ * Squad sizes a competition may set, and how many scores each counts toward
+ * the Team Championship (per apparatus).
+ *
+ * The superadmin picks the size per COMPETITION (`Competition.maxTeamSize`, on
+ * the Create/Edit Competition form); it caps every team in that meet per
+ * gender + age group. A coach never chooses it — the coach dashboard only shows
+ * the cap and "best N count".
  *
  * Mirrors TEAM_SIZE_COUNTED in Server/src/utils/scoring/team-championship.util.js.
  * The server does the counting; this copy only labels the choice and the cap.
@@ -10,7 +15,7 @@ export const TEAM_SIZE_OPTIONS = Object.freeze([
   { value: 6, counted: 5 },
 ]);
 
-/** What a team created before the size existed is read as, on both stacks. */
+/** What a competition saved before the size existed is read as, on both stacks. */
 export const DEFAULT_TEAM_SIZE = 6;
 
 /**

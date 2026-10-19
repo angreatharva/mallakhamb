@@ -65,9 +65,10 @@ service internals in [modules/auth.md](auth.md#email--srcservicesemail).
   so it must not turn `/api/health` into a 503. See
   [11-OBSERVABILITY.md](../11-OBSERVABILITY.md).
 
-- **The emails-sent metric labels production mail `provider="other"`.** The
-  registry's `EMAIL_PROVIDERS` allow-list has no `gmail-api` (see
-  [11-OBSERVABILITY.md](../11-OBSERVABILITY.md)).
+- **A new provider needs a metric label.** The emails-sent metric's
+  `EMAIL_PROVIDERS` allow-list (`prometheus/registry.js`) maps unknown names to
+  `other`; `gmail-api` was missing until 2026-10-19, so earlier production mail
+  shows as `provider="other"` (see [11-OBSERVABILITY.md](../11-OBSERVABILITY.md)).
 
 Tests: `tests/unit/services/email/gmail-api.adapter.test.js`,
 `tests/unit/services/email/email-health.test.js`,

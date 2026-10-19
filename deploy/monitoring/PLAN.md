@@ -157,7 +157,7 @@ The free tier allows **10,000 active series** (check the current limit at sign-u
 | `mallakhamb_scores_submitted_total` | counter | `outcome` (`accepted`, `rejected`) | `scoring.service.js` `saveScores` (every live write: judge, admin, superadmin, public save-score) and `submitScore` |
 | `mallakhamb_auth_logins_total` | counter | `role` (`admin coach judge player`; superadmins sign in as `admin`), `outcome` (`success`, `failure`, `locked`) | `authentication.service.js` `login`, `judge.service.js` `loginJudge` |
 | `mallakhamb_payment_webhooks_total` | counter | `event` (`payment.captured`, `payment.failed`, `order.paid`, `other`), `outcome` (`processed`, `ignored`, `rejected_signature`, `error`) | `payment.service.js` `reconcileWebhook` |
-| `mallakhamb_emails_sent_total` | counter | `provider` (`resend`, `nodemailer`), `outcome` (`sent`, `failed`) | email service |
+| `mallakhamb_emails_sent_total` | counter | `provider` (`gmail-api` — production — `nodemailer`, `resend`, `none`; anything else `other`), `outcome` (`sent`, `failed`) | email service |
 | `app_info` | gauge = 1 | `version` (`RENDER_GIT_COMMIT` short), `service` (`RENDER_SERVICE_NAME`), `node` | registry setup |
 
 **Rule:** no metric is computed with a database query at scrape time. A scrape must stay cheap and must still answer while MongoDB is down, because that is exactly when you need it.

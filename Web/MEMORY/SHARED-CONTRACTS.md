@@ -179,9 +179,9 @@ competitionLockSync.test.js:72-81).
 `DEFAULT_TEAM_SIZE = 6`, `countedScoresFor`) mirrors `TEAM_SIZE_COUNTED` /
 `DEFAULT_TEAM_SIZE` in `Server/src/utils/scoring/team-championship.util.js`
 by hand. The server does all counting; this copy only labels the choice and
-the cap ("best 3 count"). No cross-stack test. ⚠️ Its header still says the
-size is declared by a coach when creating a team — it has been the
-superadmin's per-competition `maxTeamSize` since 2026-09-26.
+the cap ("best 3 count"). No cross-stack test. The size is the superadmin's
+per-competition `maxTeamSize` (since 2026-09-26) — a coach never chooses it;
+the file's header says so since 2026-10-19.
 
 ## `apparatus.js` has no drift detector — verified identical by direct reading only
 

@@ -54,7 +54,9 @@ const LOGIN_ROLES = new Set(['admin', 'coach', 'judge', 'player']);
 const LOGIN_OUTCOMES = new Set(['success', 'failure', 'locked']);
 const WEBHOOK_EVENTS = new Set(['payment.captured', 'payment.failed', 'order.paid']);
 const WEBHOOK_OUTCOMES = new Set(['processed', 'ignored', 'rejected_signature', 'error']);
-const EMAIL_PROVIDERS = new Set(['resend', 'nodemailer', 'none']);
+// Every provider email.service can select. Production on Render sends through
+// gmail-api; without it here its mail was counted as provider="other".
+const EMAIL_PROVIDERS = new Set(['resend', 'nodemailer', 'gmail-api', 'none']);
 const SCORE_OUTCOMES = new Set(['accepted', 'rejected']);
 
 const pick = (allowed, value, fallback = 'other') =>

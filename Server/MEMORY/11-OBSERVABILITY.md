@@ -95,10 +95,11 @@ scrapes it every 60 s; dashboards, alerts and synthetic checks are in
   `mallakhamb-deploy` on the OCI VMs), else `RENDER_GIT_COMMIT`, else `dev`
   (deploy C1.11 / F19, 2026-10-16). Grafana shows the running commit from it.
 - `EMAIL_PROVIDERS` (the allow-list for the email provider label) is
-  `resend` / `nodemailer` / `none`. ⚠️ **`gmail-api` is missing**, and `pick()`
-  maps anything off the list to `other` — so production (which must use
-  `gmail-api` on Render) reports its mail as `provider="other"`. Not fixed as of
-  2026-10-18; add `'gmail-api'` to the set (and its test) when touching this.
+  `resend` / `nodemailer` / `gmail-api` / `none`; `pick()` maps anything off
+  the list to `other`. `gmail-api` — what production runs — was missing until
+  2026-10-19, so production mail was counted as `provider="other"` before that
+  date. Pinned by a test in `tests/unit/infrastructure/prometheus.registry.test.js`.
+  A new email provider must be added here too.
 - Label values from outside the process go through allow-lists; a unit test
   fails if a label NAME outside `ALLOWED_LABEL_NAMES` ever appears.
 

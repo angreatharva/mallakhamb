@@ -112,6 +112,15 @@ describe('business labels are forced through allow-lists', () => {
     expect(await metrics.metrics()).not.toMatch(/example\.com/);
   });
 
+  test('every email provider keeps its own label — gmail-api is what production runs', async () => {
+    const metrics = createMetrics({ collectDefaults: false });
+    for (const provider of ['gmail-api', 'nodemailer', 'resend', 'none']) metrics.business.emailSent(provider, 'sent');
+    metrics.business.emailSent('carrier-pigeon', 'sent');
+    for (const provider of ['gmail-api', 'nodemailer', 'resend', 'none', 'other']) {
+      expect(await sample(metrics, 'mallakhamb_emails_sent_total', { provider, outcome: 'sent' })).toBe(1);
+    }
+  });
+
   test('unknown roles and outcomes collapse to other', async () => {
     const metrics = createMetrics({ collectDefaults: false });
     metrics.business.login('wizard', 'maybe');

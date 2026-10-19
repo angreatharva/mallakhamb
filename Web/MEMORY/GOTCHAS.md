@@ -239,9 +239,6 @@ your own machine.
 
 ## Other traps worth knowing
 
-- **`utils/scoring/teamSize.js`'s header is stale**: it says the size is
-  declared by a coach when creating a team. Since 2026-09-26 it is the
-  superadmin's per-competition `maxTeamSize`; the coach only sees the cap.
 - **`CoachDashboard.jsx` still `console.log`s the whole dashboard payload**
   ("Dashboard full response:") on every load. Production builds drop
   `console.*` (`drop_console` in `vite.config.js`), so it only shows in dev —
