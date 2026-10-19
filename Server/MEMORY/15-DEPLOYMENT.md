@@ -158,9 +158,10 @@ What the plan changes about this doc's assumptions:
   [09-PAYMENTS.md](09-PAYMENTS.md)), F5 (`.env_example` discount code off and
   a placeholder; `Server/.env.scripts` always had a blank password), F19
   (`app_info` version reads `GIT_COMMIT`), a refused CORS origin is a 403 not a
-  500, and a clean `SIGTERM` no longer exits 7. ⚠️ The **staging** env still
-  enables the old public discount code `BRMC@2026`, and production on Render
-  has not been checked (deploy C0.9). The Web blocker F1 (socket URL
+  500, and a clean `SIGTERM` no longer exits 7. The old public discount code
+  `BRMC@2026` was replaced on 2026-10-19 — on Render production and in the OCI
+  staging Vault secret (version 5; app-01 restarted, app-02's env re-rendered).
+  The nightly e2e makes its own random code per run, so it doesn't depend on it. The Web blocker F1 (socket URL
   `replace('/api','')` broke on an `api.` host) is fixed (3c628e1); F2 (CSP
   `connect-src` in `Web/index.html`) is only partly done: it now allows the
   staging `api-137-23-63-84.sslip.io` host, but the real production API host

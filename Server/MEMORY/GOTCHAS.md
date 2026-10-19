@@ -29,8 +29,11 @@ of this doc — see each numbered doc's own body for the current behavior.
 - **A refused CORS origin answered 500** until 2026-10-17 (a plain `Error`),
   feeding the "High 5xx" alert. It is an `AuthorizationError` → 403 now.
 - **`.env_example` shipped a working discount code, enabled** — off and a
-  placeholder since 2026-10-17. ⚠️ The OCI staging env still has the old
-  public code `BRMC@2026` enabled; Render production unchecked.
+  placeholder since 2026-10-17. The old public code `BRMC@2026` was replaced
+  on Render and in the OCI staging Vault secret on 2026-10-19. To change the
+  staging code: update the **whole** env in the Vault secret, restart the API
+  on the active VM (`ExecStartPre` re-renders it), and run
+  `sudo mallakhamb-render-env` on the standby.
 
 - **`POST /api/auth/reset-password/:token` is gone** (2026-10-07). It was
   "fixed" on 2026-09-23 by implementing `resetPasswordWithToken`, which
