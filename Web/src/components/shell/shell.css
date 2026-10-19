@@ -112,6 +112,28 @@
 .shell-tabnav--vertical .shell-tabnav__link::after { display: none; }
 .shell-tabnav--vertical .shell-tabnav__link[aria-current='page'] { box-shadow: inset var(--rule) 0 0 0 rgb(var(--accent)); background: rgb(var(--surface-raised)); }
 .shell-drawer__account { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+/* The account menu's items, as links in the phone drawer (a menu inside a sheet is one layer too many). */
+.shell-drawer__account-links { display: grid; gap: 2px; flex-basis: 100%; }
+.shell-drawer__account-link {
+  display: flex; align-items: center; gap: 10px;
+  min-height: var(--control-h); padding: 0 14px;
+  color: var(--fg-secondary); text-decoration: none;
+  border-radius: var(--radius-control);
+}
+.shell-drawer__account-link:hover { color: var(--fg); background: rgb(var(--surface-raised)); }
+.shell-drawer__account-link:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.shell-drawer__account-link svg { width: 16px; height: 16px; flex: none; }
+/*
+ * "Account" beside the icon from tablet up. Below that only the icon shows,
+ * and the word is visually hidden rather than removed, so it still names the
+ * button for a screen reader.
+ */
+@media (max-width: 767.98px) {
+  .shell-account__label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+}
 
 /* Page header: tag, title, actions on the right (wrapping under on phones). */
 .shell-page-header {

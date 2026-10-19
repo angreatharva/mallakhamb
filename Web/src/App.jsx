@@ -88,13 +88,16 @@ function AppContent() {
   const isJudgeRoute = location.pathname.startsWith('/judge');
   // Pages with no header bar of their own: the super admin's player payment, and the bare Teams panel at
   // /admin/teams (the dashboard's Teams tab is the linked one, inside the dashboard header).
+  // The account page draws its own header (it has to on the admin side,
+  // where there is no shared navbar), so the navbar steps aside everywhere.
+  const isProfilePage = /^\/(player|coach|admin|superadmin)\/profile\/?$/.test(location.pathname);
   const isHeaderlessPage = /^\/(admin\/teams|superadmin\/add-player-payment)\/?$/.test(location.pathname);
 
   // The look specimen (dev/preview only) carries its own controls.
   const isSpecimen = location.pathname === '/__look';
 
   const shouldHideNavbar =
-    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage || isSpecimen;
+    isAdminRoute || isJudgeRoute || isHomePage || isPublicScores || isSelectionPage || isLoginPage || isRegisterPage || isForgotPasswordPage || isSpecimen || isProfilePage;
 
   return (
     <CompetitionProvider userType={userType}>

@@ -15,6 +15,7 @@ const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const authValidators = require('../validators/auth.validator');
+const accountValidators = require('../validators/account.validator');
 
 /**
  * Initialize authentication routes with dependencies from DI container
@@ -96,6 +97,18 @@ function createAuthRoutes(container) {
    * @access  Authenticated (cookie or Bearer)
    */
   router.get('/me', authMiddleware, authController.me);
+
+  /*
+   * The signed-in user's own account, for every role — the profile page behind
+   * the top-right account menu. GET /me above stays the lean rehydration call;
+   * these carry the editable profile and any email change in progress.
+   */
+  router.get('/me/account', authMiddleware, authController.getAccount);
+  router.put('/me', authMiddleware, accountValidators.updateMe(), handleValidationErrors, authController.updateAccount);
+  router.put('/me/password', authMiddleware, accountValidators.changePassword(), handleValidationErrors, authController.changePassword);
+  router.post('/me/email', authMiddleware, accountValidators.requestEmailChange(), handleValidationErrors, authController.requestEmailChange);
+  router.post('/me/email/confirm', authMiddleware, accountValidators.confirmEmailChange(), handleValidationErrors, authController.confirmEmailChange);
+  router.delete('/me/email', authMiddleware, authController.cancelEmailChange);
 
   router.post('/logout', authMiddleware, authController.logout);
 

@@ -24,6 +24,8 @@ export const JudgeScoring = lazy(() => import('@/pages/judge/JudgeScoring'));
 export const JudgePanelReview = lazy(() => import('@/pages/judge/JudgePanelReview'));
 export const JudgeSequence = lazy(() => import('@/pages/judge/JudgeSequence'));
 export const ForgotPassword = lazy(() => import('@/pages/shared/ForgotPassword'));
+// The account page behind the top-right menu, for every role but the judge (JudgeProfile).
+export const AccountProfile = lazy(() => import('@/pages/shared/AccountProfile'));
 export const ResetPassword = lazy(() => import('@/pages/shared/ResetPassword'));
 export const NotFound = lazy(() => import('@/pages/shared/NotFound'));
 export const PublicScores = lazy(() => import('@/pages/public/PublicScores'));

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Link, NavLink } from 'react-router-dom';
-import { LogOut, Menu as MenuIcon, UserRound } from 'lucide-react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { KeyRound, LogOut, Mail, Menu as MenuIcon, UserRound } from 'lucide-react';
 import '@/styles/look-fonts';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
-import { Button, Dialog, Heading, IconButton, Tag } from '@/components/ui';
+import { Button, Dialog, Heading, IconButton, Menu, Tag } from '@/components/ui';
 import { cx } from '@/components/ui/cx';
 import { Wordmark } from '@/components/brand/Brand';
 
@@ -20,18 +20,57 @@ export const RoleIdent = ({ role, className = '' }) =>
   (ROLE_LABEL[role] ? <Tag tone="ident" className={className}>{ROLE_LABEL[role]}</Tag> : null);
 RoleIdent.propTypes = { role: PropTypes.string, className: PropTypes.string };
 
-/** Light/Dark, Profile, Logout — the account cluster every signed-in screen carries. "Logout", the site's word for it (the e2e flows find it by that name). */
-export const AccountControls = ({ onLogout, profileTo = null, appearance = true, className = '' }) => (
+/** Where each item of the account menu goes, under a role's profile page. */
+export const accountMenuTargets = (profileTo) => [
+  { label: 'My profile', to: profileTo, icon: UserRound },
+  { label: 'Change password', to: `${profileTo}#password`, icon: KeyRound },
+  { label: 'Update email', to: `${profileTo}#email`, icon: Mail },
+];
+
+/**
+ * The top-right account menu: the profile page and its two sections that
+ * people look for by name. Logout stays its own button beside it — the one
+ * control nobody should have to open a menu to find.
+ */
+export const AccountMenu = ({ profileTo }) => {
+  const navigate = useNavigate();
+  return (
+    <Menu
+      label="Account"
+      buttonLabel={<span className="shell-account__label">Account</span>}
+      buttonVariant="ghost"
+      icon={UserRound}
+      items={accountMenuTargets(profileTo).map(({ label, to, icon }) => ({ label, icon, onSelect: () => navigate(to) }))}
+    />
+  );
+};
+AccountMenu.propTypes = { profileTo: PropTypes.string.isRequired };
+
+/** Light/Dark, Account, Logout — the account cluster every signed-in screen carries. "Logout", the site's word for it (the e2e flows find it by that name). */
+export const AccountControls = ({ onLogout, profileTo = null, appearance = true, drawer = false, className = '' }) => (
   // Its own class, not Tailwind's `flex`: a utility here would beat the shell's
   // own breakpoint rules (utilities win ties by design), and the header hides
   // this cluster on phones.
   <div className={cx('shell-account', className)}>
     {appearance && <AppearanceMenu />}
-    {profileTo && <IconButton as={Link} to={profileTo} label="Profile" icon={UserRound} variant="ghost" />}
+    {/* In the phone drawer the items are plain links: a menu inside a sheet is one layer too many. */}
+    {profileTo && !drawer && <AccountMenu profileTo={profileTo} />}
+    {profileTo && drawer && (
+      <nav aria-label="Account" className="shell-drawer__account-links">
+        {accountMenuTargets(profileTo).map(({ label, to, icon: Icon }) => (
+          <Link key={label} to={to} className="shell-drawer__account-link type-body-s">
+            <Icon aria-hidden="true" />
+            {label}
+          </Link>
+        ))}
+      </nav>
+    )}
     {onLogout && <Button variant="line" size="sm" icon={LogOut} onClick={onLogout}>Logout</Button>}
   </div>
 );
-AccountControls.propTypes = { onLogout: PropTypes.func, profileTo: PropTypes.string, appearance: PropTypes.bool, className: PropTypes.string };
+AccountControls.propTypes = {
+  onLogout: PropTypes.func, profileTo: PropTypes.string, appearance: PropTypes.bool, drawer: PropTypes.bool, className: PropTypes.string,
+};
 
 /**
  * Tabs that are links: one per route. The current page is marked by
@@ -70,10 +109,13 @@ TabNav.propTypes = {
  * that pad themselves for a 64px bar).
  */
 export const AppHeader = ({
-  role = null, segment = null, nav = [], navLabel = 'Sections', onLogout = null, profileTo = null, homeTo = '/',
+  role = null, segment = null, nav = [], navLabel = 'Sections', onLogout = null, profileTo: profileToProp = null, homeTo = '/',
   extra = null, fixed = false, navFrom = 'lg', compactBrand = false,
 }) => {
   const [open, setOpen] = useState(false);
+  // Every signed-in role has a profile page at /<role>/profile, so the
+  // account menu appears wherever the header has someone to sign out.
+  const profileTo = profileToProp || (role && onLogout ? `/${role}/profile` : null);
   return (
     <header className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl')}>
       <div className="shell-header__bar">
@@ -91,7 +133,7 @@ export const AppHeader = ({
       <Dialog open={open} onClose={() => setOpen(false)} title="Menu" sheet>
         {extra && <div className="shell-drawer__extra">{extra}</div>}
         {nav.length > 0 && <TabNav items={nav} label={navLabel} vertical onNavigate={() => setOpen(false)} />}
-        <AccountControls onLogout={onLogout} profileTo={profileTo} appearance={false} className="shell-drawer__account" />
+        <AccountControls onLogout={onLogout} profileTo={profileTo} appearance={false} drawer className="shell-drawer__account" />
       </Dialog>
     </header>
   );

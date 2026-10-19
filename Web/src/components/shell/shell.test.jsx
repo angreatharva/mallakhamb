@@ -53,9 +53,23 @@ describe('shell', () => {
     const user = userEvent.setup();
     const onLogout = vi.fn();
     at('/', <AccountControls onLogout={onLogout} profileTo="/judge/profile" />);
-    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/judge/profile');
     await user.click(screen.getByRole('button', { name: 'Logout' }));
     expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens an account menu with the profile, password and email', async () => {
+    const user = userEvent.setup();
+    at('/', <AccountControls onLogout={vi.fn()} profileTo="/coach/profile" />);
+    await user.click(screen.getByRole('button', { name: 'Account' }));
+    const items = screen.getAllByRole('menuitem').map((item) => item.textContent);
+    expect(items).toEqual(['My profile', 'Change password', 'Update email']);
+  });
+
+  it('lists the same three as links in the phone drawer', () => {
+    at('/', <AccountControls onLogout={vi.fn()} profileTo="/coach/profile" drawer />);
+    expect(screen.getByRole('link', { name: 'My profile' })).toHaveAttribute('href', '/coach/profile');
+    expect(screen.getByRole('link', { name: 'Change password' })).toHaveAttribute('href', '/coach/profile#password');
+    expect(screen.getByRole('link', { name: 'Update email' })).toHaveAttribute('href', '/coach/profile#email');
   });
 
   it('the masthead: brand, role, competition; the menu opens a drawer with the sections and the account', async () => {

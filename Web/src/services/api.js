@@ -5,6 +5,7 @@ export {
   createAdminAPI,
   superAdminAPI,
   authAPI,
+  accountAPI,
   teamAPI,
   judgeAPI,
   publicAPI,

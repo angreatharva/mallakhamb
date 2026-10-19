@@ -31,6 +31,7 @@ import {
   JudgePanelReview,
   JudgeSequence,
   ForgotPassword,
+  AccountProfile,
   ResetPassword,
   PublicScores,
   LookSpecimen,
@@ -160,6 +161,7 @@ export default function AppRoutes({ location }) {
           <Route path="select-competition" element={<CompetitionSelectionScreen userType="player" />} />
           <Route path="select-team" element={<PlayerTeamSelection />} />
           <Route path="dashboard" element={<PlayerDashboard />} />
+          <Route path="profile" element={<AccountProfile />} />
         </Route>
 
         {/* Coach Routes */}
@@ -172,6 +174,7 @@ export default function AppRoutes({ location }) {
           <Route path="select-competition" element={<CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />} />
           <Route path="dashboard" element={<CoachDashboard />} />
           <Route path="payment" element={<CoachPayment />} />
+          <Route path="profile" element={<AccountProfile />} />
         </Route>
 
         {/* Admin Routes */}
@@ -191,6 +194,7 @@ export default function AppRoutes({ location }) {
           <Route path="dashboard/:tab" element={<AdminDashboard />} />
           <Route path="teams" element={<AdminTeams />} />
           <Route path="scoring" element={<AdminScoring />} />
+          <Route path="profile" element={<AccountProfile />} />
         </Route>
 
         {/* Judge Routes */}
@@ -227,6 +231,7 @@ export default function AppRoutes({ location }) {
           <Route path="dashboard/:tab" element={<SuperAdminDashboard />} />
           <Route path="add-player-payment" element={<SuperAdminAddPlayerPayment />} />
           <Route path="scoring" element={<AdminScoring />} />
+          <Route path="profile" element={<AccountProfile />} />
         </Route>
 
         {/*

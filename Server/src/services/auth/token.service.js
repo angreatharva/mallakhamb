@@ -44,15 +44,21 @@ class TokenService {
    * @param {string} userId - User ID
    * @param {string} userType - User type (player, coach, admin, judge)
    * @param {string} competitionId - Optional competition context
+   * @param {Object} [options]
+   * @param {number} [options.issuedAt] - `iat` in seconds, instead of now. Used
+   *   right after recordLogout(): `iat` is whole seconds and the logout time is
+   *   milliseconds, so a token signed in the same second would read as issued
+   *   before the logout and be refused. Pass the next whole second.
    * @returns {string} JWT token
    */
-  generateToken(userId, userType, competitionId = null) {
+  generateToken(userId, userType, competitionId = null, { issuedAt } = {}) {
     try {
       const payload = {
         userId,
         userType,
-        ...(competitionId && { competitionId })
-        // jwt.sign automatically adds `iat` (issued-at) claim
+        ...(competitionId && { competitionId }),
+        // jwt.sign adds `iat` (issued-at) itself unless one is given
+        ...(issuedAt && { iat: issuedAt }),
       };
 
       const secret = this.config.get('jwt.secret');

@@ -22,11 +22,12 @@ const { normalizeEmail, sanitizeUserData } = require('../../utils/validation/san
 const { stripSensitiveFields, fullName } = require('../../utils/data/user-projection.util');
 
 /** Fields a judge may set on themselves. Everything else is ignored. */
+// No `email`: a new address must prove it works first, so it changes through
+// the account page's two-step flow (services/auth/account.service).
 const EDITABLE_PROFILE_FIELDS = [
   'firstName',
   'lastName',
   'phone',
-  'email',
   'stateUnit',
   'registrationNumber',
   'certificationLevel',
@@ -175,16 +176,6 @@ class JudgeAccountService {
     for (const field of EDITABLE_PROFILE_FIELDS) {
       if (sanitized[field] !== undefined) {
         allowed[field] = sanitized[field];
-      }
-    }
-
-    if (allowed.email) {
-      allowed.email = normalizeEmail(allowed.email);
-      if (
-        allowed.email !== account.email
-        && await this.judgeAccountRepository.isEmailTaken(allowed.email, accountId)
-      ) {
-        throw new ConflictError('Email already registered');
       }
     }
 

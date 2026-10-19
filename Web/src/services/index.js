@@ -4,6 +4,7 @@ export { coachAPI } from './user/coach.api.js';
 export { adminAPI, createAdminAPI } from './user/admin.api.js';
 export { superAdminAPI } from './user/super-admin.api.js';
 export { authAPI } from './auth/auth.api.js';
+export { accountAPI } from './auth/account.api.js';
 export { teamAPI } from './team/team.api.js';
 export { judgeAPI } from './public/judge.api.js';
 export { publicAPI } from './public/public.api.js';

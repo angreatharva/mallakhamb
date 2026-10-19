@@ -5,12 +5,14 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, Camera, Save, Scale } from 'lucide-react';
 
 import { judgeAPI } from '@/services/public/judge.api';
+import { accountAPI } from '@/services/api';
+import { EmailSection, PasswordSection, SectionHeading } from '@/pages/shared/account/AccountSections';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
 import {
-  Button, Field, Heading, Input, PasswordInput, Panel, Select, Tag, TextLink,
+  Button, Field, Heading, Input, Panel, Select, Tag, TextLink,
 } from '@/components/ui';
 
 const CERTIFICATION_LEVELS = [
@@ -52,13 +54,6 @@ const downscaleImage = (file, size = 256) =>
     reader.readAsDataURL(file);
   });
 
-const SectionHeading = ({ children, hint }) => (
-  <div className="mb-5 grid gap-1">
-    <Heading level={2} step="display-s">{children}</Heading>
-    {hint && <p className="text-fg-muted type-caption m-0">{hint}</p>}
-  </div>
-);
-
 /**
  * JudgeProfile — the judge's own account.
  *
@@ -74,8 +69,9 @@ const JudgeProfile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
   const [photo, setPhoto] = useState(null);
+  // An email change in progress (the shared account endpoints own it).
+  const [pendingEmailChange, setPendingEmailChange] = useState(null);
 
   const {
     register: registerProfile,
@@ -84,24 +80,19 @@ const JudgeProfile = () => {
     formState: { errors: profileErrors },
   } = useForm();
 
-  const {
-    register: registerPassword,
-    handleSubmit: handlePasswordSubmit,
-    reset: resetPassword,
-    watch: watchPassword,
-    formState: { errors: passwordErrors },
-  } = useForm();
-
   const load = useCallback(async () => {
     try {
-      const response = await judgeAPI.getProfile();
+      const [response, account] = await Promise.all([
+        judgeAPI.getProfile(),
+        accountAPI.get().catch(() => null),
+      ]);
       const data = response.data?.data || {};
       setProfile(data);
+      setPendingEmailChange(account?.data?.data?.pendingEmailChange || null);
       setPhoto(data.photo || null);
       resetProfile({
         firstName: data.firstName || '',
         lastName: data.lastName || '',
-        email: data.email || '',
         phone: data.phone || '',
         stateUnit: data.stateUnit || '',
         registrationNumber: data.registrationNumber || '',
@@ -165,20 +156,6 @@ const JudgeProfile = () => {
     } catch (error) {
       logger.error('Could not update judge photo', error);
       toast.error(error.response?.data?.message || error.message || 'Could not update your photo');
-    }
-  };
-
-  const onChangePassword = async (values) => {
-    setSavingPassword(true);
-    try {
-      await judgeAPI.changePassword(values.currentPassword, values.newPassword);
-      resetPassword();
-      toast.success('Password changed');
-    } catch (error) {
-      logger.error('Could not change judge password', error);
-      toast.error(error.response?.data?.message || 'Could not change your password');
-    } finally {
-      setSavingPassword(false);
     }
   };
 
@@ -266,17 +243,6 @@ const JudgeProfile = () => {
               </Field>
             </div>
 
-            <Field id="judge-profile-email" label="Email Address" error={profileErrors.email?.message}>
-              <Input
-                type="email"
-                placeholder="you@example.com"
-                {...registerProfile('email', {
-                  required: 'Email is required',
-                  pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' },
-                })}
-              />
-            </Field>
-
             <Field id="judge-profile-phone" label="Phone Number" error={profileErrors.phone?.message}>
               <Input
                 type="tel"
@@ -317,50 +283,11 @@ const JudgeProfile = () => {
           </form>
         </Panel>
 
-        {/* Password */}
-        <Panel>
-          <SectionHeading hint="Your current password is required — an open session alone is not enough.">
-            Password
-          </SectionHeading>
-
-          <form onSubmit={handlePasswordSubmit(onChangePassword)} noValidate className="grid gap-5">
-            <Field id="judge-profile-currentPassword" label="Current Password" error={passwordErrors.currentPassword?.message}>
-              <PasswordInput
-                autoComplete="current-password"
-                {...registerPassword('currentPassword', { required: 'Current password is required' })}
-              />
-            </Field>
-
-            <Field id="judge-profile-newPassword" label="New Password" error={passwordErrors.newPassword?.message}>
-              <PasswordInput
-                autoComplete="new-password"
-                placeholder="Min. 8 characters"
-                {...registerPassword('newPassword', {
-                  required: 'New password is required',
-                  minLength: { value: 8, message: 'Password must be at least 8 characters' },
-                  validate: (value) =>
-                    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(String(value ?? ''))
-                    || 'Password needs an uppercase letter, a lowercase letter, and a number',
-                })}
-              />
-            </Field>
-
-            <Field id="judge-profile-confirmPassword" label="Confirm New Password" error={passwordErrors.confirmPassword?.message}>
-              <PasswordInput
-                autoComplete="new-password"
-                {...registerPassword('confirmPassword', {
-                  required: 'Please confirm your new password',
-                  validate: (value) =>
-                    value === watchPassword('newPassword') || 'Passwords do not match',
-                })}
-              />
-            </Field>
-
-            <Button type="submit" variant="line" block loading={savingPassword}>
-              {savingPassword ? 'Changing…' : 'Change password'}
-            </Button>
-          </form>
-        </Panel>
+        {/* Password and email: the same sections every role's account page has. */}
+        <PasswordSection role="judge" idPrefix="judge-profile" />
+        {profile && (
+          <EmailSection user={profile} userType="judge" pending={pendingEmailChange} onChanged={load} idPrefix="judge-profile" />
+        )}
       </div>
     </div>
   );

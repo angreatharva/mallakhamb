@@ -132,6 +132,51 @@ class OTPService {
   }
 
   /**
+   * Mail the code that proves a new address works, TO that address. Background,
+   * never throws.
+   * @param {string} to - the new address
+   * @param {{userName: string, code: string, expiryMinutes: number}} data
+   * @returns {Promise<void>}
+   */
+  sendEmailChangeCode(to, { userName, code, expiryMinutes }) {
+    return this._sendInBackground('email-change code', { email: to }, 'account', (address) =>
+      this.emailService.sendNotification(address, {
+        userName,
+        title: 'Confirm your new email address',
+        message: [
+          `Your confirmation code is ${code}.`,
+          '',
+          `Enter it on your profile page within ${expiryMinutes} minutes to use this address for your Mallakhamb account.`,
+          'If you did not ask for this, ignore this email — nothing changes.',
+        ].join('\n'),
+      }),
+      { code }
+    );
+  }
+
+  /**
+   * Tell the OLD address that the account's email was changed away from it,
+   * so a change the owner did not make does not go unnoticed. Background,
+   * never throws.
+   * @param {string} to - the address being replaced
+   * @param {{userName: string, newEmail: string}} data
+   * @returns {Promise<void>}
+   */
+  notifyEmailChanged(to, { userName, newEmail }) {
+    return this._sendInBackground('email-changed notice', { email: to }, 'account', (address) =>
+      this.emailService.sendNotification(address, {
+        userName,
+        title: 'Your email address was changed',
+        message: [
+          `The email on your Mallakhamb account is now ${newEmail}.`,
+          '',
+          'If you did not make this change, reset your password and contact the organisers.',
+        ].join('\n'),
+      })
+    );
+  }
+
+  /**
    * Mail one or more Player IDs to an address: the new player's own at
    * registration, or every child under a guardian's address when someone
    * there has forgotten one. Background, never throws.

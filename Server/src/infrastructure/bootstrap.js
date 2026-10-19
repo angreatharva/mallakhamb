@@ -15,6 +15,7 @@ const AuditLogRepository = require('../repositories/audit-log.repository');
 const PerformanceOrderRepository = require('../repositories/performance-order.repository');
 const TieBreakDrawRepository = require('../repositories/tie-break-draw.repository');
 const RefreshTokenRepository = require('../repositories/refresh-token.repository');
+const AccountRequestRepository = require('../repositories/account-request.repository');
 
 const CacheService = require('../services/cache/cache.service');
 const CacheWarmer = require('../services/cache/cache-warmer');
@@ -22,6 +23,7 @@ const EmailService = require('../services/email/email.service');
 const TokenService = require('../services/auth/token.service');
 const OTPService = require('../services/auth/otp.service');
 const AuthenticationService = require('../services/auth/authentication.service');
+const AccountService = require('../services/auth/account.service');
 const AuthorizationService = require('../services/auth/authorization.service');
 const PlayerService = require('../services/user/player.service');
 const CoachService = require('../services/user/coach.service');
@@ -107,6 +109,7 @@ function bootstrap() {
   container.register('performanceOrderRepository', (c) => new PerformanceOrderRepository(c.resolve('logger')), 'singleton');
   container.register('tieBreakDrawRepository', (c) => new TieBreakDrawRepository(c.resolve('logger')), 'singleton');
   container.register('refreshTokenRepository', (c) => new RefreshTokenRepository(c.resolve('logger')), 'singleton');
+  container.register('accountRequestRepository', (c) => new AccountRequestRepository(c.resolve('logger')), 'singleton');
 
   container.register('cacheService', (c) => new CacheService(c.resolve('config'), c.resolve('logger')), 'singleton');
   container.register('tokenService', (c) => new TokenService(
@@ -136,6 +139,17 @@ function bootstrap() {
     c.resolve('judgeAccountRepository'),
     c.resolve('metrics')
   ), 'singleton');
+  container.register('accountService', (c) => new AccountService({
+    playerRepository: c.resolve('playerRepository'),
+    coachRepository: c.resolve('coachRepository'),
+    adminRepository: c.resolve('adminRepository'),
+    judgeAccountRepository: c.resolve('judgeAccountRepository'),
+    accountRequestRepository: c.resolve('accountRequestRepository'),
+    tokenService: c.resolve('tokenService'),
+    otpService: c.resolve('otpService'),
+    config: c.resolve('config'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
   container.register('authorizationService', (c) => new AuthorizationService(
     c.resolve('playerRepository'),
     c.resolve('coachRepository'),

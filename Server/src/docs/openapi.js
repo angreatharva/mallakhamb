@@ -688,6 +688,70 @@ function buildPaths() {
     responses: { 200: ok('Current principal', ref('UserSummary')) },
   }));
 
+  // ── The signed-in user's own account (every role; the top-right account menu) ──
+  const PENDING_EMAIL_CHANGE = {
+    type: 'object', nullable: true,
+    properties: {
+      newEmail: S.email,
+      newEmailType: { type: 'string', enum: ['self', 'guardian'], nullable: true },
+      status: { type: 'string', enum: ['awaiting-code', 'awaiting-coach'] },
+      expiresAt: { type: 'string', format: 'date-time' },
+    },
+  };
+  const ACCOUNT = inline({ user: { type: 'object' }, userType: S.str, pendingEmailChange: PENDING_EMAIL_CHANGE }, []);
+
+  add('/api/auth/me/account', 'get', op({
+    tag: 'Auth', operationId: 'getOwnAccount',
+    summary: 'Own account, for the profile page',
+    description: 'The profile without credentials, plus any email change in progress.',
+    responses: { 200: ok('Account', ACCOUNT) },
+  }));
+
+  add('/api/auth/me', 'put', op({
+    tag: 'Auth', operationId: 'updateOwnAccount',
+    summary: 'Edit own profile',
+    description: 'Only the fields the role may change are applied (player: names, phone, guardian, state/unit, MFI no.; '
+      + 'date of birth and gender only before joining a team; coach: names, phone; admin: name; judge: names, phone, '
+      + 'state/unit, MFI no., certification). Anything else in the body is ignored. Email and password have their own endpoints.',
+    requestBody: jsonBody(inline({
+      firstName: S.str, lastName: S.str, name: S.str, phone: S.str, guardian: ref('PlayerGuardian'),
+      dateOfBirth: { type: 'string', format: 'date' }, gender: S.gender,
+      stateUnit: S.str, registrationNumber: S.str, certificationLevel: S.str,
+    }, [])),
+    responses: { 200: ok('Updated account', ACCOUNT), ...VALIDATION_ERROR },
+  }));
+
+  add('/api/auth/me/password', 'put', op({
+    tag: 'Auth', operationId: 'changeOwnPassword',
+    summary: 'Change own password',
+    description: 'Needs the current password. Signs out every other session and sets fresh cookies for this one.',
+    requestBody: jsonBody(inline({ currentPassword: S.str, newPassword: { type: 'string', minLength: 8 } }, ['currentPassword', 'newPassword'])),
+    responses: { 200: ok('Password changed', ref('LoginResponse')), 401: errorResponse('Current password is incorrect'), ...VALIDATION_ERROR },
+  }));
+
+  add('/api/auth/me/email', 'post', op({
+    tag: 'Auth', operationId: 'requestOwnEmailChange',
+    summary: 'Start an email change',
+    description: 'Needs the current password. Mails a 6-digit code to the NEW address; nothing changes until it is confirmed. '
+      + "A player chooses whether the address is their own (`self`, unique) or a guardian's (may be shared). Replaces any change in progress.",
+    requestBody: jsonBody(inline({ newEmail: S.email, emailType: { type: 'string', enum: ['self', 'guardian'] }, currentPassword: S.str }, ['newEmail', 'currentPassword'])),
+    responses: { 200: ok('Code sent', PENDING_EMAIL_CHANGE), 401: errorResponse('Current password is incorrect'), 409: errorResponse('Address already registered'), ...VALIDATION_ERROR },
+  }));
+
+  add('/api/auth/me/email', 'delete', op({
+    tag: 'Auth', operationId: 'cancelOwnEmailChange',
+    summary: 'Cancel an email change in progress',
+    responses: { 200: ok('Cancelled') },
+  }));
+
+  add('/api/auth/me/email/confirm', 'post', op({
+    tag: 'Auth', operationId: 'confirmOwnEmailChange',
+    summary: 'Finish an email change with the mailed code',
+    description: "Switches the address and tells the old one. A player who had no email goes to `awaiting-coach` instead: their coach approves the address. Five wrong codes drop the request.",
+    requestBody: jsonBody(inline({ code: S.str }, ['code'])),
+    responses: { 200: ok('Changed, or waiting for the coach', inline({ status: { type: 'string', enum: ['done', 'awaiting-coach'] }, user: { type: 'object' } }, [])), ...VALIDATION_ERROR },
+  }));
+
   add('/api/auth/logout', 'post', op({
     tag: 'Auth', operationId: 'authLogout',
     summary: 'Log out',

@@ -10,6 +10,7 @@
 
 const { asyncHandler } = require('../middleware/error.middleware');
 const { stripSensitiveFields } = require('../utils/data/user-projection.util');
+const { sendLoginResponse } = require('../utils/security/login-response.util');
 const {
   isProductionLike,
   setAccessTokenCookie,
@@ -24,6 +25,9 @@ function createAuthController(container) {
   const logger = container.resolve('logger');
 
   const isProduction = isProductionLike(config);
+  // Resolved on use: harnesses that build this controller without the
+  // account routes need not register it.
+  const accountService = () => container.resolve('accountService');
 
   return {
     // ==================== Password Reset ====================
@@ -111,6 +115,63 @@ function createAuthController(container) {
           userType: req.userType,
         },
       });
+    }),
+
+    // ==================== Own account (every role) ====================
+
+    /** @route GET /api/auth/me/account */
+    getAccount: asyncHandler(async (req, res) => {
+      const data = await accountService().getAccount(req.user._id, req.userType);
+      res.json({ success: true, data });
+    }),
+
+    /** @route PUT /api/auth/me */
+    updateAccount: asyncHandler(async (req, res) => {
+      const data = await accountService().updateProfile(req.user._id, req.userType, req.body);
+      res.json({ success: true, data, message: 'Profile updated.' });
+    }),
+
+    /**
+     * @route PUT /api/auth/me/password
+     * Every other session is signed out; this one gets new cookies, the same
+     * way a login sets them.
+     */
+    changePassword: asyncHandler(async (req, res) => {
+      const { currentPassword, newPassword } = req.body;
+      const competition = req.user.currentCompetition ? String(req.user.currentCompetition) : null;
+      const { token, user } = await accountService().changePassword(
+        req.user._id, req.userType, currentPassword, newPassword, competition
+      );
+      await sendLoginResponse({
+        res, tokenService, isProduction,
+        data: { user, token, competition },
+        userType: req.userType,
+        message: 'Password changed. Other devices have been signed out.',
+      });
+    }),
+
+    /** @route POST /api/auth/me/email */
+    requestEmailChange: asyncHandler(async (req, res) => {
+      const data = await accountService().requestEmailChange(req.user._id, req.userType, req.body);
+      res.json({ success: true, data, message: `We sent a 6-digit code to ${data.newEmail}.` });
+    }),
+
+    /** @route POST /api/auth/me/email/confirm */
+    confirmEmailChange: asyncHandler(async (req, res) => {
+      const data = await accountService().confirmEmailChange(req.user._id, req.userType, req.body.code);
+      res.json({
+        success: true,
+        data,
+        message: data.status === 'awaiting-coach'
+          ? 'Address confirmed. Your coach now needs to approve it.'
+          : 'Email changed.',
+      });
+    }),
+
+    /** @route DELETE /api/auth/me/email */
+    cancelEmailChange: asyncHandler(async (req, res) => {
+      await accountService().cancelEmailChange(req.user._id, req.userType);
+      res.json({ success: true, message: 'Email change cancelled.' });
     }),
 
     logout: asyncHandler(async (req, res) => {

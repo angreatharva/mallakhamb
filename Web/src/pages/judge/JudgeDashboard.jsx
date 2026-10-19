@@ -20,6 +20,7 @@ import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/admin/AdminKit';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
+import { AccountMenu } from '@/components/shell';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -762,16 +763,9 @@ const JudgeDashboard = () => {
         title={judgeInfo.name}
         subtitle={myJudgeType}
         onLogout={handleLogout}
-        actions={(
-          <button onClick={() => navigate('/judge/profile')}
-            className="ui-btn ui-btn--ghost ui-btn--sm"
-            aria-label="Your profile">
-            <span className="ui-btn__label" style={{ display: 'contents' }}>
-              <UserCircle aria-hidden="true" />
-              <span className="hidden sm:inline">Profile</span>
-            </span>
-          </button>
-        )}
+        // The account menu every role has. Only here, not on the scoring
+        // screens: nothing new should be able to take a judge off a slip.
+        actions={<AccountMenu profileTo="/judge/profile" />}
       />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">

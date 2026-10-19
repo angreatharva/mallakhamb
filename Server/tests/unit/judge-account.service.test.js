@@ -164,17 +164,15 @@ describe('updateProfile', () => {
     expect(applied).toEqual({ firstName: 'Pat', lastName: 'Mhatre', stateUnit: 'Maharashtra' });
   });
 
-  it('refuses to move to an address another judge already holds', async () => {
-    const { service } = buildService({
-      accounts: [
-        { _id: ACCOUNT_ID, firstName: 'Pat', lastName: 'Mhatre', email: 'pat@club.in' },
-        { _id: 'other', firstName: 'Sam', lastName: 'Rao', email: 'sam@club.in' },
-      ],
+  it('ignores an email in a profile body — a new address has to be confirmed first', async () => {
+    const { service, judgeAccountRepository } = buildService({
+      accounts: [{ _id: ACCOUNT_ID, firstName: 'Pat', lastName: 'Mhatre', email: 'pat@club.in' }],
     });
 
-    await expect(
-      service.updateProfile(ACCOUNT_ID, { email: 'sam@club.in' })
-    ).rejects.toThrow(ConflictError);
+    await service.updateProfile(ACCOUNT_ID, { email: 'sam@club.in', phone: '9876543210' });
+
+    const [, applied] = judgeAccountRepository.updateById.mock.calls[0];
+    expect(applied).toEqual({ phone: '9876543210' });
   });
 });
 
