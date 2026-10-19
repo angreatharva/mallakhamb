@@ -9,9 +9,10 @@ export const authAPI = {
   me: () => api.get('/auth/me'),
   // userType picks the account when one email owns several (player, coach,
   // admin, judge); omitted, the server takes the first match.
-  forgotPassword: (email, userType) => api.post('/auth/forgot-password', { email, userType }),
-  verifyOTP: (email, otp, userType) => api.post('/auth/verify-otp', { email, otp, userType }),
-  resetPasswordWithOTP: (email, otp, password, userType) => api.post('/auth/reset-password-otp', { email, otp, password, userType }),
+  // `identifier` is an email or, for a player, a Player ID.
+  forgotPassword: (identifier, userType) => api.post('/auth/forgot-password', { identifier, userType }),
+  verifyOTP: (identifier, otp, userType) => api.post('/auth/verify-otp', { identifier, otp, userType }),
+  resetPasswordWithOTP: (identifier, otp, password, userType) => api.post('/auth/reset-password-otp', { identifier, otp, password, userType }),
   getAssignedCompetitions: () => api.get('/auth/competitions/assigned'),
   setCompetition: (competitionId) => api.post('/auth/set-competition', { competitionId }),
 };

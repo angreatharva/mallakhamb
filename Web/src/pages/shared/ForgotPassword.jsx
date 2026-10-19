@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form';
 import { Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '@/services/api';
-import { validateEmailFormat } from '@/validators/form.validator';
-import { portalFromSearch, accountTypeFor, loginPathFor, withPortal } from './resetPortal';
+import { validateEmailFormat, validateEmailOrPlayerId } from '@/validators/form.validator';
+import { portalFromSearch, accountTypeFor, accountFieldFor, loginPathFor, withPortal } from './resetPortal';
 import { logger } from '@/infrastructure/logger';
 import { Button, Field, Input, Notice, TextLink } from '@/components/ui';
 import { AuthLayout, AuthHeader, AuthLinks } from '@/components/shell';
@@ -19,6 +19,8 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const portal = portalFromSearch(location.search);
+  const isPlayer = portal === 'player';
+  const account = accountFieldFor(portal);
 
   const { register, handleSubmit, formState: { errors } } = useForm();
 
@@ -28,11 +30,12 @@ const ForgotPassword = () => {
     try {
       logger.log('🔐 Sending forgot password request for:', data.email);
       const timeout = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 120000));
-      await Promise.race([authAPI.forgotPassword(data.email, accountTypeFor(portal)), timeout]);
+      const identifier = data.email.trim().toLowerCase();
+      await Promise.race([authAPI.forgotPassword(identifier, accountTypeFor(portal)), timeout]);
       setSent(true);
       // The server answers the same for every address, so neither can we.
       toast.success('Check your email for the code.', { id: 'forgot-password' });
-      setTimeout(() => navigate(withPortal('/reset-password', portal), { state: { email: data.email } }), 2000);
+      setTimeout(() => navigate(withPortal('/reset-password', portal), { state: { email: identifier } }), 2000);
     } catch (err) {
       logger.error('❌ Forgot password error:', err);
       let msg = 'An error occurred. Please try again.';
@@ -57,21 +60,34 @@ const ForgotPassword = () => {
       <AuthHeader
         tag="Password reset"
         title="Forgot Password?"
-        lede="Enter your email and we'll send you a one-time code to reset your password."
+        lede={isPlayer
+          ? "Enter your email or Player ID and we'll send a one-time code to reset your password."
+          : "Enter your email and we'll send you a one-time code to reset your password."}
       />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-5">
-        <Field id="email" label="Email Address" required error={errors.email?.message}>
+        {/* The field keeps the name `email` for every portal; a player's may hold a Player ID. */}
+        <Field id="email" label={account.label} required error={errors.email?.message}>
           <Input
             {...register('email', {
-              required: 'Email is required',
-              validate: v => validateEmailFormat(v) || 'Please enter a valid email address',
+              validate: isPlayer
+                ? validateEmailOrPlayerId
+                : (v) => validateEmailFormat(v) || 'Please enter a valid email address',
             })}
-            type="email" autoComplete="email"
-            placeholder="you@example.com"
+            type={account.type} autoComplete={account.autoComplete}
+            autoCapitalize="none" spellCheck={false}
+            placeholder={account.placeholder}
             disabled={loading || sent}
           />
         </Field>
+
+        {isPlayer && (
+          <Notice tone="info">
+            Enter your Player ID and the code goes to the email on your account — yours or your parent&apos;s.
+            Entering a parent&apos;s email sends the Player IDs registered with it. No email on your account?
+            Ask your coach to reset your password.
+          </Notice>
+        )}
 
         <Button type="submit" size="lg" block loading={loading} disabled={sent} icon={loading || sent ? null : Send}>
           {loading ? 'Sending OTP…' : sent ? 'OTP Sent — Redirecting…' : 'Send OTP'}
@@ -85,7 +101,7 @@ const ForgotPassword = () => {
       </form>
 
       {sent && (
-        <Notice tone="success" title="If that email has an account, a 6-digit code is on its way" role="status" aria-live="polite" className="ui-fade-in">
+        <Notice tone="success" title={isPlayer ? 'If that account has an email, a 6-digit code is on its way' : 'If that email has an account, a 6-digit code is on its way'} role="status" aria-live="polite" className="ui-fade-in">
           Redirecting to reset page…
         </Notice>
       )}

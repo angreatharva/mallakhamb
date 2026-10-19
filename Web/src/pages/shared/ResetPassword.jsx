@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form';
 import { Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '@/services/api';
-import { validatePasswordStrength } from '@/validators/form.validator';
-import { portalFromSearch, accountTypeFor, loginPathFor, withPortal } from './resetPortal';
+import { validatePasswordStrength, validateEmailOrPlayerId } from '@/validators/form.validator';
+import { portalFromSearch, accountTypeFor, accountFieldFor, loginPathFor, withPortal } from './resetPortal';
 import { Button, Field, Input, PasswordInput, Notice, TextLink } from '@/components/ui';
 import { AuthLayout, AuthHeader, AuthLinks } from '@/components/shell';
 
@@ -23,6 +23,8 @@ const ResetPassword = () => {
   const location = useLocation();
   const portal = portalFromSearch(location.search);
   const userType = accountTypeFor(portal);
+  const isPlayer = portal === 'player';
+  const account = accountFieldFor(portal);
   const emailFromState = location.state?.email || '';
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
@@ -35,11 +37,11 @@ const ResetPassword = () => {
   const handleVerifyOTP = async () => {
     const email = watch('email');
     const otp = watch('otp');
-    if (!email || !otp) { toast.error('Please enter email and OTP'); return; }
+    if (!email || !otp) { toast.error(`Please enter ${isPlayer ? 'email or Player ID' : 'email'} and OTP`); return; }
     if (otp.length !== 6) { toast.error('OTP must be 6 digits'); return; }
     setVerifying(true); setError('');
     try {
-      await authAPI.verifyOTP(email, otp, userType);
+      await authAPI.verifyOTP(email.trim().toLowerCase(), otp, userType);
       setOtpVerified(true);
       toast.success('OTP verified! Set your new password.');
     } catch (err) {
@@ -53,7 +55,7 @@ const ResetPassword = () => {
   const onSubmit = async (data) => {
     setLoading(true); setError('');
     try {
-      await authAPI.resetPasswordWithOTP(data.email, data.otp, data.password, userType);
+      await authAPI.resetPasswordWithOTP(data.email.trim().toLowerCase(), data.otp, data.password, userType);
       setSuccess(true);
       toast.success('Password reset successfully!');
       setTimeout(() => navigate(loginPathFor(portal)), 2000);
@@ -100,14 +102,17 @@ const ResetPassword = () => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-5">
-        <Field id="email" label="Email Address" required error={errors.email?.message}>
+        <Field id="email" label={account.label} required error={errors.email?.message}>
           <Input
-            {...register('email', {
-              required: 'Email is required',
-              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email' },
-            })}
-            type="email" autoComplete="email"
-            placeholder="you@example.com"
+            {...register('email', isPlayer
+              ? { validate: validateEmailOrPlayerId }
+              : {
+                required: 'Email is required',
+                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email' },
+              })}
+            type={account.type} autoComplete={account.autoComplete}
+            autoCapitalize="none" spellCheck={false}
+            placeholder={account.placeholder}
             disabled={loading || otpVerified}
           />
         </Field>

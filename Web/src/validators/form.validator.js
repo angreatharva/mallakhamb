@@ -80,6 +80,34 @@ export const loginSchema = z.object({
   password: passwordSchema,
 });
 
+/** A Player ID as the server issues it: `firstname.lastname.ddmmyy`, maybe `.2`. */
+export const LOGIN_ID_PATTERN = /^[a-z0-9]+(\.[a-z0-9]+){1,3}$/;
+
+/**
+ * Rule for a field that takes an email or a Player ID (player sign-in and the
+ * player's password reset). Returns true or the message to show, so it plugs
+ * straight into react-hook-form's `validate`. Mirrors the server's
+ * accountIdentifier().
+ */
+export const validateEmailOrPlayerId = (value) => {
+  const typed = String(value ?? '').trim().toLowerCase();
+  if (!typed) return 'Email or Player ID is required';
+  if (typed.includes('@')) return validateEmailFormat(typed) || 'Please enter a valid email address';
+  return LOGIN_ID_PATTERN.test(typed) || 'A Player ID looks like firstname.lastname.ddmmyy';
+};
+
+/**
+ * A player signs in with their own email or their Player ID. A guardian's
+ * email is never a login — it may belong to several children.
+ */
+export const playerLoginSchema = z.object({
+  identifier: z.string().trim().toLowerCase().superRefine((value, ctx) => {
+    const verdict = validateEmailOrPlayerId(value);
+    if (verdict !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: verdict });
+  }),
+  password: passwordSchema,
+});
+
 /**
  * Judges sign in with their own email address, like every other role. This
  * asked for a `username` until judges got accounts of their own; the usernames

@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRateLimit } from '../../hooks/useRateLimit';
-import { loginSchema, judgeLoginSchema } from '@/validators/form.validator';
+import { loginSchema, judgeLoginSchema, playerLoginSchema, validateEmailOrPlayerId } from '@/validators/form.validator';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
@@ -199,7 +199,7 @@ const UnifiedLogin = () => {
     }
     
     // Validate input based on role
-    const schema = role === 'judge' ? judgeLoginSchema : loginSchema;
+    const schema = role === 'judge' ? judgeLoginSchema : role === 'player' ? playerLoginSchema : loginSchema;
     const validation = schema.safeParse(data);
     if (!validation.success) {
       validation.error.errors.forEach((err) => {
@@ -372,6 +372,9 @@ const UnifiedLogin = () => {
     }
   };
   
+  // A player signs in with their own email or their Player ID — for a player
+  // using a guardian's email or none, the Player ID is the only login.
+  const isPlayer = role === 'player';
   const emailField = config.usesEmail ? 'email' : 'username';
   const blocked = lockoutEndTime !== null || rateLimitEndTime !== null;
 
@@ -390,24 +393,43 @@ const UnifiedLogin = () => {
         {lockoutEndTime && <AccountLockoutMessage lockoutEndTime={lockoutEndTime} />}
         {rateLimitEndTime && !lockoutEndTime && <AccountLockoutMessage lockoutEndTime={rateLimitEndTime} />}
 
-        <Field
-          id={`${role}-${emailField}`}
-          label={config.usesEmail ? 'Email' : 'Username'}
-          required
-          error={errors[emailField]?.message}
-        >
-          <Input
-            type={config.usesEmail ? 'email' : 'text'}
-            placeholder={config.usesEmail ? `${role}@example.com` : 'Enter your username'}
-            autoComplete={config.usesEmail ? 'email' : 'username'}
-            {...register(emailField, {
-              required: `${config.usesEmail ? 'Email' : 'Username'} is required`,
-              ...(config.usesEmail && {
-                pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' }
-              })
-            })}
-          />
-        </Field>
+        {isPlayer ? (
+          <Field
+            id="player-identifier"
+            label="Email or Player ID"
+            required
+            error={errors.identifier?.message}
+            help="Your own email, or your Player ID (firstname.lastname.ddmmyy)"
+          >
+            <Input
+              type="text"
+              placeholder="you@example.com or aarav.patil.150616"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              {...register('identifier', { validate: validateEmailOrPlayerId })}
+            />
+          </Field>
+        ) : (
+          <Field
+            id={`${role}-${emailField}`}
+            label={config.usesEmail ? 'Email' : 'Username'}
+            required
+            error={errors[emailField]?.message}
+          >
+            <Input
+              type={config.usesEmail ? 'email' : 'text'}
+              placeholder={config.usesEmail ? `${role}@example.com` : 'Enter your username'}
+              autoComplete={config.usesEmail ? 'email' : 'username'}
+              {...register(emailField, {
+                required: `${config.usesEmail ? 'Email' : 'Username'} is required`,
+                ...(config.usesEmail && {
+                  pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' }
+                })
+              })}
+            />
+          </Field>
+        )}
 
         <Field id={`${role}-password`} label="Password" required error={errors.password?.message}>
           <PasswordInput

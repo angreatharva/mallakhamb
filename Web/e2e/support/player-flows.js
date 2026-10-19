@@ -26,6 +26,10 @@ export const submitRegistration = async (page, player) => {
   await page.goto('/player/register');
   await expect(page.getByRole('heading', { name: 'Create Account' })).toBeVisible();
 
+  // First screen: whose email. Roster players all have their own.
+  await page.getByRole('link', { name: /my own email/i }).click();
+  await expect(page).toHaveURL(/\/player\/register\?with=own/);
+
   await page.locator('#player-reg-firstName').fill(player.firstName);
   await page.locator('#player-reg-lastName').fill(player.lastName);
   await page.locator('#player-reg-email').fill(player.email);
@@ -35,6 +39,11 @@ export const submitRegistration = async (page, player) => {
   await page.locator('#player-reg-password').fill(player.password);
   await page.locator('#player-reg-confirmPassword').fill(player.password);
 
+  // A player under 18 needs a guardian's consent; the tick appears once the
+  // date of birth says so. The input is visually hidden inside its label.
+  const consent = page.locator('#player-reg-guardianConsent');
+  if (await consent.count()) await consent.check({ force: true });
+
   const outcome = await submitAndReadOutcome(
     page,
     '/players/register',
@@ -42,6 +51,10 @@ export const submitRegistration = async (page, player) => {
     'player'
   );
   if (outcome !== 'registered') return outcome;
+
+  // Registration first shows the Player ID it was given.
+  await expect(page.getByRole('heading', { name: 'Your Player ID' })).toBeVisible();
+  await page.getByRole('button', { name: /^continue$/i }).click();
 
   // Registration signs the player in and hands them to the level chooser —
   // team selection comes after a meet has been picked, since the roster is
@@ -67,7 +80,8 @@ export const signIn = async (page, player, expectedUrl = /\/player\/select-level
   await page.goto('/player/login');
   await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
 
-  await page.locator('#player-email').fill(player.email);
+  // The field takes the player's own email or their Player ID.
+  await page.locator('#player-identifier').fill(player.email);
   await page.locator('#player-password').fill(player.password);
   await page.getByRole('button', { name: /^sign in$/i }).click();
 

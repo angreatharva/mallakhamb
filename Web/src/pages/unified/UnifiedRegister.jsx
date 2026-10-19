@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
-import { Button, Field, Input, PasswordInput, Select, TextLink } from '@/components/ui';
+import { Button, Field, Input, Notice, PasswordInput, Select, TextLink } from '@/components/ui';
 import { AuthLayout, AuthHeader, AuthLinks } from '@/components/shell';
 
 // API services
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
+import RegistrationChoice from '@/pages/player/registration/RegistrationChoice';
+import PlayerIdScreen from '@/pages/player/registration/PlayerIdScreen';
+import { RELATIONS, choiceFromSearch, needsConsent } from '@/pages/player/registration/playerRegistration';
 
 
 /**
@@ -199,6 +202,72 @@ const PLAYER_FIELDS = [
 ];
 
 /**
+ * The responsible adult, for a player using a guardian's email or none. The
+ * server requires all three for those two choices.
+ */
+const GUARDIAN_FIELDS = [
+  {
+    name: 'guardian.name',
+    label: 'Parent/Guardian Name',
+    type: 'text',
+    placeholder: 'Full name',
+    autoComplete: 'off',
+    rules: { required: 'Parent/guardian name is required' },
+  },
+  // Full-width rows: at half width the long labels wrap and push the inputs
+  // out of line with their neighbours.
+  {
+    name: 'guardian.relation',
+    label: 'Relation to Player',
+    type: 'select',
+    options: RELATIONS,
+    rules: { required: 'Relation is required' },
+  },
+  {
+    name: 'guardian.phone',
+    label: 'Parent/Guardian Phone',
+    type: 'tel',
+    placeholder: "Parent's or guardian's phone number",
+    autoComplete: 'tel',
+    rules: PHONE_RULES,
+  },
+];
+
+const playerField = (name) => PLAYER_FIELDS.find((field) => field.name === name);
+
+/**
+ * The player form for each first-screen choice. Own email is the form as it
+ * always was; a guardian's email swaps the player's phone for the guardian's
+ * details; no email drops the address altogether.
+ */
+const PLAYER_FIELDS_BY_CHOICE = {
+  own: PLAYER_FIELDS,
+  guardian: [
+    playerField('firstName'),
+    playerField('lastName'),
+    {
+      ...playerField('email'),
+      label: "Parent's or Guardian's Email",
+      placeholder: 'parent@example.com',
+    },
+    ...GUARDIAN_FIELDS,
+    playerField('dateOfBirth'),
+  ],
+  none: [
+    playerField('firstName'),
+    playerField('lastName'),
+    ...GUARDIAN_FIELDS,
+    playerField('dateOfBirth'),
+  ],
+};
+
+/** `errors['guardian.name']` is `errors.guardian.name` in react-hook-form. */
+const errorFor = (errors, name) => name.split('.').reduce((node, key) => node?.[key], errors)?.message;
+
+/** A DOM id for a field name; a dot would need escaping in every selector. */
+const fieldId = (role, name) => `${role}-reg-${name.replace(/\./g, '-')}`;
+
+/**
  * Judge registration fields.
  *
  * Name, address and phone identify the person; the three judging credentials
@@ -293,9 +362,14 @@ const UnifiedRegister = () => {
   const navigate = useNavigate();
   const { login, user, userType } = useAuth();
   const [loading, setLoading] = useState(false);
+  // The player just registered, held so the Player ID screen can show it
+  // before moving on. Set before login(), so the redirect below waits.
+  const [registeredPlayer, setRegisteredPlayer] = useState(null);
 
   const role = detectRoleFromPath(location.pathname);
   const config = getRoleConfig(role);
+  // Players first say whose email they will use; null is the choice screen.
+  const choice = role === 'player' ? choiceFromSearch(location.search) : null;
 
   const {
     register,
@@ -305,18 +379,27 @@ const UnifiedRegister = () => {
   } = useForm();
 
   const passwordValue = watch('password');
+  const showConsent = role === 'player' && needsConsent(watch('dateOfBirth'));
+  const consentGiven = watch('guardianConsent');
 
   // Redirect if already authenticated
   useEffect(() => {
+    if (registeredPlayer) return;
     if (user && userType === role) {
       navigate(HOME_AFTER_REGISTER[role] || '/');
     }
-  }, [user, userType, role, navigate]);
+  }, [user, userType, role, navigate, registeredPlayer]);
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (formData) => {
     setLoading(true);
     try {
       const apiService = role === 'coach' ? coachAPI : role === 'judge' ? judgeAPI : playerAPI;
+      const data = { ...formData };
+      if (role === 'player') {
+        data.emailType = choice.emailType;
+        if (choice.emailType === 'none') delete data.email;
+        data.guardianConsent = showConsent ? Boolean(formData.guardianConsent) : undefined;
+      }
       const response = await apiService.register(data);
 
       /*
@@ -352,6 +435,16 @@ const UnifiedRegister = () => {
         secureStorage.setItem('judge_user', JSON.stringify(userData));
       }
 
+      // A player stops on the Player ID screen first: for anyone not using
+      // their own email it is the only login, and nobody can mail it to a
+      // player with no address.
+      if (role === 'player' && userData.loginId) {
+        setRegisteredPlayer(userData);
+        login(userData, token, role);
+        toast.success('Registration successful!');
+        return;
+      }
+
       login(userData, token, role);
       toast.success('Registration successful!');
 
@@ -366,7 +459,11 @@ const UnifiedRegister = () => {
     }
   };
 
-  const fields = role === 'coach' ? COACH_FIELDS : role === 'judge' ? JUDGE_FIELDS : PLAYER_FIELDS;
+  const fields = role === 'coach'
+    ? COACH_FIELDS
+    : role === 'judge'
+      ? JUDGE_FIELDS
+      : PLAYER_FIELDS_BY_CHOICE[choice?.key] || PLAYER_FIELDS;
 
   // Group half-width fields into pairs
   const renderFields = () => {
@@ -394,23 +491,72 @@ const UnifiedRegister = () => {
   const renderField = (field) => (
     <Field
       key={field.name}
-      id={`${role}-reg-${field.name}`}
+      id={fieldId(role, field.name)}
       label={field.label}
       required={!!field.rules?.required}
-      error={errors[field.name]?.message}
+      error={errorFor(errors, field.name)}
     >
-      <Input
-        type={field.type}
-        placeholder={field.placeholder}
-        autoComplete={field.autoComplete}
-        {...register(field.name, field.rules)}
-      />
+      {field.type === 'select' ? (
+        <Select defaultValue="" {...register(field.name, field.rules)}>
+          <option value="" disabled>Select</option>
+          {field.options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </Select>
+      ) : (
+        <Input
+          type={field.type}
+          placeholder={field.placeholder}
+          autoComplete={field.autoComplete}
+          {...register(field.name, field.rules)}
+        />
+      )}
     </Field>
   );
+
+  // ── Player: the Player ID, once registered ──
+  if (role === 'player' && registeredPlayer) {
+    return (
+      <AuthLayout role={role} title={config.title} lede={config.description}>
+        <PlayerIdScreen
+          player={registeredPlayer}
+          emailType={registeredPlayer.emailType || choice?.emailType || 'self'}
+          onContinue={() => navigate(HOME_AFTER_REGISTER.player)}
+        />
+      </AuthLayout>
+    );
+  }
+
+  // ── Player: whose email, if any ──
+  if (role === 'player' && !choice) {
+    return (
+      <AuthLayout role={role} title={config.title} lede={config.description}>
+        <AuthHeader tag={config.accessLabel} title={config.formTitle} lede="Do you have your own email address?" />
+        <RegistrationChoice />
+        <AuthLinks>
+          <TextLink as={Link} to="/" className="ui-link--quiet">← Home</TextLink>
+          <span className="shell-auth__links-end">
+            <TextLink as={Link} to={config.loginLink}>Sign in</TextLink>
+          </span>
+        </AuthLinks>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout role={role} title={config.title} lede={config.description}>
       <AuthHeader tag={config.accessLabel} title={config.formTitle} lede={config.formSubtitle} />
+
+      {choice && (
+        <div className="shell-auth__chosen">
+          <span className="type-body-s">{choice.title}</span>
+          <TextLink as={Link} to="/player/register" className="type-body-s">Change</TextLink>
+        </div>
+      )}
+
+      {choice?.key === 'none' && (
+        <Notice tone="info">
+          You will sign in with a Player ID, shown after you register. Without an email, only your coach can reset a forgotten password.
+        </Notice>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate aria-label={`${config.title} registration form`} className="grid gap-5">
         {renderFields()}
@@ -418,7 +564,7 @@ const UnifiedRegister = () => {
         {/* Gender (player only) */}
         {role === 'player' && (
           <Field id="player-reg-gender" label="Gender" required error={errors.gender?.message}>
-            <Select {...register('gender', { required: 'Gender is required' })}>
+            <Select defaultValue="" {...register('gender', { required: 'Gender is required' })}>
               <option value="" disabled>Select gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
@@ -458,6 +604,38 @@ const UnifiedRegister = () => {
             })}
           />
         </Field>
+
+        {/*
+          * Guardian consent, for anyone under 18 (DPDP Act); the server refuses
+          * the registration without it. Shown once the date of birth says so.
+          */}
+        {showConsent && (
+          <div className="grid gap-1">
+            <label className="ui-check" data-checked={consentGiven || undefined}>
+              <input
+                id="player-reg-guardianConsent"
+                type="checkbox"
+                className="sr-only"
+                aria-invalid={errors.guardianConsent ? 'true' : undefined}
+                aria-describedby={errors.guardianConsent ? 'player-reg-guardianConsent-error' : undefined}
+                {...register('guardianConsent', {
+                  validate: (value) => value === true || 'A parent or guardian must agree for a player under 18',
+                })}
+              />
+              <span className="ui-check__box" aria-hidden="true">
+                {consentGiven && <Check className="w-3 h-3" />}
+              </span>
+              <span className="type-body-s">
+                I am this player&apos;s parent or guardian, and I agree to this registration.
+              </span>
+            </label>
+            {errors.guardianConsent && (
+              <p id="player-reg-guardianConsent-error" className="ui-field__error type-caption" role="alert">
+                {errors.guardianConsent.message}
+              </p>
+            )}
+          </div>
+        )}
 
         <Button type="submit" size="lg" block loading={loading} iconRight={loading ? null : ArrowRight}>
           {loading ? 'Creating Account...' : config.buttonText}
