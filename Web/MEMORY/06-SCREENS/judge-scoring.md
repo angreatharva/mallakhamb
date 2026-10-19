@@ -4,18 +4,19 @@ covers:
   - src/pages/judge/JudgeScoring.jsx
 read_when: "changing the judge's COP slip form, the HIGH-W1 dispatcher, or slip autosave"
 depends_on: [06-SCREENS/judge-shared, 06-SCREENS/judge-panel-data-hook, SHARED-CONTRACTS, 09-REALTIME]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
 
-`src/pages/judge/JudgeScoring.jsx` (1109 lines), route `/judge/scoring`.
+`src/pages/judge/JudgeScoring.jsx` (1090 lines), route `/judge/scoring`.
 The core slip-filling screen — but the file's default export
-(`:1087`) is a **hook-free dispatcher** that only calls `useLocation`
-and picks between `ScorerScoring` (see
-[scorer-scoring.md](scorer-scoring.md)) and `JudgeSlip` (the actual COP
-form, `:207-1075`) based on `isScorer`.
+(`JudgeScoring`, `:1056`) is a **hook-free dispatcher** that only calls
+`useLocation` and picks one of three children: `TimeKeeperScoring` (the
+stopwatch screen, see [time-keeper-scoring.md](time-keeper-scoring.md)),
+`ScorerScoring` (see [scorer-scoring.md](scorer-scoring.md)) or `JudgeSlip`
+(the actual COP form, `:178`).
 
 ## The HIGH-W1 fix — why the dispatcher exists, and the constraint it imposes
 
@@ -30,8 +31,16 @@ could go stale if `secureStorage.getItem` later evicted an
 undecryptable entry, letting `isScorer` change mid-instance-life, which
 was the exact trigger.
 ```js
-isScorer = location.state?.isScorer || storedJudgeUser?.judgeType === 'Scorer'
+const primary = storedJudgeUser?.judgeType;
+const isScorer = location.state?.isScorer
+  || (!location.state?.isTimeKeeper && primary === 'Scorer');
+const isTimeKeeper = !isScorer
+  && (location.state?.isTimeKeeper || primary === 'Time Keeper');
 ```
+The navigation state is the dashboard's **per-category** answer and wins — for
+one person seated as both Scorer and Time Keeper it carries the role chosen in
+the dashboard's role popup. The stored primary seat only covers a refresh that
+lost the state.
 Regression-tested directly by `JudgeScoring.hooks.test.jsx` (see
 [14-TESTING.md](../14-TESTING.md) — three tests: a Scorer routes to
 `ScorerScoring`; the same instance tolerates `isScorer` flipping across
@@ -50,7 +59,12 @@ dispatcher pattern exists to prevent.
 different roles on different panels, so the seat is resolved per
 category, not cached globally.
 
-**Fields**: Difficulty (A/B/C element steppers, C→B→A cascade via
+**Fields**: Difficulty (per class A/B/C a shared `DifficultyPicker` from
+`judgeShared.jsx` — a 1–10 grid in two rows of five where one tap sets the
+count, plus a vertical − / count / + stepper for 0 or above 10, and the class
+subtotal "6 × 0.40 = 2.40"; tapping the chosen number again **keeps** it —
+only − lowers it. Same picker in the phone and desktop layouts and,
+`compact`, in the Senior Judge's edit dialog. C→B→A cascade via
 `resolveDifficultyValue`+`getDifficultyRequirement` from
 `@/utils/scoring/copRules`, see
 [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md)), Combination
@@ -62,21 +76,29 @@ tab, desktop, and `SrEditModal` in `judgeShared.jsx`. The server still
 accepts any multiple of 0.05, so older stored marks like 2.55 stay valid),
 Originality/Bonus (binary None/+0.20 toggle).
 
-**Layout**: separate mobile (3-tab swipeable, touch-swipe handlers
-`:265-293`) and desktop (two-column grid) renders, both driving the
-same `scores` state.
+**Layout**: separate mobile (3-tab swipeable; switching tab scrolls to the
+top) and desktop (two-column grid) renders, both driving the same `scores`
+state. On a phone the block holding **Live Final Score** and the tabs is
+sticky at the header's **measured** height (ResizeObserver — the phone header
+is two rows, ~121 px), so the score stays visible while scrolling.
 
 ## Autosave — localStorage, per (team, player, judgeType)
 
 `scores` is cached to **localStorage** (not sessionStorage) under
-`judge_scores_${teamId}_${playerId}_${judgeType}` (`:334-337`), written
-on every `scores` change via a `useEffect` (`:367-376`), cleared on
-submit/finalize/reset. A judge who reloads mid-slip gets their
-in-progress entries back via `getInitialScores()` (`:340-362`), which
-validates the cached shape before trusting it. **This persists across
-tab closes** since it's localStorage, not sessionStorage — worth
-knowing if you're debugging a slip that "remembers" values from a much
-earlier session.
+`judge_scores_${teamId}_${playerId}_${judgeType}` (built by
+`scoringCacheKey()` in `judgeShared.jsx`), written on every `scores` change
+— but **not before the judge is known** (the key would end `_unknown`, a slot
+nothing reads back) — and cleared on submit/finalize/reset. A judge who
+reloads mid-slip gets their entries back from a one-shot restore effect that
+runs as soon as the real key exists and validates the cached shape first.
+**This persists across tab closes** since it's localStorage, not
+sessionStorage — worth knowing if you're debugging a slip that "remembers"
+values from a much earlier session.
+
+While a slip has unsubmitted marks, a `beforeunload` listener asks the
+browser's own "Reload site? Changes may not be saved" prompt (a page can't
+draw its own dialog there). iOS Safari ignores it, which is why the autosave
+matters.
 
 ## Restore-already-submitted-slip effect
 
@@ -86,6 +108,13 @@ Once `panelScores[myJudgeType]` lands from the panel feed
 judge deliberately clicked "Edit My Score" from Panel Review, which
 passes `resumeEditing: true`) — auto-navigates to Panel Review. One-shot,
 guarded by `restoredRef`.
+
+**Re-editing never shows the old score** (fixed 2026-09-26): the slip is not
+touchable (`slipReady`) until the submitted slip has loaded or the read has
+settled with none, so a change can't be overwritten by a late load. Panel
+Review clears an abandoned edit's leftovers before going back in, so an edit
+opens on the submitted score; but an edit's own unsaved marks found in the
+cache win over the submitted slip (that is "this edit, refreshed").
 
 ## Submit flow
 

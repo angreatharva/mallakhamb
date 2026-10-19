@@ -8,10 +8,12 @@ covers:
   - src/repositories/score.repository.js
   - src/services/competition/performance-order.service.js
   - src/models/PerformanceOrder.js
-read_when: "changing score calculation, ranking, tie-breaks, judge panel maths, or the running-order/lot-draw subsystem"
+  - src/models/TieBreakDraw.js
+  - src/repositories/tie-break-draw.repository.js
+read_when: "changing score calculation, ranking, tie-breaks, lucky draws, Team Championship, judge panel maths, or the running-order/lot-draw subsystem"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, 08-REALTIME-SOCKETS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## COP rules — `src/config/cop-rules.js` (single backend source of truth)
@@ -33,11 +35,17 @@ server only *checks* it, never recomputes it from the client's number.
 - `TOLERANCE_TIERS`/`getTolerance()` — §3.4: ≥9.00→0.10, ≥8.00→0.20,
   ≥7.00→0.30, ≥6.00→0.40, ≥5.00→0.50, else 1.00.
 - `TIME_DEDUCTION_TIERS`/`getTimeDeduction()` — §3.5: ≤3s over→0.20,
-  ≤5s→0.30, ≤9s→0.40, else 0.50. `TIME_LIMIT_SECONDS = 90`.
+  ≤5s→0.30, ≤9s→0.40, else 0.50. `TIME_LIMIT_SECONDS = 90`,
+  `TIME_MINIMUM_SECONDS = 60`. `getTimeDeductionForTime(seconds)` applies the
+  **same table both ways**: short of 60 s by N seconds, or over 90 s by N
+  (0 for a blank/zero time). Served to the client as `timeMinimumSeconds`.
 - `APPARATUS = ['Pole Mallakhamb','Hanging Mallakhamb','Rope Mallakhamb']`.
   **Is** apparatus-specific: `COMBINATION_CHECKLISTS` gives a different
   penalty-weighted checklist per apparatus (10/10/7 items), each summing to
-  1.60.
+  1.60. The `rule` text is quoted **verbatim** from COP Mallakhamb.pdf §2.3.2
+  (p.28), because judges read it against the printed Code. Only three PDF slips
+  are corrected ("p art", "Mallakhmab", "B- Part"); the Web mirror must match
+  word for word (`copRulesSync.test.js`).
 - `normalizeApparatus()`/`apparatusKey()` — canonicalizes short labels;
   `apparatusKey` defaults unset apparatus to Pole so legacy rows compare
   equal to explicit Pole rows.
@@ -88,8 +96,9 @@ Panel size changes the *method*, not just the judge count:
 otherDeduction)`, rounded to 3dp — not 2, because COP base scores land on
 quarters like 9.225 and 2dp rounding would change real placings);
 `calculateRankings` (delegates to `ranking.util.rankByScore`);
-`calculateTimeDeduction` (parses "MM:SS" or seconds — reference/UI-only,
-**not applied automatically**); `calculateCompletePlayerScore` (the
+`calculateTimeDeduction` (parses "MM:SS" or seconds; under 60 s it charges
+the shortfall, over 90 s the overage, from the same table — reference/UI-only,
+**not applied automatically**: the Scorer enters the deduction); `calculateCompletePlayerScore` (the
 per-submission orchestrator — calls `calculateIndividualScore`, computes
 `deductionReference`, computes `finalScore`, falling back to a positive
 client-provided `finalScore` only if server recalculation yields exactly 0);
@@ -103,36 +112,101 @@ apparatus, not pooled**).
 ranking (descending sort, ties share rank, next rank skips — 1,1,3).
 `calculateTeamRankings` delegates to it directly on `team.totalScore` — **no
 tie-break rule applies to teams**, only individual performances.
-`calculateIndividualRankings` applies `applyTieBreaker` first, then stamps
-ranks using `areTied` against the previous player.
-`calculateIndividualRankingsByApparatus` — **the entry point actually used**
-by `CalculationService.getIndividualRankingsWithTieBreaker` and
+`calculateIndividualRankings(players, type, { draws })` applies
+`applyTieBreaker` first, then stamps ranks: a player shares the previous
+player's rank only if `areTied(...)` **and not** `separatedByLuckyDraw(...)`.
+`calculateIndividualRankingsByApparatus(players, type, { draws })` — **the
+entry point actually used** by
+`CalculationService.getIndividualRankingsWithTieBreaker` and
 `player-row.util.rankPlayerRows`: groups by `apparatusKey(player.apparatus)`
-first, ranks each apparatus group independently, flattens back to one list.
+first, ranks each apparatus group independently (passing only the draws whose
+`apparatus` matches), flattens back to one list.
+
+`player-row.util.rankPlayerRows(rows, type, { draws })` is what both results
+feeds call — `ScoringService.getIndividualScores` (admin/superadmin board) and
+`PublicService.getPublicScores` (public board). Each loads the category's
+draws with `tieBreakDrawRepository.findForStanding(competitionId, {gender,
+ageGroup, competitionType})`, which returns `[]` unless all three are given
+(an un-narrowed feed mixes categories, and no draw describes it). **A new
+results feed must pass draws the same way**, or its placings disagree with the
+other two boards.
+
+## Team Championship — `utils/scoring/team-championship.util.js`
+
+Competition I's team score. The superadmin sets `Competition.maxTeamSize`
+(4 or 6) per meet: a **4-player** squad counts its **best 3 per apparatus**, a
+**6-player** squad its **best 5 per apparatus**; the team total is the sum of
+the per-apparatus subtotals (never "best N across all apparatus", so one strong
+apparatus can't carry a squad that didn't field N on another). A meet saved
+before the field existed reads as 6 (`DEFAULT_TEAM_SIZE`), so its teams count
+best 5. `scoreTeam` returns `{teamSize, countedPerApparatus, totalScore,
+apparatus: [{apparatus, subtotal, counted, dropped}]}`; `rankTeamChampionship`
+ranks with `rankByScore` (level totals share a place — no tie-break).
+`hasRoomInSquad` / `entriesInCategory` cap registration at `maxTeamSize` per
+gender + age group. Both `ScoringService.getTeamRankings` (admin) and
+`PublicService.getPublicTeamChampionship` (public, built on `getPublicScores`
+so only published scores count) call it. This replaced ranking on every
+athlete's summed `totalScore`, which rewarded entering more athletes.
 
 ## Tie-break algorithm — `utils/scoring/tie-breaker.util.js`
 
-The precise rule, confirmed in code and matching *Tie-Break Rules
-Authority* (the user's own rule,
-**not** a "v2 spec §7" cascade — no such cascade exists anywhere in this
-file):
+The rule set the user confirmed against COP Mallakhamb.pdf §1.12 / §2.1.3
+(2026-10-17; lucky draw switched on 2026-10-18). It replaced an earlier
+"senior judge score, then whole-panel mean" rule — don't restore that.
 
-- **3-judge panels**: tie broken by lower time only (one step).
-- **4-judge panels**: (1) higher senior-judge score, (2) higher mean of all
-  4 judges (senior included, sum/4).
-- **5-judge panels**: same two steps, sum/5.
-- If a step can't separate two competitors, the tie stands (shared rank).
-- Team Championship never enters this engine — team rankings have no
-  tie-break rule at all.
+- **3-judge panels**: (1) lower time wins, and the Senior Judge's mark is never
+  used; (2) same time → **lucky draw**.
+- **4- and 5-judge panels** (COP 1.12):
+  1. **1.12.1 base score** (§2.1.3) = (average of the two middle scores of the
+     four judges + Chief) / 2, computed for every tied athlete *whether or
+     not* the base score was applied to their final score. `baseScoreOf`
+     reuses `calculateIndividualScore`'s `executionAverage`, so the tie-break
+     reads a panel exactly as the score did.
+  2. **1.12.2** higher plain **mean of the four judges**: Chief excluded,
+     nothing dropped (`fourJudgeAverageOf`).
+  3. **1.12.3** higher (that mean + Chief) / 2 (`fourJudgeAverageWithChiefOf`).
+  4. **1.12.4 lucky draw**.
+- "The four judges" = J1–J4 on a 5-judge panel; J1–J3 **plus the Sr. Judge in
+  the vacant fourth slot** on a 4-judge panel (the convention
+  `calculation.util` scores with and the Scorer sheet draws).
+- Applies to every **individual** standing: Competition I, II and III. Team
+  Championship never enters this engine.
 
-`determineTieBreakerWinner(playerA, playerB, competitionType)` is the core
-decision function: not-tied → decide on `finalScore` directly (`step:0`);
-tied + panelSize 3 → compare `timeInSeconds` (`step:1`); tied + 4/5-judge →
-`seniorScoreOf` (`step:1`), then `panelMean` (`step:2`). `panelSizeOf` reads
-`player.panelSize` first (authoritative), falling back to counting non-zero
-judge marks only when absent. `annotateTieGroups` walks a sorted list finding
-score-equal runs (within `EPSILON=1e-6`) and stamps `tieBreakInfo:
-{resolvedAtStep, method, unresolved}` on each member.
+`determineTieBreakerWinner(playerA, playerB)` is the pairwise decision. Not
+tied → `finalScore` (`step:0`, `higher_final_score`). Both 3-judge →
+`timeInSeconds` (`faster_time`, else `identical_time` / `time_unavailable`).
+Otherwise the three COP steps (`base_score`, `four_judge_average`,
+`four_judge_average_with_chief`), else `identical_panel_scores`, or
+`panel_scores_unavailable` when a step's marks can't be read. A mixed pair
+(3-judge vs 4-judge) falls through to the COP steps. `panelSizeOf` reads
+`player.panelSize` first, falling back to counting non-zero marks.
+
+**The lucky draw is physical, never random in code.** `applyTieBreaker(players,
+type, { draws })` sorts by the rules, `annotateTieGroups` stamps
+`tieBreakInfo {resolvedAtStep, method, unresolved}`, then `resolveLuckyDraws`
+walks runs of neighbours the rules leave tied:
+- A run is **eligible** only if every tie in it is `identical_time` /
+  `identical_panel_scores` (`LUCKY_DRAW_ELIGIBLE_REASONS`). A tie from missing
+  data is never sent to a draw; the data gets fixed.
+- Every member gets `tieGroupKey` = its athletes' ids sorted and comma-joined
+  (`tieGroupKey()`; `playerKeyOf()` handles ObjectId, string or populated doc).
+- If a recorded draw's `order` names **exactly** that set, the run is
+  reordered by it: `method: 'lucky_draw'`, `resolvedAtStep` 2 (3-judge) or 4
+  (4/5), `luckyDrawPosition`. Otherwise the run stays tied with
+  `awaitingLuckyDraw: <eligible>`. A corrected score that changes the group
+  therefore retires the old draw, and the board asks again.
+
+**Recording a draw.** `TieBreakDraw` model: one doc per tie group
+(competition, gender, ageGroup, competitionType *slug*, apparatus, `groupKey`,
+`order[]`, `tiedScore`, `notes`, `recordedBy/Name/Role/At`), unique on the six
+identity fields. `TieBreakDrawService.recordDraw` ranks the standing through
+`scoringService.getIndividualScores` and refuses unless the ids sent are
+exactly one group currently `awaitingLuckyDraw` (or already `lucky_draw`, to
+re-record); it upserts atomically. `clearDraw` deletes by group key. Routes:
+`POST`/`DELETE /api/{admin,superadmin}/tie-break/draws` (the admin pair sits
+behind `validateCompetitionContext` + `requireUnlockedCompetition()`). The
+admin UI is `Web/src/components/scores/LuckyDrawPanel.jsx` on Scores →
+Individual Rankings.
 
 ## `Score` model — what one document represents
 
@@ -149,7 +223,8 @@ scores, full `breakdown`, `submittedAt`) is the detailed modern shape — both
 are kept in sync by the write pipeline. `tieBreakResolution{step,method,
 resolvedAt}` exists on the schema but **nothing writes it yet** — rankings
 are resolved on read by the tie-breaker engine, which returns the equivalent
-explanation as `tieBreakInfo` computed fresh each time. See full field list
+explanation as `tieBreakInfo` computed fresh each time. The only stored
+tie-break state is the separate `TieBreakDraw` collection. See full field list
 and index list in [04-DATA-MODEL.md](04-DATA-MODEL.md).
 
 `ScoreRepository` is thin — `findByCompetition`, `findByPlayer` (uses the
@@ -225,6 +300,16 @@ apparatus/category).
    - **Duplicate-key race on first create**: two judges racing to create the
      first doc for a performer — the loser catches Mongo 11000 and retries
      as an update onto the winner's doc instead of failing the submission.
+   - Every accepted / rejected write bumps
+     `metrics.business.scoreSubmitted('accepted'|'rejected')` (Prometheus
+     scores/min; see [11-OBSERVABILITY.md](11-OBSERVABILITY.md)).
+   - The socket fan-out after a save sends each judge's mark with **that
+     judge's** breakdown, via `judge-slip.util.breakdownForJudge(playerScore,
+     judgeType)`: the judge's own slip breakdown, else its section totals
+     (`detailed: false`), else the entry breakdown only if it is the sole mark,
+     else `null` ("keep what you show"). Broadcasting `playerScore.breakdown`
+     under every name made Panel Review show the Senior Judge's sections on
+     every card.
    - Lock checks: whole-document `isLocked` unconditionally rejects every
      write, `isFinalSubmit` included, only an explicit admin unlock clears
      it; `lockedApparatus[]` blocks only that apparatus. A first save that
@@ -304,7 +389,8 @@ hook fires), `searchAccounts` → `judgeAccountRepository.searchAssignable`
 **`JudgePanelService`** — `saveJudges` (bulk create-or-update, per-entry
 errors collected not thrown), `getJudges` (live seats only, projected via
 `JUDGE_PUBLIC_FIELDS` to prevent leaking bcrypt hashes — CRIT-2),
-`assertNotAlreadyOnPanel` (one person can't hold two seats on the same panel
+`assertNotAlreadyOnPanel` (one person can't hold two seats on the same panel —
+except Scorer + Time Keeper, which `maySeatTogether` allows
 — "same panel" means competition+gender+ageGroup(+competitionType if
 given)(+apparatus, where a no-apparatus seat clashes with any named one)),
 `deleteJudge` (**soft delete**: `judgeAccount:null, isActive:false` — vacates
@@ -336,6 +422,11 @@ with the real 0-10 `judgeScores` schema).
   GOTCHAS.md.
 - Any new write against `playerScores[]` must match by `(playerId,
   apparatusKey)`, never `playerId` alone.
+- A tie-break change: keep the engine pure and deterministic. The only input
+  besides the rows is recorded draws; never add randomness. Update
+  `tests/unit/v2-scoring.test.js` + `tests/unit/lucky-draw.test.js` and the
+  labels in `Web/src/components/scores/PlayerRankingBoard.jsx`
+  (`TIE_BREAK_LABELS` keys = the engine's `reason` codes).
 - A new realtime scoring event: add to `event-types.js`, emit to **both**
   room-id forms via `scoringRoomIds`/`getAltRoomId` — see
   [08-REALTIME-SOCKETS.md](08-REALTIME-SOCKETS.md).

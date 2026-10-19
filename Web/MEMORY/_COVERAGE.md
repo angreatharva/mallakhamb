@@ -6,6 +6,18 @@ MEMORY doc), and which doc covers it. Built 2026-09-23, commit `f0bdc1d`.
 
 Legend: `[x]` read and covered · `(direct)` · `(agent)`.
 
+**Update pass 2026-10-18** (verified against `06891b5`): every doc whose
+covered files changed since its last edit was re-read against the code and
+updated (behaviour changes written in; restyle-only changes noted with a
+dated "Since the last pass" section). Files added to scope since the build:
+
+- [x] src/pages/judge/{TimeKeeperScoring.jsx,timeKeeper.js,StopwatchFace.jsx,stopwatchPalette.js} → 06-SCREENS/time-keeper-scoring (new doc)
+- [x] src/hooks/useSignOutOnBack.js, src/components/auth/SignOutOnBackDialog.jsx → 03-ROUTING-AND-NAV, 01-ARCHITECTURE, 07-COMPONENTS
+- [x] src/components/scores/LuckyDrawPanel.jsx → 07-COMPONENTS, 06-SCREENS/admin-scores
+- [x] src/utils/scoring/teamSize.js → SHARED-CONTRACTS, 06-SCREENS/coach-dashboard
+- [x] src/pages/public/home/images.js (local Home photos) → 06-SCREENS/public-home-and-scores
+- [x] tests: 11 Web test files added since the last inventory → 14-TESTING (55 files)
+
 ## Skeleton (read directly)
 - [x] package.json, index.html, src/main.jsx, src/App.jsx (direct) → 01-ARCHITECTURE
 - [x] src/routes/index.jsx, src/routes/lazy-pages.js (direct) → 03-ROUTING-AND-NAV

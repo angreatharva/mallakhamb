@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminLots.jsx
 read_when: "changing running-order/lot-drawing UI, or debugging a dropped drag reorder"
 depends_on: [07-COMPONENTS, 11-SCORING-CLIENT, 09-REALTIME]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -73,3 +73,14 @@ screen itself holds no socket connection; the server emits
   to prevent.
 - Don't let "Draw Lots" and drag-reorder share a code path — they
   intentionally touch different fields (`lotNo` vs running position).
+
+## Since the last pass (2026-10-18)
+
+- **The meet decides the options** (2026-10-12): age groups come from the
+  chosen meet (`useAgeGroups(gender, superadmin ? activeCompetition : null)`,
+  as on the Scores tab), and the competition-type dropdown offers only the
+  types that meet runs (`activeCompetition.competitionTypes`). A Competition-I-
+  only meet used to offer II and III as well, each an empty category to draw.
+  A type the newly chosen meet doesn't run is cleared from the selection.
+- Line numbers (`:NNN`) above predate the 2026-10 restyle and are
+  approximate — search by the named function.

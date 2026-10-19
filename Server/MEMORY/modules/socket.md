@@ -4,8 +4,8 @@ covers:
   - src/socket/**
 read_when: "adding or debugging a socket event"
 depends_on: [08-REALTIME-SOCKETS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 Full detail (auth handshake, room-naming, the complete event catalogue,
@@ -18,17 +18,16 @@ convention.
 
 | File | Role |
 |---|---|
-| `src/socket/socket.manager.js` | Connection/auth, room join/leave, `emitToRoom`/`emitToUser`/`broadcast` |
-| `src/socket/handlers/scoring.handler.js` | The only handler with real inbound event listeners — see [07-SCORING-ENGINE.md](../07-SCORING-ENGINE.md) |
-| `src/socket/handlers/notification.handler.js` | **Entirely dead code** — registers zero listeners, its 5 outbound methods have no callers |
-| `src/socket/events/event-types.js` | Every event name constant |
-| `src/socket/README.md` | Existing doc — **describes rooms/events that don't work as documented**, see GOTCHAS.md |
+| `src/socket/socket.manager.js` | Connection/auth, room join/leave, `emitToRoom`/`emitToUser`/`broadcast`; caches each judge's seats per room (`judgeTypeByRoom`, and `judgeTypesByRoom` = every seat); reports Prometheus socket metrics |
+| `src/socket/handlers/scoring.handler.js` | Scoring-room events: join/leave, `score_update` / `scores_saved` (broadcast only), and the Time Keeper's `time_record` → `time_recorded` relay — see [08-REALTIME-SOCKETS.md](../08-REALTIME-SOCKETS.md) |
+| `src/socket/handlers/notification.handler.js` | Inbound `join_competition_room` / `leave_competition_room` listeners are live (since 2026-09-23); its 5 outbound helper methods still have no callers |
+| `src/socket/events/event-types.js` | Every event name constant (incl. `TIME_RECORD` / `TIME_RECORDED`) |
+| `src/socket/README.md` | Existing doc — room-id format and handler framing are stale (metrics section is current), see [08-REALTIME-SOCKETS.md](../08-REALTIME-SOCKETS.md) |
 
 ## One fact worth repeating here
 
-The only room-join mechanisms anywhere in the socket layer are the two
-scoring-room paths. No socket ever joins a `competition_*`/`competition:*`/
-`team_*` room, so several real `emitToRoom` calls from `admin.service.js`/
-`scoring.service.js`/`competition.service.js` broadcast into empty rooms.
-Use `emitToUser` for anything that needs to actually reach someone outside
-a scoring room — see [08-REALTIME-SOCKETS.md](../08-REALTIME-SOCKETS.md).
+Rooms that a client actually joins: the two scoring-room id forms (slug and
+display, both always emitted to via `scoringRoomIds`) and, since 2026-09-23,
+`competition_{id}`. Nothing joins `team_{id}`, so an `emitToRoom` there reaches
+nobody. Use `emitToUser` for anything that must reach someone outside those
+rooms — see [08-REALTIME-SOCKETS.md](../08-REALTIME-SOCKETS.md).

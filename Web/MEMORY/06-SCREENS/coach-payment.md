@@ -4,8 +4,8 @@ covers:
   - src/pages/coach/CoachPayment.jsx
 read_when: "changing ANY part of the payment flow — Razorpay integration or the discount-code bypass"
 depends_on: [SHARED-CONTRACTS, 08-API-INTEGRATION, 06-SCREENS/coach-dashboard]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is — the highest-stakes screen in the coach flow
@@ -123,3 +123,18 @@ that gates whether the discount-code UI renders at all.
 - Any change to the Razorpay `handler`/`modal.ondismiss` callbacks must
   preserve the fail-closed behavior: `paymentComplete` should only ever
   be set after a server-verified success, never optimistically.
+
+## Since the last pass (2026-10-18)
+
+- **The right confirmation after submitting** (2026-10-13): `submittedVia`
+  (`'paid'` | `'free'` | `'already'`) records how the team came to be
+  submitted **on this visit**, and the closing screen's tag and heading come
+  from `COPY[submittedVia]`. Before, the post-payment refetch read the team as
+  submitted+paid and the "already submitted" check replaced the success
+  screen, so coaches saw "Team Already Submitted" right after paying. A
+  100%-off discount submission gets its own "Team Submitted Successfully!".
+  The refetch only sets `'already'` when nothing was submitted this visit
+  (`prev ?? 'already'`). The e2e payment helpers
+  (`e2e/support/payment-flows.js`) accept the new headings.
+- Line numbers (`:NNN`) above predate the 2026-10 restyle and are
+  approximate — search by the named function.

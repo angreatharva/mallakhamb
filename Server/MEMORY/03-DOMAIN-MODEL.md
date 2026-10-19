@@ -3,18 +3,31 @@ doc: 03-DOMAIN-MODEL
 covers:
   - src/models/**
   - src/config/cop-rules.js
+  - src/config/competition-levels.js
+  - src/config/judge-seats.js
 read_when: "you need to understand an entity's meaning, lifecycle, or relationships before changing behavior around it — not just its schema shape (see 04-DATA-MODEL for schema/index detail)"
 depends_on: []
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-22
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## The entities, in one paragraph each
 
 **Competition** (a "meet") is the aggregate root for everything event-scoped:
-level (district/state/national/international), the `competitionTypes` it runs
-(`competition_1`/`_2`/`_3`, i.e. "Competition I/II/III"), an `apparatusConfig`
-map of which apparatus each type uses, fee schedule, and — critically —
+level (`COMPETITION_LEVELS` in `config/competition-levels.js`: district / state /
+national / international / **dso** (District Sports Office) / **university** —
+a filter on the post-login level chooser, never a permission; the Web mirror
+`utils/competition/levels.js` has a sync test), the `competitionTypes` it runs
+(`competition_1`/`_2`/`_3`, i.e. "Competition I/II/III"), which apparatus each
+gender competes on per type (`apparatusByGender`, a Map `{ competition_1:
+{ Male: [...], Female: [...] } }` — the source of truth when present;
+`apparatusConfig`, the old per-type list, is **derived** from it on write as the
+union of both genders so older readers keep working; meets saved before the
+split fall back to `apparatusConfig` for both genders — see
+`utils/data/competition-apparatus.util.js`), `maxTeamSize` (4 or 6, set by the
+superadmin per meet: the per-gender + age-group squad cap **and** the Team
+Championship count — 4 → best 3 per apparatus, 6 → best 5; absent on old meets,
+which read as 6 and uncapped), fee schedule, and — critically —
 `registeredTeams[]`, an **embedded array that is the sole source of truth for
 who is entered**. `Team` and `Player` carry no back-reference to `Competition`;
 you cannot ask a team "which meets are you in", only ask a meet "which teams
@@ -54,7 +67,14 @@ across every panel they sit on. `Judge` (Mongo collection literally named
 `judgeassignments`) is a **panel seat**: one document per
 (competition, gender, ageGroup, apparatus, judgeNo), pointing at the
 `JudgeAccount` filling it (`judgeAccount: null` = empty seat). One person can
-hold many `Judge` seats. Never confuse the collection names with the model
+hold many `Judge` seats. Seat types and numbers live in `config/judge-seats.js`:
+Senior Judge 1, Judge 1–4 = 2–5 (the five that **evaluate**), Scorer 6,
+**Time Keeper 7** (the two that only record and never count in panel size).
+Both recording seats are required on a panel, and they are the one pair a
+single person may hold together (`SHAREABLE_SEATS`, `maySeatTogether`);
+everywhere else it is one person, one seat. The Time Keeper's stopped time is
+relayed to the Scorer's sheet over the scoring room (socket `time_record`), not
+persisted by the Time Keeper. Never confuse the collection names with the model
 names — they're swapped on purpose (see `Judge.js:86-102`,
 `JudgeAccount.js:123-135` for the renaming-risk warnings). See *Judge
 Accounts*, *Panel Apparatus
@@ -67,6 +87,14 @@ competitionType) — note `competitionType` is part of the uniqueness identity
 per-apparatus lock state in `lockedApparatus[]` separate from the
 whole-sheet `isLocked`. See [07-SCORING-ENGINE.md](07-SCORING-ENGINE.md) for
 the calculation/ranking detail this model supports.
+
+**TieBreakDraw** records the result of a **physical** lucky draw (COP 1.12.4,
+and the 3-judge "same time" rule) for one group of tied athletes in one
+standing: identity `(competition, gender, ageGroup, competitionType slug,
+apparatus, groupKey)`, where `groupKey` is the group's sorted player ids. The
+ranking engine applies its `order` only while the rules still leave exactly
+those athletes level, so a later score correction retires it. Written only by
+admins / superadmins (Scores → Individual Rankings).
 
 **PerformanceOrder** is the running order (who performs when) for a category —
 identity is `(competition, gender, ageGroup, competitionType)`, deliberately
@@ -140,6 +168,12 @@ see the representation split below.
    helpers in `src/utils/data/user-projection.util.js`
    (`stripSensitiveFields`, `SENSITIVE_USER_FIELDS`) are what actually stand
    between a populated user document and the wire in most paths.
+   Every account model (Player, Coach, Admin, JudgeAccount) now carries the
+   reset trio `resetPasswordToken` / `resetPasswordExpires` /
+   `resetPasswordAttempts` (`select: false`; at the attempt cap the OTP is
+   discarded). Admin lacked the first two until 2026-10-07, so strict mode
+   silently dropped the OTP and no admin or superadmin could ever reset — see
+   [06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md#forgot-password--otp--reset).
 
 5. **A judge's role is a property of the seat (the category being scored), not
    of the account.** One `JudgeAccount` can be Senior Judge in one category and

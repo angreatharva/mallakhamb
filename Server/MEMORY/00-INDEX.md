@@ -4,8 +4,8 @@ covers:
   - Server/**
 read_when: "always — the entry point for any change in Server/"
 depends_on: []
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 # MEMORY — router
@@ -15,8 +15,11 @@ gymnastics competitions: registration + Razorpay payment (coaches enter
 teams), live judge-panel scoring over HTTP and Socket.IO, running-order/lot
 draw, and public results. Five roles — player, coach, admin, superadmin,
 judge — the last split into an account (`JudgeAccount`) and per-meet panel
-seats (`Judge`). One process serves HTTP and Socket.IO together. Verified
-against commit `f0bdc1d`, 2026-09-23.
+seats (`Judge`). One process serves HTTP and Socket.IO together. Built against
+commit `f0bdc1d` (2026-09-23); brought up to date against `06891b5`
+(2026-10-18) — tie-breaks per COP §1.12 with admin-recorded lucky draws,
+per-competition team size and best-N Team Championship, apparatus per gender,
+the Time Keeper seat, Prometheus metrics, and the OCI staging build.
 
 ## Read order for a cold agent (only 3 docs)
 
@@ -56,6 +59,10 @@ against commit `f0bdc1d`, 2026-09-23.
 |---|---|---|
 | Add/modify an API endpoint | `CHANGE-RECIPES.md#add-endpoint`, `05-API-SURFACE.md` | the domain's `routes/validators/controllers`, owning service |
 | Change scoring maths / tie-breaks | `07-SCORING-ENGINE.md` | `src/config/cop-rules.js`, `src/utils/scoring/*`, `src/services/scoring/calculation.service.js` |
+| Change the lucky draw (a tie the rules can't break) | `07-SCORING-ENGINE.md` (tie-break section) | `src/utils/scoring/tie-breaker.util.js` (`resolveLuckyDraws`), `src/services/scoring/tie-break-draw.service.js`, `src/models/TieBreakDraw.js`, `Web/src/components/scores/LuckyDrawPanel.jsx` |
+| Change Team Championship / squad size | `07-SCORING-ENGINE.md` (Team Championship), `03-DOMAIN-MODEL.md` | `src/utils/scoring/team-championship.util.js`, `Competition.maxTeamSize`, `coach.service.js`/`super-admin.service.js` (`hasRoomInSquad`) |
+| Change which apparatus a gender competes on | `03-DOMAIN-MODEL.md`, `modules/utils.md` | `src/utils/data/competition-apparatus.util.js`, `Competition.apparatusByGender` |
+| Change panel seats (Time Keeper, Scorer, who may share) | `03-DOMAIN-MODEL.md`, `08-REALTIME-SOCKETS.md` (`time_record`) | `src/config/judge-seats.js`, `src/utils/data/judge-assignment.util.js` (`MINIMUM_PANEL_SEATS`) |
 | Change the score-submission write path | `07-SCORING-ENGINE.md`, `04-DATA-MODEL.md` (Score) | `src/services/scoring/scoring.service.js` (`saveScores`), `src/controllers/admin.controller.js` |
 | Add a field to Competition/Score/Player/etc. | `CHANGE-RECIPES.md#add-entity-field`, `04-DATA-MODEL.md`, `03-DOMAIN-MODEL.md` | the model, its validator, `utils/data/user-projection.util.js` |
 | Add a role or permission | `CHANGE-RECIPES.md#add-role-or-permission`, `06-AUTH-AND-SECURITY.md` | `src/middleware/auth.middleware.js` |
@@ -76,7 +83,8 @@ against commit `f0bdc1d`, 2026-09-23.
 | Debug startup/shutdown/index/migration behavior | `01-ARCHITECTURE.md`, `modules/infrastructure.md` | `scripts/startup.js`, `src/infrastructure/database/*` |
 | Debug logging/metrics/health | `11-OBSERVABILITY.md` | `src/infrastructure/{logger,health-monitor}.js`, `src/infrastructure/prometheus/` |
 | Deploy or roll back | `15-DEPLOYMENT.md` | `render.yaml` |
-| Plan or prepare the move off Render (OCI / AWS) | `15-DEPLOYMENT.md` ("Planned move off Render") | repo-root `deploy/README.md`, `deploy/COMMON.md` (findings F1–F16, phases C0–C9), `deploy/oci/PLAN.md`, `deploy/aws/PLAN.md` |
+| Plan or operate the move off Render (OCI staging is built) | `15-DEPLOYMENT.md` ("Move off Render") | repo-root `deploy/README.md`, `deploy/COMMON.md` (findings, phases C0–C9), `deploy/oci/PLAN.md` (its "what was actually built" box wins), `deploy/aws/PLAN.md` |
+| Change the nightly e2e (throw-away `_e2e` DB) | `12-CONFIG-AND-ENV.md` (`EMAIL_PROVIDER=none`, `LOG_DIR`), `13-SCRIPTS-AND-OPS.md` (`SEED_SEASON_LEAD_DAYS`, `SETUP_LOCK_PATH`) | `src/services/email/none.adapter.js`, `scripts/lib/{meets,setup-chain}.js`, repo-root `deploy/oci/` |
 | Email won't send, or the server won't boot after copying `.env_example` | `modules/email.md`, `GOTCHAS.md` | `src/services/email/gmail-api.adapter.js`, `.env_example` |
 | Check whether a README/doc claim is trustworthy | `GOTCHAS.md` | — several `docs/*.md` files are severely stale, see the list there before citing one |
 

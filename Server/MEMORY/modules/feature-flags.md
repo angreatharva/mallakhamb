@@ -3,8 +3,8 @@ doc: modules/feature-flags
 covers: []
 read_when: "you're looking for the feature-flag system and wondering where it went"
 depends_on: [modules/public]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Removed 2026-09-23

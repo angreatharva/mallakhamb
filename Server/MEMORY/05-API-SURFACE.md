@@ -8,19 +8,21 @@ covers:
   - src/docs/api-enums.js
 read_when: "adding/changing any HTTP endpoint, or checking what auth/lock/validator a route already has"
 depends_on: [01-ARCHITECTURE, 06-AUTH-AND-SECURITY]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Coverage check (per the build instructions' verification step)
 
 Grepping `router\.(get|post|put|patch|delete)\(` across every `src/routes/*.js`
-file yields **182** route definitions; `src/routes/index.js` additionally
+file yields **186** route definitions (2026-10-18; +4 for the lucky-draw
+routes); `src/routes/index.js` additionally
 registers **2 more directly on `apiRouter`** (`GET /health-legacy`, `GET
-/csrf-token`) that the per-file grep misses — **184 routes total**, each also
+/csrf-token`) that the per-file grep misses — **188 routes total**, each also
 served at both `/api/...` and `/api/v1/...` (see
 [01-ARCHITECTURE.md](01-ARCHITECTURE.md)). `src/docs/openapi.js` documents
-**182** operations. The 2-route gap is exactly `docs.routes.js`'s own two
+**186** operations, and `npm run docs:openapi:check` (live Express stack vs.
+spec) reports 186/186 with no drift. The 2-route gap is exactly `docs.routes.js`'s own two
 endpoints (`GET /api/docs`, `GET /api/docs/openapi.json`), which are
 self-referential and correctly excluded from the spec by design. Every other
 route was spot-checked path-by-path and method-by-method against the OpenAPI
@@ -136,6 +138,7 @@ panel (shared NAT) via `/me`+`/set-competition` traffic.
 | GET | `/rankings/team`, `/scores/team-rankings` (alias), `/rankings/individual` | authorize, context |
 | POST | `/scores/recalculate` | authorize, context, unlocked |
 | GET/POST/PUT | `/lots`, `/lots/draw`, `/lots/teams`, `/lots/players` | authorize, context (+unlocked on writes) |
+| POST/DELETE | `/tie-break/draws` | authorize, context, unlocked, `tieBreakDrawValidator.{recordDraw,clearDraw}` → `tieBreakDrawController` — record / clear a physical lucky draw (COP 1.12.4); body = category + `apparatus` + `order[]` (2–100 ids) or `groupKey`. See [07-SCORING-ENGINE.md](07-SCORING-ENGINE.md) |
 | POST | `/age-groups/start`, `/age-groups/:ageGroup/end` | authorize, context, unlocked |
 | GET | `/age-groups/status` | authorize, context |
 | GET | `/transactions`, `/transactions/summary`, `/transactions/:transactionId` | authorize, context |
@@ -144,11 +147,12 @@ panel (shared NAT) via `/me`+`/set-competition` traffic.
 Only `POST /login` sits ahead of the blanket guard. Heavily **reuses other
 controllers' handlers**, not `superAdminController`, for anything that
 mirrors an admin capability:
-- Score/ranking/lot-draw/judge-management block → `adminController.*` /
-  `performanceOrderController.*` (same handlers as `/api/admin`, but
-  **without** `validateCompetitionContext` on the lot-draw routes — a
-  superadmin isn't scoped to one competition and must send `competitionId`
-  explicitly).
+- Score/ranking/lot-draw/lucky-draw/judge-management block →
+  `adminController.*` / `performanceOrderController.*` /
+  `tieBreakDrawController.*` (same handlers as `/api/admin`, but **without**
+  `validateCompetitionContext` on the lot-draw and `/tie-break/draws` routes —
+  a superadmin isn't scoped to one competition and must send `competitionId`
+  (or `competition`) explicitly; `competitionIdFromRequest` reads either).
 - Genuinely `superAdminController`-owned: login; player payment
   create/verify/add; admin CRUD; coach list+status; team list/details/delete;
   `judges/:judgeId` DELETE only; competition full CRUD + admin
@@ -180,6 +184,7 @@ mirrors an admin capability:
 | GET | `/submitted-teams` | authenticate + `requireScoringAccess` — **not actually public** |
 | GET | `/teams` | public — `SUBMITTED_TEAM_PLAYER_FIELDS` allow-list only |
 | GET | `/scores` | public — `competitionId` required; two-gate publish rule (`isFinalized` AND locked/`lockedApparatus`) |
+| GET | `/team-championship` | public — `competitionId` + `gender` + `ageGroup` required; Competition I team standing (best 3 / best 5 per apparatus) built on the same published scores as `/scores` — see [modules/public.md](modules/public.md) |
 | POST | `/save-score` | authenticate + `requireScoringAccess`, unlocked — **the path the deployed judge client actually posts to** |
 | POST | `/payments/razorpay/webhook` | public, HMAC-verified — deliberately not behind the lock, see [09-PAYMENTS.md](09-PAYMENTS.md) |
 

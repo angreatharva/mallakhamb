@@ -4,8 +4,8 @@ covers:
   - src/repositories/**
 read_when: "writing or changing any DB query, or figuring out which repository method already does what you need"
 depends_on: [04-DATA-MODEL]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Purpose
@@ -137,6 +137,16 @@ select/populate normalization; ⚠️ its `.populate('adminId', ...)` call is
 suspect since `AuditLog.adminId` has no `ref` — see GOTCHAS.md),
 `TransactionRepository` (`findByUser` — maps `userType` to the matching
 schema field, `findByStatus`, `findByDateRange`).
+
+`TieBreakDrawRepository` (2026-10-18, recorded lucky draws):
+`findForStanding(competition, {gender, ageGroup, competitionType})` — every
+draw for one category, **`[]` unless all three are given** (competitionType
+normalized to the slug); `upsertByIdentity(identity, updates)` — atomic
+`findOneAndUpdate` upsert on the six-field unique identity, same reason as
+`PerformanceOrderRepository.upsertByCategory` (two admins saving at once
+land on one document, not a duplicate-key 500); `deleteByIdentity(identity)`
+→ `true` when a draw was removed. See
+[07-SCORING-ENGINE.md](../07-SCORING-ENGINE.md).
 
 ## Failure modes
 

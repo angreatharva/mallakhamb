@@ -8,8 +8,8 @@ covers:
   - src/services/cache/**
 read_when: "changing an unauthenticated read or its caching"
 depends_on: [10-CACHING-AND-PERF, 04-DATA-MODEL]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Purpose
@@ -23,11 +23,13 @@ tree but not much else.
 ## `public.service.js` (`PublicService`)
 
 Constructor deps: `competitionRepository`, `scoreRepository`, `adminService`
-(optional), `logger`.
+(optional), `tieBreakDrawRepository` (optional — without it every unbroken tie
+just stays tied), `logger`.
 
 | Method | Contract |
 |---|---|
-| `getPublicScores(competitionId, filters)` | `competitionId` **required** at both validator and service layer — an earlier version allowed it optional and dumped the entire unpaginated DB (19.5MB/1.4s on one fixture). Two-gate publish rule: a row must be `isFinalized===true` AND either whole-doc `isLocked` or its apparatus present in `lockedApparatus`. Strips `-createdBy -updatedBy` and per-row slip breakdowns (`stripSlipBreakdowns`). Ranks **server-side** (`rankPlayerRows`) so tie-break logic stays in one place, never recomputed in the browser |
+| `getPublicScores(competitionId, filters)` | `competitionId` **required** at both validator and service layer — an earlier version allowed it optional and dumped the entire unpaginated DB (19.5MB/1.4s on one fixture). Two-gate publish rule: a row must be `isFinalized===true` AND either whole-doc `isLocked` or its apparatus present in `lockedApparatus`. Strips `-createdBy -updatedBy` and per-row slip breakdowns (`stripSlipBreakdowns`). Ranks **server-side** (`rankPlayerRows(rows, type, { draws })`, with the category's recorded lucky draws from `tieBreakDrawRepository.findForStanding`) so tie-break logic stays in one place, never recomputed in the browser |
+| `getPublicTeamChampionship(competitionId, {gender, ageGroup})` | Competition I team standing for one category. Built **on `getPublicScores`**, so a score counts toward a team only once it would show on the player board (Senior Judge final submit + Scorer lock both apply). Reads the meet's `maxTeamSize` and calls `team-championship.util.rankTeamChampionship` (best 3 / best 5 **per apparatus**, summed) — the same engine as the admin team rankings |
 | `getPublicTeams(competitionId)` | No `competitionId` → `[]`, not an error. Only `isSubmittedRegistration` teams. Player fields hard-narrowed to `SUBMITTED_TEAM_PLAYER_FIELDS` at both the populate and the mapping layer — fixes a prior leak of `dateOfBirth` for (mostly minor) athletes |
 | `getPublicCompetitions()` | Thin wrapper over `competitionRepository.findActive` |
 | `getPublicRankings(competitionId, ageGroup)` | **Unreachable — no route mounts it.** Would call `adminService.getTeamRankings`/`getIndividualRankings` in parallel if it were wired up; confirms `adminService` really is injected here (per `bootstrap.js`), but its only live use today is this dead method |
@@ -45,6 +47,7 @@ admin feed compute identical numbers — never a separate calculation.
 | GET | `/submitted-teams` | authenticate + `requireScoringAccess` | **Not actually public** — reuses `adminController.getSubmittedTeams`, which is the real "which teams are in this category" definition (shared with the judge dashboard) — `publicService` does **not** call it |
 | GET | `/teams` | public | `publicValidator.getPublicTeams()` — `competitionId` optional |
 | GET | `/scores` | public | `publicValidator.getPublicScores()` — `competitionId` required |
+| GET | `/team-championship` | public | `publicValidator.getPublicTeamChampionship()` — `competitionId`, `gender`, `ageGroup` all **required** (a standing is one category's; an unscoped request has no legitimate caller) |
 | POST | `/save-score` | authenticate + `requireScoringAccess`, unlocked | The path the deployed judge client actually posts to — see [07-SCORING-ENGINE.md](../07-SCORING-ENGINE.md) |
 | POST | `/payments/razorpay/webhook` | public, HMAC | See [09-PAYMENTS.md](../09-PAYMENTS.md) |
 

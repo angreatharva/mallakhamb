@@ -7,8 +7,8 @@ covers:
   - src/utils/ordering/performanceOrder.js
 read_when: "changing the judge slip, Panel Review, the mismatch/tolerance modals, the Senior Judge override modal, or the running-order/lot screens"
 depends_on: [SHARED-CONTRACTS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Scope of this doc vs. SHARED-CONTRACTS.md
@@ -120,8 +120,14 @@ because they're shown in different dialogs and resolved differently:
   at all for 3-judge panels (copRules.js:438-439, `size >= 4` guard) —
   there's no Chief-vs-panel tolerance concept at 3.
 
-**`hasBlockingIssue`** (copRules.js:489) is the OR of both, and is
-what Final Submit actually waits on.
+**`hasBlockingIssue`** is the OR of both — but since 2026-09-29 **Final
+Submit waits only on `hasBlockingMismatch`**. A tolerance breach no longer
+locks it: Panel Review turns the button into "Final Submit with Base Score X"
+(`toleranceInfo.baseScore`, COP §3.4 = (execution average + Senior) / 2) and
+requires the Senior Judge to have acknowledged the tolerance dialog first. See
+[06-SCREENS/judge-panel-review.md](06-SCREENS/judge-panel-review.md).
+Per-judge mismatch detail is **per section**: a judge is red under Difficulty
+only if their difficulty differs from the Senior's, likewise Combination.
 
 Two per-judge lists are deliberately **not merged**, and the comment at
 copRules.js:463-466 says why: `disagreeingJudges` (whose slip content
@@ -141,6 +147,22 @@ Slips reloaded from the server carry only section totals (see
 would report a mismatch nobody actually entered. Any new comparison
 added to this function needs to go through `detailedSlips`, not the
 raw `slips` list, or it will false-positive on every reloaded session.
+
+## Other `copRules.js` helpers added since the build
+
+- **`roundExecution(raw)`** — Execution to one decimal, the half going
+  **down** (2.00–2.05 → 2.00, 2.06–2.10 → 2.10), clamped to 4.40. Used by the
+  slip's phone and desktop layouts and the Senior Judge's edit dialog. The
+  server still accepts any multiple of 0.05 (older stored marks stay valid).
+- **`TIME_MINIMUM_SECONDS = 60`** and **`getTimeDeductionForTime(seconds)`** —
+  the §3.5 table applied to seconds **short of 60 or over 90** (0 for a blank
+  time). Mirrors the server's function of the same name; the Scorer sheet's
+  deduction preview and the Time Keeper's `deductionNote` both read it.
+- **`averageSlipBreakdown(slips, panelSize)`** / **`describeSlipAverage`** —
+  the public "Score Breakdown (Average)": all three slips on a 3-judge panel,
+  the **middle two evaluation slips by total** on a 4/5-judge one (chief
+  excluded), mapping `judgeRole` codes through `SLIP_ROLE_TO_JUDGE_TYPE`. Used
+  by `PlayerRankingBoard`. Display only — never a ranking input.
 
 ## `judgePanel.js`: don't let panel size mean two different things
 

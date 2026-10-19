@@ -4,13 +4,13 @@ covers:
   - src/migrations/**
 read_when: "writing or reasoning about a schema migration"
 depends_on: [04-DATA-MODEL, modules/infrastructure]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 The full migration table (all 11, purpose, rerun-safety) and the "how to add
 one" recipe live in
-[04-DATA-MODEL.md](../04-DATA-MODEL.md#migrations-src-migrations) — this is
+[04-DATA-MODEL.md](../04-DATA-MODEL.md#migrations-srcmigrations) — this is
 a pointer entry so `src/migrations/` has its own module doc per the
 directory-per-module convention. Runner mechanics (tracking collection,
 ordering validation, batch-rollback-on-failure) live in

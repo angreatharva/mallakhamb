@@ -4,8 +4,8 @@ covers:
   - src/pages/superadmin/SuperAdminManagement.jsx
 read_when: "changing any destructive superadmin action (delete competition/admin, remove admin), or the competition create/edit form"
 depends_on: [08-API-INTEGRATION, 06-SCREENS/unified-dashboard]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is — and what it is NOT
@@ -87,12 +87,24 @@ call, toasts, closes the modal, then calls `fetchData()`.
 (registrationOpenDate → feeDueDate → startDate) where each date
 input's `max` is capped via a `previousDay()` helper (`:168-174`) so an
 invalid ordering can't even be entered through the UI. Base + late fee
-(₹), per-apparatus fee overrides, competition-types × apparatus
-checkboxes with a client-side rule that each selected type needs ≥1
-apparatus (enforced at `:592-598` and `:633-639`), a 14-cell age-group
+(₹), per-apparatus fee overrides, competition types × **apparatus per gender**
+checkboxes (`apparatusByGender: {<type>: {Male:[…], Female:[…]}}`; Hanging is
+never offered for women — `isApparatusAllowedForGender`) with a client-side
+rule that each selected type needs ≥1 apparatus across both genders
+(`activeApparatus()` returns the first type that runs nothing as `missing`;
+it also sends the per-type union as `apparatusConfig` for older servers — the
+server derives it itself), a **required "max team size per age group"** (4 or
+6 players; `maxTeamSize`, which also decides the Team Championship count —
+best 3 / best 5 per apparatus), a 14-cell age-group
 × gender grid whose "Select All" only selects *valid* gender/age pairs
 (Under16 girls-only, Under18 boys-only, via `isAgeGroupValidForGender`),
-and (create-only) an admin multi-select with search.
+and (create-only) an admin multi-select with search. **Level** offers all six
+`COMPETITION_LEVELS` (district, state, national, international, DSO,
+university — `utils/competition/levels.js`, labelled via `levelLabel`).
+
+Editing a meet saved before the gender split starts its per-gender
+checkboxes from `apparatusByGenderOf(comp)` = `offeredApparatus(comp, type,
+gender)` for each gender, i.e. the old per-type list (less Hanging for women).
 
 `validateFeeWindow()` (`:189-218`) is a client-side mirror of the
 server's `normalizeFeeWindow`

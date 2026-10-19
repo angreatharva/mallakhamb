@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminTransactions.jsx
 read_when: "changing the payment/transactions viewer"
 depends_on: [07-COMPONENTS, 12-RESPONSIVE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -61,3 +61,9 @@ Razorpay Payment ID, Players (opens a modal), Amount, Status.
 - Keep `deriveTransactionRow()` as the single source for both
   mobile/desktop views if adding a new column — don't compute a new
   field separately in each render branch.
+
+## Since the last pass (2026-10-18)
+
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

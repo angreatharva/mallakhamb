@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeProfile.jsx
 read_when: "changing the judge's own account/profile screen"
 depends_on: [13-FORMS-AND-VALIDATION]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -50,3 +50,9 @@ you add a new editable field here that other screens read off
   it needs the same client-side downscale — the inline-storage
   constraint (no object storage, ephemeral disk) applies wherever
   photos are stored on a document rather than externally.
+
+## Since the last pass (2026-10-18)
+
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

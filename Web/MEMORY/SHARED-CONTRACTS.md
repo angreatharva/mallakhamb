@@ -10,8 +10,8 @@ covers:
   - src/utils/competition/levels.js
 read_when: "changing ANY scoring math, fee/late-fee math, the competition-lock boundary, apparatus-shape reading, or panel-size logic on either stack — this is the file that tells you the other stack exists"
 depends_on: [11-SCORING-CLIENT]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Why this doc exists
@@ -84,7 +84,8 @@ it runs on a path you're touching.
 Read `compareCopRules` (copRulesSync.js:57-159) as the precise
 definition of "in sync": it diffs `edition`, `pointCeilings`,
 `elementClassValues`, `difficultyRequirements`, `timeLimitSeconds`,
-then **evaluates the client's `getTolerance`/`getTimeDeduction`
+`timeMinimumSeconds` (since 2026-09-27; skipped when an older server doesn't
+send it), then **evaluates the client's `getTolerance`/`getTimeDeduction`
 functions at the server's declared tier boundaries** (rather than
 diffing table shapes — this survives either side refactoring an
 if-ladder into a data table), then diffs `combinationChecklists` by id
@@ -172,7 +173,24 @@ semantics (423, not 403; superadmin bypass only —
 `mayBypassCompetitionLock` agreement is asserted directly,
 competitionLockSync.test.js:72-81).
 
+## Team size: a labelled mirror, no test
+
+`src/utils/scoring/teamSize.js` (`TEAM_SIZE_OPTIONS` 4→3 / 6→5,
+`DEFAULT_TEAM_SIZE = 6`, `countedScoresFor`) mirrors `TEAM_SIZE_COUNTED` /
+`DEFAULT_TEAM_SIZE` in `Server/src/utils/scoring/team-championship.util.js`
+by hand. The server does all counting; this copy only labels the choice and
+the cap ("best 3 count"). No cross-stack test. ⚠️ Its header still says the
+size is declared by a coach when creating a team — it has been the
+superadmin's per-competition `maxTeamSize` since 2026-09-26.
+
 ## `apparatus.js` has no drift detector — verified identical by direct reading only
+
+**Per-gender offer (2026-09-25):** `offeredApparatus(competition, type,
+gender)` mirrors the server's `utils/data/competition-apparatus.util.js` of the
+same name — reads `apparatusByGender`, falls back to the per-type
+`apparatusConfig` less what COP bars the gender from (Hanging for women).
+Used by the coach dashboard, judge dashboard, Manage Judges and the
+superadmin competition form. Also untested against the server.
 
 Unlike the three pairs above, **no test file imports
 `Server/src/utils/data/apparatus.util.js` into the Web test suite.**
@@ -256,21 +274,28 @@ was a deliberate non-duplication rather than a gap — the tie-break rule
 itself is comparatively rare to invoke (only fires on an actual tie)
 and computing it client-side would add a fourth sync-tested pair for a
 calculation the UI never needs to run ahead of the network. See
-`Server/src/utils/scoring/tie-breaker.util.js` for the rule itself.
+`Server/src/utils/scoring/tie-breaker.util.js` for the rule itself
+(COP §1.12 since 2026-10-17/18: 3-judge time → lucky draw; 4/5-judge base
+score → mean of the four judges → (mean + Chief)/2 → lucky draw).
 
-## Competition levels: static enum, no test either direction
+The two client pieces that touch tie-breaks stay display-only and are keyed to
+the **server's reason codes**, which is the contract to keep in step:
+`PlayerRankingBoard`'s `TIE_BREAK_LABELS` (one label per engine `reason`, plus
+`awaitingLuckyDraw`), and `LuckyDrawPanel`, which groups rows by the server's
+`tieBreakInfo.tieGroupKey` and only **sends** the drawn order — the server
+validates it and applies it on the next read. Neither file orders athletes
+itself. A new engine reason needs a label, or the card explains nothing.
 
-`levels.js`'s `COMPETITION_LEVELS` (`district`/`state`/`national`/
-`international`) mirrors the `Competition.level` mongoose enum by
-convention, not by test or shared import — confirmed no cross-file
-test exists for this pair. Low risk in practice (a 4-value enum that
-has not changed since introduction per the doc comment at
-levels.js:1-23), but if a level is ever renamed, added, or removed,
-**both this file and the Mongoose enum must be edited together by
-hand** — nothing will fail CI if you forget one side. `normalizeLevel`
-(levels.js:62-65) returning `null` for an unrecognized value is the
-safety net for stale client state (localStorage/URL), not for
-client/server drift.
+## Competition levels: six values, sync-tested since 2026-09-26
+
+`levels.js`'s `COMPETITION_LEVELS` is `district` / `state` / `national` /
+`international` / **`dso`** (District Sports Office) / **`university`**, and
+`levelLabel()` gives the display name. The server's list now lives in one
+module, `Server/src/config/competition-levels.js` (read by the model enum and
+both validators), and **`levels.test.js` imports it and fails if the two
+drift** — a level missing on either side is a meet nobody can pick, or a pick
+the server refuses. `normalizeLevel` returning `null` for an unrecognized
+value is still the safety net for stale client state (localStorage/URL).
 
 ## Everything else in `src/utils/scoring/*` that is NOT a shared contract
 

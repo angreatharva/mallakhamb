@@ -4,8 +4,8 @@ covers:
   - Web/**
 read_when: "always — the entry point for any change in Web/"
 depends_on: []
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 # MEMORY — router
@@ -16,15 +16,22 @@ gymnastics competition platform `Server/MEMORY` documents — registration
 running-order/lot draw, and public results. Five roles — player, coach,
 admin, superadmin, judge. Not TypeScript. Deployed as a static build,
 separately from the API (different origin — this is why CSRF matters
-and why `document.cookie` can't be used to read the CSRF token). Verified
-against commit `f0bdc1d`, 2026-09-23.
+and why `document.cookie` can't be used to read the CSRF token). Built
+against commit `f0bdc1d` (2026-09-23); brought up to date against `06891b5`
+(2026-10-18) — the Time Keeper screen, the Scorer/Time Keeper role popup,
+per-gender apparatus and the squad cap, sign-out-on-back, the lucky-draw
+panel, the socket-URL fix, and local Home photos.
+
+**Line numbers.** Many docs (06-SCREENS especially) cite `file:NNN` lines
+from before the 2026-10 restyle; where a doc says so, treat them as
+approximate and search by the named function or constant.
 
 ## Read order for a cold agent (only 3 docs)
 
 1. **[SHARED-CONTRACTS.md](SHARED-CONTRACTS.md)** — the single most
    important doc in this tree. This is a monorepo with two independent
-   implementations of the same scoring/fee/lock rules; only 3 of 8
-   duplicated pairs have an automated drift test. Read this before
+   implementations of the same scoring/fee/lock rules; only 4 duplicated
+   pairs have an automated drift test. Read this before
    touching anything that computes a number that gets saved.
 2. **[01-ARCHITECTURE.md](01-ARCHITECTURE.md)** — the app shell, and a
    correction of several stale version/dependency claims made by other
@@ -61,11 +68,15 @@ against commit `f0bdc1d`, 2026-09-23.
 | Add or change an API call | `CHANGE-RECIPES.md#add-endpoint-call`, [08-API-INTEGRATION.md](08-API-INTEGRATION.md) | the domain's `src/services/**/*.api.js` |
 | Change scoring/fee/lock math | `CHANGE-RECIPES.md#change-scoring-math`, [SHARED-CONTRACTS.md](SHARED-CONTRACTS.md) | `src/utils/scoring/*.js` **and** the `Server/` counterpart, same commit |
 | Change the judge slip / mismatch review flow | [11-SCORING-CLIENT.md](11-SCORING-CLIENT.md), [06-SCREENS/judge-scoring.md](06-SCREENS/judge-scoring.md), [06-SCREENS/judge-panel-review.md](06-SCREENS/judge-panel-review.md) | `src/pages/judge/{JudgeScoring,JudgePanelReview,judgeShared,useJudgePanelData}.js*` |
+| Change the Time Keeper / stopwatch, or how a time reaches the Scorer | [06-SCREENS/time-keeper-scoring.md](06-SCREENS/time-keeper-scoring.md), [06-SCREENS/scorer-scoring.md](06-SCREENS/scorer-scoring.md), [09-REALTIME.md](09-REALTIME.md) | `src/pages/judge/{TimeKeeperScoring,timeKeeper,StopwatchFace}.js*`, `ScorerScoring.jsx` (`applyRecordedTime`) |
+| Change the Scorer / Time Keeper role choice for a person holding both | [06-SCREENS/judge-dashboard.md](06-SCREENS/judge-dashboard.md), [06-SCREENS/judge-scoring.md](06-SCREENS/judge-scoring.md) (dispatcher) | `JudgeDashboard.jsx` (`RECORDER_ROLES`, role popup), `useJudgePanelData.js` (`seatTypesFor`) |
+| Change how a tie is shown or a lucky draw is recorded | [06-SCREENS/admin-scores.md](06-SCREENS/admin-scores.md), [07-COMPONENTS.md](07-COMPONENTS.md#scores), [SHARED-CONTRACTS.md](SHARED-CONTRACTS.md#tie-break-math-is-deliberately-not-duplicated-on-the-client) | `src/components/scores/{LuckyDrawPanel,PlayerRankingBoard}.jsx`; the rule itself is `Server/src/utils/scoring/tie-breaker.util.js` |
+| Change what Back does on a signed-in screen | [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#sign-out-on-back) | `src/hooks/useSignOutOnBack.js`, `src/components/auth/SignOutOnBackDialog.jsx`, `App.jsx` |
 | Add a socket event | `CHANGE-RECIPES.md#add-socket-event`, [09-REALTIME.md](09-REALTIME.md) | `Server/src/socket/events/event-types.js`, the relevant judge/admin screen |
 | Add a form | `CHANGE-RECIPES.md#add-form`, [13-FORMS-AND-VALIDATION.md](13-FORMS-AND-VALIDATION.md) | the relevant screen; check `form.validator.js` first, most forms don't use it |
 | Change a color/spacing/breakpoint | `CHANGE-RECIPES.md#change-design-tokens`, [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md), [02-CONVENTIONS.md](02-CONVENTIONS.md) (colour literals are a lint **error**) | `src/styles/looks/{contract,prime-time}.js` → `npm run looks`, `src/styles/breakpoints.js`, `src/styles/tokens.js` (`FG`/`DATA_COLORS`) |
 | Change a judge screen's header / the slip's look | [06-SCREENS/judge-shared.md](06-SCREENS/judge-shared.md), [07-COMPONENTS.md](07-COMPONENTS.md) | `JudgeHeader` in `src/pages/judge/judgeShared.jsx` (keep its ref — the slip pins its score bar off it), `src/components/shell/shell.css` |
-| Prepare the SPA for the move off Render | [GOTCHAS.md](GOTCHAS.md) ("Open blockers for moving production off Render"), [09-REALTIME.md](09-REALTIME.md) | the 7 `replace('/api'` socket sites, CSP `connect-src` in `index.html`; plan in repo-root `deploy/COMMON.md` (C1.1, C1.2) |
+| Prepare the SPA for the move off Render | [GOTCHAS.md](GOTCHAS.md) ("Moving production off Render"), [09-REALTIME.md](09-REALTIME.md) | socket URL is fixed (`apiConfig.getSocketUrl()`); still open: the production API host in CSP `connect-src` (`index.html`); plan in repo-root `deploy/COMMON.md` |
 | Light/Dark, or anything that must read in both appearances | [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/utils/ui/appearance.js`, `public/appearance-init.js`, `src/contexts/AppearanceProvider.jsx`, `src/components/layout/AppearanceMenu.jsx` |
 | Restyle screens / the site-wide design language | `docs/design-language/LOOKS.md` (the playbook), `REPORT.md` (what's done/left), [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md) | `src/styles/looks/*` — a restyle is a pack edit; prime-time is the only look |
 | Change the landing page | [06-SCREENS/public-home-and-scores.md](06-SCREENS/public-home-and-scores.md), `docs/homepage/README.md` | `src/pages/public/Home.jsx`, `src/pages/public/home/**`; verify with `npm run audit:home` |
@@ -115,7 +126,7 @@ tradeoff for whoever owns this tree to decide, not deciding it here.
 `06-SCREENS/{admin-judges,admin-scoring,admin-scores,admin-transactions,
 admin-lots,admin-teams,admin-register,scorer-scoring,coach-dashboard,
 coach-payment,coach-create-team,player-dashboard,player-team-selection,
-judge-shared,judge-scoring,judge-panel-review,judge-panel-data-hook,
+judge-shared,judge-scoring,time-keeper-scoring,judge-panel-review,judge-panel-data-hook,
 judge-team-players,judge-dashboard,judge-sequence,judge-profile,
 superadmin-management,superadmin-add-player-payment,unified-login,
 unified-register,unified-dashboard,public-home-and-scores}` ·

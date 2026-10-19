@@ -13,6 +13,19 @@ build" section for the list. New files this pass added to scope:
 (new). Removed from scope: `src/services/feature-flags/` (deleted; see
 [modules/feature-flags.md](modules/feature-flags.md)).
 
+**Update pass 2026-10-18** (verified against `06891b5`): every doc whose
+`covers:` matched a file changed since its last edit was re-read against the
+code and updated. Files added to scope since the build, and where each is
+covered:
+
+- [x] src/config/competition-levels.js, src/config/judge-seats.js → 03-DOMAIN-MODEL, 04-DATA-MODEL, modules/validators
+- [x] src/models/TieBreakDraw.js, src/repositories/tie-break-draw.repository.js, src/services/scoring/tie-break-draw.service.js, src/controllers/tie-break-draw.controller.js, src/validators/tie-break-draw.validator.js → 07-SCORING-ENGINE, 04-DATA-MODEL, 05-API-SURFACE, modules/{repositories,scoring,validators}
+- [x] src/utils/scoring/team-championship.util.js, src/utils/data/competition-apparatus.util.js → 07-SCORING-ENGINE, 03-DOMAIN-MODEL, modules/utils, modules/user-services
+- [x] src/infrastructure/prometheus/{registry,route-label}.js, src/middleware/{prometheus,metrics-auth}.middleware.js, src/infrastructure/keep-alive.js → 11-OBSERVABILITY, modules/middleware
+- [x] src/services/email/none.adapter.js, src/services/email/templates/*.js → modules/email, modules/auth
+- [x] scripts/seedTrials.js → 13-SCRIPTS-AND-OPS
+- [x] tests: 17 suites added since the build → 14-TESTING (all 75 listed)
+
 Legend: `[x]` read and covered · `(direct)` read by the orchestrating session
 · `(agent)` read via a delegated research agent, findings verified against
 citations and cross-checked (spot-checked route counts, migration counts,

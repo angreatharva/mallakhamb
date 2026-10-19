@@ -9,8 +9,8 @@ covers:
   - src/pages/superadmin/SuperAdminDashboard.jsx
 read_when: "adding a route, a new role screen, or investigating why a URL doesn't render what you expect"
 depends_on: [10-AUTH-AND-SECURITY, 04-STATE-MANAGEMENT]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## §3.4 resolved: `UnifiedLogin`/`UnifiedDashboard` are the real implementations
@@ -142,8 +142,43 @@ adding a route for a new admin/superadmin screen, check whether it
 belongs in this `switch(activeTab)` tab system first** — it likely does
 not need a new top-level `<Route>`.
 
+## Sign out on Back
+
+Added 2026-10-12 for all five roles (`635f286`). Once a user is past the
+post-login choosers, browser **Back** never reopens login / select-level /
+select-competition / select-team / create-team: the step is undone, the user
+stays on the same screen, and `SignOutOnBackDialog` asks "Sign out?" ("Stay
+signed in" just closes it).
+
+- `src/hooks/useSignOutOnBack.js`, called once in `App.jsx`'s `AppContent`.
+  "Signed-in screen" = anything under `/{role}/` whose first segment after the
+  role is **not** in `ENTRY_SCREENS` (`isSignedInScreen(pathname, role)`).
+  Only **backward** pops out of the signed-in area count; pushes, replaces and
+  Forward into a chooser the user opened pass through.
+- **No sentinel `pushState`.** Chrome and Safari skip history entries a page
+  adds without a user gesture, so after a reload Back jumps over a sentinel.
+  The pop is allowed, then reversed with `history.go(+n)` using React
+  Router's `idx` in `history.state` (it survives replace navigations — the
+  admin dashboard replaces away `?competitionId=` on arrival). An entry with
+  no `idx` falls back to `navigate(..., {replace})`.
+- **`<Routes location={…}>` on every render.** `AppRoutes` receives the hook's
+  `location`; while the reversal is in flight it is the screen the user left,
+  so the chooser never mounts (no auto pass-through, no fetches) and the
+  dashboard never remounts (filters, tabs, a judge's socket survive). Passing
+  the prop only sometimes would remount everything, because React Router wraps
+  its output in an extra provider only when the prop is given.
+- **The dialog calls `logout()` only** — not `clearCompetitionContext()` first:
+  clearing the meet first makes CoachDashboard redirect to select-competition
+  mid-logout and fire 401s. (The dashboards' own Logout buttons still clear it
+  first; harmless-looking console 401s.)
+- Tests: `src/hooks/useSignOutOnBack.test.jsx`. Browser-verified for coach,
+  admin, player and judge; superadmin by unit test only.
+
 ## Change guidance
 
+- New entry screen before a dashboard (another chooser): add its first path
+  segment to `ENTRY_SCREENS` in `useSignOutOnBack.js`, or Back from the
+  dashboard will walk into it.
 - New role-scoped screen: add it inside the matching `*Layout`'s
   children in `routes/index.jsx`, and add its lazy import to
   `lazy-pages.js` — both are required, routing alone won't code-split it.

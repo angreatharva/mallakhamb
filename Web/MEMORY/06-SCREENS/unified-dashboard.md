@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedDashboard.jsx
 read_when: "changing the admin/superadmin dashboard shell, tab system, or competition auto-selection"
 depends_on: [03-ROUTING-AND-NAV, 04-STATE-MANAGEMENT, 06-SCREENS/superadmin-management]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Scope correction: admin/superadmin only
@@ -119,3 +119,10 @@ in [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md).
   confirm it's genuinely obsolete rather than a paused feature — it's
   substantial enough that its removal should be a deliberate decision,
   not incidental cleanup.
+
+## Since the last pass (2026-10-18)
+
+- The superadmin overview fits a 320 px phone (2026-10-11).
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

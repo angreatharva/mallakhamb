@@ -4,8 +4,8 @@ covers:
   - src/services/user/**
 read_when: "changing admin/coach/super-admin/judge/player user-facing behavior — team management, registration, payment, judge seating, or admin dashboards"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, 06-AUTH-AND-SECURITY]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-22
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Purpose
@@ -43,9 +43,9 @@ team.
 | `src/services/user/coach.service.js` | Coach registration + payment | 1432 lines | Shares `services/payment/razorpay.gateway.js` with super-admin.service.js |
 | `src/services/user/super-admin.service.js` | Superadmin console | 1066 lines | Only file with an explicit Mongo transaction (`addPlayer`) |
 | `src/services/user/player.service.js` | Player-facing service | — | ⚠️ pending parallel research pass |
-| `src/services/user/judge.service.js` | Judge-facing service | — | ⚠️ pending (covered with scoring engine) |
+| `src/services/user/judge.service.js` | Judge-facing service. `loginJudge` counts `metrics.business.login('judge', success / failure / locked)` and now also selects `apparatusByGender` on the competitions it returns | — | ⚠️ pending (covered with scoring engine) |
 | `src/services/user/judge-account.service.js` | Judge account mgmt | — | ⚠️ pending (covered with scoring engine) |
-| `src/services/user/judge-panel.service.js` | Panel seating | — | ⚠️ pending (covered with scoring engine) |
+| `src/services/user/judge-panel.service.js` | Panel seating. `assertNotAlreadyOnPanel(..., judgeType)` ignores a clash when the two seats `maySeatTogether` (Scorer + Time Keeper, `config/judge-seats.js`) — the one pair one person may hold | — | ⚠️ pending (covered with scoring engine) |
 | `src/services/user/user.service.js` | Shared base class | — | ⚠️ pending parallel research pass |
 | `src/services/user/README.md` | Existing doc | — | ⚠️ pending reconciliation pass |
 
@@ -111,32 +111,34 @@ team.
 | Method | Lines | Contract | Collaborators |
 |---|---|---|---|
 | `constructor(...)` | 42-60 | Wires deps, several optional | UserService |
-| `registerCoach(payload)` | 62-67 | → `authenticationService.register(payload,'coach')` | authenticationService |
-| `loginCoach(email, password)` | 69-83 | Login WITHOUT auto-selecting a competition | authenticationService |
-| `getCoachProfile(coachId)` | 85-87 | → `getProfile` | — |
-| `getCoachStatus(coachId)` | 89-123 | Onboarding step machine: create-team → select-competition → dashboard | getCoachTeams, competitionRepository |
-| `getCoachTeams(coachId)` | 125-127 | Active teams for a coach | teamRepository |
-| `createTeam(coachId, teamData)` | 129-156 | Create team + best-effort bind `coach.team` back-ref | teamRepository, coachRepository |
-| `getOpenCompetitions()` | 158-163 | Upcoming, non-deleted competitions | competitionRepository |
-| `registerTeamForCompetition(teamId, competitionId, coachId)` | 165-238 | Push a new `registeredTeams` entry, idempotent (`already_registered`); ownership check throws `AuthorizationError` | teamRepository, competitionRepository |
-| `selectCompetitionForTeam(coachId, competitionId)` | 240-244 | Trivial pairing helper, no persistence | getCoachTeams |
-| `getTeamDashboard(coachId, competitionId)` | 246-429 | Full dashboard payload: team + roster (1 batched player query) + fee-window fields + discount availability | getCoachTeams, competitionRepository, playerRepository |
-| `getTeamStatus(coachId, competitionId)` | 431-438 | Minimal `hasTeam` flag — ⚠️ `submitted` is hard-coded `false`, likely stale/incomplete | getCoachTeams |
-| `searchPlayers(coachId, competitionId, query)` | 440-470 | Regex search over this coach's first team's roster only | playerRepository |
-| `addPlayerToAgeGroup(coachId, competitionId, payload)` | 472-583 | Add/update a squad entry; enforces entry-gender==account-gender; team-addressed write | playerRepository, competitionRepository.addPlayerToRegistration/updatePlayerInRegistration |
-| `removePlayerFromAgeGroup(coachId, competitionId, playerId)` | 585-630 | Remove one squad entry, team-addressed | competitionRepository.removePlayerFromRegistration |
-| `getDiscountAvailability()` | 641-648 | `{enabled, percentOff}` — never exposes the code | config |
-| `_loadRegistration` (private) | 663-677 | Shared lookup for the 3 payment methods | competitionRepository |
-| `quoteTeamPaymentWithDiscount(coachId, competitionId, discountCode)` | 693-734 | Side-effect-free discounted price quote | `_loadRegistration`, `config/payment.config` |
-| `redeemDiscountAndSubmit(coachId, competitionId, discountCode)` | 755-867 | Submit team directly at ₹0, bypassing Razorpay entirely | `_loadRegistration`, teamRepository, competitionRepository.updateRegistrationFields, transactionRepository |
-| `createTeamPaymentOrder(coachId, competitionId)` | 869-986 | Create a Razorpay order for full squad fee; asserts payment window open | competitionRepository, teamRepository, razorpay.gateway |
-| `verifyTeamPaymentAndSubmit(coachId, competitionId, payload)` | 988-1226 | HMAC + live Razorpay re-fetch + amount check, then mark submitted | razorpay.gateway, competitionRepository.updateRegistrationFields, transactionRepository |
-| `getProfile(coachId)` (override) | 1234-1261 | Coach + populated team, password stripped | coachRepository |
-| `assignToTeam` / `removeFromTeam` | 1271-1332 / 1341-1383 | 1:1 coach↔team binding with double uniqueness checks | coachRepository, teamRepository |
-| `getActiveCoaches(options)` | 1407-1428 | List active coaches, passwords stripped | coachRepository |
+| `registerCoach(payload)` | 64-69 | → `authenticationService.register(payload,'coach')` | authenticationService |
+| `loginCoach(email, password)` | 71-85 | Login WITHOUT auto-selecting a competition | authenticationService |
+| `getCoachProfile(coachId)` | 87-89 | → `getProfile` | — |
+| `getCoachStatus(coachId)` | 91-125 | Onboarding step machine: create-team → select-competition → dashboard | getCoachTeams, competitionRepository |
+| `getCoachTeams(coachId)` | 127-129 | Active teams for a coach | teamRepository |
+| `createTeam(coachId, teamData)` | 131-158 | Create team + best-effort bind `coach.team` back-ref | teamRepository, coachRepository |
+| `getOpenCompetitions()` | 160-165 | Upcoming, non-deleted competitions | competitionRepository |
+| `registerTeamForCompetition(teamId, competitionId, coachId)` | 167-240 | Push a new `registeredTeams` entry, idempotent (`already_registered`); ownership check throws `AuthorizationError` | teamRepository, competitionRepository |
+| `selectCompetitionForTeam(coachId, competitionId)` | 242-246 | Trivial pairing helper, no persistence | getCoachTeams |
+| `getTeamDashboard(coachId, competitionId)` | 248-433 | Full dashboard payload: team + roster (1 batched player query) + fee-window fields + discount availability | getCoachTeams, competitionRepository, playerRepository |
+| `getTeamStatus(coachId, competitionId)` | 435-442 | Minimal `hasTeam` flag — ⚠️ `submitted` is hard-coded `false`, likely stale/incomplete | getCoachTeams |
+| `searchPlayers(coachId, competitionId, query)` | 444-474 | Regex search over this coach's first team's roster only | playerRepository |
+| `addPlayerToAgeGroup(coachId, competitionId, payload)` | 476-633 | Add/update a squad entry; enforces entry-gender==account-gender; team-addressed write | playerRepository, competitionRepository.addPlayerToRegistration/updatePlayerInRegistration |
+| `removePlayerFromAgeGroup(coachId, competitionId, playerId)` | 635-680 | Remove one squad entry, team-addressed | competitionRepository.removePlayerFromRegistration |
+| `getDiscountAvailability()` | 691-698 | `{enabled, percentOff}` — never exposes the code | config |
+| `_loadRegistration` (private) | 713-727 | Shared lookup for the 3 payment methods | competitionRepository |
+| `quoteTeamPaymentWithDiscount(coachId, competitionId, discountCode)` | 743-784 | Side-effect-free discounted price quote | `_loadRegistration`, `config/payment.config` |
+| `redeemDiscountAndSubmit(coachId, competitionId, discountCode)` | 805-917 | Submit team directly at ₹0, bypassing Razorpay entirely | `_loadRegistration`, teamRepository, competitionRepository.updateRegistrationFields, transactionRepository |
+| `createTeamPaymentOrder(coachId, competitionId)` | 919-1036 | Create a Razorpay order for full squad fee; asserts payment window open | competitionRepository, teamRepository, razorpay.gateway |
+| `verifyTeamPaymentAndSubmit(coachId, competitionId, payload)` | 1038-1276 | HMAC + live Razorpay re-fetch + amount check, then mark submitted | razorpay.gateway, competitionRepository.updateRegistrationFields, transactionRepository |
+| `getProfile(coachId)` (override) | 1284-1311 | Coach + populated team, password stripped | coachRepository |
+| `assignToTeam` / `removeFromTeam` | 1321-1382 / 1391-1433 | 1:1 coach↔team binding with double uniqueness checks | coachRepository, teamRepository |
+| `getActiveCoaches(options)` | 1457-1478 | List active coaches, passwords stripped | coachRepository |
 
 ### coach.service.js — invariants & failure modes
-- **Entry-gender vs account-gender**: `addPlayerToAgeGroup` (`:500-527`) validates the squad entry's `gender` against `Player.gender` at write time — previously these could silently drift.
+- **Entry-gender vs account-gender**: `addPlayerToAgeGroup` validates the squad entry's `gender` against `Player.gender` at write time — previously these could silently drift.
+- **Squad cap** (since 2026-09-25): `addPlayerToAgeGroup` refuses a new entry once the team fields `competition.maxTeamSize` athletes in that gender + age group (`team-championship.util.hasRoomInSquad`, which leaves the athlete being written out of the count, so re-posting someone is never blocked by their own place). A meet with no `maxTeamSize` is uncapped. `getTeamDashboard` returns `maxTeamSize` so the client can show the limit.
+- **Apparatus per gender**: when the meet has `apparatusByGender` (`hasGenderApparatus`), the requested apparatus are filtered to what that gender is offered per type (`offeredApparatus`); if a request named some and none survive, it is a `ValidationError` on `apparatus`.
 - **Team-addressed writes only** (`:530-537,611-612,1142-1148`): every registration mutation goes through `CompetitionRepository.updateRegistrationFields`/`addPlayerToRegistration`/`updatePlayerInRegistration`/`removePlayerFromRegistration` — a positional-index write built from a stale `findIndex` is corrupted the instant another coach's team withdraws in between. See `competition.repository.js` below.
 - **Discount code is all-or-nothing** (`redeemDiscountAndSubmit`, `:739-748,787-795`): Razorpay has no ₹0 order, so this bypasses the gateway and re-implements every guard by hand (feature flag, code validity, payment window, already-submitted, `payableAmount===0` re-check). `paymentStatus` is still `'completed'`, not `'pending'` — the ₹0 obligation genuinely is settled.
 - **Priced at payment instant, not request instant** (`:897-905,1102-1118`): `createTeamPaymentOrder` prices at quote time; `verifyTeamPaymentAndSubmit` re-prices from Razorpay's own `paymentDetails.created_at`, so a slow webhook/retry is priced at when the coach actually paid, not when verification runs. Known edge case (deliberately unfixed): a checkout spanning a fee deadline can amount-mismatch and force a repay at the late price.
@@ -155,29 +157,31 @@ Plain class (no `UserService` inheritance).
 
 | Method | Lines | Contract | Collaborators |
 |---|---|---|---|
-| `normalizeFeeWindow(payload, existing=null)` (module fn) | 56-130 | Validates fee-window date ordering on create/update | readWindowDate |
-| `constructor({...})` | 133-157 | Wires 9 repos/services + config | — |
-| `_findRegisteredTeam` / `_canonicalTeamId` (private) | 162-173 | Resolve a registration by team id OR registration subdoc id | — |
-| `loginSuperAdmin(email, password)` | 175-182 | Admin auth login, then hard-requires `role==='superadmin'` | authenticationService |
+| `normalizeFeeWindow(payload, existing=null)` (module fn) | 60-134 | Validates fee-window date ordering on create/update | readWindowDate |
+| `constructor({...})` | 137-161 | Wires 9 repos/services + config | — |
+| `_findRegisteredTeam` / `_canonicalTeamId` (private) | 166-177 | Resolve a registration by team id OR registration subdoc id | — |
+| `loginSuperAdmin(email, password)` | 179-186 | Admin auth login, then hard-requires `role==='superadmin'` | authenticationService |
 | `getAllAdmins`/`createAdmin`/`updateAdmin`/`deleteAdmin` | 184-187 | Direct admin CRUD | adminRepository, authenticationService |
-| `getAllCoaches` / `updateCoachStatus` | 196-200 | List with composed `name` (lean docs carry no virtuals); toggle `isActive` | coachRepository |
-| `getAllTeams(filters)` | 202-327 | Competition-scoped or global team listing | competitionRepository, teamRepository, playerRepository |
-| `groupPlayersByTeam(teamIds)` | 338-357 | ONE query for many teams' players → Map | playerRepository |
+| `getAllCoaches` / `updateCoachStatus` | 200-203 | List with composed `name` (lean docs carry no virtuals); toggle `isActive` | coachRepository |
+| `getAllTeams(filters)` | 206-331 | Competition-scoped or global team listing | competitionRepository, teamRepository, playerRepository |
+| `groupPlayersByTeam(teamIds)` | 342-361 | ONE query for many teams' players → Map | playerRepository |
 | `deleteTeam` (soft) / `deleteJudge` (hard) | 359-360 | — | teamRepository / judgeRepository |
-| `createCompetition(payload, adminId)` | 362-392 | Validates playerFee + fee window; bidirectionally syncs `admin.competitions` | competitionRepository, adminRepository, normalizeFeeWindow |
-| `getAllCompetitions` / `getCompetitionById` | 393-404 | List/get, admins populated | competitionRepository |
-| `updateCompetition(id, payload)` | 406-426 | Re-validates fee window against STORED values | competitionRepository, normalizeFeeWindow |
-| `deleteCompetition(id)` | 427-429 | → `competitionService.deleteCompetition` | competitionService |
-| `assignAdminToCompetition` / `removeAdminFromCompetition` | 431-472 | Bidirectional competition↔admin link add/remove | competitionRepository, adminRepository |
-| `getSystemStats()` | 474-482 | Global counts (admins/coaches/teams/competitions) | 4 repos in parallel |
-| `getSuperAdminDashboard(competitionId)` | 484-657 | Per-competition or aggregated-across-all gender/team stats — ⚠️ the "all competitions" branch loops per-competition with sequential player queries, a potential N+1 at scale, not flagged as fixed | competitionRepository, playerRepository |
-| `getTransactions(competitionId)` | 659-676 | Up to 200 transactions, deeply populated | transactionRepository |
-| `createPlayerPaymentOrder(superAdminId, playerData)` | 684-794 | Razorpay order to add ONE athlete; **fee window NOT asserted** (deliberate override) | competitionRepository, teamRepository, razorpay.gateway |
-| `verifyPaymentAndAddPlayer(superAdminId, playerData, paymentPayload)` | 803-941 | Verify signature+status+amount (priced at payment instant), then `addPlayer` | razorpay.gateway, addPlayer, transactionRepository |
-| `addPlayer({...}, superAdminId)` | 943-1062 | Create Player + push into `registeredTeams.players` + Transaction, **inside a Mongo session/transaction** | competitionRepository, teamRepository, playerRepository, transactionRepository |
+| `createCompetition(payload, adminId)` | 366-405 | Validates playerFee + fee window; bidirectionally syncs `admin.competitions` | competitionRepository, adminRepository, normalizeFeeWindow |
+| `getAllCompetitions` / `getCompetitionById` | 406-417 | List/get, admins populated | competitionRepository |
+| `updateCompetition(id, payload)` | 419-446 | Re-validates fee window against STORED values | competitionRepository, normalizeFeeWindow |
+| `deleteCompetition(id)` | 447-449 | → `competitionService.deleteCompetition` | competitionService |
+| `assignAdminToCompetition` / `removeAdminFromCompetition` | 451-492 | Bidirectional competition↔admin link add/remove | competitionRepository, adminRepository |
+| `getSystemStats()` | 494-502 | Global counts (admins/coaches/teams/competitions) | 4 repos in parallel |
+| `getSuperAdminDashboard(competitionId)` | 504-677 | Per-competition or aggregated-across-all gender/team stats — ⚠️ the "all competitions" branch loops per-competition with sequential player queries, a potential N+1 at scale, not flagged as fixed | competitionRepository, playerRepository |
+| `getTransactions(competitionId)` | 679-696 | Up to 200 transactions, deeply populated | transactionRepository |
+| `createPlayerPaymentOrder(superAdminId, playerData)` | 704-823 | Razorpay order to add ONE athlete; **fee window NOT asserted** (deliberate override) | competitionRepository, teamRepository, razorpay.gateway |
+| `verifyPaymentAndAddPlayer(superAdminId, playerData, paymentPayload)` | 832-970 | Verify signature+status+amount (priced at payment instant), then `addPlayer` | razorpay.gateway, addPlayer, transactionRepository |
+| `addPlayer({...}, superAdminId)` | 972-1100 | Create Player + push into `registeredTeams.players` + Transaction, **inside a Mongo session/transaction** | competitionRepository, teamRepository, playerRepository, transactionRepository |
 
 ### super-admin.service.js — invariants & failure modes
 - **Fee-window validation centralized in `normalizeFeeWindow`** (`:42-130`), run on both create and update — the Mongoose schema's own validator can't see sibling paths through `findByIdAndUpdate`. Rules: `registrationOpenDate <= feeDueDate`; both fee dates strictly before `startDate`; `feeDueDate < endDate`; a positive `lateFee` requires a `feeDueDate`. On update, an omitted field falls back to the stored value (`effective()` helper, `:81-90`) so a partial edit is validated against the whole picture.
+- **`maxTeamSize` is required on create** (`isValidTeamSize`: 4 or 6, else `ValidationError` "Max team size must be 4 or 6 players per age group") and validated on update only when the payload carries it. Both `createCompetition` and `updateCompetition` run the body through `competition-apparatus.util.applyApparatusByGender`, which stores `apparatusByGender` and **derives** `apparatusConfig` (the union of both genders) from it.
+- **The squad cap applies to superadmin adds too**: `createPlayerPaymentOrder` and `addPlayer` check `hasRoomInSquad` before charging or writing, so an override can't overfill a squad.
 - **Superadmin's per-athlete add bypasses the registration WINDOW, not the PAYMENT** (`createPlayerPaymentOrder`, `:709-717`) — a coach is blocked outside the window; a superadmin override lifts the block but the athlete still pays (including any late fee).
 - **`addPlayer` is the only method across all 5 large files that opens an explicit Mongo transaction** (`:979-1061`) — Player creation, the `registeredTeams.players` push, and the Transaction record commit or abort together.
 - Errors: `NotFoundError`, `ValidationError` (invalid playerFee, fee-window ordering, missing payment payload, signature invalid, amount mismatch, invalid age group, duplicate player email).
@@ -190,7 +194,7 @@ Plain class (no `UserService` inheritance).
 
 ## Dependencies (all three files)
 DI-wired in `src/infrastructure/di-container.js` — see
-[01-ARCHITECTURE.md](../01-ARCHITECTURE.md#di-container). `adminService`
+[01-ARCHITECTURE.md](../01-ARCHITECTURE.md#di-container-srcinfrastructuredi-containerjs). `adminService`
 depends on `scoringService` and `judgePanelService` (post task-3.1 extraction);
 `coachService` and `superAdminService` both depend on
 `services/payment/razorpay.gateway.js` independently (no shared payment

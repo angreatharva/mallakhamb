@@ -4,8 +4,8 @@ covers:
   - src/infrastructure/**
 read_when: "changing DB connection handling, index reconciliation, migrations runner internals, Redis, or graceful shutdown"
 depends_on: [01-ARCHITECTURE, 11-OBSERVABILITY, 04-DATA-MODEL]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Purpose
@@ -27,6 +27,7 @@ don't: the database/index/migration/Redis/shutdown machinery itself.
 | `src/infrastructure/database/index-manager.js` | Schema-vs-DB index reconciliation | The reason `scripts/startup.js` exists |
 | `src/infrastructure/database/migration-runner.js` | Applies/tracks migrations | Tracking is a Mongo collection, not a file |
 | `src/infrastructure/graceful-shutdown.js` | `GracefulShutdownHandler` | Registered by both entrypoints |
+| `src/infrastructure/keep-alive.js` | `startKeepAlive({logger})` | Started by both entrypoints after listen. Pings the service's own **public** URL (`KEEP_ALIVE_URL`, else `${RENDER_EXTERNAL_URL}/api/health/ping`) every `KEEP_ALIVE_INTERVAL_MINUTES` (default 10, clamped 1–14) so free Render's 15-minute idle sleep never triggers — the ping leaves and re-enters through Render's proxy, so it counts as inbound. It cannot wake an already-sleeping instance (no timers run); an outside pinger on `/api/health/ping` covers that. Off when neither URL is set (local, and the OCI VMs) or `KEEP_ALIVE=false`. Test: `tests/unit/infrastructure/keep-alive.test.js` |
 | `src/infrastructure/redis-client.js` | `RedisClient` (ioredis wrapper) | Backs token invalidation; in-memory fallback |
 | `src/infrastructure/health-monitor.js`, `prometheus/`, `logger.js` | — | See [11-OBSERVABILITY.md](../11-OBSERVABILITY.md) |
 | `src/infrastructure/bootstrap.js`, `createApp.js`, `di-container.js` | — | See [01-ARCHITECTURE.md](../01-ARCHITECTURE.md) |
@@ -115,9 +116,18 @@ redisClient})` wires signal handlers: `SIGTERM`/`SIGINT` → clean shutdown;
 5. `closeRedisConnection()` — wrapped so a Redis failure never blocks
    shutdown.
 6. `flushLogsAndMetrics()` — ends the Winston logger transports and awaits
-   `'finish'`. (No metrics flush: Prometheus metrics are pulled by the
-   scrape, and the old collector it used to guard for was removed 2026-10-03.)
+   `'finish'`, then sets `logsEnded = true`. It runs **last** on purpose.
+   (No metrics flush: Prometheus metrics are pulled by the scrape, and the old
+   collector it used to guard for was removed 2026-10-03.)
 7. `process.exit(exitCode)`.
+
+Every message in the handler goes through `this.log(level, msg, meta)`, which
+falls back to `console` once `logsEnded` is set. Writing to an ended winston
+logger emits `'error'` (write after end); with no listener that throws, and
+thrown inside Node's fatal-exception handler the process **exits 7**. A clean
+`SIGTERM` used to exit 7 this way, which systemd on the OCI VMs read as a
+failure (fixed 2026-10-16/17, `fix/shutdown-exit-7`, test
+`tests/unit/infrastructure/graceful-shutdown.test.js`).
 
 Any thrown error mid-sequence forces `process.exit(1)` immediately — there's
 no separate hard-kill timer beyond the step-2 `shutdownTimeout`.

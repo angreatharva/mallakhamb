@@ -8,8 +8,8 @@ covers:
   - .env_example
 read_when: "changing build output, env vars, chunking, or wondering whether there's a CI pipeline"
 depends_on: [02-CONVENTIONS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## There is no CI pipeline in this repository
@@ -49,17 +49,26 @@ run-by-hand today, not enforced automatically before merge or deploy.
   — if you add a new heavy dependency, consider whether it belongs in
   one of these buckets or would bloat the default chunk.
   `chunkSizeWarningLimit: 1000`.
+- **`define: { 'import.meta.env.VITE_LOOK_OVERRIDE': … }`** — the look preview
+  switch (design-language PLAN §4.4) as a build-time constant, `''` unless the
+  build sets `VITE_LOOK_OVERRIDE=1`. Vite only inlines env vars that exist, so
+  without this an unset one stayed a runtime lookup and the dev-only `/__look`
+  specimen chunk shipped in every production build. The look-specimen e2e
+  needs a dev server or a `VITE_LOOK_OVERRIDE=1` build.
 - **Vitest config lives in this same file** (`:50-75`), not a separate
   `vitest.config.js`: `environment: 'jsdom'`, `setupFiles:
   './src/setupTests.js'` (see [14-TESTING.md](14-TESTING.md)),
   `include: ['src/**/*.{test,spec}.{js,jsx}']` — **scoped to `src/`
   specifically so Vitest's default glob never matches the Playwright
   `*.spec.js` files under `e2e/`** (explicit comment, `:55-56`).
-  Coverage (`v8` provider) is scoped to `src/**/*.{js,jsx}` and
-  explicitly excludes `src/components/design-system/**` and
-  `src/styles/**` — comment: "Presentational design-system pieces:
-  markup and tokens, no logic worth asserting, and including them
-  buries the code that matters."
+  **`maxWorkers: 4`** (2026-10-08): with a worker per core (15 on a 16-core
+  laptop) the judge-screen tests, which render whole screens in jsdom,
+  competed for the machine and random ones hit the 5 s timeout; with four the
+  slowest takes ~1.2 s. The timeout stays at the default so a real hang still
+  fails. Coverage (`v8` provider) is scoped to `src/**/*.{js,jsx}` and
+  excludes `src/styles/**` and `LiveRegion`, "the one presentational piece
+  kept from the old design system" (the rest of `components/design-system/`
+  was retired with the classic look).
 
 ## `postcss.config.js`
 
@@ -91,7 +100,8 @@ the tooling angle.)
 
 ## `package.json` — dependencies worth knowing about
 
-Not TypeScript (`@types/react`/`@types/react-dom` exist for editor
+`"engines": { "node": "24.x" }` since 2026-10-16 — Node 24 everywhere
+(Render, both OCI VMs, local). Not TypeScript (`@types/react`/`@types/react-dom` exist for editor
 IntelliSense only — no `tsconfig.json`/`jsconfig.json` anywhere in
 `Web/`). Notable/non-obvious entries:
 - `react-router-dom ^7.18.2` — see
@@ -137,7 +147,9 @@ conventional `.env.example`) — this is deliberate and consistent (both
 `README.md` and `docs/web-guide.md` reference this exact filename), but
 worth knowing since tooling that auto-detects `.env.example` by the
 conventional name won't find it. Two variables:
-- `VITE_API_URL` — backend base URL, must end in `/api`. Template shows
+- `VITE_API_URL` — backend base URL, must end in `/api` (the socket URL is
+  derived by stripping that **trailing** `/api` — `apiConfig.getSocketUrl()`).
+  Template shows
   three example values (production/Render, ngrok tunnel, local
   `http://localhost:5000/api`) with the production Render URL left as
   the uncommented default.

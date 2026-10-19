@@ -35,6 +35,15 @@ exact file paths/patterns, and a "verify with" line. Verified against commit
    entry so `npm run docs:openapi:check` doesn't fail CI (see
    [05-API-SURFACE.md](05-API-SURFACE.md) for the coverage-parity check this
    enforces).
+7. **DI + test harnesses** — a new controller is registered in
+   `bootstrap.js` and resolved by the router at build time. Integration
+   tests that hand-build a container (e.g.
+   `tests/integration/admin-score-lock-cycle.test.js`) must stub it too, or
+   Express throws "Route.post() requires a callback function" and the whole
+   suite fails to load (hit on 2026-10-18 with `tieBreakDrawController`).
+8. **Mirror on superadmin** if admins have it — `super-admin.routes.js`
+   reuses the same handlers without `validateCompetitionContext`
+   (competition id comes in the request).
 
 **Verify with**: `npm run docs:openapi:check`; a unit test in
 `tests/unit/routes/` mounting the router with a mocked `auth.middleware`
@@ -94,11 +103,17 @@ through the real router, not just the guard function in isolation.
    `scoringRoomIds`/`getAltRoomId` (`utils/data/scoring-room.util.js`) —
    never a hand-rolled room-id string. If it's not scoring-related, **verify
    a join mechanism exists for the room you're targeting** — today only
-   scoring rooms have one; `emitToUser` is the reliable alternative for
-   anything else (see [08-REALTIME-SOCKETS.md](08-REALTIME-SOCKETS.md)).
+   scoring rooms and `competition_{id}` have one; `emitToUser` is the
+   reliable alternative for anything else (see
+   [08-REALTIME-SOCKETS.md](08-REALTIME-SOCKETS.md)).
 4. If authorization is needed beyond "is this socket a judge," check
    `socketManager.isJudgeAuthorizedForRoom`/`cacheJudgeAssignments` rather
-   than re-deriving it.
+   than re-deriving it. For "does this person hold seat X in this room",
+   read `socket.judgeTypesByRoom.get(roomId)` (a Set of every seat) — not
+   `judgeTypeByRoom`, which keeps only one. `handleTimeRecord` (Time Keeper
+   only) is the pattern.
+5. Register through `socketManager.registerEventHandler` — that wrapper is
+   what records the per-event Prometheus metrics.
 
 **Verify with**: `tests/security/socket-scoring.security.test.js` pattern —
 a real Socket.IO client asserting the event only reaches authorized

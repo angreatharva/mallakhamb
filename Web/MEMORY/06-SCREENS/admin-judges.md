@@ -4,13 +4,13 @@ covers:
   - src/pages/admin/AdminJudges.jsx
 read_when: "changing judge panel staffing/assignment UI"
 depends_on: [08-API-INTEGRATION, SHARED-CONTRACTS, 03-ROUTING-AND-NAV]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
 
-`src/pages/admin/AdminJudges.jsx` — 1037 lines, ~52KB. Not a top-level
+`src/pages/admin/AdminJudges.jsx` — 1003 lines. Not a top-level
 route: rendered as the `dashboard/judges` tab inside
 `UnifiedDashboard.jsx`'s `switch(activeTab)` (see
 [03-ROUTING-AND-NAV.md](../03-ROUTING-AND-NAV.md#where-the-15kb-screens-actually-live--not-all-of-them-are-routes)),
@@ -46,8 +46,19 @@ below it (`:442-477`). Large flat `useState` set, no reducer/context.
 
 No `react-hook-form`/zod — manual controlled `Dropdown`s plus the
 bespoke `JudgeSearch` autocomplete. "Add Judge" mode uses
-`judgeFormData` (array of 6 slots seeded from `EMPTY_JUDGE_FORM`);
-"Judge List" mode edits existing seats via an `AssignJudgeModal`.
+`judgeFormData` (array of **7** slots seeded from `EMPTY_JUDGE_FORM`:
+Senior Judge 1, Judge 1–4 = 2–5, Scorer 6, **Time Keeper 7** — the numbers in
+`Server/src/config/judge-seats.js`); "Judge List" mode edits existing seats
+via an `AssignJudgeModal`. `REQUIRED_JUDGE_TYPES` = Senior Judge, Judge 1,
+Judge 2, Scorer, **Time Keeper** (required since 2026-09-26, the client copy
+of the server's `MINIMUM_PANEL_SEATS`). Each seat reads its own name
+(`seatLabel` — the Time Keeper slot was briefly labelled "Timer" and renamed
+back on 2026-09-27).
+
+**Apparatus options are the meet's, for the chosen gender**:
+`offeredApparatus(competition, type, gender)` (reads `apparatusByGender`,
+falls back to the per-type `apparatusConfig`), never the three COP apparatus —
+offering one the meet doesn't run would seat a panel nobody is judged by.
 
 ## Non-obvious behaviors
 
@@ -66,15 +77,18 @@ bespoke `JudgeSearch` autocomplete. "Add Judge" mode uses
 - **Duplicate-seat prevention is done client-side twice**: once via a
   `taken` map passed to `JudgeSearch` in the Add form (a slot can't pick
   someone already in another slot of the same form or already seated on
-  the panel, `:900-917`), once at `handleSaveJudges` before POST
-  (`:643-655`). Server also enforces it — this is UX-only
+  the panel), once at `handleSaveJudges` before POST. **Exception:** one
+  person may hold Scorer **and** Time Keeper — every check goes through a
+  local `maySeatTogether` that mirrors the server's (`config/judge-seats.js`);
+  keep the two in step. Server also enforces it — this is UX-only
   pre-validation, don't treat either client check as the actual
   guarantee.
 - **`ageGroupStarted`** (from `getAllJudgesSummary`) disables Edit/Delete/
   Unlock once a category has begun (`:690, 697, 1006, 1010`) — an admin
   cannot restaff a panel mid-competition.
-- **`padJudgeSlots`** (`:491`) always renders exactly 6 slots (Senior
-  Judge, Judge 1-4, Scorer) regardless of how many the server returns,
+- **`padJudgeSlots`** always renders exactly **7** slots (`JUDGE_SLOTS`:
+  Senior Judge, Judge 1-4, Scorer, Time Keeper) regardless of how many the
+  server returns,
   and stamps the *currently selected* apparatus onto empty slots rather
   than reading it off state — deliberately, to avoid a race where
   `selectedApparatus` hasn't updated yet in the same tick the list
@@ -83,8 +97,9 @@ bespoke `JudgeSearch` autocomplete. "Add Judge" mode uses
 ## Change guidance
 
 - If you're changing how many panel seats can exist or their role
-  names: `padJudgeSlots`'s hardcoded 6-slot assumption (Senior Judge +
-  Judge 1-4 + Scorer) needs to change in lockstep — see
+  names: `EMPTY_JUDGE_FORM` / `JUDGE_SLOTS` (7 seats) and
+  `REQUIRED_JUDGE_TYPES` need to change in lockstep with
+  `Server/src/config/judge-seats.js` and `MINIMUM_PANEL_SEATS` — see
   [11-SCORING-CLIENT.md](../11-SCORING-CLIENT.md) for `PANEL_TYPES` and
   how panel size is derived elsewhere.
 - Don't add a competition-type-level panel fetch — apparatus is

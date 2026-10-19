@@ -8,8 +8,8 @@ covers:
   - src/components/superadmin/AddPlayerForm.jsx
 read_when: "adding a form, changing password/phone/name validation rules, or wondering why two forms validate the same field differently"
 depends_on: [07-COMPONENTS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## The headline finding: `zodResolver` is never used, anywhere
@@ -173,3 +173,23 @@ manually and inline rather than through a shared helper.
   `AddPlayerForm.jsx` — if another screen needs the same check
   (`CoachCreateTeam`-adjacent flows, `UnifiedRegister`'s player path),
   it does not exist yet as a shared utility.
+
+## Since the last pass (2026-10-18)
+
+- **One password meter** (responsive plan Phase 8.3, 2026-10-02):
+  `components/auth/PasswordStrength.jsx` exports `PasswordStrengthIndicator`
+  and `PasswordRequirements`, replacing the copies in `AdminRegister` and
+  `AddPlayerForm`. Each form's length policy is now explicit props —
+  `minLength` / `strongLength`: admin accounts 12 / 16, player accounts 8 / 12.
+  The meter only **displays** strength; it validates nothing, so the policy
+  table above (which form enforces what) is unchanged.
+- **Squad cap**: the coach dashboard refuses to add an athlete to a full
+  gender + age group client-side, against the meet's `maxTeamSize` — see
+  [06-SCREENS/coach-dashboard.md](06-SCREENS/coach-dashboard.md). The server
+  enforces it too.
+- **Competition form**: the superadmin form now requires a max team size (4 or
+  6) and validates that each selected competition type runs at least one
+  apparatus across the two genders — see
+  [06-SCREENS/superadmin-management.md](06-SCREENS/superadmin-management.md).
+- Field markup moved onto the shared `ui/Field` / `Input` primitives in the
+  2026-10 restyle (no behaviour change).

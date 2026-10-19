@@ -81,7 +81,7 @@ the whole codebase.**
    none currently exists for this pair.
 4. If the change affects the judge slip's breakdown shape: also update
    `normalizeBreakdown` in `src/pages/judge/judgeShared.jsx` (the
-   canonical shape) and `src/components/scores/scoringPropTypes.js`
+   canonical shape) and `src/utils/scoring/scoringPropTypes.js`
    (its PropTypes mirror) — see
    [11-SCORING-CLIENT.md](11-SCORING-CLIENT.md).
 
@@ -95,10 +95,12 @@ averaging method itself changed.
 1. **Server first** — add the event-name constant to
    `Server/src/socket/events/event-types.js`, then wire the emitter.
 2. **Client** — add the listener in the relevant judge/admin screen
-   (see [09-REALTIME.md](09-REALTIME.md) for the 6 existing independent
+   (see [09-REALTIME.md](09-REALTIME.md) for the 7 existing independent
    socket connections — there is no shared `useSocket()` hook to extend,
    copy the connect/auth/room-join pattern from the nearest existing
-   file). Derive the socket auth token's storage key via
+   file). Connect to **`apiConfig.getSocketUrl()`** — never build the URL
+   with `.replace('/api','')`, which broke every socket on an `api.` host
+   until 2026-10-15. Derive the socket auth token's storage key via
    `getRoleFromPath(routePrefix)` — **never** hand-roll a role
    comparison; see
    [GOTCHAS.md](GOTCHAS.md#real-previously-shipped-bugs-worth-knowing-as-precedent)

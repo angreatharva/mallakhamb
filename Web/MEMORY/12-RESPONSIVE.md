@@ -8,8 +8,8 @@ covers:
   - src/components/responsive/**
 read_when: "touching any table/grid/filter layout, a dialog, a touch target, or investigating a horizontal-scroll or mobile/tablet-layout bug"
 depends_on: [05-DESIGN-SYSTEM]
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 Rewritten 2026-10-07 after the responsive/appearance work (merged

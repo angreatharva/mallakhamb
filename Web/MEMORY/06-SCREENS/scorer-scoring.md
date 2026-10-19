@@ -5,8 +5,8 @@ covers:
   - src/pages/judge/scorerRows.js
 read_when: "changing the Scorer's time/deduction sheet"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT, 09-REALTIME]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Disambiguation — two similarly-named files, not one
@@ -24,18 +24,15 @@ screen or its socket (`scorerRows.test.js` exists alongside it).
 
 ## Not itself route-mapped — chosen at render time by judge type
 
-`ScorerScoring.jsx` (~853 lines) has no entry in `routes/index.jsx` or
+`ScorerScoring.jsx` (~877 lines) has no entry in `routes/index.jsx` or
 `lazy-pages.js`. The single route `/judge/scoring` renders
-`JudgeScoring.jsx`, whose bottom section (`:1077-1109`) is a small
-dispatcher — a component also named `JudgeScoring`, shadowing the main
-scoring component earlier in the same file:
-```js
-const isScorer = location.state?.isScorer || storedJudgeUser?.judgeType === 'Scorer';
-return isScorer ? <ScorerScoring /> : <JudgeSlip />;
-```
-`ScorerScoring` and the judge's COP slip (`JudgeSlip`) are two different
-child components both mounted at the single URL `/judge/scoring`,
-chosen by the judge's `judgeType`. A comment (`:1078`) explains this
+`JudgeScoring.jsx`, whose bottom section (`:1056`) is a small
+dispatcher — a component also named `JudgeScoring` — that picks
+`TimeKeeperScoring`, `ScorerScoring` or `JudgeSlip`. The navigation state's
+`isScorer` / `isTimeKeeper` (the dashboard's per-category answer, including
+the role chosen by someone seated as **both** Scorer and Time Keeper) wins;
+the stored `judge_user.judgeType` covers a refresh. Full rule in
+[judge-scoring.md](judge-scoring.md). A comment (`:1078`) explains this
 dispatcher exists to avoid a hook-order violation (the same class of
 bug HIGH-W1 fixed elsewhere) — `judge_user` is read fresh on every
 render, not memoized, so a mid-session storage eviction can't leave the
@@ -65,11 +62,17 @@ createAdminAPI('/judge')` (`:16`) — reuses the admin API factory scoped
 to `/judge`. `loadExistingScores` (`:141-235`) hydrates any
 previously-saved draft/locked state via `scorerAPI.getTeamScores`.
 
-Opens its own socket connection (`:320-357`) to room
+Opens its own socket connection (URL from `apiConfig.getSocketUrl()`, which
+strips only the **trailing** `/api` — the old `replace('/api','')` broke on an
+`api.` host; fixed 2026-10-15) to room
 `scoring_${gender}_${ageGroup}_${competitionType}`, listening for
-`score_updated` (live-fills judge mark cells as judges submit,
-`:359-394`) and `scores_saved_notification` (triggers a full refetch) —
-see [09-REALTIME.md](../09-REALTIME.md).
+`score_updated` (live-fills judge mark cells as judges submit),
+`scores_saved_notification` (triggers a full refetch) and **`time_recorded`**
+(the Time Keeper's stopped time — `applyRecordedTime` fills that row's Time
+field as if typed, fills an empty Time Keeper name, toasts it; times arriving
+while the sheet loads are queued in `pendingTimesRef` and applied after) — see
+[09-REALTIME.md](../09-REALTIME.md) and
+[time-keeper-scoring.md](time-keeper-scoring.md).
 
 ## Non-obvious behaviors
 
@@ -103,6 +106,8 @@ see [09-REALTIME.md](../09-REALTIME.md).
   (`:396-420`) — same rule as elsewhere: `judges.length` (not the
   mirrored array's length) is what must be passed to
   `calculateAverageMarks`.
+- **Session strip**: the scoring-session details sit in one compact strip
+  above the sheet (2026-09-27).
 - **Save outcome (draft vs. lock) is derived, not a toggle**:
   `handleSaveScores` (`:460-515`) requires Time Keeper/Scorer names and
   every player having a time, then computes `shouldLock =

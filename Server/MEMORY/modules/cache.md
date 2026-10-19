@@ -4,8 +4,8 @@ covers:
   - src/services/cache/**
 read_when: "changing what's cached, TTLs, or cache warming"
 depends_on: [10-CACHING-AND-PERF]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 Full detail lives in

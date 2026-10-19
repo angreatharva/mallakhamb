@@ -4,8 +4,8 @@ covers:
   - src/pages/coach/CoachCreateTeam.jsx
 read_when: "changing the team-creation screen or its post-submit routing"
 depends_on: [13-FORMS-AND-VALIDATION]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -41,3 +41,10 @@ this doc covers what the screen does around that form.
 - If team creation ever fails intermittently right after submit,
   suspect the 500ms fixed-delay read-after-write workaround before
   assuming a new bug — it's a known, deliberate (if fragile) pattern.
+
+## Since the last pass (2026-10-18)
+
+- Restyled onto the shared `Field` / `Heading` primitives (2026-10-10).
+- Team size is **not** chosen here: it was briefly a coach field
+  (2026-09-25) and moved to the superadmin's competition form the next day
+  (`Competition.maxTeamSize`, per meet). Don't reintroduce it on this screen.

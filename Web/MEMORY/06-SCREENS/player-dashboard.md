@@ -4,8 +4,8 @@ covers:
   - src/pages/player/PlayerDashboard.jsx
 read_when: "changing the player's landing screen or competition-selection modal"
 depends_on: [08-API-INTEGRATION, 07-COMPONENTS, 04-STATE-MANAGEMENT]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -16,7 +16,7 @@ DOB, gender, email), team status/assignment (with an inline "join a
 team" dropdown if unassigned), age group, and a `PerformancePanel`
 instance scoped `selfOnly={true}` with `highlightPlayerId` for "My
 Performance & Scores" (see
-[07-COMPONENTS.md](../07-COMPONENTS.md#performancepanelperformancepaneljsx)).
+[07-COMPONENTS.md](../07-COMPONENTS.md#performanceperformancepaneljsx)).
 Also handles a competition-selection modal when the player is assigned
 to 2+ competitions and none is currently selected.
 
@@ -68,3 +68,10 @@ fetch:
 - If fixing the `?competitionId=` one-shot-apply pattern here, apply
   the same fix to `CoachDashboard.jsx` — they're independent copies of
   the same logic.
+
+## Since the last pass (2026-10-18)
+
+- A competition's level is shown through `levelLabel` (`utils/competition/levels.js`), so the new **DSO** and **University** levels read properly instead of a raw lowercase slug.
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

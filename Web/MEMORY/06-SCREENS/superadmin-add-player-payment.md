@@ -4,8 +4,8 @@ covers:
   - src/pages/superadmin/SuperAdminAddPlayerPayment.jsx
 read_when: "changing the superadmin add-player payment flow"
 depends_on: [07-COMPONENTS, SHARED-CONTRACTS, 06-SCREENS/superadmin-management]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -81,3 +81,10 @@ to refresh its teams list and remount `AddPlayerForm`.
   bypass should also apply to superadmin-added players — it's currently
   a deliberate asymmetry versus the coach flow, not an oversight to
   "fix" by default.
+
+## Since the last pass (2026-10-18)
+
+- The add is refused when the athlete's squad is already at the meet's `maxTeamSize` for that gender + age group (server `hasRoomInSquad`, checked before the Razorpay order is created).
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

@@ -13,6 +13,8 @@ covers:
   - src/components/layout/Navbar.jsx
   - src/components/ordering/SortableList.jsx
   - src/components/scores/PlayerRankingBoard.jsx
+  - src/components/scores/LuckyDrawPanel.jsx
+  - src/components/auth/SignOutOnBackDialog.jsx
   - src/components/scores/ScoreCategoryFilters.jsx
   - src/components/scores/scoreRows.js
   - src/components/competition/CompetitionDisplay.jsx
@@ -25,8 +27,8 @@ covers:
   - src/utils/security/sanitize.js
 read_when: "reusing or changing a shared (non-design-system, non-responsive) component"
 depends_on: [05-DESIGN-SYSTEM, SHARED-CONTRACTS]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Scope
@@ -147,6 +149,13 @@ Phase 8 merged proven duplicates; each keeps every caller's behaviour.
   in the admin/coach/player/judge/superadmin screens.
 
 ## `auth/` — small shared primitives
+
+**`SignOutOnBackDialog.jsx`** (2026-10-12) — props `open`, `onClose`. The
+"Sign out?" `ConfirmDialog` (danger tone; "Sign out" / "Stay signed in") that
+`hooks/useSignOutOnBack` raises when Back would leave the signed-in area —
+see [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#sign-out-on-back). Calls
+`logout()` **only**: logout already drops the stored meet and level, and
+clearing the meet first makes the coach dashboard redirect mid-logout.
 
 **`AccountLockoutMessage.jsx`** — props: `lockoutEndTime` (Date,
 required, no default), `primaryColor` (string, default `'#FF6B6B'`).
@@ -303,19 +312,25 @@ row must already carry a server-assigned `rank`, optionally
 `tieBreakInfo`). The public/admin/superadmin results board: top-3
 podium (2nd-left / 1st-center-elevated / 3rd-right) plus a ranked list
 below, both built from the same `PlayerCard` subcomponent. Also exports
-named `SkeletonRow` (`:65-75`, loading placeholder).
-- Imports and calls `sortByRank` from `./scoreRows` (`:6, 210`) — does
-  not sort itself.
-- `is3JudgePanel` detection (`:90`) branches the score-breakdown
-  display: 3-judge panels show averaged Difficulty/Combination/
-  Execution/Bonus pills computed client-side from `judgeSlips`/
-  `scoreBreakdown` (`getAverageBreakdown`, `:92-109`); non-3-judge
-  panels show raw per-judge pills (Senior/J1/J2/J3/J4 + Avg). This is
-  presentational aggregation only, not the ranking/tie-break logic.
-- Ties: reads `player.tieBreakInfo.method` against a local
-  `TIE_BREAK_LABELS` map (`:24-32`) for human-readable text (e.g.
-  "Placed on the faster time") plus a "Tied" badge when
-  `tieBreakInfo.unresolved`.
+named `SkeletonRow` and `RankBadge` (the placing in the display face; 1–3
+take the medal colours).
+- Imports and calls `sortByRank` from `./scoreRows` — does not sort itself.
+- **One "Score Breakdown (Average)" at every panel size**: Difficulty /
+  Combination / Execution / Originality averaged by
+  `copRules.averageSlipBreakdown(judgeSlips, panelSize)` over the slips the
+  panel rule counts — all three on a 3-judge panel, the **middle two
+  evaluation slips by total** on a 4/5-judge one — with a
+  `describeSlipAverage` note under it; rows without stored slips fall back to
+  the row's own `scoreBreakdown`. (The old 3-judge-only averaging and raw
+  per-judge pills are gone.) Presentational only, not ranking.
+- Ties: reads `player.tieBreakInfo.method` against `TIE_BREAK_LABELS`, whose
+  keys are the server engine's reason codes: `faster_time`, `base_score`,
+  `four_judge_average`, `four_judge_average_with_chief`, `lucky_draw`
+  ("Placed by lucky draw"), `identical_time`, `identical_panel_scores`,
+  `time_unavailable`, `panel_scores_unavailable`. When
+  `tieBreakInfo.awaitingLuckyDraw` it reads **"Tied — lucky draw to be held"**
+  instead. A "Tied" badge shows when `tieBreakInfo.unresolved`. A new engine
+  reason needs a label here, or the card shows no explanation.
 - Displayed rank is `player.rank` if finite, else `index+1` fallback
   (`placeOf`, `:215`) — never silently renumbers a tie.
 
@@ -332,6 +347,21 @@ the file header (`:6-15`) says this replaced an older UX where filters
 appeared one at a time. Cascading is `disabled` + a placeholder naming
 the prerequisite ("Select gender first"), not hidden controls.
 Apparatus is deliberately last — pages only fetch once it's set.
+
+**`LuckyDrawPanel.jsx`** (2026-10-18) — props: `rows` (the ranked rows),
+`onRecord(group, order)`, `onClear(group)` (both async). Admin/superadmin
+only, on Scores → Individual Rankings. Records the result of a **physical**
+lucky draw (COP 1.12.4; the 3-judge "same time" rule) for every tie the
+server flags: exported `luckyDrawGroups(rows)` groups rows by
+`tieBreakInfo.tieGroupKey` where `awaitingLuckyDraw` or `method ===
+'lucky_draw'`, sorted by place (recorded groups in drawn order). Each
+`DrawGroup` is a raised `Panel` — "Level for 2nd on 8.25", a status tag
+("Lucky draw needed" / "Lucky draw recorded"), an ordered list with
+up/down `IconButton`s ("Move X up"), **Save draw result**, or **Change
+order** / **Clear draw** once recorded. Renders nothing when there's no such
+group; a `Notice` above the groups says how many still need a draw. It never
+ranks anyone — the server applies the order and the page reloads. Test:
+`LuckyDrawPanel.test.jsx`.
 
 ## `competition/`
 
@@ -390,7 +420,7 @@ competition matches the chosen level (`:322-327`).
 **`LevelSelectionScreen.jsx`** — props: `userType` (required). The
 screen immediately before `CompetitionSelectionScreen`; picks a level
 (`COMPETITION_LEVELS` from `@/utils/competition/levels`, see
-[SHARED-CONTRACTS.md](SHARED-CONTRACTS.md#competition-levels-static-enum-no-test-either-direction))
+[SHARED-CONTRACTS.md](SHARED-CONTRACTS.md#competition-levels-six-values-sync-tested-since-2026-09-26))
 before narrowing to a competition. Not shown to superadmins. Fetches
 per-role competition lists purely to compute a count badge per level
 card. Comments stress the level is "a FILTER, not a permission"

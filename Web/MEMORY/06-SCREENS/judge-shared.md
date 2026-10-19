@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/judgeShared.jsx
 read_when: "changing the breakdown shape, the mismatch/tolerance modals, the Senior Judge override modal, the judge header, or seeing sideways scroll on a judge page"
 depends_on: [11-SCORING-CLIENT, SHARED-CONTRACTS]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is

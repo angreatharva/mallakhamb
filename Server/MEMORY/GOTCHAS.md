@@ -13,6 +13,25 @@ built, and were fixed in a follow-up pass. Kept here, briefly, so a future
 agent doesn't rediscover the same defect from an old comment or a stale copy
 of this doc — see each numbered doc's own body for the current behavior.
 
+- **Tie-breaks follow COP Mallakhamb §1.12 now** (2026-10-17/18). The
+  "senior judge score, then whole-panel mean" rule is gone; so is any idea of
+  a random draw in code. 3-judge: time, then a lucky draw. 4/5-judge: base
+  score → plain mean of the four judges → (mean + Chief)/2 → lucky draw. The
+  draw is held physically and recorded by an admin (`TieBreakDraw`). Old
+  comments, tests or the archived "v2 spec §7" cascade must not be restored.
+  See [07-SCORING-ENGINE.md](07-SCORING-ENGINE.md).
+- **Team Championship counts best 3 / best 5 per apparatus** (2026-09-25),
+  set by the meet's `maxTeamSize`. It used to rank every athlete's summed
+  score, so a squad scored more by entering more athletes.
+- **A clean `SIGTERM` exited 7** until 2026-10-17: `graceful-shutdown.js`
+  logged after ending the winston logger. Everything there logs through
+  `this.log()` now.
+- **A refused CORS origin answered 500** until 2026-10-17 (a plain `Error`),
+  feeding the "High 5xx" alert. It is an `AuthorizationError` → 403 now.
+- **`.env_example` shipped a working discount code, enabled** — off and a
+  placeholder since 2026-10-17. ⚠️ The OCI staging env still has the old
+  public code `BRMC@2026` enabled; Render production unchecked.
+
 - **`POST /api/auth/reset-password/:token` is gone** (2026-10-07). It was
   "fixed" on 2026-09-23 by implementing `resetPasswordWithToken`, which
   turned a 500 into a takeover: it matched the token against the OTP field
@@ -92,7 +111,7 @@ auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
 
 ## Dead/vestigial configuration
 
-- **`RAZORPAY_WEBHOOK_SECRET`** is documented (README, system-handbook, `.env_example`, `render.yaml`) as a required, distinct payments variable — it has **zero code consumers**. The webhook HMAC verification actually reuses `RAZORPAY_KEY_SECRET` (`payment.service.js`, `razorpay.gateway.js`). Setting it does nothing.
+- ~~`RAZORPAY_WEBHOOK_SECRET` has zero code consumers~~ — **fixed 2026-10-17** (deploy C1.3 / F4). `PaymentService.verifySignature` now uses it, falling back to `RAZORPAY_KEY_SECRET` with a one-time warning when it is unset. The two secrets are different: the webhook secret is the one typed into Razorpay → Webhooks.
 - **`NGROK_ENABLED`/`NGROK_AUTH_TOKEN`** — documented and present in `render.yaml`/`.env_example`, but no `process.env.NGROK*` reference exists anywhere in the codebase.
 
 ## Live defects / correctness risks (not dead code, but wrong or fragile)
@@ -116,6 +135,8 @@ auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
 - **Two independent token-rotation mechanisms coexist and don't share code**: `auth.middleware.js`'s silent 12h-threshold access-token re-sign (`rotateTokenIfNeeded`), and the explicit, client-invoked, theft-detecting refresh-token rotation via `POST /auth/refresh`. Don't conflate them when reading "rotation" in a file.
 - **Refresh-token reuse detection revokes the WHOLE family**, not just the reused token — the intended theft response is "kill the whole session chain, force full re-login."
 - **OTP codes are stored in plaintext** on the user document (`resetPasswordToken`/`resetPasswordExpires`), not hashed — inconsistent with `RefreshToken`'s hash-only storage, but this is the current, confirmed behavior; `utils/auth/otp.util.js` ships an unused `hashOTP` helper nobody calls. The wrong-guess cap (`resetPasswordAttempts`, `OTP_MAX_ATTEMPTS`) and the constant-time compare are what make plaintext tolerable for a 10-minute code.
+- **The email metric labels production mail `provider="other"`.** `prometheus/registry.js`'s `EMAIL_PROVIDERS` allow-list is `resend` / `nodemailer` / `none` — no `gmail-api`, which is what production runs — and `pick()` maps anything off the list to `other`. Open as of 2026-10-18.
+- **`EMAIL_PROVIDER=none` silences every email** (OTPs included). It exists for the nightly e2e and `config-manager` refuses it in production unless the DB name ends in `_e2e` — keep that guard if you touch it.
 - **SMTP never leaves free Render.** Ports 25/465/587 are blocked, so the default `nodemailer` provider times out there while working perfectly locally. Production must run `EMAIL_PROVIDER=gmail-api`. See [modules/email.md](modules/email.md).
 - **`.env_example` selects `EMAIL_PROVIDER=gmail-api` (since `8d0dc23`), and blank Gmail keys stop boot in any environment.** `config-manager` only requires the Gmail keys in production, so validation passes locally — then `GmailApiAdapter`'s constructor throws `missing configuration: clientId, …` while the DI container builds `EmailService` at startup. A new dev copying `.env_example` must fill `GMAIL_*` or set `EMAIL_PROVIDER=nodemailer`. (Verified 2026-10-11 by constructing `EmailService` with blank keys.)
 - **A `GMAIL_REFRESH_TOKEN` that doesn't start `1//` was mangled in a paste.** Google's only answer is `invalid_grant: Bad Request`; the adapter now warns at startup and surfaces Google's `error_description`. Re-run `npm run gmail:token`, which tests the token before printing it.

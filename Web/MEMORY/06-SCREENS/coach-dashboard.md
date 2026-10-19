@@ -4,8 +4,8 @@ covers:
   - src/pages/coach/CoachDashboard.jsx
 read_when: "changing the coach's team/roster management screen"
 depends_on: [SHARED-CONTRACTS, 07-COMPONENTS, 04-STATE-MANAGEMENT]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -17,7 +17,7 @@ context) broken into gender × age-group cards with drag-and-drop roster
 management, an "Add Player" modal (search existing players, assign age
 group + apparatus checkboxes), and a "Team Summary" modal leading to
 Pay Fees / submission. Renders `PerformancePanel` (see
-[07-COMPONENTS.md](../07-COMPONENTS.md#performancepanelperformancepaneljsx))
+[07-COMPONENTS.md](../07-COMPONENTS.md#performanceperformancepaneljsx))
 at the bottom once a team+competition exist.
 
 ## Data fetching
@@ -72,3 +72,22 @@ Re-fetched whenever `currentCompetition._id` changes (`:173-177`, from
   `PlayerDashboard.jsx` for the same duplicated logic.
 - Don't bypass `apparatusFor` for apparatus display — direct
   string/array shape checks have broken this screen before.
+
+## Since the last pass (2026-10-18)
+
+- **Squad cap per age group** (2026-09-26): the dashboard payload carries the
+  meet's `maxTeamSize` (4 or 6, set by the superadmin — never by the coach).
+  Each gender × age-group card shows `n / maxTeamSize`, the team header says
+  "Max N players per age group (best M count)" (`countedScoresFor` from
+  `utils/scoring/teamSize.js`: 4 → 3, 6 → 5), and adding a player to a full
+  group toasts "This competition allows at most N players per age group — X is
+  full" before any request. The server enforces the same cap
+  (`hasRoomInSquad`). A meet with no size set is uncapped.
+- **Apparatus checkboxes are the meet's, for the athlete's gender**:
+  `offeredApparatus(currentCompetition, null, gender)` (reads
+  `apparatusByGender`, falls back to `apparatusConfig`; Hanging is never
+  offered for women). The server drops anything the gender isn't offered.
+- A leftover `console.log('Dashboard full response:', …)` logs the whole
+  dashboard payload — in dev only (production builds set `drop_console`).
+- Line numbers (`:NNN`) above predate the 2026-10 restyle and are
+  approximate — search by the named function.

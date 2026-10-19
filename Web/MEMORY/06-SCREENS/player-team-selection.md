@@ -4,8 +4,8 @@ covers:
   - src/pages/player/PlayerTeamSelection.jsx
 read_when: "changing how a player joins a team, or investigating why the team list shows squads from other meets"
 depends_on: [08-API-INTEGRATION, 03-ROUTING-AND-NAV]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -73,3 +73,9 @@ correct even though the list shown is too broad.
 - If you touch the join flow, don't remove the `competitionId` param
   from `updateTeam` — that's the one place this screen's competition
   scoping is actually correct.
+
+## Since the last pass (2026-10-18)
+
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

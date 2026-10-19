@@ -9,8 +9,8 @@ covers:
   - src/models/Transaction.js
 read_when: "changing pricing, the Razorpay flow, the discount code, registration fee windows, or the webhook"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, modules/user-services]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Two independent Razorpay flows, one gateway module
@@ -91,7 +91,10 @@ must agree with.
   this feature exists to skip.
 - `isDiscountCodeValid`/`applyDiscountCode`/`assertDiscountCodeValid` —
   SHA-256-digest constant-time compare of the submitted code against
-  `payments.discount.code` from config.
+  `payments.discount.code` from config. `.env_example` ships the code **off**
+  (`DISCOUNT_CODE_ENABLED=false`, `DISCOUNT_CODE=change-me-to-a-long-random-code`)
+  since 2026-10-17 (deploy C1.4) — the old example value was a real working
+  code. Turn it on per environment, and never reuse the example string.
 
 ## Registration CRUD — `src/services/competition/registration.service.js`
 
@@ -125,14 +128,23 @@ record of it.
    the parsed body.
 2. **Signature verification (a THIRD, separate mechanism from the gateway's
    `verifyPaymentSignature`)**: `PaymentService.verifySignature` —
-   `HMAC-SHA256(rawBody)` using `config.razorpay.keySecret` (same secret var
-   as the client-callback path), hex digest, `timingSafeEqual` against the
+   `HMAC-SHA256(rawBody)` using **`config.razorpay.webhookSecret`**
+   (`RAZORPAY_WEBHOOK_SECRET`, the secret typed into Razorpay → Settings →
+   Webhooks, which is *not* the API key secret). If it is unset, the service
+   falls back to `razorpay.keySecret` with a one-time warning, so a deployment
+   that typed the key secret into the webhook form keeps reconciling (deploy
+   C1.3 / finding F4 — before 2026-10-17 only the key secret was ever read).
+   Hex digest, `timingSafeEqual` against the
    header, length-checked first. This is Razorpay's standard whole-payload
    webhook scheme — **do not confuse it with `razorpay.gateway.js`'s
    `order_id|payment_id` HMAC**, which is a different scheme for a different
    call site (the client-driven verify, not the async webhook).
 3. Only two events are handled: `payment.captured` and `payment.failed` —
    everything else is acknowledged and ignored (`'Webhook event ignored'`).
+   `reconcileWebhook` wraps `applyWebhook` and counts every delivery in
+   `mallakhamb_payment_webhooks_total{event,outcome}` — `processed` /
+   `ignored` / `rejected_signature` / `error` (see
+   [11-OBSERVABILITY.md](11-OBSERVABILITY.md)).
 4. Amounts are converted Razorpay-paise → rupees, then
    `competitionRepository.applyPaymentWebhookResult(orderId, fields)` — an
    **atomic, `arrayFilters`-targeted update** (never a load-then-`.save()` on

@@ -4,13 +4,13 @@ covers:
   - src/pages/admin/AdminScores.jsx
 read_when: "changing the admin/superadmin results/rankings viewer"
 depends_on: [07-COMPONENTS, 03-ROUTING-AND-NAV]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
 
-`src/pages/admin/AdminScores.jsx` — 535 lines, ~26KB. Mounted at the
+`src/pages/admin/AdminScores.jsx` — 488 lines. Mounted at the
 `dashboard/scores` tab (see
 [03-ROUTING-AND-NAV.md](../03-ROUTING-AND-NAV.md)), not a standalone
 route. The selection/results hub — distinct from
@@ -45,6 +45,27 @@ the page used to sort by `finalScore` and number rows by array index,
 ignoring tie-break rules; it now trusts the server-computed `rank` so
 this page and the public results board agree.
 
+## Lucky draw — `LuckyDrawPanel` (2026-10-18)
+
+On the **Individual Rankings** tab, above the search box, `<LuckyDrawPanel
+rows={scores} onRecord={recordLuckyDraw} onClear={clearLuckyDraw} />`
+(`src/components/scores/LuckyDrawPanel.jsx`). It renders only when some row's
+`tieBreakInfo` is `awaitingLuckyDraw` (a tie the COP rules couldn't break —
+same time on a 3-judge panel, identical at 1.12.1–1.12.3 on a 4/5-judge one)
+or already `method: 'lucky_draw'`. Each group shows "Level for 2nd on 8.25",
+a "Lucky draw needed" / "Lucky draw recorded" tag, the athletes with
+up/down buttons, and **Save draw result** (or **Change order** / **Clear
+draw** once recorded). The draw itself is held physically at the venue; this
+only records its order.
+
+`recordLuckyDraw(group, order)` → `api.recordTieBreakDraw({...categoryParams(),
+order})`; `clearLuckyDraw(group)` → `api.clearTieBreakDraw({...categoryParams(),
+groupKey: group.key})` (superadmin's `categoryParams` adds `competition`). Both
+toast and **reload the board** — the server applies the order, never the
+client. A ranking that ties a group the server no longer considers tied (a
+score changed) refuses with a message; reload and re-draw. See Server
+`07-SCORING-ENGINE.md`.
+
 ## Non-obvious behaviors
 
 - **For a plain admin, the competition dropdown is rendered but
@@ -58,9 +79,13 @@ this page and the public results board agree.
   changed — avoids retriggering the filter-reset cascade if
   `currentCompetition` gets rebuilt by its context provider on every
   render.
-- `fetchTeamRankings` (`:316-357`) does client-side transformation (top-3
-  players, average team score) purely for display — **not** the ranking
-  authority; `rank` still comes from the server field `team.rank`.
+- `fetchTeamRankings` does client-side transformation purely for display —
+  **not** the ranking authority; `rank` still comes from the server field
+  `team.rank`. `topPlayerScores` is the scores that **counted** toward the
+  team total as decided on the server (`team.apparatus[].counted` — best 3 of
+  a 4-player team / best 5 of a 6-player team **per apparatus**, set by the
+  meet's `maxTeamSize`), keyed per apparatus so an athlete counted on two
+  apparatus appears twice.
 
 ## Change guidance
 

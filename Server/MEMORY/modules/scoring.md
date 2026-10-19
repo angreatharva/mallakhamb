@@ -4,8 +4,8 @@ covers:
   - src/services/scoring/**
 read_when: "changing score calculation/aggregation service internals"
 depends_on: [07-SCORING-ENGINE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 The full scoring-engine narrative (COP rules, calculation math, ranking,
@@ -19,8 +19,9 @@ substantive.
 
 | File | Size | Role |
 |---|---|---|
-| `src/services/scoring/scoring.service.js` | 1757 lines | Score CRUD, aggregation/ranking, lock/unlock/recalculate, `saveScores` — the highest-stakes method in the codebase |
-| `src/services/scoring/calculation.service.js` | 302 lines | The arithmetic orchestrator — `calculateFinalScore`, `calculateRankings`, `calculateTimeDeduction`, `calculateCompletePlayerScore`, `getIndividualRankingsWithTieBreaker` |
+| `src/services/scoring/scoring.service.js` | 1785 lines | Score CRUD, aggregation/ranking (individual feeds rank with recorded lucky draws; team rankings use `rankTeamChampionship`), lock/unlock/recalculate, `saveScores` — the highest-stakes method in the codebase |
+| `src/services/scoring/calculation.service.js` | 306 lines | The arithmetic orchestrator — `calculateFinalScore`, `calculateRankings`, `calculateTimeDeduction` (under 60 s or over 90 s), `calculateCompletePlayerScore`, `getIndividualRankingsWithTieBreaker` |
+| `src/services/scoring/tie-break-draw.service.js` | 154 lines | Records / clears the result of a physical lucky draw (COP 1.12.4); refuses anything that isn't exactly one tie group currently awaiting a draw |
 | `src/services/scoring/README.md` | — | Existing doc — **contains several stale/fabricated claims**, see [07-SCORING-ENGINE.md](../07-SCORING-ENGINE.md#open-questions) and GOTCHAS.md |
 
 ## One fact worth repeating here

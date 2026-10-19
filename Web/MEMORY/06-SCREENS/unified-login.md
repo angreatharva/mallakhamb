@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedLogin.jsx
 read_when: "changing login for any role, lockout/rate-limit UI, or the judge-specific login path"
 depends_on: [13-FORMS-AND-VALIDATION, 03-ROUTING-AND-NAV, 10-AUTH-AND-SECURITY]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -105,3 +105,10 @@ be removed rather than maintained.
 - If touching the judge login path: remember it's entirely separate
   from every other role's — a fix to the generic `apiService.login()`
   branch does not automatically apply to judges.
+
+## Since the last pass (2026-10-18)
+
+- "Forgot password?" links to `/forgot-password?role=<role>` (2026-10-07): the role says **which account** to reset when one email owns several (the reset endpoints accept `userType`).
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

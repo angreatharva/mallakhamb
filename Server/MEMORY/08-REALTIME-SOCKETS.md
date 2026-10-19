@@ -5,8 +5,8 @@ covers:
   - src/utils/data/scoring-room.util.js
 read_when: "adding/changing a socket event, debugging a broadcast that doesn't arrive, or touching room membership/authorization"
 depends_on: [06-AUTH-AND-SECURITY, 07-SCORING-ENGINE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 > **Updated 2026-09-23 (follow-up pass, same commit lineage).** The
@@ -43,6 +43,21 @@ scoring rooms (`autoJoinJudgeRoom`); `cacheJudgeAssignments(socket)` resolves
 `isJudgeAuthorizedForRoom` never needs a DB read per score event (a HIGH-5
 fix — room membership used to be gated on role alone, letting a judge
 broadcast forged `score_updated` into a panel they weren't assigned to).
+It also caches **`socket.judgeTypesByRoom`** (Map roomId → Set of every seat
+held there). One room is a whole category carrying all its apparatus panels,
+so one person can be Time Keeper on Pole and Judge 1 on Rope in the same room;
+`judgeTypeByRoom` keeps only the last seat seen. `socket.judgeName` is the
+server-side name used when a broadcast names its sender, never a
+client-claimed one.
+
+Metrics go to the Prometheus registry (constructor arg `metrics`, default
+`noopMetrics`; the old `MetricsCollector` was retired 2026-10-03):
+`socketio_connected_clients`, `socketio_rooms` (read at scrape time, skipping
+each socket's own room), and per registered event
+`socketio_events_received_total{event}` / `socketio_event_errors_total{event}`
+/ `socketio_event_handler_seconds{event}`. `event` is safe as a label because
+only server-registered handler names reach it. See
+[11-OBSERVABILITY.md](11-OBSERVABILITY.md).
 
 ## Room-naming — the ONLY real room family is scoring rooms
 
@@ -119,6 +134,8 @@ needed a room.
 | `scores_saved` | client→server | `scoring.handler.js` | |
 | `scores_saved_notification` | server→client | `scoring.handler.js` | Both room forms |
 | `performance_order_updated` | server→client | `performance-order.service.js` | Both room forms via `scoringRoomIds`; failures logged, never thrown |
+| `time_record` | client→server | `scoring.handler.js` (`handleTimeRecord`) | **Time Keeper only**: `userType === 'judge'`, room authorized, and `judgeTypesByRoom.get(roomId)` has `'Time Keeper'`. Re-checks the competition lock. Payload `{roomId, playerId, teamId, apparatus, seconds}`; `seconds` must be a whole number 0–3600. **Relay only, never persists** — the time lands in that athlete's Time field on the Scorer's sheet and is saved with the sheet like a typed one |
+| `time_recorded` | server→client | `scoring.handler.js` | To both room forms excluding the sender, with `timeKeeperName` (from `socket.judgeName`), `recordedBy`, `timestamp`; plus an `{…, ack: true}` copy back to the Time Keeper |
 | `error` | server→client | `socket.manager.js` | Generic handler-error catch, or join failure |
 
 Retired, documented in-file, not present: `score_update_request` /
@@ -177,6 +194,9 @@ called directly by `scoring.handler.js` for authorization.
 
 ## Stale docs — `src/socket/README.md`
 
+(Its metrics section was rewritten for the Prometheus registry on 2026-10-03;
+the points below still stand.)
+
 - Documents the scoring-room id format as `{competitionId}_{gender}_
   {ageGroup}_{competitionType}` (with an example
   `comp-123_male_u12_individual`) — the real format has **no competitionId**
@@ -197,6 +217,10 @@ called directly by `scoring.handler.js` for authorization.
   real handlers, but the README's framing is stale either way.
 
 ## Change guidance
+
+- A new event is counted automatically once it goes through
+  `registerEventHandler` (the metrics wrap lives in the dispatcher); don't
+  emit metrics by hand in a handler.
 
 - A new scoring broadcast: emit to **both** room-id forms via
   `scoringRoomIds`/`getAltRoomId`, never a hand-rolled string.

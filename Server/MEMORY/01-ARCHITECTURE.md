@@ -10,8 +10,8 @@ covers:
   - src/config/config-manager.js
 read_when: "you need the request lifecycle, DI wiring order, or how the process boots/shuts down, before touching any single feature"
 depends_on: []
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-22
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What this system is
@@ -125,17 +125,26 @@ matters for readability, not for correctness — `resolve` is lazy).
 `socketManager.broadcast(...)`, but `socketManager` cannot exist until the HTTP
 server exists, which is created AFTER `bootstrap()` runs. `bootstrap()`
 registers those services with `socketManager: null`
-(`di-container.js:189,242,281,296` etc.). `initializeSocketIO(httpServer)`
-(`di-container.js:327-412`), called once the server exists, replaces `.socketManager`
+(`bootstrap.js:195,249,289` etc. — the wiring is in `bootstrap.js`, not
+`di-container.js`). `initializeSocketIO(httpServer)`
+(`bootstrap.js:344`), called once the server exists, replaces `.socketManager`
 on each of `scoringService`, `competitionService`, `teamService`, `judgeService`,
 `adminService`, `performanceOrderService` with a **lazy getter** that resolves
 `socketManager` from the container on first access and then rewrites itself to
-a plain value (`di-container.js:349-373`). A service resolved before the socket
+a plain value (`bootstrap.js:379-390`). A service resolved before the socket
 server exists and NOT in `servicesNeedingSocket` silently keeps `socketManager:
 null` forever — `broadcast()` is written to no-op on null, so the failure mode
 is silent (a feature quietly not broadcasting), not a crash. **If you add a new
 service that must broadcast, add its name to `servicesNeedingSocket`
-(`di-container.js:349-360`) or its sockets will never fire.**
+(`bootstrap.js:366`) or its sockets will never fire.**
+
+`ScoringService` is still built **positionally**; its optional trailing
+arguments are `teamRepository`, `metrics`, `tieBreakDrawRepository` (in that
+order — append, never insert, or the harnesses that build it with fewer
+arguments break). `tieBreakDrawService` is registered right after it and
+depends on it one-way (it ranks a standing before accepting a lucky draw);
+`publicService` gets `tieBreakDrawRepository` too, so both results feeds rank
+with recorded draws.
 
 `adminService` delegates scoring to `scoringService` and judge-seat assignment
 to `judgePanelService` rather than owning that logic itself — both were

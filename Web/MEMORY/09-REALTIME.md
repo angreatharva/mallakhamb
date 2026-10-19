@@ -9,14 +9,14 @@ covers:
   - src/pages/admin/AdminScoring.jsx
 read_when: "adding or debugging any socket.io-client usage — live scoring, running-order pushes, panel sync"
 depends_on: [08-API-INTEGRATION, 11-SCORING-CLIENT]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
-## No shared socket context — six independent connections, one copy-pasted pattern
+## No shared socket context — seven independent connections, one copy-pasted pattern
 
 There is **no `SocketContext`/`useSocket` hook anywhere in `Web/src`**
-(confirmed by exhaustive grep — zero matches). Six files each
+(confirmed by exhaustive grep — zero matches). Seven files each
 independently open their own `socket.io-client` connection in a
 `useEffect`, with `socket.disconnect()` in the cleanup, duplicating the
 same connect/auth/room-join boilerplate:
@@ -27,27 +27,28 @@ same connect/auth/room-join boilerplate:
 - `src/pages/judge/ScorerScoring.jsx`
 - `src/pages/judge/useJudgePanelData.js` (a hook, backing the live panel-review view)
 - `src/pages/admin/AdminScoring.jsx` (also serves `/superadmin/scoring` via `routePrefix`)
+- `src/pages/judge/TimeKeeperScoring.jsx` (the Time Keeper's stopwatch, 2026-09-26)
 
-If you're adding a seventh live-scoring surface, there is no shared
-primitive to reach for — you'll copy one of these six. That's a real gap
+If you're adding an eighth live-scoring surface, there is no shared
+primitive to reach for — you'll copy one of these seven. That's a real gap
 worth knowing about before assuming a `useSocket()` hook exists.
 
-## Connection setup — identical across all six
+## Connection setup — identical across all seven
 
 ```js
-const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+const socketUrl = apiConfig.getSocketUrl();   // src/config/api.config.js
 const token = secureStorage.getItem('judge_token' /* or role-derived key */);
 const socket = io(socketUrl, { auth: { token }, withCredentials: true });
 ```
 
-**⚠️ Open deploy blocker (`deploy/COMMON.md` F1, 2026-10-11):**
-`.replace('/api', '')` removes the FIRST `/api`, so an API host that starts
-with `api.` (`https://api.<domain>/api`) becomes `https:/.<domain>/api` and
-every live-scoring socket breaks. Seven files carry the line (the six above
-plus `TimeKeeperScoring.jsx`). The planned fix (C1.1) is one
-`getSocketBaseUrl()` in `src/config/api.config.js` that strips only a
-trailing `/api`, used everywhere; `grep -rn "replace('/api'" src` must then
-return nothing. Fine on `*.onrender.com` today.
+`getSocketUrl()` is the base URL minus its **trailing** `/api`
+(`baseUrl.replace(/\/api\/?$/, '')`). **Fixed 2026-10-15** (`3c628e1`, deploy
+F1 / C1.1): every surface used to build it with `.replace('/api', '')`, which
+removes the FIRST `/api` — an `api.` host (`https://api.<domain>/api`) became
+`https:/.<domain>/api` and every live-scoring socket broke. All seven files use it
+now. `grep -rn "replace('/api'"
+src` should only find the explanatory comment in `api.config.js`; never
+reintroduce a hand-built socket URL.
 
 Auth rides the `auth: { token }` handshake payload (a JWT), matching the
 server's JWT socket auth. **`AdminScoring.jsx` derives its storage key
@@ -61,7 +62,7 @@ key the same way, never by hand-rolling a role comparison.
 
 ## Emitted events (client → server)
 
-- **`join_scoring_room`** with `{ roomId }` — all six files, on
+- **`join_scoring_room`** with `{ roomId }` — all seven files, on
   `connect`. The room id is always built client-side as
   `` `scoring_${gender}_${ageGroup}_${competitionType}` `` — **category-scoped**,
   not competition-id scoped. This is a *separate* room from the
@@ -69,6 +70,11 @@ key the same way, never by hand-rolling a role comparison.
   socket into at handshake time based on the JWT (see
   [Server/MEMORY/08-REALTIME-SOCKETS.md](../../Server/MEMORY/08-REALTIME-SOCKETS.md) —
   a socket can be a member of both simultaneously).
+- **`time_record`** with `{ roomId, playerId, teamId, apparatus, seconds }` —
+  `TimeKeeperScoring.jsx` only, on Stop (or "Not received — send again").
+  The server relays it only from a socket seated as Time Keeper in that room,
+  and **never persists it** — see
+  [06-SCREENS/time-keeper-scoring.md](06-SCREENS/time-keeper-scoring.md).
 - **`scores_saved`** with `{ teamId, roomId, isLocked }` —
   `ScorerScoring.jsx` and `AdminScoring.jsx`, fired after a successful
   score save to notify the rest of the panel immediately (rather than
@@ -96,6 +102,14 @@ Beyond the socket.io built-ins `connect`/`disconnect`/`connect_error`/`error`:
   panel.
 - **`scores_saved_notification`** — same three files. Marks a slip
   finalized/locked on other panel members' screens.
+- **`time_recorded`** — `ScorerScoring.jsx` (fills that row's Time as if
+  typed; queued while the sheet loads) and `TimeKeeperScoring.jsx` (the
+  `{ ack: true }` copy confirms the send).
+
+`useJudgePanelData.js` also **re-reads the panel on every re-connect**
+(anything broadcast while the socket was down is lost) and, for Panel Review,
+every 10 s and when the tab becomes visible — the live feed is no longer the
+only source of truth there.
 - **`scores_saved_error`** — listened in `useJudgePanelData.js` and
   `AdminScoring.jsx`. **See "A client-only event" below — this appears
   to be dead.**
@@ -156,7 +170,7 @@ as "not consumed by the SPA today," not necessarily "unused server-side."
 ## Change guidance
 
 - Adding a new live-scoring surface: there's no shared hook to extend —
-  copy the connect/auth/room-join pattern from one of the six files
+  copy the connect/auth/room-join pattern from one of the seven files
   above, and derive the auth storage key via `getRoleFromPath`, not a
   hand-rolled role check.
 - Adding a new socket event: add the constant to

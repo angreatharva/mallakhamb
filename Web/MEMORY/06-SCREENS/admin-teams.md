@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminTeams.jsx
 read_when: "changing the team browser/viewer screen"
 depends_on: [08-API-INTEGRATION]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -43,3 +43,9 @@ applied gender/ageGroup filters for consistency (`:229`).
 - If adding a new field to the team detail view: check both response
   shapes (`{team: {...}}` and flat) before assuming one — `getAllTeams`
   and `getTeamDetails` don't agree.
+
+## Since the last pass (2026-10-18)
+
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

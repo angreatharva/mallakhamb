@@ -5,8 +5,8 @@ covers:
   - playwright.config.js
 read_when: "running ANY e2e/seed/audit npm script, or before pointing E2E_BASE_URL/E2E_API_URL at anything other than localhost"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT]
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Read this before running anything in `e2e/`
@@ -154,7 +154,7 @@ All 22 files under `e2e/support/`, one line each:
 | `level-flows.js` | Shared "choose your level" UI step, used by every role's sign-in flow |
 | `meets.js` | Reads the committed `meets.json` |
 | `panel-plan.js` | Reads the committed `panel-plan.json`, with heavy validation |
-| `payment-flows.js` | Drives the 100%-off discount-code payment path (not a real Razorpay charge) |
+| `payment-flows.js` | Drives the 100%-off discount-code payment path (not a real Razorpay charge). Accepts the post-submit headings `CoachPayment` shows since 2026-10-13 ("Team Submitted Successfully!" for a 100%-off submit, not "Team Already Submitted") |
 | `people.js` | Pure convention functions: email/password derivation, roster validation, `ONLY=` filter |
 | `player-flows.js` | Player registration/sign-in/join-team helpers |
 | `roster-generated.js` | Deterministically generates ~108 extra athlete fixtures for 9 of the 12 teams |
@@ -217,7 +217,7 @@ the new Home (`9814afa`). All read-only. Results and run commands:
 | `judge-deep-screens.spec.js` | Running order, panel review, Senior Judge edit dialog, Mismatch/Tolerance alerts. Rewrites the scores response **in the browser only**; asserts the page stayed put |
 | `responsive-judge-walk.spec.js` (`audit:judge-walk`) | The slip's three tabs, nothing under the Submit bar, steppers. `WALK_UNLOCK=1`, `WALK_AGE=`, `WALK_APPEARANCE=` |
 | `responsive-score-sheet.spec.js` | Score sheet: cards below 1024, table from 1024, 0 clipped fields |
-| `look-specimen.spec.js` | The `/__look` specimen per look × appearance × role × width (+ dialogs and menu open): screenshots to `SPECIMEN_OUT`, contrast (incl. `::before` text), sideways scroll and 44px targets. Needs a dev or `VITE_LOOK_OVERRIDE=1` build (`E2E_BASE_URL`). The contrast measurement itself lives in `support/contrast.js`, shared with `contrast-audit.spec.js`; `measurePage` no longer counts focusable containers (tab panels, dialogs, regions) as tap targets |
+| `look-specimen.spec.js` | The `/__look` specimen per look × appearance × role × width (+ dialogs and menu open): screenshots to `SPECIMEN_OUT`, contrast (incl. `::before` text), sideways scroll and 44px targets. Needs a dev or `VITE_LOOK_OVERRIDE=1` build (`E2E_BASE_URL`). The contrast measurement itself lives in `support/contrast.js`, shared with `contrast-audit.spec.js`; `measurePage` no longer counts focusable containers (tab panels, dialogs, regions) as tap targets. Also fails if any piece of a shell masthead (`.shell-header__bar`) overlaps another or the bar scrolls sideways — a phone header once hid the role ident under the account cluster |
 | `appearance-everywhere.spec.js` | The Light/Dark switch on every page of every role, one choice everywhere (114/114) |
 | `appearance-persistence.spec.js`, `focus-visible.spec.js`, `edge-cases.spec.js`, `desktop-fold.spec.js`, `responsive-modals.spec.js` | Persistence across logout/reload; a visible focus change on every Tab stop; long names/empty lists/latency/500s; fold; dialog scrolling |
 | `perf-baseline.mjs` | Phone-profile speed (390×844, 4× CPU, Fast 4G, cold cache): median LCP, CLS and font/JS/CSS bytes for Home, player login, `/scores`, judge dashboard, against a production build (`PERF_URL`, default :4174). `--build <dir>` adds entry-chunk gzip sizes. Baselines in the design-language plan §14 |

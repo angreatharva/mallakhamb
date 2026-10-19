@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeSequence.jsx
 read_when: "changing the judge-side running-order screen"
 depends_on: [07-COMPONENTS, 09-REALTIME, 06-SCREENS/judge-dashboard]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -79,3 +79,13 @@ switching while this screen might stay mounted across the change.
   fight an in-flight optimistic drag.
 - Investigate the `category` `useMemo([])` staleness question above
   before assuming this screen safely reflects a live category switch.
+
+## Since the last pass (2026-10-18)
+
+- The running order and its dialogs were reworked for touch screens
+  (2026-10-03): drag handles and dialog actions are 44 px targets.
+- Its socket connects to `apiConfig.getSocketUrl()`, which strips only the
+  **trailing** `/api` (the old `replace('/api','')` broke on an `api.` host;
+  fixed 2026-10-15).
+- Line numbers (`:NNN`) above predate the 2026-10 restyle and are
+  approximate — search by the named function.

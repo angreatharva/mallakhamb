@@ -16,8 +16,8 @@ covers:
   - src/services/user/player.api.js
 read_when: "adding or changing any API call, touching CSRF/refresh/competition-lock handling, or looking up which endpoint a screen actually calls"
 depends_on: [10-AUTH-AND-SECURITY]
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Two axios instances, one interceptor stack
@@ -28,7 +28,9 @@ last_verified: 2026-10-07
 `publicApi` (anonymous, `withCredentials: true` but carries no
 Authorization header logic). Both hit the same `baseURL`
 (`apiConfig.getBaseUrl()`, `api.config.js:6` — `VITE_API_URL` or
-`http://localhost:5000/api`). Only `api` gets the request/response
+`http://localhost:5000/api`). The same module's `getSocketUrl()` (base minus
+its **trailing** `/api`) is what every Socket.IO connection uses — see
+[09-REALTIME.md](09-REALTIME.md). Only `api` gets the request/response
 interceptors described below; `publicApi` is used directly for
 `GET /csrf-token` and by `public.api.js`'s three anonymous endpoints.
 
@@ -264,6 +266,8 @@ several; the screens derive it from `?role=` via `pages/shared/resetPortal.js`.
 | `getTeamScores(params)` | GET `${basePath}/scores/team` |
 | `getIndividualScores(params)` | GET `${basePath}/scores/individual` |
 | `getTeamRankings(params)` | GET `${basePath}/scores/team-rankings` |
+| `recordTieBreakDraw(data)` | POST `${basePath}/tie-break/draws` — `{gender, ageGroup, competitionType, apparatus, order: [playerId…], competition?}`; records a physical lucky draw (2026-10-18, see [06-SCREENS/admin-scores.md](06-SCREENS/admin-scores.md)) |
+| `clearTieBreakDraw(data)` | DELETE `${basePath}/tie-break/draws` with the body in axios's `{ data }` — `{…category, apparatus, groupKey}` |
 | `getSubmittedTeams(params)` | GET `${basePath}/teams/submitted` |
 | `saveJudges(data)` | POST `${basePath}/judges/bulk` |
 | `getJudges(params)` | GET `${basePath}/judges` |

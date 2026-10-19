@@ -12,8 +12,8 @@ covers:
   - src/components/auth/AuthLoadingSpinner.jsx
 read_when: "changing login/logout/session behavior, route guarding, cross-tab sync, or the password-reset screens"
 depends_on: [04-STATE-MANAGEMENT, 08-API-INTEGRATION]
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Session model in one paragraph
@@ -381,3 +381,14 @@ that role's login, or `/` with no role), and `withPortal(path, portal)` (keeps
 - ⚠️ UNVERIFIED: HIGH-W3's full seven-module axios-bypass fix — corroborated
   by `judge.api.js`'s in-file comment and the progress log, not
   independently re-audited module-by-module.
+
+## Since the last pass (2026-10-18)
+
+- `ForgotPassword`, `ResetPassword`, `NotFound` and `AuthLoadingSpinner` were
+  restyled onto the shared auth shell (`AuthLayout` / `AuthHeader`, look
+  tokens) in the 2026-10-10 pass. The reset flow itself is unchanged since the
+  2026-10-07 rewrite above: the portal name comes from `?role=` (the login
+  page's "Forgot password?" link sets it), so one email that owns several
+  accounts resets the right one.
+- Back from a signed-in screen now asks "Sign out?" instead of reopening login
+  or the choosers — see [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#sign-out-on-back).

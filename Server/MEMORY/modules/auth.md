@@ -7,8 +7,8 @@ covers:
   - src/services/email/**
 read_when: "changing auth service internals, token/OTP mechanics, or email delivery"
 depends_on: [06-AUTH-AND-SECURITY]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 Flow-level narrative (login/refresh/logout/reset sequences, cookie
@@ -101,7 +101,8 @@ the synchronous-looking shim wired to `TokenInvalidationService` via
 ## Email — `src/services/email/`
 
 `email.service.js` selects a provider (`email.provider` config —
-`'nodemailer'` (default), `'resend'` or `'gmail-api'`) and delegates to
+`'nodemailer'` (default), `'resend'`, `'gmail-api'`, or `'none'` for the throw-away
+`_e2e` database only) and delegates to
 `nodemailer.adapter.js`/`resend.adapter.js`/`gmail-api.adapter.js`, all
 implementing `email-provider.interface.js`. **Production on Render must use
 `gmail-api`**: free Render blocks outbound SMTP (25/465/587), so Nodemailer

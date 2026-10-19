@@ -5,8 +5,8 @@ covers:
   - package.json
 read_when: "running or changing a seed/ops/perf script, or checking what an npm script actually does before running it"
 depends_on: [01-ARCHITECTURE, 04-DATA-MODEL]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 All 40 npm scripts map cleanly to an existing file (`scripts/*.js`,
@@ -29,7 +29,7 @@ entries" callout claiming broken migrate aliases and phantom scripts is
 | Script | npm script | What it does | Blast radius |
 |---|---|---|---|
 | `createAdmin.js` | `create-admin` | Idempotent dev admin creation | 1 DB doc |
-| `createSuperAdmin.js` | `create-superadmin` | Idempotent dev superadmin creation | 1 DB doc |
+| `createSuperAdmin.js` | `create-superadmin` | Idempotent dev superadmin creation; reads `SEED_SUPERADMIN_EMAIL`/`SEED_SUPERADMIN_PASSWORD` like `seedApi` does (since 2026-10-16, so the nightly lifecycle run and the seed agree on one account) | 1 DB doc |
 | `createCompetitions.js` | `create-competitions` | Creates/updates the 12 seeded meets from `seed/meets.json`; `--late` back-dates fee deadlines | Writes Competition+Admin docs |
 | `planPanels.js` | `seed:panels:plan` | Draws random panel sizes (3/4/5) + seats **once** per meet, writes `seed/panel-plan.json`; refuses to overwrite without `--force` | Local file only — see *Panel Plan* |
 | `seatPanel.js` | `seed:panels:one` | Seats ONE panel category via the real admin HTTP API (single-category repair tool) | Live HTTP + Judge docs |
@@ -41,7 +41,8 @@ entries" callout claiming broken migrate aliases and phantom scripts is
 | `setupAll.js` | `setup`, `setup:list`, `setup:dry` | Orchestrates the full seed chain end to end (mixes DB-direct/browser/API steps); `--from/--to/--only/--drop` | Can drop the whole DB |
 | `setupApi.js` | `setup:api`, `setup:api:list` | Same chain, every step after bootstrap goes over HTTP (no browser) | Live HTTP throughout |
 | `setupUi.js` | `setup:ui`, `setup:ui:list` | Same chain, driven through a real browser (Playwright specs in `Web/e2e`) | Slowest, most thorough — real browser against the real app |
-| `verifySeed.js` | (invoked internally by `setup-chain.js`) | Read-only invariant checker confirming a seeded DB is actually complete | Pure read |
+| `verifySeed.js` | (invoked internally by `setup-chain.js`) | Read-only invariant checker confirming a seeded DB is actually complete. "Published" now counts per **row**: finalized AND (whole-doc `isLocked` OR the row's apparatus in `lockedApparatus`) — the same two-gate rule the public results apply (it used to require whole-doc locks) | Pure read |
+| `seedTrials.js` | (`node scripts/seedTrials.js [--competition=SGAM-TRIALS-1] [--only=teams\|pay\|judges] [--dry-run]`) | Fills ONE existing meet over the real API: 5 teams (`SGAM-TRIALS-TEAM-A…E`), 300 athletes (6 per age group per team, every apparatus their gender is offered), pays via the discount code, registers 6 judges **without** seating them. Idempotent. Accounts `sgamtrials.<a-e>@example.com` etc., password `<Firstname>@2026` — see *TRIALS Seed* in project memory | Live HTTP, hundreds of accounts |
 | `captureEnvironment.js` | `seed:capture` | Reads a live DB, writes `seed/registrations.generated.json` for replay elsewhere | Read-only DB; 1 local file |
 
 See *Seed Chains*, *Seed Roster*, *Browser Seeding Traps* in project memory for the roster/timing detail behind these.
@@ -76,7 +77,7 @@ equals `MONGODB_URI` or doesn't look like a scratch DB name.
 | `loadTest.js` | Concurrent load test at several concurrency levels |
 | `probe.js` | Response payload sizes, which fields dominate them |
 | `socketLoad.js` | Socket.IO connect time + slip fan-out latency/throughput |
-| `testApi.js` | Functional walk of the whole API in product order — the closest thing to an API-only E2E smoke suite |
+| `testApi.js` | Functional walk of the whole API in product order — the closest thing to an API-only E2E smoke suite (no longer probes the retired `GET /api/health/metrics`) |
 | `lib/harness-server.js` | Boots the real `createApp` in-process against a chosen Mongo URI |
 | `lib/client.js` | `ApiClient` — cookie jar + CSRF + Bearer + competition-context client mimicking the SPA |
 
@@ -89,7 +90,10 @@ fixtures), `roster.js` (bridges CJS scripts to the ESM roster files under
 `Web/e2e/support/` via dynamic `import()` — so API and UI chains seed the
 same people), `setup-chain.js` (the shared engine behind `setupAll/Api/Ui.js`
 — locking via a lock file so only one seed run happens at a time, arg
-parsing, `--drop` confirmation, step runner, verification).
+parsing, `--drop` confirmation, step runner, verification). The lock file is
+`scripts/seed/.setup-running`, or `SETUP_LOCK_PATH` when set — the OCI nightly
+run uses its own so it never collides with a manual seed on the same VM.
+`meets.js` applies `SEED_SEASON_LEAD_DAYS` (see below) through `shiftSeason`.
 
 ## Env vars scripts read directly
 
@@ -100,7 +104,9 @@ rather than through `config-manager.js`:
 |---|---|---|
 | `SEED_ADMIN_PASSWORD` | `scripts/lib/admin-api.js` | Required to sign in as admin for panel-seating scripts (not defaulted — refuses if unset) |
 | `SEED_ADMIN_EMAIL` | `scripts/lib/admin-api.js`, `seedApi.js` | Defaults to `admin@gmail.com` |
-| `SEED_SUPERADMIN_EMAIL`/`SEED_SUPERADMIN_PASSWORD` | `seedApi.js` | Default to the hardcoded local superadmin pair |
+| `SEED_SUPERADMIN_EMAIL`/`SEED_SUPERADMIN_PASSWORD` | `seedApi.js`, `createSuperAdmin.js` | Default to the hardcoded local superadmin pair |
+| `SEED_SEASON_LEAD_DAYS` | `scripts/lib/meets.js` | Slides the fixed seed season forward so its first meet starts at least N days from today (whole days, else it throws). Set by the nightly e2e so the fee windows are always open; unset = the fixed dates. Test: `tests/unit/scripts/seed-season-shift.test.js` |
+| `SETUP_LOCK_PATH` | `scripts/lib/setup-chain.js` | Overrides the one-run-at-a-time lock file |
 | `SEED_API_URL` | `admin-api.js`, `seedScores.js`, `seedApi.js` | Where seed HTTP calls point; default `http://127.0.0.1:5000/api` |
 | `SEED_WORKERS` | `setupUi.js` | Playwright parallelism; default `4` |
 | `COMPETITION_PLACE` | `planPanels.js` | Which meet the panel plan treats as "default" |

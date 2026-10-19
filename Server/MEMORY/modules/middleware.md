@@ -4,8 +4,8 @@ covers:
   - src/middleware/**
 read_when: "adding a new middleware, or figuring out which existing one already does what you need"
 depends_on: [01-ARCHITECTURE, 06-AUTH-AND-SECURITY, 02-CONVENTIONS]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Purpose
@@ -24,7 +24,7 @@ the file-by-file index.
 | File | Exports | Mounted |
 |---|---|---|
 | `auth.middleware.js` | `createAuthMiddleware`, `requireRole`, `requirePlayer`, `requireCoach`, `requireAdmin`, `requireSuperAdmin`, `requireJudge`, `requireAdminOrScorer`, `requireSequenceManager` | Per-route, not global |
-| `security.middleware.js` | `generateNonceMiddleware`, `createHelmetMiddleware`, `createCorsMiddleware`, `createIpRateLimitMiddleware` (unused — see below), `createUserRateLimitMiddleware`, `createAuthRateLimitMiddleware`, `createJudgeLoginRateLimitMiddleware`, `createStrictRateLimit` (unused), `createRequestSizeLimits` (unused) | `createApp.js` (nonce/helmet/CORS global); rate limiters attached per-router in `routes/index.js` |
+| `security.middleware.js` | `generateNonceMiddleware`, `createHelmetMiddleware`, `createCorsMiddleware`, `createIpRateLimitMiddleware` (unused — see below), `createUserRateLimitMiddleware`, `createAuthRateLimitMiddleware`, `createJudgeLoginRateLimitMiddleware`, `createStrictRateLimit` (unused), `createRequestSizeLimits` (unused) | `createApp.js` (nonce/helmet/CORS global); rate limiters attached per-router in `routes/index.js`. A refused CORS origin is an `AuthorizationError` → **403** (was a 500 until 2026-10-17) |
 | `csrf.middleware.js` | `csrfTokenHandler`, `createCsrfMiddleware` | `createApp.js` (global, if `csrfEnabled`); handler mounted at `GET /api/csrf-token` |
 | `competition-context.middleware.js` | `validateCompetitionContext` | Per-route |
 | `competition-lock.middleware.js` | `createCompetitionLockGuard` → `requireUnlockedCompetition(options)` | Per-route, always after auth |

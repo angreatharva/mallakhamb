@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeTeamPlayers.jsx
 read_when: "changing the judge's team roster screen or apparatus-eligibility filtering"
 depends_on: [SHARED-CONTRACTS, 09-REALTIME]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -85,3 +85,11 @@ with full session state including `returnTo: /judge/team/${team._id}`.
 - Any new apparatus-eligibility check on this screen should go through
   `isRegisteredFor`, not a hand-rolled object lookup — that's the exact
   bug class already fixed here once.
+
+## Since the last pass (2026-10-18)
+
+- The athlete list no longer scrolls sideways on small phones (2026-10-02).
+- Its socket connects to `apiConfig.getSocketUrl()` (trailing-`/api` strip,
+  fixed 2026-10-15 for `api.` hosts).
+- Line numbers (`:NNN`) above predate the 2026-10 restyle and are
+  approximate — search by the named function.

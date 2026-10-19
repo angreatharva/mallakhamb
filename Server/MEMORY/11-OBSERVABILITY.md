@@ -13,8 +13,8 @@ covers:
   - src/routes/health.routes.js
 read_when: "adding logging, debugging why a metric/health check reads wrong, or working on the audit trail"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Logging — `src/infrastructure/logger.js` (Winston wrapper)
@@ -32,9 +32,12 @@ Transport selection by environment, all inside `createLogger()`:
   `combined.log`, `maxsize:5MB`, `maxFiles:5`, `tailable:true` (the
   `tailable` flag is a deliberate fix for orphaned log-file generations
   across dev restarts).
-- `LOG_DIR = path.join(__dirname, '..', '..', 'logs')` — resolved relative to
-  the module's own location (`Server/logs/`), specifically to avoid
-  depending on `process.cwd()`.
+- `LOG_DIR = process.env.LOG_DIR || path.join(__dirname, '..', '..', 'logs')`.
+  The default is resolved relative to the module's own location
+  (`Server/logs/`), specifically to avoid depending on `process.cwd()`.
+  `LOG_DIR` exists for a **second instance of the same release** (the OCI
+  nightly e2e copy, deploy/oci/PLAN.md O14), which must not write into the real
+  API's log files.
 - Level: `debug` in development, `info` otherwise.
   `defaultMeta: {service:'mallakhamb-api', environment}`.
 
@@ -79,7 +82,23 @@ scrapes it every 60 s; dashboards, alerts and synthetic checks are in
   timing only with `DB_MONITOR_COMMANDS=true` (costs ~25 % p50).
 - **Socket.IO, business counters** — injected as an optional last constructor
   argument (`metrics`, default `noopMetrics`) into the socket manager and the
-  scoring, auth, judge, payment and email services.
+  scoring, auth, judge, payment and email services. (ScoringService has since
+  gained one more optional argument after it, `tieBreakDrawRepository`.)
+  Business series include scores/min by outcome
+  (`metrics.business.scoreSubmitted('accepted'|'rejected')`, from
+  `ScoringService.saveScores`, the one path every score write takes) and
+  `mallakhamb_payment_webhooks_total{event,outcome}` with outcomes
+  `processed` / `ignored` / `rejected_signature` / `error` (from
+  `PaymentService.reconcileWebhook`). Socket series: see
+  [08-REALTIME-SOCKETS.md](08-REALTIME-SOCKETS.md).
+- **`app_info`** — `version` label = first 7 chars of `GIT_COMMIT` (written by
+  `mallakhamb-deploy` on the OCI VMs), else `RENDER_GIT_COMMIT`, else `dev`
+  (deploy C1.11 / F19, 2026-10-16). Grafana shows the running commit from it.
+- `EMAIL_PROVIDERS` (the allow-list for the email provider label) is
+  `resend` / `nodemailer` / `none`. ⚠️ **`gmail-api` is missing**, and `pick()`
+  maps anything off the list to `other` — so production (which must use
+  `gmail-api` on Render) reports its mail as `provider="other"`. Not fixed as of
+  2026-10-18; add `'gmail-api'` to the set (and its test) when touching this.
 - Label values from outside the process go through allow-lists; a unit test
   fails if a label NAME outside `ALLOWED_LABEL_NAMES` ever appears.
 

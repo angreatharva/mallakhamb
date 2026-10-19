@@ -7,8 +7,8 @@ covers:
   - src/contexts/CompetitionContext.jsx
 read_when: "adding shared state, touching competition selection/auto-select, or debugging a session/competition mismatch"
 depends_on: [10-AUTH-AND-SECURITY, 08-API-INTEGRATION]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## No Redux/Zustand — React Context is the entire state-management story

@@ -6,8 +6,8 @@ covers:
   - src/routes/team.routes.js
 read_when: "changing team CRUD, roster membership, or the /api/teams surface"
 depends_on: [03-DOMAIN-MODEL, 05-API-SURFACE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Purpose

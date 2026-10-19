@@ -8,8 +8,8 @@ covers:
   - src/utils/security/competition-lock.util.js
 read_when: "changing competition CRUD, the fee/lock policy modules, or the /api/competitions surface"
 depends_on: [03-DOMAIN-MODEL, 06-AUTH-AND-SECURITY]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Purpose
@@ -30,8 +30,8 @@ modules every write route in this domain depends on.
 
 | Method | Contract |
 |---|---|
-| `createCompetition` | Validates, persists |
-| `updateCompetition` | Persists partial updates |
+| `createCompetition` | Validates, strips superadmin-only fee fields, runs `applyApparatusByGender` (stores `apparatusByGender`, derives `apparatusConfig`), persists |
+| `updateCompetition` | Persists partial updates, through the same `applyApparatusByGender` (against the stored `competitionTypes`) |
 | `deleteCompetition` | — |
 | `getCompetitionById` | Single read, cached |
 | `getCompetitions` | List, cached |

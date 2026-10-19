@@ -5,20 +5,41 @@ covers:
   - src/pages/judge/judgeCategoryOptions.js
 read_when: "changing the judge landing screen, the category picker, or multi-meet switching"
 depends_on: [SHARED-CONTRACTS, 09-REALTIME, 08-API-INTEGRATION]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
 
-`src/pages/judge/JudgeDashboard.jsx` (1076 lines), route
+`src/pages/judge/JudgeDashboard.jsx` (1204 lines), route
 `/judge/dashboard`. Judge's name/seat header; a 5-rung category-ladder
 picker modal (meet → Gender → Age Group → Competition Type →
 Apparatus), auto-opened on first visit for a seated judge (`:165-174`);
 once confirmed, a "Current Assignment" summary strip, a searchable team
 list (filtered/sorted by live running order), a "Set Sequence" button
 (Senior Judge/Scorer seats only, linking to `/judge/sequence`), a
-"Change Category" button, and Profile/Logout.
+"Change Category" button, and Profile/Logout. The meet list shows each meet's
+place and level (`levelLabel`, `utils/competition/levels.js` — six levels incl.
+DSO and University).
+
+## Scorer + Time Keeper — the role popup (2026-09-27)
+
+The Scorer and Time Keeper are the **one pair of seats one person may hold
+together**. When the chosen category seats this person as both
+(`holdsBothRecorderSeats(seatTypesFor(judgeInfo, category))`,
+`RECORDER_ROLES = ['Scorer', 'Time Keeper']`), a popup of its own asks which
+role to work as, right after the category is confirmed. The answer is kept in
+`sessionStorage['judge_selected_role']` so a refresh doesn't ask again, and is
+**cleared whenever the category changes** (a new category asks again). Until it
+is answered the team list waits behind the popup; the strip then shows the
+chosen role (Timer icon for the Time Keeper).
+
+Opening a team: the **Time Keeper** goes straight to `/judge/scoring` with the
+team and `isTimeKeeper: true` (like the Scorer, who gets `isScorer: true`);
+for a both-seat person the popup's choice decides which flag is set. The
+dispatcher in `JudgeScoring.jsx` reads those flags — see
+[judge-scoring.md](judge-scoring.md) and
+[time-keeper-scoring.md](time-keeper-scoring.md).
 
 ## Multi-meet switching — a genuinely significant, safety-relevant flow
 
@@ -43,8 +64,12 @@ panel without a live fetch.
 
 ## Apparatus resolution priority
 
-(`:241-278`) Seat's own named apparatus (legacy) > meet's
-`apparatusConfig` > what registered athletes actually hold. Explicit
+(`availableApparatus`) Seat's own named apparatus (legacy) > what the meet
+runs **for this gender** in this type (`offeredApparatus(activeCompetition,
+type, gender)` from `utils/scoring/apparatus.js`, which reads
+`apparatusByGender` and falls back to the per-type `apparatusConfig` for a
+meet saved before the split) > what registered athletes of this gender and age
+group actually hold. Explicit
 past-bug note: `judgeInfo.competition` is stored as a bare id string,
 so an old lookup `judgeInfo.competition?.apparatusConfig?.[type]` was
 always `undefined` — `activeCompetition` (the full stored competition
@@ -69,7 +94,7 @@ leaving an invisible-but-still-click-swallowing full-screen overlay
 
 ## Socket usage
 
-Own connection (`:500-522`) purely for live running-order re-sort —
+Own connection (URL `apiConfig.getSocketUrl()`) purely for live running-order re-sort —
 joins `scoring_${gender}_${ageGroup}_${competitionType}`, listens for
 `performance_order_updated`, applies directly via
 `indexPerformanceOrder` rather than refetching. See

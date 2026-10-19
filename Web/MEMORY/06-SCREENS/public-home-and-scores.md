@@ -6,8 +6,8 @@ covers:
   - src/pages/public/PublicScores.jsx
 read_when: "changing the public landing page or the public results viewer"
 depends_on: [07-COMPONENTS, 05-DESIGN-SYSTEM]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## `Home.jsx` — the landing page (rebuilt 2026-10-06, `9814afa`)
@@ -45,9 +45,11 @@ quality bar). The old 839-line Home (particles, `MagneticCursor`, dead
   desktop windows.
 - **Touch targets:** footer and photo-credit links are ≥ 44px tall and wide
   below the laptop layout and on touch (`99c4372`, `529e52f`, `81207da`).
-- **`home/preload.js`** + an inline script in `index.html`: on `/` the hero
-  photo, the Home chunk and the fonts (self-hosted Fontsource Teko + Archivo,
-  CSP `font-src 'self'`) start with the app's boot.
+- **`home/preload.js`**, called from `main.jsx` on `/` only: the Home chunk,
+  the hero photo (a `<link rel=preload as=image fetchpriority=high>` added
+  here, because the hero's URL is hashed at build time and `index.html` can't
+  name it) and the fonts (self-hosted Fontsource Teko + Archivo, CSP
+  `font-src 'self'`) start with the app's boot.
 - Home is a **dark island**: its own palette (black stage, teak, chalk,
   saffron), whatever the appearance. It's the reference implementation of the
   "Prime Time" language that `docs/design-language/PLAN.md` rolls out
@@ -56,8 +58,15 @@ quality bar). The old 839-line Home (particles, `MagneticCursor`, dead
 - Brand rule: the page says **"Mallakhamb India"**; "Bhausaheb", "Ranade",
   "Navodit" must not appear. `src/assets/main-home.jpg` shows "RANADE" in its
   pixels — never use it here.
-- No data fetching. Photos are hotlinked from Wikimedia/Pexels (CSP
-  `img-src https:`).
+- No data fetching. **Photos are local** since 2026-10-11 (`274c13a`):
+  `home/images.js` imports five files from `Web/assets/images` (hero
+  `China-Main.jpg`, pole `veerbadrasana-III.jpg`, hanging
+  `Hanging-Mallakhamb.jpg`, rope `wadi.jpg`, live `Mallakhamba-Mumbai-1.jpg`),
+  so Vite bundles and hashes them and nothing loads from another site.
+  `sections.html` is imported `?raw`, so its `<img>`s name a placeholder
+  `src="%img:<key>%"` that `fillImages()` swaps for the bundled URL (an
+  unknown key throws). The Wikimedia/Pexels hotlinks are gone, and so are the
+  `footer.html` credit lines for the photos they replaced, and `docs/homepage/images.json` was deleted.
 - **Verify:** `npm run build && npm run preview`, then `npm run audit:home`
   (41 device profiles). Measured phone (4x CPU, fast 4G) FCP 1.5 s / LCP 2.5 s /
   CLS 0.

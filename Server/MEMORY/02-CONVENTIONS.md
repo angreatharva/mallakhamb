@@ -6,8 +6,8 @@ covers:
   - src/middleware/validation.middleware.js
 read_when: "writing a new controller/service, deciding what error to throw, or following the response-envelope shape"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Layer naming

@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedRegister.jsx
 read_when: "changing registration for player/coach/judge, or the post-registration redirect per role"
 depends_on: [13-FORMS-AND-VALIDATION, 03-ROUTING-AND-NAV]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -94,3 +94,9 @@ circumstance.
   `HOME_AFTER_REGISTER`, and think through whether that role needs the
   same "no data yet, show an explanatory landing page" treatment judges
   get, rather than defaulting to `select-level`.
+
+## Since the last pass (2026-10-18)
+
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

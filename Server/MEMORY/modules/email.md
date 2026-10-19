@@ -6,8 +6,8 @@ covers:
   - docs/gmail-api-email.md
 read_when: "changing email provider selection, templates, or what triggers an email"
 depends_on: [modules/auth]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 The reset flow that triggers these mails is in
@@ -18,7 +18,8 @@ service internals in [modules/auth.md](auth.md#email--srcservicesemail).
 
 | File | Role |
 |---|---|
-| `src/services/email/email.service.js` | Provider selection (`email.provider`: `nodemailer` default, `resend`, `gmail-api`), retry queue (3 tries), metrics, and `checkHealth()` |
+| `src/services/email/email.service.js` | Provider selection (`email.provider`: `nodemailer` default, `resend`, `gmail-api`, `none`), retry queue (3 tries), metrics, and `checkHealth()` |
+| `src/services/email/none.adapter.js` | **Sends nothing** (2026-10-16). For the OCI nightly lifecycle run (deploy/oci/PLAN.md O14), which registers 110 athletes, 16 judges and 12 coaches on a throw-away DB. Logs recipient + subject only (never the body, which can hold an OTP), counts suppressed messages, warns at construction. `ConfigManager` refuses it in production unless the DB name ends in `_e2e`. Test: `tests/unit/services/email/none-provider.test.js` |
 | `src/services/email/email-provider.interface.js` | The interface every adapter implements (`sendEmail`, `verifyConfiguration`) |
 | `src/services/email/nodemailer.adapter.js` | SMTP. Connect/greeting timeouts 10 s, socket 20 s (the 2-minute default turned a blocked port into a 6-minute hang across retries) |
 | `src/services/email/resend.adapter.js` | Resend API. Needs a verified sending domain, which the project doesn't own yet |
@@ -64,5 +65,10 @@ service internals in [modules/auth.md](auth.md#email--srcservicesemail).
   so it must not turn `/api/health` into a 503. See
   [11-OBSERVABILITY.md](../11-OBSERVABILITY.md).
 
+- **The emails-sent metric labels production mail `provider="other"`.** The
+  registry's `EMAIL_PROVIDERS` allow-list has no `gmail-api` (see
+  [11-OBSERVABILITY.md](../11-OBSERVABILITY.md)).
+
 Tests: `tests/unit/services/email/gmail-api.adapter.test.js`,
-`tests/unit/services/email/email-health.test.js`.
+`tests/unit/services/email/email-health.test.js`,
+`tests/unit/services/email/none-provider.test.js`.

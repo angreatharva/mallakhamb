@@ -5,8 +5,8 @@ covers:
   - eslint-rules/**
 read_when: "adding a new file, wondering why lint is warning about a color/spacing literal, or setting up a new test/e2e file's lint scope"
 depends_on: [05-DESIGN-SYSTEM]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Import alias: `@/` → `src/`

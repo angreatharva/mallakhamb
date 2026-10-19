@@ -99,7 +99,7 @@ before touching adjacent code.
   athletes were judged on the ten-item Pole checklist because of this
   line." Fixed by treating an empty/unset apparatus as "whatever the
   athlete is registered for," never a hardcoded default. See
-  [judge-team-players.md](06-SCREENS/judge-team-players.md#empty-apparatus-is-not-the-same-as-pole).
+  [judge-team-players.md](06-SCREENS/judge-team-players.md).
 - **A hook-order crash from a conditional early return.** `JudgeScoring.jsx`
   used to branch Scorer-vs-Judge with an early return before ~17 hooks
   ran; if the branch flipped mid-instance-life (a storage eviction could
@@ -122,11 +122,20 @@ before touching adjacent code.
 
 ## Unguarded client/server duplication — no automated drift detector
 
-Only **3 of 8** client/server value-duplication pairs in this codebase
-have an automated cross-stack test (one that literally imports the
-server module and asserts identical output): the COP static tables, the
-fee window, and the competition-lock boundary. The rest are either
-hand-verified-identical-in-prose or genuinely untested:
+Only **4** client/server value-duplication pairs in this codebase have an
+automated cross-stack test (one that literally imports the server module and
+asserts identical output): the COP static tables, the fee window, the
+competition-lock boundary, and — since 2026-09-26 — the competition levels
+(`levels.test.js`). The rest are either hand-verified-identical-in-prose or
+genuinely untested:
+
+- **New since the last pass, untested:** `offeredApparatus` (apparatus per
+  gender — `utils/scoring/apparatus.js` vs. the server's
+  `competition-apparatus.util.js`), `teamSize.js` (4→3 / 6→5 vs.
+  `team-championship.util.js`), the Scorer + Time Keeper sharing rule
+  (`AdminJudges.jsx`'s local `maySeatTogether` vs. `config/judge-seats.js`),
+  and the seat list itself (`EMPTY_JUDGE_FORM` / `REQUIRED_JUDGE_TYPES` vs.
+  `JUDGE_SEAT_TYPES` / `MINIMUM_PANEL_SEATS`). Change both sides together.
 
 - **The panel-averaging methodology itself is not sync-tested** —
   `calculateAverageMarks`/`resolveDifficultyValue` (client) vs.
@@ -165,16 +174,17 @@ names (`DarkCard`, `FadeIn`, `EmptyState`…) drawn by the `ui` primitives,
 and `EmptyState` also exists in `@/components/ui` — check the import path.
 See [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md#same-names-different-components).
 
-## Open blockers for moving production off Render (`deploy/COMMON.md`, 2026-10-11)
+## Moving production off Render (`deploy/COMMON.md`) — status 2026-10-18
 
-Both work on `*.onrender.com` today and break on the planned
-`mallakhambcompetition.com` hosts:
-- **F1 — socket URL.** Seven files build it with
-  `VITE_API_URL.replace('/api','')`, which mangles an `api.` hostname. See
-  [09-REALTIME.md](09-REALTIME.md#connection-setup--identical-across-all-six).
-- **F2 — CSP.** `connect-src` in `index.html` allows only `'self'`,
-  Razorpay, `*.onrender.com`, ngrok and loopback. Add the new
-  `https://`/`wss://` API hosts and **keep** the onrender entries until
+- ~~**F1 — socket URL.**~~ **Fixed 2026-10-15** (`3c628e1`): all seven
+  live-scoring surfaces call `apiConfig.getSocketUrl()`, which strips only a
+  trailing `/api`. Never hand-build a socket URL with `.replace('/api','')`
+  again — it mangles an `api.` hostname. See
+  [09-REALTIME.md](09-REALTIME.md#connection-setup--identical-across-all-seven).
+- **F2 — CSP, partly done.** `connect-src` in `index.html` allows `'self'`,
+  Razorpay, `*.onrender.com`, ngrok, loopback and now the OCI **staging** API
+  (`https://` and `wss://api-137-23-63-84.sslip.io`). The real production API
+  host must still be added at cutover, and the onrender entries **kept** until
   decommission (rollback needs them).
 
 ## Styling traps (responsive/appearance work, 2026-10)
@@ -229,6 +239,18 @@ your own machine.
 
 ## Other traps worth knowing
 
+- **`utils/scoring/teamSize.js`'s header is stale**: it says the size is
+  declared by a coach when creating a team. Since 2026-09-26 it is the
+  superadmin's per-competition `maxTeamSize`; the coach only sees the cap.
+- **`CoachDashboard.jsx` still `console.log`s the whole dashboard payload**
+  ("Dashboard full response:") on every load. Production builds drop
+  `console.*` (`drop_console` in `vite.config.js`), so it only shows in dev —
+  but don't copy the pattern.
+- **Tie-break labels are keyed to server reason codes.** A new reason in
+  `Server/src/utils/scoring/tie-breaker.util.js` without a matching key in
+  `PlayerRankingBoard`'s `TIE_BREAK_LABELS` leaves the card with no
+  explanation, silently.
+
 - **`SuperAdminManagement.jsx` has no Teams or Judges section** —
   `deleteTeam`/`deleteJudge` are never called from that file, despite
   being real `superAdminAPI` functions. ⚠️ UNVERIFIED where those two
@@ -247,7 +269,7 @@ your own machine.
   every active team across all competitions. The **join** action does
   correctly scope by competition; only the displayed list is too broad.
   This is a server-only fix — don't attempt a client workaround. See
-  [player-team-selection.md](06-SCREENS/player-team-selection.md#a-known-live-defect--server-side-not-this-screens-fault).
+  [player-team-selection.md](06-SCREENS/player-team-selection.md#a-known-documented-live-defect--server-side-not-this-screens-fault).
 - **`JudgeSequence.jsx`'s `category` is computed once via
   `useMemo(() => ({...}), [])`** — if the judge's selected category
   changes elsewhere while this screen stays mounted, this value would

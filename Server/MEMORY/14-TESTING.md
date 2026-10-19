@@ -5,8 +5,8 @@ covers:
   - package.json (jest config)
 read_when: "writing a test for any layer, or figuring out where an existing test for a subsystem lives"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Setup
@@ -22,8 +22,9 @@ confirmed complete). Jest config (`package.json`): `testMatch:
 (`afterEach`) — tests share one in-memory Mongo instance but start each test
 with empty collections.
 
-Suite counts: `tests/unit/` = 33, `tests/integration/` = 12,
-`tests/security/` = 11 — **56 total**, matching `README.md`'s claim exactly.
+Suite counts (2026-10-18): `tests/unit/` = 50, `tests/integration/` = 13,
+`tests/security/` = 12 — **75 suites, 953 tests, all green** (`npx jest`).
+`README.md` still claims 56; it is stale.
 
 ## Where to find/add a test, by subsystem
 
@@ -40,11 +41,20 @@ incl. judge; timing-safe unknown-account handling),
 constant-time compare), `unit/models/password-reset-fields.test.js` (every
 account model has the reset trio), `unit/services/email/gmail-api.adapter.test.js`,
 `unit/services/email/email-health.test.js`,
-`unit/utils/security/account-lockout.util.test.js`.
+`unit/services/email/none-provider.test.js` (`EMAIL_PROVIDER=none` sends
+nothing and is refused in production off an `_e2e` DB),
+`unit/utils/security/account-lockout.util.test.js`,
+`security/csrf-cookieless.security.test.js` (cookieless requests — iPhones
+block the cross-site cookies — pass on the signed CSRF header).
 
 **Scoring / COP**: `unit/calculation.service.test.js`,
 `unit/v2-scoring.test.js` (panel sizes, tolerance/time tables, difficulty
-cascade, tie-breaks per panel size, apparatus/gender restriction),
+cascade, tie-breaks per panel size incl. the COP §2.1.3 base-score worked
+example, apparatus/gender restriction),
+`unit/lucky-draw.test.js` (lucky draw on 3- and 4/5-judge panels, stale and
+per-apparatus draws, `TieBreakDrawService.recordDraw` refusals),
+`unit/utils/scoring/team-championship.util.test.js` (best 3 / best 5 per
+apparatus, squad cap),
 `unit/final-score-deductions.test.js`, `unit/ranking-apparatus.test.js`,
 `unit/utils/scoring/judge-slip.util.test.js`,
 `unit/utils/scoring/ranking.util.test.js`,
@@ -57,16 +67,23 @@ produce identical scoring behavior), `unit/submission-visibility.test.js`,
 the Scorer's sheet), `integration/admin-score-lock-cycle.test.js`,
 `integration/apparatus-lock.test.js`.
 
+**Competition setup**: `unit/competition-apparatus.test.js` (apparatus per
+type and gender, derived `apparatusConfig`), `unit/competition-levels.test.js`
+(the six levels), `unit/services/competition/competition.service.test.js`.
+
 **Panels / judges**: `unit/panel-apparatus-scope.test.js`,
 `unit/judge-panel-assignment.test.js`, `unit/judge-assignment.util.test.js`,
 `unit/judge-account.service.test.js`, `unit/performance-order.service.test.js`.
 
 **Payment**: `unit/discount-code.test.js`, `unit/late-fee-window.test.js`,
+`unit/services/payment/webhook-secret.test.js` (`RAZORPAY_WEBHOOK_SECRET`
+first, key-secret fallback with one warning),
 `integration/payment-webhook-reconcile.test.js` (does **not** cover the
 webhook-idempotency gap noted in GOTCHAS.md — no "same event delivered
 twice" case exists).
 
 **Competition lock / scope**: `security/competition-lock-enforcement.test.js`,
+`integration/competition-lock-enforcement.test.js`,
 `security/competition-lock.security.test.js` (the exact 23:59:59.999 UTC
 boundary, superadmin override, defer-not-refuse behavior),
 `security/competition-scope.security.test.js` (admin scope, judge seat
@@ -91,12 +108,26 @@ incident that once broke `migrate:up` in production),
 `unit/infrastructure/database/index-manager.test.js` (guards the "same key,
 different name" incident that rolled back migration 005).
 
-**Infra / routing / validation**: `unit/middleware/request-coalescing.middleware.test.js`,
+**Observability / process**: `integration/prometheus-metrics.test.js`,
+`unit/infrastructure/prometheus.registry.test.js` (label allow-lists,
+`app_info` version from `GIT_COMMIT`),
+`unit/infrastructure/prometheus.route-label.test.js`,
+`unit/middleware/metrics-auth.middleware.test.js`,
+`unit/infrastructure/graceful-shutdown.test.js` (a clean SIGTERM must not
+exit 7 — never log to the ended winston logger),
+`unit/infrastructure/keep-alive.test.js`.
+
+**Scripts**: `unit/scripts/seed-season-shift.test.js`
+(`SEED_SEASON_LEAD_DAYS`).
+
+**Infra / routing / validation**: `unit/middleware/cors-reject.test.js`
+(a refused origin is a 403, not a 500),
+`unit/middleware/request-coalescing.middleware.test.js`,
 `unit/validation-middleware.test.js`, `unit/public-validation.test.js`,
 `unit/repositories/audit-log.repository.test.js`,
 `unit/routes/admin.routes.test.js` (auth guards, isolated app + mocked
-`auth.middleware` — ⚠️ project memory flags this as a known-failing test;
-not re-verified by running the suite in this research pass),
+`auth.middleware` — passes in the full run of 2026-10-18; the old
+"known-failing" note is out of date),
 `unit/routes/judge.routes.test.js` (retired flat-score endpoints,
 `GET /api/judge/lots`).
 

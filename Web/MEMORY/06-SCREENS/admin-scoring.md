@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminScoring.jsx
 read_when: "changing the admin/superadmin live score-entry screen"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT, 09-REALTIME, 04-STATE-MANAGEMENT]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -88,3 +88,10 @@ project — see [01-ARCHITECTURE.md](../01-ARCHITECTURE.md)).
   "one payload, whole-sheet lock" assumption at `:302-316` still holds
   — a partial save would need to change how `lockedApparatus` gates the
   form.
+
+## Since the last pass (2026-10-18)
+
+- Its socket connects to `apiConfig.getSocketUrl()`, which strips only the **trailing** `/api` (fixed 2026-10-15 for `api.` hosts). It still carries the dead `scores_saved_error` listener (`:172`) — see [judge-panel-data-hook.md](judge-panel-data-hook.md).
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.

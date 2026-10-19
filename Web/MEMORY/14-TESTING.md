@@ -6,8 +6,8 @@ covers:
   - "**/*.test.jsx"
 read_when: "adding a test, debugging a failing test, or deciding whether a test file already covers something"
 depends_on: [SHARED-CONTRACTS, 10-AUTH-AND-SECURITY, 13-FORMS-AND-VALIDATION]
-verified_against_commit: 7f250ee
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Stack
@@ -63,13 +63,28 @@ the same provider stack, there's no existing `renderWithProviders` to
 extend — you'd be the first to add one**, or continue the established
 pattern of duplicating the wrapper inline.
 
-## Full test-file inventory (44 files, 405 tests — green 2026-10-07), by subsystem
+## Full test-file inventory (55 files, 496 tests — green 2026-10-18), by subsystem
 
 - **styles/** — 2: `alpha.test.js` (byte-exact `alpha()`),
   `colourHygiene.test.js` (fails on any `` `${hex}NN` `` concatenation —
   even in a comment — and on any Tailwind `*-white` utility; see
-  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md))
-- **utils/ui/** — 1: `appearance.test.js`; **contexts/** adds
+  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md)); plus the design-language
+  gates: `colorLintRule.test.js` (the no-hardcoded-colours ESLint rule),
+  `fonts.test.js` (self-hosted look fonts), and under `styles/looks/` —
+  `looks.contract.test.js` (every look pack defines the full token set),
+  `looks.contrast.test.js` (the contrast audit in both appearances),
+  `looks.drift.test.js` (generated CSS matches the packs — `npm run
+  looks:check`), `type-scale.test.js` (the type steps)
+- **components/ui/** — `ui.test.jsx` (the look primitives: Button,
+  IconButton, Field, Tabs, Dialog…); **components/shell/** —
+  `shell.test.jsx` (the working-screen shell)
+- **components/scores/** — `LuckyDrawPanel.test.jsx` (groups only flagged
+  ties, sends the admin's order first-place-first, a recorded draw shows its
+  order and can be cleared; a missing-data tie is never offered)
+- **hooks/** — `useSignOutOnBack.test.jsx` (Back from a signed-in screen is
+  undone and asks to sign out; pushes / replaces / Forward pass through)
+- **utils/ui/** — 2: `appearance.test.js`, `look.test.js` (which look a route
+  claims); **contexts/** adds
   `AppearanceProvider.test.jsx`; **components/layout/** —
   `AppearanceMenu.test.jsx` (keyboard, announcement, no reload)
 - **hooks/** — 3: `useAgeGroups.test.js`, `useResponsive.test.jsx` (shared

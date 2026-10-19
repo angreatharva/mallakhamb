@@ -6,8 +6,8 @@ covers:
   - index.html
 read_when: "first orientation in this codebase, or touching the app shell (provider order, navbar visibility, toast placement)"
 depends_on: [04-STATE-MANAGEMENT, 03-ROUTING-AND-NAV]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What this is
@@ -55,7 +55,7 @@ that doesn't match the current `utils/auth/`, `utils/scoring/`,
 table with distinct top-level per-role login components and no
 level/competition-selection flow, predating both the `Unified*`
 consolidation (see
-[03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#§34-resolved-unifiedloginunifieddashboard-are-the-real-implementations))
+[03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#34-resolved-unifiedloginunifieddashboard-are-the-real-implementations))
 and the level/competition chooser feature (see
 [04-STATE-MANAGEMENT.md](04-STATE-MANAGEMENT.md)) entirely. It also
 contains a literal copy-paste defect — its "Deployment Checklist"
@@ -79,14 +79,34 @@ StrictMode
 └─ App
    └─ ErrorBoundary (root-level, outermost — catches anything below,
       including a crash inside the router itself)
-      └─ BrowserRouter
-         └─ AuthProvider
-            └─ AppContent
-               └─ CompetitionProvider (userType from AuthContext)
-                  ├─ Navbar (conditionally rendered, see below)
-                  ├─ AppRoutes (the actual route tree — see 03-ROUTING-AND-NAV.md)
-                  └─ Toaster (react-hot-toast)
+      └─ AppearanceProvider (Light/Dark per DEVICE; outermost after the
+         boundary so a switch never remounts anything — a judge mid-slip
+         keeps every mark)
+         └─ MotionConfig reducedMotion="user" (honours the OS setting for
+            every framer element: movement stops, fades still run)
+            └─ BrowserRouter
+               └─ AuthProvider
+                  └─ AppContent
+                     └─ CompetitionProvider (userType from AuthContext)
+                        ├─ Navbar (conditionally rendered, see below)
+                        ├─ AppRoutes location={backGuard.location}
+                        │  (the route tree — see 03-ROUTING-AND-NAV.md)
+                        ├─ SignOutOnBackDialog (Back from a signed-in screen)
+                        └─ Toaster (react-hot-toast, look-styled options)
 ```
+
+- **Back from a signed-in screen asks "Sign out?"** (2026-10-12):
+  `useSignOutOnBack({ signedInRole })` runs in `AppContent`; the `location`
+  it returns — not `useLocation()` — is what `AppRoutes` and the chrome draw,
+  so while a Back is being undone they keep showing the screen the user left.
+  `AppRoutes` gets `location` on **every** render (toggling the prop would
+  remount everything). Full rules: [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#sign-out-on-back).
+- **The look is applied per route**: `applyLook(location.pathname,
+  location.search)` (then `loadLookFonts`) on every navigation, and again when
+  a screen no route names (the 404) claims a look via `onLookClaim` — see
+  [05-DESIGN-SYSTEM.md](05-DESIGN-SYSTEM.md).
+- **Toasts use the look's options** (`components/ui/toast.js`) with the old
+  durations kept (4 s, success 3 s, error 4 s).
 
 `AppContent` is where the provider chain and the route tree meet — it's
 also where several small but real cross-cutting UI decisions live that
@@ -133,7 +153,10 @@ are easy to miss because they aren't obviously "architecture":
 
 ## `main.jsx` — nothing beyond the mount
 
-Nine lines: `StrictMode` wraps `App`, rendered into `#root`. React 19
+`StrictMode` wraps `App`, rendered into `#root`. One addition: on `/` only it
+calls `preloadHome()` (`pages/public/home/preload.js`) **before** React
+renders, so the Home chunk, the hero photo and its fonts download alongside
+the app's boot. React 19
 StrictMode double-invokes renders/effects in development — this is
 directly relevant to code elsewhere in the app that had to be made
 render-pure specifically because of it (see

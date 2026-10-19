@@ -6,8 +6,8 @@ covers:
   - ../deploy/{README,COMMON}.md (plan summary only)
 read_when: "deploying, rolling back, or changing render.yaml/deployment-relevant env vars"
 depends_on: [01-ARCHITECTURE, 12-CONFIG-AND-ENV]
-verified_against_commit: cd66189
-last_verified: 2026-10-11
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Topology
@@ -117,10 +117,22 @@ because a sync would silently reset an incident mitigation:**
   consistent with the code and with each other — prefer these over
   `deployment-guide.md` for anything deploy-related.
 
-## Planned move off Render (`deploy/`, repo root — plan only, nothing executed)
+## Move off Render (`deploy/`, repo root) — OCI staging BUILT, production still on Render
 
-Status 2026-10-11 (`cd66189`): production is still Render free + Atlas +
-Grafana Cloud. The move is planned in four docs at the repo root:
+**Status 2026-10-18:** production is still Render free + Atlas + Grafana
+Cloud, and `mallakhambcompetition.com` is untouched. **Oracle Cloud was chosen
+and is built on the Always Free tier (never Pay-As-You-Go — the user's rule):**
+two Arm A1 VMs, 1 OCPU / 6 GB each, in ap-mumbai-1 — `app-01` **active**
+(reserved IP 137.23.63.84, serving the staging hosts
+`app-137-23-63-84.sslip.io` / `api-137-23-63-84.sslip.io`) and `app-02` warm
+**standby**. Failover is drilled both ways (~62–67 s). Both run **Node 24**
+(`package.json` `engines.node: "24.x"` since 2026-10-16, matching Render), with
+Alloy shipping host metrics to Grafana and four "(OCI staging)" dashboards in
+the Mallakhamb folder. A nightly full-season lifecycle run (O14) seeds and
+drops a `<db>_e2e` database on each VM with `EMAIL_PROVIDER=none` (see
+[12-CONFIG-AND-ENV.md](12-CONFIG-AND-ENV.md)). What was actually built
+overrides the plan text: see the "what was actually built" box at the top of
+`deploy/oci/PLAN.md`. The plan itself lives in four docs at the repo root:
 `deploy/README.md` (options compared, decisions needed),
 `deploy/COMMON.md` (platform-neutral findings F1–F16, env-var master list,
 phases C0 code fixes → C9 decommission, runbooks), `deploy/oci/PLAN.md`
@@ -141,12 +153,18 @@ What the plan changes about this doc's assumptions:
 - **The HTTPS redirect also hits `/metrics` and health routes** (F6): local
   checks need `-H 'X-Forwarded-Proto: https'`; never give Caddy a
   `health_uri`.
-- **Server-side blockers still open in code:** F4 (webhooks verified with
-  `RAZORPAY_KEY_SECRET`; `RAZORPAY_WEBHOOK_SECRET` never read) and F5
-  (`.env_example` ships `DISCOUNT_CODE_ENABLED=true` with a real-looking
-  code; `Server/.env.scripts` is tracked). The two Web blockers (F1 socket
-  URL `replace('/api','')` breaks on an `api.` host; F2 CSP `connect-src`
-  only allows `*.onrender.com`) are in `Web/MEMORY/GOTCHAS.md`.
+- **Server-side findings fixed in code (2026-10-16/17):** F4 (webhooks now
+  verify with `RAZORPAY_WEBHOOK_SECRET`, falling back to the key secret — see
+  [09-PAYMENTS.md](09-PAYMENTS.md)), F5 (`.env_example` discount code off and
+  a placeholder; `Server/.env.scripts` always had a blank password), F19
+  (`app_info` version reads `GIT_COMMIT`), a refused CORS origin is a 403 not a
+  500, and a clean `SIGTERM` no longer exits 7. ⚠️ The **staging** env still
+  enables the old public discount code `BRMC@2026`, and production on Render
+  has not been checked (deploy C0.9). The Web blocker F1 (socket URL
+  `replace('/api','')` broke on an `api.` host) is fixed (3c628e1); F2 (CSP
+  `connect-src` in `Web/index.html`) is only partly done: it now allows the
+  staging `api-137-23-63-84.sslip.io` host, but the real production API host
+  must be added at cutover — see `Web/MEMORY/GOTCHAS.md`.
 - Monitoring dashboards/alerts are sized for Render's 0.1 CPU / 512 MiB and
   must switch preset at cutover (F15; see
   [11-OBSERVABILITY.md](11-OBSERVABILITY.md)).

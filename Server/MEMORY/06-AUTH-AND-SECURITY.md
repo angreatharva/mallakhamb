@@ -13,8 +13,8 @@ covers:
   - src/models/JudgeAccount.js
 read_when: "changing login/token/cookie behavior, adding a role guard, touching CSRF/rate-limiting, or working on competition scope/lock enforcement"
 depends_on: [01-ARCHITECTURE, 03-DOMAIN-MODEL]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## Roles
@@ -235,6 +235,15 @@ doesn't need a redeploy). **Must stay on in production**: the auth cookies are
 Public Suffix List (see *Cross-Site Cookie
 Topology*) — CSRF is what makes
 that safe.
+
+## CORS (`createCorsMiddleware`, `src/middleware/security.middleware.js`)
+
+Production/staging allow only the origins in `CORS_ORIGINS`; development and
+test allow all; a request with **no** `Origin` (server-to-server, curl, mobile)
+always passes. A refused origin is an `AuthorizationError`, so it answers
+**403**. Before 2026-10-17 it was a plain `Error`, which surfaced as a **500**
+and fed Grafana's "High 5xx" alert on every stray browser hitting the API
+(found in the OCI staging rehearsal, deploy C6).
 
 ## Rate limiting
 

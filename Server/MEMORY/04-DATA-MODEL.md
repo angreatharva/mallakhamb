@@ -7,8 +7,8 @@ covers:
   - src/infrastructure/database/index-manager.js
 read_when: "adding/changing a schema field, an index, or writing a migration"
 depends_on: [03-DOMAIN-MODEL, modules/repositories, modules/infrastructure]
-verified_against_commit: b5b0672
-last_verified: 2026-10-07
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 For entity meaning/relationships/lifecycle, see
@@ -61,8 +61,15 @@ was previously undeclared and silently dropped by strict mode), `password`/
 Index `{team:1}` (built by migration 001, now also schema-declared).
 
 ### Competition (`src/models/Competition.js`) — the aggregate root
-`name`, `level` enum `[district,state,national,international]`,
-`competitionTypes[]` slug enum, `apparatusConfig` Map, `place`, `year`,
+`name`, `level` enum `COMPETITION_LEVELS`
+`[district,state,national,international,dso,university]`
+(`config/competition-levels.js`), `competitionTypes[]` slug enum,
+`apparatusConfig` Map (per type, **derived** on write as the union of both
+genders), `apparatusByGender` Map `{<type>: {Male:[apparatus], Female:[apparatus]}}`
+(default `undefined`; the source of truth when present — see
+`utils/data/competition-apparatus.util.js`), `maxTeamSize` enum `TEAM_SIZES`
+`[4,6]` (no default: required on create by `super-admin.service`, absent on old
+meets, which read as 6 and uncapped), `place`, `year`,
 `startDate`/`endDate` (cross-field ordering validated in the **service**, not
 the schema — `findByIdAndUpdate` makes sibling paths unreadable to a schema
 validator; see `SuperAdminService.normalizeFeeWindow` in
@@ -105,8 +112,10 @@ Methods include `addAdmin`/`removeAdmin`, `updateCompetitionStatus`
 `judgeAccount` ref JudgeAccount (nullable = empty slot), `competition`
 required, `competitionTypes[]` slug enum required, `gender`/`ageGroup`
 required, `apparatus` (nullable, part of seat identity — see below),
-`judgeNo` (1-7; 7 is legacy for a removed Time Keeper role), `judgeType`
-enum `[Senior Judge,Judge 1-4,Scorer]`, `isActive` default false ("true once
+`judgeNo` (1–`MAX_SEAT_NO`=7), `judgeType` enum `JUDGE_SEAT_TYPES`
+`[Senior Judge,Judge 1-4,Scorer,Time Keeper]` from `config/judge-seats.js`
+(seat numbers Senior 1, Judge 1–4 = 2–5, Scorer 6, **Time Keeper 7**),
+`isActive` default false ("true once
 a registered judge fills the slot"). Collection name is **explicitly
 `judgeassignments`**, not the Mongoose default — renaming risk noted in-file
 (a collection rename doesn't migrate data).
@@ -121,7 +130,10 @@ at one meet). **Apparatus is part of the panel identity** — the pair of
 unique indexes above didn't include it until migration 010, which is *why*
 Manage Judges couldn't ask which apparatus a panel was seated for; the old,
 narrower pair is dropped by that migration. `pre('validate')` normalizes
-legacy `Scorer`+`judgeNo:7` docs to `judgeNo:6`.
+legacy `Scorer`+`judgeNo:7` docs to `judgeNo:6` (seat 7 belonged to a Time
+Keeper once, was removed, and is the Time Keeper's again — so the two never
+collide). The unique `judgeType` index means one person holding **both**
+Scorer and Time Keeper (allowed, `SHAREABLE_SEATS`) still has two seat docs.
 
 ### JudgeAccount (`src/models/JudgeAccount.js`) — the PERSON, collection `judges`
 `firstName` required, `lastName` not required, `email` (unique),
@@ -181,7 +193,11 @@ of 0.05); `executionAverage`/`baseScore`(conditionally required)/
 `otherDeduction`/`finalScore`; `isFinalized`/`finalizedAt` (per-player
 lock); `panelSize` enum `[3,4,5]` nullable; `elementSelections[]`;
 `tieBreakResolution{step,method,resolvedAt}` — **schema exists but nothing
-writes it**, rankings resolve on read instead. Top-level: `competition`,
+writes it**, rankings resolve on read instead (its `method` comment lists the
+current engine codes: `faster_time` / `base_score` / `four_judge_average` /
+`four_judge_average_with_chief` / `identical_time` / `identical_panel_scores`).
+`time` String ("MM:SS" or seconds) feeds the time deduction and the 3-judge
+tie-break. Top-level: `competition`,
 `teamId`, `gender`/`ageGroup`, `competitionType` (**display** form, unlike
 every other model), `isLocked` (whole-doc freeze) + `lockedApparatus[]`
 (per-apparatus freeze — two separate locks because one doc covers all three
@@ -194,6 +210,19 @@ being part of this identity is load-bearing** (HIGH-3, see GOTCHAS.md) ·
 `{createdAt:-1}` · `{competition,gender,ageGroup,competitionType}` (prefix-
 usable for narrower queries) · `{competition,isLocked}` (for published-results
 reads) · `{'playerScores.playerId'}` multikey (per-athlete lookups).
+
+### TieBreakDraw (`src/models/TieBreakDraw.js`) — recorded lucky draws
+One document per **tie group** in one standing: `competition` ref, `gender`,
+`ageGroup`, `competitionType` (**slug** form, like PerformanceOrder),
+`apparatus` enum, `groupKey` (the group's player ids, sorted, comma-joined),
+`order[]` ref Player (the drawn order, first place first), `tiedScore`,
+`notes` (≤500), `recordedBy` (un-ref'd ObjectId — Admin or SuperAdmin) /
+`recordedByName` / `recordedByRole` / `recordedAt`; timestamps.
+**Index**: `tie_break_draw_identity_unique` on
+`{competition,gender,ageGroup,competitionType,apparatus,groupKey}` — upserts
+(`upsertByIdentity`) land on one doc when two admins save at once. No
+migration: `index-manager` builds it from the schema at boot. Semantics in
+[07-SCORING-ENGINE.md](07-SCORING-ENGINE.md#tie-break-algorithm--utilsscoringtie-breakerutiljs).
 
 ### Team (`src/models/Team.js`)
 `name`, `coach` ref Coach required, `description`, `isActive`, `stateUnit`,

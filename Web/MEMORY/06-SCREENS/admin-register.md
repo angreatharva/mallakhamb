@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminRegister.jsx
 read_when: "changing admin self-registration"
 depends_on: [13-FORMS-AND-VALIDATION, 10-AUTH-AND-SECURITY]
-verified_against_commit: f0bdc1d
-last_verified: 2026-09-23
+verified_against_commit: 06891b5
+last_verified: 2026-10-18
 ---
 
 ## What it is
@@ -15,7 +15,7 @@ top-level route at `/admin/register`, outside `AdminLayout`/
 `ProtectedRoute` (as expected for a public registration page). **Not**
 a `UnifiedRegister` wrapper — admin registration is its own separate
 component and flow (see
-[03-ROUTING-AND-NAV.md](../03-ROUTING-AND-NAV.md#§34-resolved-unifiedloginunifieddashboard-are-the-real-implementations)).
+[03-ROUTING-AND-NAV.md](../03-ROUTING-AND-NAV.md#34-resolved-unifiedloginunifieddashboard-are-the-real-implementations)).
 
 ## Form
 
@@ -70,3 +70,9 @@ post-registration rather than using the router.
 - If adding a real 429 retry-after value from the server: replace the
   hardcoded "15 minutes" string at `:177` rather than adding a second
   parallel message.
+
+## Since the last pass (2026-10-18)
+
+- Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
+  tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
+  above predate it and are approximate — search by the named function.
