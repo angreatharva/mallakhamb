@@ -164,7 +164,7 @@ export default function AuthProvider({ children }) {
   // navigates via React Router instead of doing a full page reload.
   useEffect(() => {
     const handleAuthExpired = (e) => {
-      const expiredRole = e.detail?.role || currentRole || userType;
+      const expiredRole = e.detail?.userType || currentRole || userType;
       if (!expiredRole) return;
 
       secureStorage.clearForRole(expiredRole);
