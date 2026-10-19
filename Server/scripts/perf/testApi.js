@@ -202,12 +202,13 @@ async function run() {
     await step('POST /api/players/register', newPlayer.post('/api/players/register', {
       firstName: 'Flow', lastName: 'Player', email: playerEmail,
       phone: '9000000001', dateOfBirth: '2010-05-05', gender: 'Male',
-      password, confirmPassword: password,
+      password, confirmPassword: password, guardianConsent: true,
     }));
     await step('POST /api/players/register rejects a duplicate e-mail',
       newPlayer.post('/api/players/register', {
         firstName: 'Flow', lastName: 'Player', email: playerEmail,
         phone: '9000000001', dateOfBirth: '2010-05-05', gender: 'Male', password,
+        guardianConsent: true,
       }), { expect: [400, 409] });
     await step('POST /api/players/register rejects a short password',
       newPlayer.post('/api/players/register', {

@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const bcrypt = require('bcryptjs');
+const { baseLoginId, nextFreeLoginId, siblingsPattern } = require('../utils/data/player-login-id.util');
+
+const EMAIL_TYPES = ['self', 'guardian', 'none'];
+const PLAYER_LOGIN_ID_INDEX = 'player_login_id_unique';
+const PLAYER_SELF_EMAIL_INDEX = 'player_self_email_unique';
 
 const playerSchema = new mongoose.Schema({
   firstName: {
@@ -13,18 +18,59 @@ const playerSchema = new mongoose.Schema({
     required: [true, 'Last name is required'],
     trim: true
   },
+  /**
+   * The Player ID — `firstname.lastname.ddmmyy`, `.2`/`.3` for a duplicate.
+   * Assigned by the pre-validate hook below and never recomputed; see
+   * utils/data/player-login-id.util. Every player can sign in with it, and for
+   * a player without an email of their own it is the only login.
+   */
+  loginId: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: undefined
+  },
+  /**
+   * Whose address `email` is, chosen on the first registration screen:
+   *   self     — the player's own; unique, and it signs in like today
+   *   guardian — a parent's or guardian's; siblings may share it, so it is a
+   *              contact address only and never a login
+   *   none     — no address at all; password resets go through the coach
+   * Accounts from before the choice existed are `self`.
+   */
+  emailType: {
+    type: String,
+    enum: EMAIL_TYPES,
+    default: 'self'
+  },
   email: {
     type: String,
-    required: [true, 'Email is required'],
-    unique: true,
+    // Uniqueness is the partial index below, over `self` addresses only.
+    required: [function() { return this.emailType !== 'none'; }, 'Email is required'],
     lowercase: true,
     trim: true,
+    default: undefined,
     validate: {
       validator: function(v) {
-        return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+        return v == null || /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
       },
       message: 'Please enter a valid email'
     }
+  },
+  /**
+   * The responsible adult, for a player using a guardian's email or none.
+   * Required for those two at the API boundary (playerValidators.createPlayer),
+   * not here, so the `self` accounts that never had one still save.
+   */
+  guardian: {
+    name: { type: String, trim: true, default: null },
+    relation: { type: String, trim: true, default: null },
+    phone: { type: String, trim: true, default: null }
+  },
+  /** When a guardian confirmed consent for a player under 18 (DPDP Act). */
+  consentAt: {
+    type: Date,
+    default: null
   },
   /**
    * Contact number.
@@ -143,6 +189,32 @@ const playerSchema = new mongoose.Schema({
   }
 });
 
+/**
+ * Give a new player (or a legacy one on its next save) a Player ID.
+ *
+ * Here rather than in the registration service so every path that creates a
+ * player — registration, the super admin's add-player, the seeders, the tests —
+ * gets one. The suffix is chosen against the IDs already stored; two
+ * registrations racing for the same one are settled by the unique index and
+ * retried by PlayerRepository.create.
+ */
+playerSchema.pre('validate', async function(next) {
+  try {
+    if (this.emailType === 'none') this.email = undefined;
+    if (this.loginId || !this.dateOfBirth) return next();
+    const base = baseLoginId(this.firstName, this.lastName, this.dateOfBirth);
+    if (!base) return next();
+    const taken = await this.constructor
+      .find({ loginId: siblingsPattern(base) }, { loginId: 1 })
+      .session(this.$session() || null)
+      .lean();
+    this.loginId = nextFreeLoginId(base, taken.map((p) => p.loginId));
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Hash password before saving
 playerSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
@@ -185,4 +257,33 @@ playerSchema.methods.getAge = function() {
  */
 playerSchema.index({ team: 1 });
 
-module.exports = mongoose.model('Player', playerSchema);
+/**
+ * One account per Player ID. Partial so the accounts from before the field
+ * existed (no `loginId` until migration 012 or their next save) don't all
+ * collide on "missing".
+ */
+playerSchema.index(
+  { loginId: 1 },
+  { unique: true, partialFilterExpression: { loginId: { $type: 'string' } }, name: PLAYER_LOGIN_ID_INDEX }
+);
+
+/**
+ * An email is unique only as a player's OWN address — that is the one that
+ * signs in. A guardian's address is shared by siblings, and `none` has none.
+ * Replaces the old `email_1` unique index; migration 012 drops that one, which
+ * the index manager would otherwise report as a conflict and leave in place.
+ */
+playerSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { emailType: 'self', email: { $type: 'string' } }, name: PLAYER_SELF_EMAIL_INDEX }
+);
+
+/** "Which players use this guardian address" — the Player ID reminder. */
+playerSchema.index({ email: 1, emailType: 1 });
+
+const Player = mongoose.model('Player', playerSchema);
+Player.EMAIL_TYPES = EMAIL_TYPES;
+Player.PLAYER_LOGIN_ID_INDEX = PLAYER_LOGIN_ID_INDEX;
+Player.PLAYER_SELF_EMAIL_INDEX = PLAYER_SELF_EMAIL_INDEX;
+
+module.exports = Player;

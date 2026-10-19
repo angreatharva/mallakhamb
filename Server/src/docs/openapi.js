@@ -323,7 +323,11 @@ const schemas = {
       _id: { type: 'string', format: 'objectid' },
       firstName: { type: 'string' },
       lastName: { type: 'string' },
-      email: { type: 'string', format: 'email' },
+      loginId: { type: 'string', description: 'The Player ID: firstname.lastname.ddmmyy, .2/.3 for a duplicate. Set by the server, never changed.' },
+      emailType: { type: 'string', enum: ['self', 'guardian', 'none'], description: "Whose address `email` is. Only 'self' signs in or is unique." },
+      email: { type: 'string', format: 'email', nullable: true },
+      guardian: ref('PlayerGuardian'),
+      consentAt: { type: 'string', format: 'date-time', nullable: true },
       phone: { type: 'string' },
       dateOfBirth: { type: 'string', format: 'date' },
       gender: { type: 'string', enum: GENDERS },
@@ -331,6 +335,16 @@ const schemas = {
       team: { type: 'string', format: 'objectid', nullable: true },
       stateUnit: { type: 'string', nullable: true },
       registrationNumber: { type: 'string', nullable: true },
+    },
+  },
+
+  PlayerGuardian: {
+    type: 'object',
+    description: 'The responsible adult for a player using a guardian email or none.',
+    properties: {
+      name: { type: 'string', nullable: true },
+      relation: { type: 'string', nullable: true },
+      phone: { type: 'string', nullable: true },
     },
   },
 
@@ -591,6 +605,9 @@ const S = {
 
 const loginBody = jsonBody(inline({ email: S.email, password: S.str }, ['email', 'password']));
 
+// An email, or a player's Player ID. `email` is still read when `identifier` is absent.
+const IDENTIFIER = { type: 'string', description: 'Email address, or (players only) Player ID' };
+
 /** The category quadruple, as a request body fragment. */
 const categoryBody = {
   gender: S.gender,
@@ -691,15 +708,17 @@ function buildPaths() {
   add('/api/auth/forgot-password', 'post', op({
     tag: 'Auth', auth: false, operationId: 'forgotPassword',
     summary: 'Send a password-reset OTP',
-    description: 'Always answers 200 whether or not the address is registered, so the endpoint cannot be used to enumerate accounts.',
-    requestBody: jsonBody(inline({ email: S.email, userType: RESET_USER_TYPE }, ['email'])),
+    description: 'Always answers 200 whether or not the account exists, so the endpoint cannot be used to enumerate accounts. '
+      + "A Player ID sends the code to the player's address (their own or a guardian's); a player with no email gets none. "
+      + "A guardian's address is mailed the Player IDs registered under it instead of a code.",
+    requestBody: jsonBody(inline({ identifier: IDENTIFIER, email: S.email, userType: RESET_USER_TYPE }, [])),
     responses: { 200: ok('OTP sent if the account exists'), ...VALIDATION_ERROR },
   }));
 
   add('/api/auth/verify-otp', 'post', op({
     tag: 'Auth', auth: false, operationId: 'verifyOtp',
     summary: 'Verify a reset OTP',
-    requestBody: jsonBody(inline({ email: S.email, otp: S.str, userType: RESET_USER_TYPE }, ['email', 'otp'])),
+    requestBody: jsonBody(inline({ identifier: IDENTIFIER, email: S.email, otp: S.str, userType: RESET_USER_TYPE }, ['otp'])),
     description: 'Every failure — unknown email, no code, expired, wrong, or discarded after OTP_MAX_ATTEMPTS wrong guesses — returns the same message.',
     responses: { 200: ok('OTP accepted'), ...VALIDATION_ERROR },
   }));
@@ -707,7 +726,7 @@ function buildPaths() {
   add('/api/auth/reset-password-otp', 'post', op({
     tag: 'Auth', auth: false, operationId: 'resetPasswordOtp',
     summary: 'Reset a password with an OTP',
-    requestBody: jsonBody(inline({ email: S.email, otp: S.str, password: S.str, userType: RESET_USER_TYPE }, ['email', 'otp', 'password'])),
+    requestBody: jsonBody(inline({ identifier: IDENTIFIER, email: S.email, otp: S.str, password: S.str, userType: RESET_USER_TYPE }, ['otp', 'password'])),
     responses: { 200: ok('Password changed'), ...VALIDATION_ERROR },
   }));
 
@@ -732,21 +751,27 @@ function buildPaths() {
   add('/api/players/register', 'post', op({
     tag: 'Players', auth: false, operationId: 'registerPlayer',
     summary: 'Register an athlete',
-    description: 'Rate limited per IP.',
+    description: 'Rate limited per IP. `emailType` is the first-screen choice: own email (default; email and phone required), '
+      + "a guardian's email (email and guardian required; siblings may share it), or none (guardian required). "
+      + 'A player under 18 needs `guardianConsent: true`. The response carries the assigned Player ID as `user.loginId`.',
     requestBody: jsonBody(inline({
-      firstName: S.str, lastName: S.str, email: S.email, phone: S.str,
+      firstName: S.str, lastName: S.str,
+      emailType: { type: 'string', enum: ['self', 'guardian', 'none'] },
+      email: S.email, phone: S.str,
+      guardian: ref('PlayerGuardian'),
+      guardianConsent: S.bool,
       password: { type: 'string', minLength: 8 },
       dateOfBirth: { type: 'string', format: 'date' },
       gender: S.gender, stateUnit: S.str, registrationNumber: S.str,
-    }, ['firstName', 'lastName', 'email', 'phone', 'password', 'dateOfBirth', 'gender'])),
+    }, ['firstName', 'lastName', 'password', 'dateOfBirth', 'gender'])),
     responses: { 201: ok('Registered', ref('LoginResponse')), ...VALIDATION_ERROR, 409: errorResponse('E-mail already registered') },
   }));
 
   add('/api/players/login', 'post', op({
     tag: 'Players', auth: false, operationId: 'loginPlayer',
     summary: 'Athlete login',
-    description: 'Rate limited per IP. Locks the account temporarily after repeated failures.',
-    requestBody: loginBody,
+    description: "Rate limited per IP. Locks the account temporarily after repeated failures. `identifier` is the player's own email or their Player ID; a guardian's address never signs in.",
+    requestBody: jsonBody(inline({ identifier: IDENTIFIER, email: S.email, password: S.str }, ['password'])),
     responses: { 200: ok('Logged in', ref('LoginResponse')), 401: errorResponse('Bad credentials'), 423: errorResponse('Account locked') },
   }));
 

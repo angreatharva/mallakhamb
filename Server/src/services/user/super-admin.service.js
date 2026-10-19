@@ -1,6 +1,7 @@
 const { fullName, coachCard, enteredPlayerCard } = require('../../utils/data/user-projection.util');
 const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
+const { EMAIL_TYPES } = require('../../models/Player');
 const { calculatePlayerAdditionAmount, resolveFeeWindow } = require('../../config/payment.config');
 const { applyApparatusByGender } = require('../../utils/data/competition-apparatus.util');
 const { hasRoomInSquad, isValidTeamSize, TEAM_SIZES } = require('../../utils/scoring/team-championship.util');
@@ -969,7 +970,7 @@ class SuperAdminService {
     }
   }
 
-  async addPlayer({ firstName, lastName, email, dateOfBirth, gender, ageGroup, teamId, competitionId, password, apparatus }, superAdminId) {
+  async addPlayer({ firstName, lastName, email, emailType, guardian, dateOfBirth, gender, ageGroup, teamId, competitionId, password, apparatus }, superAdminId) {
     // Verify teamId belongs to competitionId
     const competition = await this.competitionRepository.findById(competitionId);
     if (!competition) {
@@ -1008,9 +1009,20 @@ class SuperAdminService {
       );
     }
 
-    // Check player email uniqueness
-    const existingPlayer = await this.playerRepository.findOne({ email: email.toLowerCase() });
-    if (existingPlayer) {
+    // The same three choices as self-registration. Only a player's own
+    // address must be unique; a guardian's may be shared by siblings.
+    const kind = emailType || 'self';
+    if (!EMAIL_TYPES.includes(kind)) {
+      throw new ValidationError(`emailType must be one of: ${EMAIL_TYPES.join(', ')}`);
+    }
+    const address = kind === 'none' ? undefined : String(email || '').trim().toLowerCase();
+    if (kind !== 'none' && !address) {
+      throw new ValidationError('Email is required');
+    }
+    if (kind !== 'self' && !(guardian?.name && guardian?.phone)) {
+      throw new ValidationError('Parent/guardian name and phone are required for a player without their own email');
+    }
+    if (kind === 'self' && await this.playerRepository.isEmailTaken(address)) {
       throw new ValidationError('Player with this email already exists');
     }
 
@@ -1023,7 +1035,9 @@ class SuperAdminService {
       const playerData = {
         firstName,
         lastName,
-        email: email.toLowerCase(),
+        emailType: kind,
+        ...(address ? { email: address } : {}),
+        ...(kind !== 'self' ? { guardian: { name: guardian.name, relation: guardian.relation || null, phone: guardian.phone } } : {}),
         dateOfBirth,
         gender,
         ageGroup, // Add age group to player document
@@ -1086,6 +1100,7 @@ class SuperAdminService {
         firstName: player.firstName,
         lastName: player.lastName,
         email: player.email,
+        loginId: player.loginId,
         team: canonicalTeamId,
         ageGroup: ageGroup,
         gender: gender

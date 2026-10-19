@@ -18,7 +18,7 @@ const { validateCompetitionContext } = require('../middleware/competition-contex
 const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const playerValidators = require('../validators/player.validator');
-const { email } = require('../validators/common.validator');
+const { accountIdentifier } = require('../validators/common.validator');
 const { body } = require('express-validator');
 
 /**
@@ -33,7 +33,8 @@ function createPlayerRoutes(container) {
   const playerAuth = requirePlayer;
   const playerController = container.resolve('playerController');
   const requireUnlockedCompetition = createCompetitionLockGuard(container);
-  const loginValidation = () => [email('email'), body('password').trim().notEmpty().withMessage('Password is required')];
+  // A player signs in with their own email or their Player ID.
+  const loginValidation = () => [accountIdentifier(), body('password').trim().notEmpty().withMessage('Password is required')];
 
   /**
    * @route   POST /api/players/register

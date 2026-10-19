@@ -10,6 +10,13 @@
 const BaseRepository = require('./base.repository');
 const Player = require('../models/Player');
 const { pageMeta } = require('../utils/data/pagination.util');
+const { OWN_EMAIL_CLAUSE, normalizeLoginId } = require('../utils/data/player-login-id.util');
+
+/** Attempts at a fresh Player ID when a concurrent registration took ours. */
+const LOGIN_ID_RETRIES = 5;
+
+const isLoginIdCollision = (error) =>
+  error?.code === 11000 && /loginId|player_login_id_unique/.test(String(error.message));
 
 class PlayerRepository extends BaseRepository {
   /**
@@ -21,7 +28,31 @@ class PlayerRepository extends BaseRepository {
   }
 
   /**
-   * Find player by email
+   * Create a player, retrying when a concurrent registration took the same
+   * Player ID first. The model's pre-validate hook picks the next free one on
+   * each attempt; a caller-supplied `loginId` is never retried.
+   *
+   * Takes no options, like BaseRepository.create: the super admin's add-player
+   * passes `{ session }` and it has always been ignored.
+   * @param {Object|Object[]} data
+   * @returns {Promise<Object|Object[]>}
+   */
+  async create(data) {
+    const assigned = Array.isArray(data) ? data.some((d) => d?.loginId) : Boolean(data?.loginId);
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await super.create(data);
+      } catch (error) {
+        if (assigned || !isLoginIdCollision(error) || attempt >= LOGIN_ID_RETRIES) throw error;
+        this.logger.warn('PlayerRepository.create: Player ID taken concurrently, retrying', { attempt });
+      }
+    }
+  }
+
+  /**
+   * Find the player whose OWN address this is — the account an email signs in
+   * to. A guardian's address is shared by siblings and never identifies one
+   * player, so those accounts are not found here; see findByGuardianEmail.
    * @param {string} email - Player email
    * @param {Object} options - Query options. Login passes { select: '+password' },
    *   which is required because `password` is `select: false` on the schema.
@@ -29,9 +60,44 @@ class PlayerRepository extends BaseRepository {
    */
   async findByEmail(email, options = {}) {
     try {
-      return await this.findOne({ email: email.toLowerCase() }, options);
+      return await this.findOne({ email: email.toLowerCase(), ...OWN_EMAIL_CLAUSE }, options);
     } catch (error) {
       this.logger.error('PlayerRepository.findByEmail error', { email, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Find a player by Player ID, in any case the user typed it.
+   * @param {string} loginId
+   * @param {Object} options - as for findByEmail
+   * @returns {Promise<Object|null>}
+   */
+  async findByLoginId(loginId, options = {}) {
+    const normalized = normalizeLoginId(loginId);
+    if (!normalized) return null;
+    try {
+      return await this.findOne({ loginId: normalized }, options);
+    } catch (error) {
+      this.logger.error('PlayerRepository.findByLoginId error', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Every player who registered with this address as a guardian's — the
+   * children a "forgot my Player ID" email lists.
+   * @param {string} email
+   * @returns {Promise<Array>}
+   */
+  async findByGuardianEmail(email) {
+    try {
+      return await this.find(
+        { email: email.toLowerCase(), emailType: 'guardian', isActive: { $ne: false } },
+        { select: 'firstName lastName loginId', sort: { createdAt: 1 } }
+      );
+    } catch (error) {
+      this.logger.error('PlayerRepository.findByGuardianEmail error', { error: error.message });
       throw error;
     }
   }
@@ -103,14 +169,15 @@ class PlayerRepository extends BaseRepository {
   }
 
   /**
-   * Check if email is already registered
+   * Is this address already some player's OWN email? Only those are unique —
+   * a guardian's address may be shared by any number of siblings.
    * @param {string} email - Email to check
    * @param {string} excludeId - Player ID to exclude from check (optional)
    * @returns {Promise<boolean>} True if email is taken
    */
   async isEmailTaken(email, excludeId = null) {
     try {
-      const criteria = { email: email.toLowerCase() };
+      const criteria = { email: email.toLowerCase(), ...OWN_EMAIL_CLAUSE };
       if (excludeId) {
         criteria._id = { $ne: excludeId };
       }

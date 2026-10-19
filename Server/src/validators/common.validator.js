@@ -1,5 +1,6 @@
 const { body, param, query } = require('express-validator');
 const mongoose = require('mongoose');
+const { LOGIN_ID_PATTERN } = require('../utils/data/player-login-id.util');
 
 /**
  * Common validation rules used across multiple validators
@@ -44,6 +45,35 @@ const email = (field = 'email') => {
     .withMessage('Please provide a valid email address')
     .toLowerCase();
 };
+
+/**
+ * The account a sign-in or reset is for: an email, or — for a player — their
+ * Player ID. Read from `identifier`, falling back to `email` so clients and
+ * seeders that predate the Player ID keep working. Normalised into
+ * `req.body.identifier` either way, so the controller reads one field.
+ */
+const accountIdentifier = () =>
+  body('identifier')
+    .customSanitizer((value, { req }) => {
+      const raw = value ?? req.body.email;
+      return typeof raw === 'string' ? raw.trim().toLowerCase() : raw;
+    })
+    .notEmpty()
+    .withMessage('Email or Player ID is required')
+    .isString()
+    .withMessage('Email or Player ID must be text')
+    .isLength({ max: 254 })
+    .withMessage('Email or Player ID is too long')
+    .custom((value) => {
+      if (value.includes('@')) {
+        // Loose on purpose: this finds an account, it does not create one, and
+        // the stored addresses were checked by each model's own rule.
+        if (!/^\S+@\S+\.\S+$/.test(value)) throw new Error('Please provide a valid email address');
+      } else if (!LOGIN_ID_PATTERN.test(value)) {
+        throw new Error('Player ID looks like firstname.lastname.ddmmyy');
+      }
+      return true;
+    });
 
 /**
  * Validate password
@@ -295,6 +325,7 @@ module.exports = {
   objectId,
   mongoId: objectId,
   email,
+  accountIdentifier,
   password,
   phone,
   pagination,

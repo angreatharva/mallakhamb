@@ -33,8 +33,9 @@ function createPlayerController(container) {
 
     /** @route POST /api/player/login */
     loginPlayer: asyncHandler(async (req, res) => {
-      const { email, password } = req.body;
-      const result = await playerService.loginPlayer(email, password);
+      // Email or Player ID; the validator puts either into `identifier`.
+      const { identifier, password } = req.body;
+      const result = await playerService.loginPlayer(identifier, password);
       await sendLoginResponse({
         res, tokenService, isProduction,
         data: result, userType: 'player',

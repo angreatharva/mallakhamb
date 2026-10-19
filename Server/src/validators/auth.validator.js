@@ -1,5 +1,5 @@
 const { body } = require('express-validator');
-const { email, password } = require('./common.validator');
+const { accountIdentifier, password } = require('./common.validator');
 
 /**
  * Validation rules for the /api/auth endpoints.
@@ -31,9 +31,11 @@ const userType = () =>
     .isIn(RESET_USER_TYPES)
     .withMessage(`userType must be one of: ${RESET_USER_TYPES.join(', ')}`);
 
+// `identifier` is an email or, for a player, a Player ID (the old `email`
+// field is still read). A Player ID always means the player account.
 const forgotPassword = () => {
   return [
-    email('email'),
+    accountIdentifier(),
     userType()
   ];
 };
@@ -43,7 +45,7 @@ const forgotPassword = () => {
  */
 const verifyOTP = () => {
   return [
-    email('email'),
+    accountIdentifier(),
     body('otp')
       .trim()
       .notEmpty()
@@ -61,7 +63,7 @@ const verifyOTP = () => {
  */
 const resetPassword = () => {
   return [
-    email('email'),
+    accountIdentifier(),
     body('otp')
       .trim()
       .notEmpty()

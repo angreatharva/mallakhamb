@@ -30,25 +30,26 @@ function createAuthController(container) {
 
     /** @route POST /api/auth/forgot-password */
     forgotPassword: asyncHandler(async (req, res) => {
-      await authenticationService.forgotPassword(req.body.email, req.body.userType);
-      // Always same message — prevents email enumeration
+      // `identifier` is an email or a Player ID (see accountIdentifier).
+      await authenticationService.forgotPassword(req.body.identifier, req.body.userType);
+      // Always same message — prevents email and Player ID enumeration
       res.json({
         success: true,
-        message: 'If an account with that email exists, an OTP has been sent.',
+        message: 'If an account with that email or Player ID has an email address, a code has been sent to it.',
       });
     }),
 
     /** @route POST /api/auth/verify-otp */
     verifyOTP: asyncHandler(async (req, res) => {
-      const { email, otp, userType } = req.body;
-      const result = await authenticationService.verifyOTP(email, otp, userType);
+      const { identifier, otp, userType } = req.body;
+      const result = await authenticationService.verifyOTP(identifier, otp, userType);
       res.json({ success: true, data: result });
     }),
 
     /** @route POST /api/auth/reset-password-otp */
     resetPasswordWithOTP: asyncHandler(async (req, res) => {
-      const { email, otp, password, userType } = req.body;
-      await authenticationService.resetPasswordWithOTP(email, otp, password, userType);
+      const { identifier, otp, password, userType } = req.body;
+      await authenticationService.resetPasswordWithOTP(identifier, otp, password, userType);
       res.json({
         success: true,
         message: 'Password reset successfully. You can now log in.',

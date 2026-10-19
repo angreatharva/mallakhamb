@@ -384,6 +384,8 @@ async function seedPlayers() {
       password: player.password,
       gender: player.gender,
       dateOfBirth: player.dateOfBirth,
+      // The roster is all minors, and a minor's registration needs it.
+      guardianConsent: true,
     });
 
     if (!registration.ok) {

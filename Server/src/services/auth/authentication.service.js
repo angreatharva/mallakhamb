@@ -44,6 +44,26 @@ const {
   lockoutPolicy,
   DEFAULT_BCRYPT_ROUNDS,
 } = require('../../utils/security/login-security.util');
+const { emailTypeOf, looksLikeEmail } = require('../../utils/data/player-login-id.util');
+
+/**
+ * Shape a player registration body in place, for whichever of the three
+ * first-screen choices was made (own email / guardian's email / none).
+ *
+ * The Player ID and the consent time are the server's to set: a client that
+ * sent its own `loginId` could claim someone else's login.
+ *
+ * @param {Object} data - sanitised registration body
+ */
+function preparePlayerRegistration(data) {
+  delete data.loginId;
+  delete data.consentAt;
+  data.emailType = emailTypeOf(data);
+  if (data.emailType === 'none') delete data.email;
+  if (data.emailType === 'self') delete data.guardian;
+  if (data.guardianConsent === true || data.guardianConsent === 'true') data.consentAt = new Date();
+  delete data.guardianConsent;
+}
 
 class AuthenticationService {
   /**
@@ -235,11 +255,17 @@ class AuthenticationService {
       const sanitizedData = sanitizeUserData(userData);
       const sanitizedUserType = sanitizeString(userType);
 
+      if (sanitizedUserType === 'player') {
+        preparePlayerRegistration(sanitizedData);
+      }
+
       // Normalize email
       const email = sanitizedData.email || normalizeEmail(userData.email);
 
-      // Check if email already exists
-      const emailExists = await this.isEmailTaken(email, sanitizedUserType);
+      // Only an address that signs in has to be unique: a player's guardian
+      // email is shared by siblings, and a player without one has none.
+      const emailSignsIn = sanitizedUserType !== 'player' || emailTypeOf(sanitizedData) === 'self';
+      const emailExists = emailSignsIn && await this.isEmailTaken(email, sanitizedUserType);
 
       if (emailExists) {
         this.logger.warn('Registration failed: Email already exists', { 
@@ -255,7 +281,7 @@ class AuthenticationService {
       // Create user (password will be hashed by model pre-save hook)
       const user = await repository.create({
         ...sanitizedData,
-        email
+        ...(email ? { email } : {})
       });
       const safeUser = user || {
         _id: sanitizedData._id || `${sanitizedUserType}-legacy-user`,
@@ -265,6 +291,12 @@ class AuthenticationService {
 
       // Generate token
       const token = this.tokenService.generateToken(String(safeUser._id), sanitizedUserType);
+
+      // A player is told their Player ID on screen; mailed too when there is
+      // an address, since it is the login for anyone not using their own.
+      if (sanitizedUserType === 'player' && safeUser.loginId && safeUser.email) {
+        this.otpService?.notifyPlayerLoginIds?.(safeUser.email, [safeUser], 'registered');
+      }
 
       // Remove password and every other sensitive field from the response.
       const userWithoutPassword = stripSensitiveFields(safeUser);
@@ -302,6 +334,14 @@ class AuthenticationService {
   async forgotPassword(email, userType = null) {
     try {
       const normalizedEmail = normalizeEmail(email);
+
+      // A guardian's address signs nobody in, so it cannot reset anyone
+      // either — but whoever typed it has most likely lost a child's Player
+      // ID. Mail them the list; the reset itself then goes by Player ID.
+      if (looksLikeEmail(normalizedEmail) && (!userType || userType === 'player')) {
+        await this._remindGuardianOfPlayerIds(normalizedEmail);
+      }
+
       const { user, userType: foundType } = await this.findUserAcrossTypes(normalizedEmail, userType);
 
       if (!user) {
@@ -310,6 +350,14 @@ class AuthenticationService {
           email: normalizedEmail,
           userType
         });
+        return;
+      }
+
+      // A player registered with no email has nowhere to send a code. Their
+      // coach resets it instead (plan Part C). The response stays the same,
+      // so this does not reveal which Player IDs have an address.
+      if (!user.email || emailTypeOf(user) === 'none') {
+        this.logger.info('Password reset requested for a player with no email', { userId: user._id });
         return;
       }
 
@@ -326,6 +374,24 @@ class AuthenticationService {
         error: error.message
       });
       throw error;
+    }
+  }
+
+  /**
+   * Mail the Player IDs of every child registered under a guardian's address.
+   * Best-effort: a failure here must not change the forgot-password response.
+   * @param {string} email - normalised
+   * @private
+   */
+  async _remindGuardianOfPlayerIds(email) {
+    try {
+      const children = await this.playerRepository.findByGuardianEmail?.(email);
+      if (children?.length) {
+        this.otpService?.notifyPlayerLoginIds?.(email, children, 'reminder');
+        this.logger.info('Player ID reminder sent to a guardian address', { players: children.length });
+      }
+    } catch (error) {
+      this.logger.error('Player ID reminder failed', { error: error.message });
     }
   }
 
@@ -666,6 +732,10 @@ class AuthenticationService {
   async findUserByType(email, userType, options = {}) {
     try {
       const repository = this.getRepositoryByType(userType);
+      // A player may sign in with their Player ID; nobody else has one.
+      if (userType === 'player' && !looksLikeEmail(email)) {
+        return await repository.findByLoginId(email, options);
+      }
       return await repository.findByEmail(email, options);
     } catch (error) {
       this.logger.error('Find user by type error', { 
@@ -696,6 +766,15 @@ class AuthenticationService {
     ];
 
     try {
+      // A Player ID names a player and nothing else. The account it finds is
+      // returned even with no address on it; forgotPassword decides what that
+      // means rather than this lookup.
+      if (!looksLikeEmail(email)) {
+        if (onlyType && onlyType !== 'player') return { user: null, userType: null };
+        const user = await this.playerRepository.findByLoginId(email);
+        return user ? { user, userType: 'player' } : { user: null, userType: null };
+      }
+
       for (const [userType, repository] of order) {
         if (onlyType && userType !== onlyType) continue;
         const user = await repository.findByEmail(email);

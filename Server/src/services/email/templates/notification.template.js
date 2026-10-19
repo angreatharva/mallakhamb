@@ -75,7 +75,7 @@ Mallakhamb Competition Team
     <p>Hello ${userName || 'User'},</p>
     
     <div class="notification-box">
-      <p>${message}</p>
+      <p>${String(message).replace(/\n/g, '<br>')}</p>
     </div>
     
     ${actionUrl ? `

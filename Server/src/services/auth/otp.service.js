@@ -107,7 +107,7 @@ class OTPService {
     const delivery = this._sendInBackground('OTP', user, userType, (to) =>
       this.emailService.sendOTP(to, {
         otp,
-        userName: user.name || user.username || 'User',
+        userName: user.name || user.firstName || user.username || 'User',
         expiryMinutes: otpExpiryMinutes
       }),
       { otp }
@@ -126,7 +126,45 @@ class OTPService {
   notifyPasswordChanged(user, userType) {
     return this._sendInBackground('password-changed notice', user, userType, (to) =>
       this.emailService.sendPasswordReset(to, {
-        userName: user.name || user.username || 'User'
+        userName: user.name || user.firstName || user.username || 'User'
+      })
+    );
+  }
+
+  /**
+   * Mail one or more Player IDs to an address: the new player's own at
+   * registration, or every child under a guardian's address when someone
+   * there has forgotten one. Background, never throws.
+   * @param {string} to
+   * @param {Array<{firstName: string, lastName: string, loginId: string}>} players
+   * @param {'registered'|'reminder'} reason
+   * @returns {Promise<void>}
+   */
+  notifyPlayerLoginIds(to, players, reason) {
+    const lines = players
+      .filter((p) => p?.loginId)
+      .map((p) => `${[p.firstName, p.lastName].filter(Boolean).join(' ')}: ${p.loginId}`);
+    if (!to || lines.length === 0) return Promise.resolve();
+
+    const registered = reason === 'registered';
+    const message = [
+      registered
+        ? 'Your player account is ready. Sign in with this Player ID and the password you chose:'
+        : 'Someone asked for the Player IDs registered with this email address:',
+      '',
+      ...lines,
+      '',
+      registered
+        ? 'Keep it somewhere safe. Your coach can also see it on the team roster.'
+        : 'Sign in with the Player ID. To reset a password, choose "Forgot password" and enter the Player ID.',
+    ].join('\n');
+
+    const recipient = { _id: players[0]._id, email: to };
+    return this._sendInBackground('Player ID', recipient, 'player', (address) =>
+      this.emailService.sendNotification(address, {
+        userName: registered ? players[0].firstName : 'there',
+        title: registered ? 'Your Player ID' : 'Your Player IDs',
+        message,
       })
     );
   }

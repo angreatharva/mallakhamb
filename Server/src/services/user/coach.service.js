@@ -454,13 +454,16 @@ class CoachService extends UserService {
     // Get the team ID (assuming coach has one team for now)
     const teamId = teams[0]._id;
     
+    // Matched literally: a typed `.` in a Player ID is a dot, not "any character".
+    const pattern = String(query ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const filters = {
       isActive: true,
       team: teamId, // Only show players assigned to this coach's team
       $or: [
-        { firstName: { $regex: query, $options: 'i' } },
-        { lastName: { $regex: query, $options: 'i' } },
-        { email: { $regex: query, $options: 'i' } },
+        { firstName: { $regex: pattern, $options: 'i' } },
+        { lastName: { $regex: pattern, $options: 'i' } },
+        { email: { $regex: pattern, $options: 'i' } },
+        { loginId: { $regex: pattern, $options: 'i' } },
       ],
     };
     

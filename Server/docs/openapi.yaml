@@ -375,9 +375,26 @@ components:
           type: string
         lastName:
           type: string
+        loginId:
+          type: string
+          description: "The Player ID: firstname.lastname.ddmmyy, .2/.3 for a duplicate. Set by the server, never changed."
+        emailType:
+          type: string
+          enum:
+            - self
+            - guardian
+            - none
+          description: Whose address `email` is. Only 'self' signs in or is unique.
         email:
           type: string
           format: email
+          nullable: true
+        guardian:
+          $ref: "#/components/schemas/PlayerGuardian"
+        consentAt:
+          type: string
+          format: date-time
+          nullable: true
         phone:
           type: string
         dateOfBirth:
@@ -407,6 +424,19 @@ components:
           type: string
           nullable: true
         registrationNumber:
+          type: string
+          nullable: true
+    PlayerGuardian:
+      type: object
+      description: The responsible adult for a player using a guardian email or none.
+      properties:
+        name:
+          type: string
+          nullable: true
+        relation:
+          type: string
+          nullable: true
+        phone:
           type: string
           nullable: true
     Judge:
@@ -1175,6 +1205,9 @@ paths:
             schema:
               type: object
               properties:
+                identifier:
+                  type: string
+                  description: Email address, or (players only) Player ID
                 email:
                   type: string
                   format: email
@@ -1185,8 +1218,6 @@ paths:
                     - coach
                     - admin
                     - judge
-              required:
-                - email
       responses:
         "200":
           description: OTP sent if the account exists
@@ -1214,7 +1245,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       description: |-
-        Always answers 200 whether or not the address is registered, so the endpoint cannot be used to enumerate accounts.
+        Always answers 200 whether or not the account exists, so the endpoint cannot be used to enumerate accounts. A Player ID sends the code to the player's address (their own or a guardian's); a player with no email gets none. A guardian's address is mailed the Player IDs registered under it instead of a code.
         
         **Public** — no authentication required.
       security: []
@@ -1231,6 +1262,9 @@ paths:
             schema:
               type: object
               properties:
+                identifier:
+                  type: string
+                  description: Email address, or (players only) Player ID
                 email:
                   type: string
                   format: email
@@ -1244,7 +1278,6 @@ paths:
                     - admin
                     - judge
               required:
-                - email
                 - otp
       responses:
         "200":
@@ -1290,6 +1323,9 @@ paths:
             schema:
               type: object
               properties:
+                identifier:
+                  type: string
+                  description: Email address, or (players only) Player ID
                 email:
                   type: string
                   format: email
@@ -1305,7 +1341,6 @@ paths:
                     - admin
                     - judge
               required:
-                - email
                 - otp
                 - password
       responses:
@@ -1459,11 +1494,21 @@ paths:
                   type: string
                 lastName:
                   type: string
+                emailType:
+                  type: string
+                  enum:
+                    - self
+                    - guardian
+                    - none
                 email:
                   type: string
                   format: email
                 phone:
                   type: string
+                guardian:
+                  $ref: "#/components/schemas/PlayerGuardian"
+                guardianConsent:
+                  type: boolean
                 password:
                   type: string
                   minLength: 8
@@ -1482,8 +1527,6 @@ paths:
               required:
                 - firstName
                 - lastName
-                - email
-                - phone
                 - password
                 - dateOfBirth
                 - gender
@@ -1521,7 +1564,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       description: |-
-        Rate limited per IP.
+        Rate limited per IP. `emailType` is the first-screen choice: own email (default; email and phone required), a guardian's email (email and guardian required; siblings may share it), or none (guardian required). A player under 18 needs `guardianConsent: true`. The response carries the assigned Player ID as `user.loginId`.
         
         **Public** — no authentication required.
       security: []
@@ -1538,13 +1581,15 @@ paths:
             schema:
               type: object
               properties:
+                identifier:
+                  type: string
+                  description: Email address, or (players only) Player ID
                 email:
                   type: string
                   format: email
                 password:
                   type: string
               required:
-                - email
                 - password
       responses:
         "200":
@@ -1580,7 +1625,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
       description: |-
-        Rate limited per IP. Locks the account temporarily after repeated failures.
+        Rate limited per IP. Locks the account temporarily after repeated failures. `identifier` is the player's own email or their Player ID; a guardian's address never signs in.
         
         **Public** — no authentication required.
       security: []
@@ -7642,6 +7687,231 @@ paths:
       security:
         - bearerAuth: []
         - cookieAuth: []
+  /api/admin/tie-break/draws:
+    post:
+      tags:
+        - Scores
+      summary: Record the lucky draw for one tied group
+      operationId: adminRecordTieBreakDraw
+      parameters:
+        - name: X-Competition-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: objectid
+          description: Competition context. Required unless the access token already carries one (set via POST /api/auth/set-competition) or the body/query supplies `competitionId`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gender:
+                  type: string
+                  enum:
+                    - Male
+                    - Female
+                ageGroup:
+                  type: string
+                  enum:
+                    - Under10
+                    - Under12
+                    - Under14
+                    - Under16
+                    - Under18
+                    - Above16
+                    - Above18
+                competitionType:
+                  type: string
+                  enum:
+                    - competition_1
+                    - competition_2
+                    - competition_3
+                    - Competition I
+                    - Competition II
+                    - Competition III
+                apparatus:
+                  type: string
+                  enum:
+                    - Pole Mallakhamb
+                    - Hanging Mallakhamb
+                    - Rope Mallakhamb
+                order:
+                  type: array
+                  items:
+                    type: string
+                    format: objectid
+                  minItems: 2
+                  maxItems: 100
+                  description: Player ids, first place first
+                notes:
+                  type: string
+                  maxLength: 500
+              required:
+                - gender
+                - ageGroup
+                - competitionType
+                - apparatus
+                - order
+      responses:
+        "200":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data: {}
+                  message:
+                    type: string
+        "400":
+          description: Request failed validation — `error.details` names the field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Missing, invalid, expired or logged-out token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Authenticated, but the principal lacks the required role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unhandled server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      description: |-
+        Only for a group the rules leave tied right now (tieBreakInfo.awaitingLuckyDraw). Recording again replaces the order.
+        
+        **Roles:** admin, superadmin
+        
+        **Competition context required** — see the `X-Competition-Id` parameter.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+    delete:
+      tags:
+        - Scores
+      summary: Remove a recorded lucky draw
+      operationId: adminClearTieBreakDraw
+      parameters:
+        - name: X-Competition-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: objectid
+          description: Competition context. Required unless the access token already carries one (set via POST /api/auth/set-competition) or the body/query supplies `competitionId`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gender:
+                  type: string
+                  enum:
+                    - Male
+                    - Female
+                ageGroup:
+                  type: string
+                  enum:
+                    - Under10
+                    - Under12
+                    - Under14
+                    - Under16
+                    - Under18
+                    - Above16
+                    - Above18
+                competitionType:
+                  type: string
+                  enum:
+                    - competition_1
+                    - competition_2
+                    - competition_3
+                    - Competition I
+                    - Competition II
+                    - Competition III
+                apparatus:
+                  type: string
+                  enum:
+                    - Pole Mallakhamb
+                    - Hanging Mallakhamb
+                    - Rope Mallakhamb
+                groupKey:
+                  type: string
+                  description: "tieBreakInfo.tieGroupKey of the group: sorted player ids, comma-joined"
+              required:
+                - gender
+                - ageGroup
+                - competitionType
+                - apparatus
+                - groupKey
+      responses:
+        "200":
+          description: Cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data: {}
+                  message:
+                    type: string
+        "400":
+          description: Request failed validation — `error.details` names the field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Missing, invalid, expired or logged-out token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Authenticated, but the principal lacks the required role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unhandled server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      description: |-
+        **Roles:** admin, superadmin
+        
+        **Competition context required** — see the `X-Competition-Id` parameter.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
   /api/admin/age-groups/start:
     post:
       tags:
@@ -13503,6 +13773,196 @@ paths:
                 $ref: "#/components/schemas/Error"
         "403":
           description: Authenticated, but the principal lacks the required role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unhandled server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      description: "**Roles:** superadmin"
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+  /api/superadmin/tie-break/draws:
+    post:
+      tags:
+        - Scores
+      summary: Record the lucky draw for one tied group
+      operationId: superAdminRecordTieBreakDraw
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                competitionId:
+                  type: string
+                  format: objectid
+                gender:
+                  type: string
+                  enum:
+                    - Male
+                    - Female
+                ageGroup:
+                  type: string
+                  enum:
+                    - Under10
+                    - Under12
+                    - Under14
+                    - Under16
+                    - Under18
+                    - Above16
+                    - Above18
+                competitionType:
+                  type: string
+                  enum:
+                    - competition_1
+                    - competition_2
+                    - competition_3
+                    - Competition I
+                    - Competition II
+                    - Competition III
+                apparatus:
+                  type: string
+                  enum:
+                    - Pole Mallakhamb
+                    - Hanging Mallakhamb
+                    - Rope Mallakhamb
+                order:
+                  type: array
+                  items:
+                    type: string
+                    format: objectid
+                  minItems: 2
+                  maxItems: 100
+      responses:
+        "200":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data: {}
+                  message:
+                    type: string
+        "400":
+          description: Request failed validation — `error.details` names the field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Missing, invalid, expired or logged-out token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Authenticated, but the principal lacks the required role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unhandled server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      description: "**Roles:** superadmin"
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+    delete:
+      tags:
+        - Scores
+      summary: Remove a recorded lucky draw
+      operationId: superAdminClearTieBreakDraw
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                competitionId:
+                  type: string
+                  format: objectid
+                gender:
+                  type: string
+                  enum:
+                    - Male
+                    - Female
+                ageGroup:
+                  type: string
+                  enum:
+                    - Under10
+                    - Under12
+                    - Under14
+                    - Under16
+                    - Under18
+                    - Above16
+                    - Above18
+                competitionType:
+                  type: string
+                  enum:
+                    - competition_1
+                    - competition_2
+                    - competition_3
+                    - Competition I
+                    - Competition II
+                    - Competition III
+                apparatus:
+                  type: string
+                  enum:
+                    - Pole Mallakhamb
+                    - Hanging Mallakhamb
+                    - Rope Mallakhamb
+                groupKey:
+                  type: string
+      responses:
+        "200":
+          description: Cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data: {}
+                  message:
+                    type: string
+        "400":
+          description: Request failed validation — `error.details` names the field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Missing, invalid, expired or logged-out token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Authenticated, but the principal lacks the required role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
           content:
             application/json:
               schema:
