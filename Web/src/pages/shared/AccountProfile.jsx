@@ -162,7 +162,7 @@ const AccountProfile = () => {
                 </div>
               </Panel>
 
-              <Panel id="details" aria-labelledby="account-details-title">
+              <Panel id="details" className="scroll-mt-24" aria-labelledby="account-details-title">
                 <SectionHeading hint={identityLocked ? 'Your date of birth and gender are set by your team entry. Ask an organiser to correct them.' : null}>
                   <span id="account-details-title">My profile</span>
                 </SectionHeading>

@@ -80,6 +80,17 @@
       "//": "Plain node, not nodemon: a watcher restarting mid-run is indistinguishable from the API being down."
     },
     {
+      "name": "api-local-check",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.MONGODB_URI='mongodb://127.0.0.1:27017/mallakhamb_identity_check';process.env.EMAIL_PROVIDER='none';process.env.NODE_ENV='development';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "The API on the LOCAL mongod (a throwaway database, never Atlas) with email suppressed, for end-to-end browser checks. Run `npm run prepare:db` with the same MONGODB_URI first. .env is untouched: dotenv never overrides a variable that is already set."
+    },
+    {
       "name": "api-metrics",
       "runtimeExecutable": "node",
       "runtimeArgs": [

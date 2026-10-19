@@ -462,6 +462,8 @@ const CoachDashboard = () => {
         <div className="max-w-4xl mx-auto px-[var(--pad)] py-10 pt-24 grid gap-8">
           <CompetitionDisplay />
           <CompetitionLockBanner />
+          {/* Requests follow the coach's team, not the meet, so they show here too. */}
+          <AccountRequestsPanel api={coachAPI.accountRequests} hideWhenEmpty />
           <EmptyState
             tag="No Team Registered"
             action={(

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Camera, Save, Scale } from 'lucide-react';
@@ -64,6 +64,7 @@ const downscaleImage = (file, size = 256) =>
  */
 const JudgeProfile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const photoInputRef = useRef(null);
 
   const [profile, setProfile] = useState(null);
@@ -107,6 +108,13 @@ const JudgeProfile = () => {
   }, [resetProfile]);
 
   useEffect(() => { load(); }, [load]);
+
+  // The account menu's "Change password" / "Update email" land on #password /
+  // #email; scroll there once the sections are on the page.
+  useEffect(() => {
+    if (!profile || !location.hash) return;
+    document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [profile, location.hash]);
 
   const onSaveProfile = async (values) => {
     setSavingProfile(true);

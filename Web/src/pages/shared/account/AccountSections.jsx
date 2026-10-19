@@ -62,7 +62,7 @@ export const PasswordSection = ({ role, idPrefix }) => {
   };
 
   return (
-    <Panel id="password" aria-labelledby={`${idPrefix}-password-title`}>
+    <Panel id="password" className="scroll-mt-24" aria-labelledby={`${idPrefix}-password-title`}>
       <SectionHeading hint="Your current password is required. Every other device you are signed in on will be signed out.">
         <span id={`${idPrefix}-password-title`}>Change password</span>
       </SectionHeading>
@@ -132,7 +132,7 @@ export const EmailSection = ({ user, userType, pending, onChanged, idPrefix }) =
   const onCancel = () => run(() => accountAPI.cancelEmailChange(), 'Email change cancelled');
 
   return (
-    <Panel id="email" aria-labelledby={`${idPrefix}-email-title`}>
+    <Panel id="email" className="scroll-mt-24" aria-labelledby={`${idPrefix}-email-title`}>
       <SectionHeading hint="A new address only replaces the old one after you enter the code we send to it.">
         <span id={`${idPrefix}-email-title`}>Update email</span>
       </SectionHeading>
