@@ -47,18 +47,32 @@ let isRefreshing = false;
 let refreshSubscribers = [];
 
 /**
- * Queue a callback to be executed once the token is refreshed.
- * @param {Function} cb
+ * Queue a request to be settled once the in-flight refresh finishes.
+ * @param {{ onRefreshed: Function, onFailed: Function }} subscriber
  */
-function subscribeTokenRefresh(cb) {
-  refreshSubscribers.push(cb);
+function subscribeTokenRefresh(subscriber) {
+  refreshSubscribers.push(subscriber);
 }
 
 /**
  * Notify all queued requests that the token has been refreshed.
  */
 function onTokenRefreshed() {
-  refreshSubscribers.forEach((cb) => cb());
+  refreshSubscribers.forEach((s) => s.onRefreshed());
+  refreshSubscribers = [];
+}
+
+/**
+ * The refresh failed: reject every queued request with its own 401.
+ *
+ * These used to be dropped, left pending forever. React StrictMode runs the
+ * AuthProvider bootstrap twice in development, so a signed-out visit to a
+ * protected page sent two `/auth/me` calls; the second queued behind the
+ * first's refresh and never settled, and the provider sat on its full-screen
+ * "Loading..." until the page was reloaded.
+ */
+function onTokenRefreshFailed() {
+  refreshSubscribers.forEach((s) => s.onFailed());
   refreshSubscribers = [];
 }
 
@@ -267,14 +281,16 @@ api.interceptors.response.use(
         secureStorage.removeItem('user');
         secureStorage.removeItem('userType');
 
+        onTokenRefreshFailed();
         dispatchAuthExpired({ userType: currentType, reason: 'refresh_failed' });
         return Promise.reject(error);
       }
 
       // Another request is already refreshing — queue this one
-      return new Promise((resolve) => {
-        subscribeTokenRefresh(() => {
-          resolve(api(originalRequest));
+      return new Promise((resolve, reject) => {
+        subscribeTokenRefresh({
+          onRefreshed: () => resolve(api(originalRequest)),
+          onFailed: () => reject(error),
         });
       });
     }

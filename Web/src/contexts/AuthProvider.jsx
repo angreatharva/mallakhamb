@@ -172,6 +172,11 @@ export default function AuthProvider({ children }) {
 
       setUser(null);
       setUserType(null);
+      // The session is settled — there is none. Without this, an expiry raised
+      // by the bootstrap's own `/auth/me` left the login page we navigate to
+      // behind App's full-screen loader whenever that bootstrap never reached
+      // its `finally` (StrictMode cancels the first run in development).
+      setLoading(false);
 
       const redirectTo = getLoginPathForRole(expiredRole);
       navigate(redirectTo, { replace: true });
