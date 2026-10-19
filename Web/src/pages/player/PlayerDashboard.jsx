@@ -231,7 +231,7 @@ const PlayerDashboard = () => {
       await fetchPlayerProfile();
       setSelectedTeam(null);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to select team');
+      toast.error(error.competitionLockedMessage || error.response?.data?.message || 'Failed to select team');
       setSelectedTeam(null);
     } finally {
       setUpdatingTeam(false);

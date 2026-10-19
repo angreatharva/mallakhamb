@@ -74,7 +74,9 @@ const PlayerTeamSelection = () => {
       }, 500);
     } catch (error) {
       logger.error('Failed to join team:', error);
-      toast.error(error.response?.data?.message || 'Failed to join team');
+      // A 423 (meet locked by its end date) carries its reason under data.error,
+      // which data.message misses; the api-client lifts it onto the error.
+      toast.error(error.competitionLockedMessage || error.response?.data?.message || 'Failed to join team');
       setSelectedTeam(null);
       setJoining(false);
     }

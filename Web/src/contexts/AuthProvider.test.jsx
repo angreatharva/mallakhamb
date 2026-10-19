@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import AuthProvider from './AuthProvider';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import ProtectedRoute from '@/middleware/protected-route';
+import { authAPI } from '@/services/auth/auth.api';
 import { AuthContext } from './AuthContext';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { authEventBus, AUTH_EXPIRED } from '@/utils/auth/authEvents';
-import { useContext } from 'react';
+import { useContext, StrictMode } from 'react';
 
 // Mock secureStorage
 vi.mock('@/utils/auth/secureStorage', () => ({
@@ -201,4 +203,55 @@ describe('AuthProvider', () => {
     expect(secureStorage.clearForRole).toHaveBeenCalledWith('admin');
     expect(screen.getByTestId('user').textContent).toBe('null');
   });
+
+  /*
+   * A signed-out visit to a protected page: the bootstrap asks `/auth/me`, it
+   * 401s, the silent refresh fails, AUTH_EXPIRED navigates to the login page.
+   * In development StrictMode runs the bootstrap twice; the first run is
+   * cancelled and the second's `/auth/me` queued behind the first's refresh,
+   * which never settled it. Nothing then cleared `loading`, so the login page
+   * stayed behind the full-screen loader until a reload. Modelled here as the
+   * first call expiring the session and the second never settling.
+   */
+  describe.each(['player', 'coach', 'admin', 'judge'])(
+    'signed-out visit to a protected %s page',
+    (role) => {
+      const LoaderGate = () => {
+        const { loading } = useContext(AuthContext);
+        if (loading) return <div>Loading...</div>;
+        return (
+          <Routes>
+            <Route path={`/${role}/login`} element={<div>{role} login form</div>} />
+            <Route
+              path={`/${role}/dashboard`}
+              element={<ProtectedRoute requiredUserType={role}><div>dashboard</div></ProtectedRoute>}
+            />
+          </Routes>
+        );
+      };
+
+      it('lands on the login form without a reload', async () => {
+        secureStorage.getItem.mockReturnValue(null);
+        authAPI.me
+          .mockImplementationOnce(() => new Promise((_, reject) => setTimeout(() => {
+            authEventBus.dispatchEvent(new CustomEvent(AUTH_EXPIRED, { detail: { userType: role } }));
+            reject(new Error('401'));
+          }, 0)))
+          .mockImplementationOnce(() => new Promise(() => {}));
+
+        render(
+          <StrictMode>
+            <MemoryRouter initialEntries={[`/${role}/dashboard`]}>
+              <AuthProvider>
+                <LoaderGate />
+              </AuthProvider>
+            </MemoryRouter>
+          </StrictMode>
+        );
+
+        expect(await screen.findByText(`${role} login form`)).toBeTruthy();
+        expect(screen.queryByText('Loading...')).toBeNull();
+      });
+    },
+  );
 });
