@@ -8,7 +8,8 @@ import { Button, ConfirmDialog, Dialog, EmptyState, Heading, Panel, Tag } from '
 /**
  * Requests from players who registered without an email, waiting on a person
  * (plan Part C): a password reset, or an email they want to add. The coach
- * sees their own players' requests on the dashboard; the super admin sees all.
+ * sees their own players' requests on the dashboard; the super admin sees all
+ * except those from players a coach registered, which only that coach sees.
  *
  * Approving a reset shows a one-time code to hand to the player — once. The
  * approver is asked first to check it is really the player or their parent,

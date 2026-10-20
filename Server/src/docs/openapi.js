@@ -940,7 +940,7 @@ function buildPaths() {
     }));
   };
   accountRequestRoutes('/api/coaches', 'coach', 'Coaches', 'coach', 'Requests from players on any of this coach’s teams.');
-  accountRequestRoutes('/api/superadmin', 'superadmin', 'Super admin', 'superAdmin', 'Every open request: the fallback for a player on no team or a coach who cannot be reached.');
+  accountRequestRoutes('/api/superadmin', 'superadmin', 'Super admin', 'superAdmin', 'Every open request except those from players a coach registered (those go to that coach only; deciding one here is a 403).');
 
   add('/api/coaches/profile', 'get', op({
     tag: 'Coaches', roles: 'coach', operationId: 'coachProfile',
@@ -2158,9 +2158,10 @@ function buildPaths() {
   });
 
   sa('/api/superadmin/coaches/{coachId}/status', 'put', {
-    operationId: 'superAdminCoachStatus', summary: 'Activate or deactivate a coach',
+    operationId: 'superAdminCoachStatus', summary: 'Activate a coach',
+    description: 'Activate only — `isActive: false` is refused with 400. A coach owns the requests of the players they registered, so deactivating one would strand them.',
     parameters: [pathParam('coachId', 'Coach id')],
-    requestBody: jsonBody(inline({ isActive: S.bool }, ['isActive'])),
+    requestBody: jsonBody(inline({ isActive: { type: 'boolean', enum: [true] } }, ['isActive'])),
     responses: { 200: ok('Updated'), ...VALIDATION_ERROR, ...NOT_FOUND },
   });
 

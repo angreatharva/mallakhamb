@@ -20,9 +20,8 @@
 const bcrypt = require('bcryptjs');
 const { ValidationError, AuthenticationError, ConflictError, NotFoundError } = require('../../errors');
 const { encrypt, decrypt } = require('../../utils/security/data-encryption.util');
+const { COACH_RELATION } = require('../../utils/data/player-login-id.util');
 
-/** The guardian relation recorded for a player their coach registered. */
-const COACH_RELATION = 'Coach';
 
 /** Matches a stored (already HTML-escaped) name exactly, ignoring case. */
 const exactName = (value) => new RegExp(`^${String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
@@ -137,6 +136,7 @@ class CoachPlayerService {
       gender,
       emailType: 'none',
       guardian,
+      registeredByCoach: coachId,
       // The coach confirms the guardian agreed; the validator requires it under 18.
       ...((guardianConsent === true || guardianConsent === 'true') ? { consentAt: new Date() } : {}),
       team: team._id,

@@ -141,12 +141,34 @@ const emailTypeOf = (player) => player?.emailType || 'self';
  */
 const OWN_EMAIL_CLAUSE = Object.freeze({ $or: [{ emailType: 'self' }, { emailType: { $exists: false } }, { emailType: null }] });
 
+/** The guardian relation the coach registration path records. */
+const COACH_RELATION = 'Coach';
+
+/**
+ * Did a coach register this player? Their account requests go to the coach
+ * only, never the super admin. `registeredByCoach` is set from now on; the
+ * players registered before it existed carry the guardian relation "Coach",
+ * which nothing but the coach path writes.
+ * @param {Object|null} player
+ * @returns {boolean}
+ */
+const isCoachRegistered = (player) =>
+  Boolean(player?.registeredByCoach) || player?.guardian?.relation === COACH_RELATION;
+
+/** Query clause matching coach-registered players (see isCoachRegistered). */
+const COACH_REGISTERED_CLAUSE = Object.freeze({
+  $or: [{ registeredByCoach: { $ne: null } }, { 'guardian.relation': COACH_RELATION }],
+});
+
 module.exports = {
+  COACH_REGISTERED_CLAUSE,
+  COACH_RELATION,
   LOGIN_ID_PATTERN,
   OWN_EMAIL_CLAUSE,
   baseLoginId,
   birthPart,
   emailTypeOf,
+  isCoachRegistered,
   looksLikeEmail,
   namePart,
   nextFreeLoginId,

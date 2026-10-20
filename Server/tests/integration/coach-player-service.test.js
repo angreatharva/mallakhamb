@@ -112,6 +112,7 @@ describe('registering a player with no email', () => {
     // The coach is the contact of record.
     expect(stored.guardian).toMatchObject({ name: 'Ravi Kale', relation: 'Coach', phone: COACH_PHONE });
     expect(stored.consentAt).toBeInstanceOf(Date);
+    expect(String(stored.registeredByCoach)).toBe(String(coach._id));
     expect(await bcrypt.compare(DEFAULT, stored.password)).toBe(true);
 
     expect(otpService.notifyCoachOfPlayerId).toHaveBeenCalledWith(

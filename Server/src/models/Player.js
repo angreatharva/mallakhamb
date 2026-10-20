@@ -67,6 +67,19 @@ const playerSchema = new mongoose.Schema({
     relation: { type: String, trim: true, default: null },
     phone: { type: String, trim: true, default: null }
   },
+  /**
+   * The coach who registered this player (CoachPlayerService), or null for a
+   * player who registered themselves or was added by a super admin. Their
+   * account requests (resets, email additions) go to that coach only.
+   * Players registered before this field read the same through
+   * `isCoachRegistered` (utils/data/player-login-id.util), from the guardian
+   * relation "Coach" that only the coach path writes.
+   */
+  registeredByCoach: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Coach',
+    default: null
+  },
   /** When a guardian confirmed consent for a player under 18 (DPDP Act). */
   consentAt: {
     type: Date,

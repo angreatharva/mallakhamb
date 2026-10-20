@@ -27,7 +27,8 @@ export const superAdminAPI = {
     approve: (id) => api.post(`/superadmin/account-requests/${id}/approve`),
     reject: (id) => api.post(`/superadmin/account-requests/${id}/reject`),
   },
-  updateCoachStatus: (coachId, data) => api.put(`/superadmin/coaches/${coachId}/status`, data),
+  // Activate only: coaches cannot be deactivated (see SuperAdminManagement).
+  activateCoach: (coachId) => api.put(`/superadmin/coaches/${coachId}/status`, { isActive: true }),
   deleteTeam: (teamId) => api.delete(`/superadmin/teams/${teamId}`),
   deleteJudge: (judgeId) => api.delete(`/superadmin/judges/${judgeId}`),
   createCompetition: (data) => api.post('/superadmin/competitions', data),

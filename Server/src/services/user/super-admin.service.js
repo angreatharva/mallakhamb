@@ -202,7 +202,18 @@ class SuperAdminService {
     const coaches = await this.coachRepository.find({}, { sort: { createdAt: -1 } });
     return coaches.map((coach) => ({ ...coach, name: fullName(coach) }));
   }
-  async updateCoachStatus(coachId, isActive) { return this.coachRepository.updateById(coachId, { isActive }); }
+  /**
+   * Activate only. A coach cannot be deactivated: the requests of the players
+   * they registered are theirs alone to decide, so a deactivated coach would
+   * strand them. `isActive: false` is refused; true brings back a coach
+   * deactivated before this rule.
+   */
+  async updateCoachStatus(coachId, isActive) {
+    if (isActive !== true && isActive !== 'true') {
+      throw new ValidationError('Coaches cannot be deactivated');
+    }
+    return this.coachRepository.updateById(coachId, { isActive: true });
+  }
 
   async getAllTeams(filters = {}) {
     const { gender, ageGroup, competition } = filters;

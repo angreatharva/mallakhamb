@@ -530,12 +530,15 @@ const SuperAdminManagement = () => {
   };
 
   // ─── Coach ─────────────────────────────────────────────────────────────────
-  const handleToggleCoachStatus = async (id, current) => {
+  // Coaches cannot be deactivated: a coach owns the requests of the players
+  // they registered, which nobody else can decide. Activate stays, only to
+  // bring back a coach deactivated before that rule.
+  const handleActivateCoach = async (id) => {
     try {
-      await superAdminAPI.updateCoachStatus(id, { isActive: !current });
-      toast.success(`Coach ${!current ? 'activated' : 'deactivated'}`);
+      await superAdminAPI.activateCoach(id);
+      toast.success('Coach activated');
       fetchData();
-    } catch { toast.error('Failed to update coach status'); }
+    } catch { toast.error('Failed to activate coach'); }
   };
 
   // ─── Competition CRUD ──────────────────────────────────────────────────────
@@ -1007,11 +1010,12 @@ const SuperAdminManagement = () => {
                     <Td>{coach.phone || '—'}</Td>
                     <Td><StatusBadge active={coach.isActive} /></Td>
                     <td className="px-4 py-3">
-                      <DarkBtn size="sm" variant={coach.isActive ? 'danger' : 'success'}
-                        onClick={() => handleToggleCoachStatus(coach._id, coach.isActive)}>
-                        {coach.isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
-                        {coach.isActive ? 'Deactivate' : 'Activate'}
-                      </DarkBtn>
+                      {coach.isActive ? <span className="text-fg-muted type-caption">—</span> : (
+                        <DarkBtn size="sm" variant="success" onClick={() => handleActivateCoach(coach._id)}>
+                          <UserCheck className="w-3.5 h-3.5" />
+                          Activate
+                        </DarkBtn>
+                      )}
                     </td>
                   </DarkTr>
                 ))}

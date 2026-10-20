@@ -15,8 +15,10 @@
  *
  * "Their coach" is the coach of the team the player is on when the request is
  * decided — looked up, not stored, so a team change moves the request with the
- * player. A super admin can decide any request: a player on no team, or a
- * coach who cannot be reached. Every decision is written to the audit log.
+ * player. A super admin can decide any request EXCEPT from a player a coach
+ * registered — those are that coach's alone (and coaches cannot be
+ * deactivated, so one is always there). Every decision is written to the
+ * audit log.
  *
  * @module services/auth/account-request.service
  */
@@ -25,7 +27,9 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { AuthorizationError, NotFoundError, ValidationError } = require('../../errors');
 const { recordLogout } = require('../../utils/security/token-invalidation.util');
-const { emailTypeOf, looksLikeEmail } = require('../../utils/data/player-login-id.util');
+const {
+  emailTypeOf, looksLikeEmail, isCoachRegistered, COACH_REGISTERED_CLAUSE,
+} = require('../../utils/data/player-login-id.util');
 const { securitySetting, DEFAULT_BCRYPT_ROUNDS } = require('../../utils/security/login-security.util');
 
 const PASSWORD_RESET = 'password-reset';
@@ -113,11 +117,14 @@ class AccountRequestService {
   }
 
   /**
-   * Every request waiting on a person, for the super admin.
+   * Every request waiting on a person, for the super admin — except those
+   * from players a coach registered, which only that coach sees and decides.
    * @returns {Promise<Array>}
    */
   async listForSuperAdmin() {
-    return this._listOpen({});
+    const coachOwned = await this.playerRepository.find(COACH_REGISTERED_CLAUSE, { select: '_id' });
+    const excluded = (coachOwned || []).map((p) => p._id);
+    return this._listOpen(excluded.length ? { user: { $nin: excluded } } : {});
   }
 
   /** @private */
@@ -158,14 +165,19 @@ class AccountRequestService {
   }
 
   /**
-   * May this person decide this request? A super admin always; a coach only
-   * for a player on one of their teams right now.
+   * May this person decide this request? A coach only for a player on one of
+   * their teams right now; a super admin for any player except one a coach
+   * registered, whose requests are that coach's alone.
    * @private
    */
   async _assertMayDecide(request, approver) {
-    if (approver.userType === 'superadmin') return;
+    const player = await this.playerRepository.findById(request.user, { select: 'team registeredByCoach guardian' });
+    if (approver.userType === 'superadmin') {
+      // A player their coach registered belongs to that coach alone.
+      if (isCoachRegistered(player)) throw new AuthorizationError('This player’s requests are decided by their coach');
+      return;
+    }
     if (approver.userType !== 'coach') throw new AuthorizationError('Only the player’s coach or a super admin can decide this');
-    const player = await this.playerRepository.findById(request.user, { select: 'team' });
     const team = player?.team ? await this.teamRepository.findById(player.team) : null;
     if (!team || String(team.coach) !== String(approver.userId)) {
       throw new AuthorizationError('This player is not on your team');
