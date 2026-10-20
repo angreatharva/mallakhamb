@@ -16,6 +16,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import PerformancePanel from '@/components/performance/PerformancePanel';
 import AccountRequestsPanel from '@/components/account/AccountRequestsPanel';
+import RegisterPlayerDialog from '@/pages/coach/RegisterPlayerDialog';
 import {
   Button, Dialog, EmptyState, Heading, IconButton, Input, Notice, Panel, SpecList, Stat, StatusTag, Tag,
 } from '@/components/ui';
@@ -43,6 +44,8 @@ const CoachDashboard = () => {
    */
   const [selectedApparatus, setSelectedApparatus] = useState([]);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
+  // Registering a player who has no email: a new account on this coach's team.
+  const [showRegisterPlayer, setShowRegisterPlayer] = useState(false);
   const [showTeamSummary, setShowTeamSummary] = useState(false);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
   const [user, setUser] = useState(null);
@@ -583,6 +586,10 @@ const CoachDashboard = () => {
               <Button variant="line" icon={UserPlus} onClick={() => setShowAddPlayer(true)} disabled={team?.isSubmitted}>
                 Add Player
               </Button>
+              {/* An account, not a squad place: open even after the squad is submitted. */}
+              <Button variant="line" icon={UserPlus} onClick={() => setShowRegisterPlayer(true)}>
+                Register Player
+              </Button>
               <Button
                 icon={team?.isSubmitted ? CheckCircle : Trophy}
                 aria-disabled={team?.isSubmitted ? 'true' : undefined}
@@ -730,6 +737,16 @@ const CoachDashboard = () => {
         </div>
       </Dialog>
 
+      <RegisterPlayerDialog
+        open={showRegisterPlayer}
+        onClose={() => setShowRegisterPlayer(false)}
+        canEnterAgeGroup={!team?.isSubmitted}
+        onEnterAgeGroup={(player) => {
+          setShowAddPlayer(true);
+          handlePlayerSelect(player);
+        }}
+      />
+
       {/* Add Player */}
       <Dialog
         open={showAddPlayer}
@@ -744,7 +761,7 @@ const CoachDashboard = () => {
               <Input id="player-search" type="text" value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); handleSearchPlayers(e.target.value); }}
                 className="pr-10"
-                placeholder="Search by name" />
+                placeholder="Search by name or Player ID" />
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none" aria-hidden="true" />
             </div>
             {searchLoading && <p className="text-fg-muted type-caption mt-1 mb-0">Searching...</p>}
@@ -754,7 +771,7 @@ const CoachDashboard = () => {
                   <button key={i} type="button" onClick={() => handlePlayerSelect(player)} className="ui-popover__option">
                     <span className="grid gap-0.5 min-w-0">
                       <span className="text-fg type-body-s font-medium">{player.firstName} {player.lastName}</span>
-                      <span className="text-fg-muted type-caption">{player.email} · {player.gender} · Age: {player.dateOfBirth ? calculateAge(player.dateOfBirth) : 'Unknown'}</span>
+                      <span className="text-fg-muted type-caption">{player.loginId || player.email} · {player.gender} · Age: {player.dateOfBirth ? calculateAge(player.dateOfBirth) : 'Unknown'}</span>
                     </span>
                   </button>
                 ))}

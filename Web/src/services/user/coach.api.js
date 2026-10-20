@@ -17,6 +17,13 @@ export const coachAPI = {
     approve: (id) => api.post(`/coaches/account-requests/${id}/approve`),
     reject: (id) => api.post(`/coaches/account-requests/${id}/reject`),
   },
+  // Players with no email, registered by the coach. The default password is
+  // readable: the coach hands it to the players they register.
+  playerDefaultPassword: {
+    get: () => api.get('/coaches/player-default-password'),
+    set: (password, currentPassword) => api.put('/coaches/player-default-password', { password, currentPassword }),
+  },
+  registerPlayer: (data) => api.post('/coaches/players', data),
   searchPlayers: (query) => api.get(`/coaches/search-players?query=${query}`),
   addPlayerToAgeGroup: (data) => api.post('/coaches/add-player', data),
   removePlayerFromAgeGroup: (playerId) => api.delete(`/coaches/remove-player/${playerId}`),

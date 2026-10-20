@@ -28,6 +28,7 @@ const AccountRequestService = require('../services/auth/account-request.service'
 const AuthorizationService = require('../services/auth/authorization.service');
 const PlayerService = require('../services/user/player.service');
 const CoachService = require('../services/user/coach.service');
+const CoachPlayerService = require('../services/user/coach-player.service');
 const AdminService = require('../services/user/admin.service');
 const PublicService = require('../services/public/public.service');
 const SuperAdminService = require('../services/user/super-admin.service');
@@ -51,6 +52,7 @@ const createAdminController = require('../controllers/admin.controller');
 const createPublicController = require('../controllers/public.controller');
 const createAuthController = require('../controllers/auth.controller');
 const createAccountRequestController = require('../controllers/account-request.controller');
+const createCoachPlayerController = require('../controllers/coach-player.controller');
 const createPlayerController = require('../controllers/player.controller');
 const createJudgeController = require('../controllers/judge.controller');
 const createSuperAdminController = require('../controllers/super-admin.controller');
@@ -191,6 +193,15 @@ function bootstrap() {
     c.resolve('config'),
     c.resolve('transactionRepository')
   ), 'singleton');
+  container.register('coachPlayerService', (c) => new CoachPlayerService({
+    coachRepository: c.resolve('coachRepository'),
+    playerRepository: c.resolve('playerRepository'),
+    teamRepository: c.resolve('teamRepository'),
+    auditLogRepository: c.resolve('auditLogRepository'),
+    otpService: c.resolve('otpService'),
+    config: c.resolve('config'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
   container.register('calculationService', (c) => new CalculationService(c.resolve('logger')), 'singleton');
   // Seating judges on panels. Registered before adminService because that one
   // delegates to it; resolve this directly for anything new.
@@ -344,6 +355,7 @@ function bootstrap() {
   container.register('publicController', (c) => createPublicController(c), 'singleton');
   container.register('authController', (c) => createAuthController(c), 'singleton');
   container.register('accountRequestController', (c) => createAccountRequestController(c), 'singleton');
+  container.register('coachPlayerController', (c) => createCoachPlayerController(c), 'singleton');
   container.register('playerController', (c) => createPlayerController(c), 'singleton');
   container.register('judgeController', (c) => createJudgeController(c), 'singleton');
   container.register('superAdminController', (c) => createSuperAdminController(c), 'singleton');

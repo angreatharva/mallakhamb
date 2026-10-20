@@ -16,7 +16,7 @@ import { Button, Field, Heading, Input, Notice, Panel, PasswordInput, Segmented 
  * superadmin, judge) — it names the stored session (`${role}_token`).
  */
 
-const errorMessage = (error, fallback) =>
+export const errorMessage = (error, fallback) =>
   error?.response?.data?.error?.message || error?.response?.data?.message || fallback;
 
 export const SectionHeading = ({ children, hint = null }) => (
@@ -27,7 +27,7 @@ export const SectionHeading = ({ children, hint = null }) => (
 );
 SectionHeading.propTypes = { children: PropTypes.node.isRequired, hint: PropTypes.node };
 
-const PASSWORD_RULES = {
+export const PASSWORD_RULES = {
   required: 'New password is required',
   minLength: { value: 8, message: 'Password must be at least 8 characters' },
   validate: (value) =>

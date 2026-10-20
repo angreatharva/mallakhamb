@@ -10,6 +10,7 @@
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, ConflictError } = require('../../errors');
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
+const { emailTypeOf } = require('../../utils/data/player-login-id.util');
 
 class PlayerService extends UserService {
   /**
@@ -162,6 +163,13 @@ class PlayerService extends UserService {
           });
           // Continue without token - not critical for the join operation
         }
+      }
+
+      // A player with no email has no inbox for their Player ID; the coach of
+      // the team they just joined gets it instead. Only on a real change of
+      // team, so re-joining the same team does not mail the coach again.
+      if (emailTypeOf(player) === 'none' && team.coach && String(player.team || '') !== String(teamId)) {
+        this.authenticationService?.otpService?.notifyCoachOfPlayerId?.(team.coach, updatedPlayer, 'joined-team', team.name);
       }
 
       this.logger.info('Player joined team successfully', { 

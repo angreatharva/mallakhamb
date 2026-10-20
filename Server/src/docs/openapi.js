@@ -1026,6 +1026,51 @@ function buildPaths() {
     responses: { 200: ok('Added'), ...VALIDATION_ERROR, ...NOT_FOUND },
   }));
 
+  // ── Players with no email, registered by their coach ──
+  const DEFAULT_PASSWORD = inline({
+    isSet: S.bool,
+    readable: { type: 'boolean', description: 'False when a value is saved but can no longer be decrypted (key rotated): set it again.' },
+    password: { type: 'string', nullable: true, description: 'In the clear, for the coach to hand to players. Stored encrypted.' },
+    setAt: { type: 'string', format: 'date-time', nullable: true },
+  }, ['isSet', 'readable']);
+  add('/api/coaches/player-default-password', 'get', op({
+    tag: 'Coaches', roles: 'coach', operationId: 'coachGetPlayerDefaultPassword',
+    summary: 'The default password for players this coach registers',
+    description: 'Readable by the coach so they can hand it out. Sent with Cache-Control: no-store.',
+    responses: { 200: ok('Default password', DEFAULT_PASSWORD) },
+  }));
+  add('/api/coaches/player-default-password', 'put', op({
+    tag: 'Coaches', roles: 'coach', operationId: 'coachSetPlayerDefaultPassword',
+    summary: 'Set or change the default player password',
+    description: 'Needs the coach’s own current password. Only players registered after the change start with the new value.',
+    requestBody: jsonBody(inline({ password: { type: 'string', minLength: 8 }, currentPassword: S.str }, ['password', 'currentPassword'])),
+    responses: { 200: ok('Saved', DEFAULT_PASSWORD), 401: errorResponse('Current password is incorrect'), ...VALIDATION_ERROR },
+  }));
+  add('/api/coaches/players', 'post', op({
+    tag: 'Coaches', roles: 'coach', operationId: 'coachRegisterPlayer',
+    summary: 'Register a player with no email onto this coach’s team',
+    description:
+      'The "No email at all" path, done by the coach: Player ID sign-in only, the coach’s default '
+      + 'player password, and the Player ID mailed to the coach. Under 18 needs `guardianConsent: true` '
+      + '(the coach confirms the guardian agreed). A player with the same name and date of birth is '
+      + 'answered 409 with `error.details.matches`; resend with `confirmDuplicate: true` to create anyway. '
+      + 'Entering the player in a meet is the separate add-player step.',
+    requestBody: jsonBody(inline({
+      firstName: S.str, lastName: S.str,
+      dateOfBirth: { type: 'string', format: 'date' }, gender: S.gender,
+      guardian: inline({ name: S.str, relation: S.str, phone: S.str }, ['name', 'relation', 'phone']),
+      guardianConsent: S.bool, confirmDuplicate: S.bool,
+    }, ['firstName', 'lastName', 'dateOfBirth', 'gender', 'guardian'])),
+    responses: {
+      201: ok('Registered', inline({
+        player: inline({ _id: S.id, firstName: S.str, lastName: S.str, loginId: S.str, gender: S.gender, team: S.id }, []),
+        team: inline({ _id: S.id, name: S.str }, []),
+      }, [])),
+      409: errorResponse('Possible duplicate — see error.details.matches'),
+      ...VALIDATION_ERROR,
+    },
+  }));
+
   add('/api/coaches/remove-player/{playerId}', 'delete', op({
     tag: 'Coaches', roles: 'coach', competitionContext: true, operationId: 'coachRemovePlayer',
     summary: 'Remove an athlete from the squad',

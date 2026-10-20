@@ -215,6 +215,53 @@ class OTPService {
   }
 
   /**
+   * Tell a coach the Player ID of a player with no email of their own.
+   *
+   * Such a player has nowhere else to be told: the coach is the adult who will
+   * hand the ID over and, later, approve their password resets. Sent when the
+   * coach registers the player themselves, and when a self-registered player
+   * joins (or moves to) the coach's team. Never carries a password.
+   *
+   * @param {string} coachId
+   * @param {{_id: *, firstName: string, lastName: string, loginId: string}} player
+   * @param {'registered-by-coach'|'joined-team'} reason
+   * @param {string} [teamName]
+   * @returns {Promise<void>} settles, never rejects
+   */
+  async notifyCoachOfPlayerId(coachId, player, reason, teamName = '') {
+    try {
+      if (!coachId || !player?.loginId) return;
+      const coach = await this.coachRepository?.findById?.(coachId);
+      if (!coach?.email) return;
+
+      const name = [player.firstName, player.lastName].filter(Boolean).join(' ');
+      const team = teamName ? ` (${teamName})` : '';
+      const message = [
+        reason === 'registered-by-coach'
+          ? `You registered ${name}${team}. They have no email address, so their sign-in details come to you:`
+          : `${name} has joined your team${team}. They have no email address, so their Player ID comes to you:`,
+        '',
+        `Player ID: ${player.loginId}`,
+        '',
+        reason === 'registered-by-coach'
+          ? 'Their password is your default player password, which you can see on your profile. Please pass both on to the player.'
+          : 'Please keep it for them. If they forget their password, they can ask for a reset, which you approve from your dashboard.',
+      ].join('\n');
+
+      const recipient = { _id: String(coach._id), email: coach.email };
+      await this._sendInBackground('Coach Player ID', recipient, 'coach', (address) =>
+        this.emailService.sendNotification(address, {
+          userName: coach.firstName || 'Coach',
+          title: `Player ID for ${name}`,
+          message,
+        })
+      );
+    } catch (error) {
+      this.logger.error('Could not send a Player ID to the coach', { coachId, error: error.message });
+    }
+  }
+
+  /**
    * Run an email send without letting it reject. Returns the settled promise
    * so tests can await the attempt; production callers ignore it.
    * @private

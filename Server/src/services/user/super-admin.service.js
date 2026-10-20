@@ -1095,6 +1095,15 @@ class SuperAdminService {
       // Commit transaction
       await session.commitTransaction();
 
+      // The Player ID goes where self-registration would send it: the
+      // player's or guardian's email, or — with no email — the team's coach.
+      const otp = this.authenticationService?.otpService;
+      if (address) {
+        otp?.notifyPlayerLoginIds?.(address, [player], 'registered');
+      } else if (teamWithCoach?.coach?._id) {
+        otp?.notifyCoachOfPlayerId?.(teamWithCoach.coach._id, player, 'joined-team', teamWithCoach.name);
+      }
+
       return {
         id: player._id,
         firstName: player.firstName,

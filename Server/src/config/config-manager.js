@@ -83,6 +83,15 @@ class ConfigManager {
         otpLength: this.getNumber('OTP_LENGTH', 6),
         otpExpiry: this.getNumber('OTP_EXPIRY_MINUTES', 10),
         otpMaxAttempts: this.getNumber('OTP_MAX_ATTEMPTS', 5),
+        /**
+         * Key for the few values the app must be able to read back — today a
+         * coach's default password for the players they register, which the
+         * coach views to hand out. Optional: unset, a key is derived from
+         * JWT_SECRET (utils/security/data-encryption.util.js), so no deploy
+         * needs a new secret. Changing either one makes saved values unreadable
+         * — the coach is asked to set the default again; nothing else breaks.
+         */
+        dataEncryptionKey: this.getString('DATA_ENCRYPTION_KEY', ''),
         maxLoginAttempts: this.getNumber('MAX_LOGIN_ATTEMPTS', 5),
         lockoutDuration: this.getNumber('LOCKOUT_DURATION_MINUTES', 15),
         csrfEnabled: this.getBoolean('CSRF_ENABLED', true),

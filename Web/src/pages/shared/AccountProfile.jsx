@@ -13,6 +13,7 @@ import { AppHeader } from '@/components/shell';
 import { Button, Field, Heading, Input, Panel, Select, Tag, TextLink } from '@/components/ui';
 import { EmailSection, PasswordSection, SectionHeading } from './account/AccountSections';
 import { RELATIONS } from '@/pages/player/registration/playerRegistration';
+import PlayerDefaultPasswordSection from '@/pages/coach/PlayerDefaultPasswordSection';
 
 const ROLE_NAME = { player: 'Player', coach: 'Coach', admin: 'Admin', superadmin: 'Super Admin' };
 
@@ -239,6 +240,7 @@ const AccountProfile = () => {
               </Panel>
 
               <PasswordSection role={role} idPrefix="account" />
+              {userType === 'coach' && <PlayerDefaultPasswordSection idPrefix="account" />}
               <EmailSection user={user} userType={userType} pending={account.pendingEmailChange} onChanged={load} idPrefix="account" />
             </>
           )}

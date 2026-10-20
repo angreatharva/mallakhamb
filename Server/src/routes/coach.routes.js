@@ -24,6 +24,8 @@ const { validateCompetitionContext } = require('../middleware/competition-contex
 const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const accountValidators = require('../validators/account.validator');
+const playerValidators = require('../validators/player.validator');
+const { password: passwordRule } = require('../validators/common.validator');
 const { createUserRateLimitMiddleware } = require('../middleware/security.middleware');
 
 /**
@@ -370,6 +372,37 @@ function createCoachRoutes(container) {
   router.get('/account-requests', authMiddleware, coachAuth, requests.list);
   router.post('/account-requests/:requestId/approve', authMiddleware, coachAuth, accountValidators.decideRequest(), handleValidationErrors, requests.approve);
   router.post('/account-requests/:requestId/reject', authMiddleware, coachAuth, accountValidators.decideRequest(), handleValidationErrors, requests.reject);
+
+  /*
+   * Players with no email, registered by their coach. Resolved per request for
+   * the same reason as the account requests above. Not competition-scoped: an
+   * account belongs to the team, and entering it in a meet stays the
+   * age-group step above, with its own lock and fee-window checks.
+   */
+  const coachPlayers = ['getDefaultPassword', 'setDefaultPassword', 'registerPlayer'].reduce((handlers, name) => ({
+    ...handlers,
+    [name]: (req, res, next) => container.resolve('coachPlayerController')[name](req, res, next),
+  }), {});
+  router.get('/player-default-password', authMiddleware, coachAuth, coachPlayers.getDefaultPassword);
+  router.put(
+    '/player-default-password',
+    authMiddleware,
+    coachAuth,
+    userRateLimit,
+    passwordRule('password'),
+    body('currentPassword').notEmpty().withMessage('Enter your current password'),
+    handleValidationErrors,
+    coachPlayers.setDefaultPassword
+  );
+  router.post(
+    '/players',
+    authMiddleware,
+    coachAuth,
+    userRateLimit,
+    playerValidators.coachRegisterPlayer(),
+    handleValidationErrors,
+    coachPlayers.registerPlayer
+  );
 
   return router;
 }

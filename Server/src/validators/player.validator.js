@@ -285,8 +285,33 @@ const joinTeam = () => {
   ];
 };
 
+/**
+ * A coach registering a player with no email (POST /api/coaches/players).
+ *
+ * The "No email at all" path of createPlayer, minus what the coach does not
+ * supply: no email, no phone of the player's own, no password (the coach's
+ * default is used). `emailType` is forced to 'none' first so the guardian
+ * rules below apply. Consent under 18 is the coach confirming the guardian
+ * agreed, in place of the guardian ticking the box themselves.
+ */
+const COACH_REGISTER_FIELDS = [
+  'firstName', 'lastName', 'guardian.name', 'guardian.relation', 'guardian.phone',
+  'guardianConsent', 'dateOfBirth', 'gender',
+];
+
+const coachRegisterPlayer = () => {
+  // The same chains as self-registration, so the two paths cannot drift.
+  const shared = createPlayer().filter((chain) => COACH_REGISTER_FIELDS.includes(chain.builder?.fields?.[0]));
+  return [
+    body('emailType').customSanitizer(() => 'none'),
+    ...shared,
+    body('confirmDuplicate').optional().isBoolean().withMessage('confirmDuplicate must be true or false').toBoolean(),
+  ];
+};
+
 module.exports = {
   createPlayer,
+  coachRegisterPlayer,
   updatePlayer,
   getPlayerById,
   deletePlayer,

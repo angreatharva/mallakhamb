@@ -89,6 +89,22 @@ const coachSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     select: false
+  },
+  /**
+   * The password every player this coach registers starts with
+   * (CoachPlayerService). ENCRYPTED, not hashed — the coach views it to hand it
+   * out — see utils/security/data-encryption.util. A player's own copy is
+   * hashed like any password the moment the account is created, so changing
+   * this later never touches existing players.
+   */
+  playerDefaultPassword: {
+    type: String,
+    default: null,
+    select: false
+  },
+  playerDefaultPasswordSetAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -100,6 +116,7 @@ const coachSchema = new mongoose.Schema({
       delete ret.password;
       delete ret.resetPasswordToken;
       delete ret.resetPasswordExpires;
+      delete ret.playerDefaultPassword;
       return ret;
     }
   }

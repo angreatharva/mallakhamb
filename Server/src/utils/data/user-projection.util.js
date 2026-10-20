@@ -236,6 +236,9 @@ const SENSITIVE_USER_FIELDS = [
   'resetPasswordAttempts',
   'loginAttempts',
   'lockUntil',
+  // A coach's default player password, encrypted. Read only through
+  // CoachPlayerService.getDefaultPassword, never as part of a profile.
+  'playerDefaultPassword',
 ];
 
 /**
