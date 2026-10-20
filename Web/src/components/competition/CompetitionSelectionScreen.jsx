@@ -248,8 +248,9 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
    * every role, without ever drawing the list (see `autoTarget` in the render).
    *
    * Gated on `selectedLevel` so it can never fire before the level step.
-   * A player goes on to pick a squad for that meet on the next screen, as
-   * before. A COACH only when their team is already entered there: for a coach,
+   * Never for a PLAYER: their flow is Level → Team → Competition, and the
+   * competition is a step they see and choose even when there is only one.
+   * A COACH only when their team is already entered there: for a coach,
    * choosing a meet they are not in registers the team for it, and that stays
    * a deliberate tap.
    */
@@ -257,6 +258,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const coachAlreadyIn = (id) => (assignedCompetitions || [])
     .some((c) => String(c._id || c.id) === String(id));
   const autoTarget = !loading && selectedLevel && onlyCompetition
+    && userType !== 'player'
     && (userType !== 'coach' || coachAlreadyIn(onlyCompetition._id || onlyCompetition.id))
     ? onlyCompetition
     : null;

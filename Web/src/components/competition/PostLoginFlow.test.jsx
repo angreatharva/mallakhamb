@@ -5,7 +5,8 @@
  *   - The level chooser shows it is still counting, instead of "0 competitions"
  *     on every card until the fetch lands.
  *   - One competition at the chosen level: straight through to the dashboard,
- *     the list never drawn. More than one: the list, as before.
+ *     the list never drawn (not for players, who always choose). More than
+ *     one: the list, as before.
  *   - A coach passes through only into a meet the team is already entered in;
  *     entering a new one stays a deliberate tap.
  */
@@ -136,11 +137,13 @@ describe('Competition chooser — one competition goes straight through', () => 
     expect(h.navigate).not.toHaveBeenCalledWith(expect.stringContaining('competitionId'));
   });
 
-  it('player with a team: one meet the team is in opens the dashboard', async () => {
+  it('player with a team: even one meet is shown as a choice, never skipped', async () => {
     h.user = { _id: 'u1', team: 'team-1' };
-    h.ctx.assignedCompetitions = [meet('c1')];
+    h.ctx.assignedCompetitions = [meet('c1', 'district', 'Nagpur Open')];
     render(<CompetitionSelectionScreen userType="player" />);
-    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/player/dashboard?competitionId=c1'));
+    expect(await screen.findByText('Nagpur Open')).toBeInTheDocument();
+    expect(screen.queryByText(/Opening /)).not.toBeInTheDocument();
+    expect(h.navigate).not.toHaveBeenCalledWith(expect.stringContaining('/player/dashboard'));
   });
 
   it('admin: one assigned meet goes straight to the dashboard', async () => {
