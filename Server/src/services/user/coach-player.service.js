@@ -21,6 +21,9 @@ const bcrypt = require('bcryptjs');
 const { ValidationError, AuthenticationError, ConflictError, NotFoundError } = require('../../errors');
 const { encrypt, decrypt } = require('../../utils/security/data-encryption.util');
 
+/** The guardian relation recorded for a player their coach registered. */
+const COACH_RELATION = 'Coach';
+
 /** Matches a stored (already HTML-escaped) name exactly, ignoring case. */
 const exactName = (value) => new RegExp(`^${String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
@@ -101,10 +104,16 @@ class CoachPlayerService {
    * @returns {Promise<{player: Object, team: {_id: *, name: string}}>}
    */
   async registerPlayer(coachId, input) {
-    const { firstName, lastName, dateOfBirth, gender, guardian, guardianConsent, confirmDuplicate } = input;
+    const { firstName, lastName, dateOfBirth, gender, guardianConsent, confirmDuplicate } = input;
 
     const [team] = await this.teamRepository.find({ coach: coachId, isActive: true }, { sort: { createdAt: -1 }, limit: 1 });
     if (!team) throw new ValidationError('Create your team before registering players');
+
+    // The coach registering the player is their contact of record: name,
+    // relation "Coach" and the coach's phone — taken from the coach's account,
+    // never from the request.
+    const coach = await this._loadCoach(coachId);
+    const guardian = this._coachAsGuardian(coach);
 
     const { password } = await this.getDefaultPassword(coachId);
     if (!password) {
@@ -127,7 +136,7 @@ class CoachPlayerService {
       dateOfBirth,
       gender,
       emailType: 'none',
-      guardian: { name: guardian.name, relation: guardian.relation || null, phone: guardian.phone },
+      guardian,
       // The coach confirms the guardian agreed; the validator requires it under 18.
       ...((guardianConsent === true || guardianConsent === 'true') ? { consentAt: new Date() } : {}),
       team: team._id,
@@ -154,6 +163,18 @@ class CoachPlayerService {
       },
       team: { _id: team._id, name: team.name },
     };
+  }
+
+  /**
+   * The guardian block for a coach-registered player: the coach themself.
+   * @private
+   */
+  _coachAsGuardian(coach) {
+    const name = [coach.firstName, coach.lastName].filter(Boolean).join(' ').trim();
+    if (!coach.phone) {
+      throw new ValidationError('Add your phone number to your profile first — it is the contact for players you register');
+    }
+    return { name, relation: COACH_RELATION, phone: coach.phone };
   }
 
   /** @private */
@@ -201,3 +222,4 @@ class CoachPlayerService {
 }
 
 module.exports = CoachPlayerService;
+module.exports.COACH_RELATION = COACH_RELATION;

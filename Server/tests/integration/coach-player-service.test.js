@@ -19,7 +19,7 @@ const { AuthenticationError, ConflictError, ValidationError } = require('../../s
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 const COACH_PASSWORD = 'CoachPass1';
 const DEFAULT = 'Shivaji2026';
-const GUARDIAN = { name: 'Sunita Patil', relation: 'Mother', phone: '9876543210' };
+const COACH_PHONE = '9123456780';
 const keyed = (secret) => ({ get: (key) => (key === 'jwt.secret' ? secret : undefined) });
 
 function build(config = keyed('j'.repeat(40))) {
@@ -37,14 +37,14 @@ function build(config = keyed('j'.repeat(40))) {
 }
 
 async function coachWithTeam() {
-  const coach = await Coach.create({ firstName: 'Ravi', lastName: 'Kale', email: 'ravi@example.com', password: COACH_PASSWORD });
+  const coach = await Coach.create({ firstName: 'Ravi', lastName: 'Kale', email: 'ravi@example.com', phone: COACH_PHONE, password: COACH_PASSWORD });
   const team = await Team.create({ name: 'Shivaji Club', coach: coach._id });
   return { coach, team };
 }
 
 const AARAV = {
   firstName: 'Aarav', lastName: 'Patil', dateOfBirth: new Date('2016-06-15'), gender: 'Male',
-  guardian: GUARDIAN, guardianConsent: true,
+  guardianConsent: true,
 };
 
 beforeAll(async () => {
@@ -109,7 +109,8 @@ describe('registering a player with no email', () => {
     expect(stored.emailType).toBe('none');
     expect(stored.email).toBeUndefined();
     expect(String(stored.team)).toBe(String(team._id));
-    expect(stored.guardian).toMatchObject(GUARDIAN);
+    // The coach is the contact of record.
+    expect(stored.guardian).toMatchObject({ name: 'Ravi Kale', relation: 'Coach', phone: COACH_PHONE });
     expect(stored.consentAt).toBeInstanceOf(Date);
     expect(await bcrypt.compare(DEFAULT, stored.password)).toBe(true);
 
@@ -130,6 +131,19 @@ describe('registering a player with no email', () => {
     const { coach } = await coachWithTeam();
     await expect(service.registerPlayer(coach._id, AARAV)).rejects.toBeInstanceOf(ValidationError);
     expect(await Player.countDocuments()).toBe(0);
+  });
+
+  test('ignores a guardian sent by the client, and needs the coach phone', async () => {
+    const { service } = build();
+    const { coach } = await coachWithTeam();
+    await service.setDefaultPassword(coach._id, { password: DEFAULT, currentPassword: COACH_PASSWORD });
+
+    const { player } = await service.registerPlayer(coach._id, { ...AARAV, guardian: { name: 'Someone Else', relation: 'Mother', phone: '9000000000' } });
+    expect((await Player.findById(player._id).lean()).guardian).toMatchObject({ name: 'Ravi Kale', relation: 'Coach' });
+
+    await Coach.updateOne({ _id: coach._id }, { $set: { phone: null } });
+    await expect(service.registerPlayer(coach._id, { ...AARAV, firstName: 'Diya', gender: 'Female' }))
+      .rejects.toThrow('Add your phone number');
   });
 
   test('stops at a same-name, same-birthday player until the coach confirms', async () => {

@@ -22,20 +22,18 @@ const tenYearsAgo = () => {
 
 const VALID = {
   firstName: 'Aarav', lastName: 'Patil', dateOfBirth: tenYearsAgo(), gender: 'Male',
-  guardian: { name: 'Sunita Patil', relation: 'Mother', phone: '9876543210' },
   guardianConsent: true,
 };
 
 describe('coachRegisterPlayer validator', () => {
-  test('accepts a complete body and forces emailType to none', async () => {
-    const { errors, body } = await check({ ...VALID, emailType: 'self' });
+  test('accepts a complete body', async () => {
+    const { errors } = await check({ ...VALID, emailType: 'self' });
     expect(errors).toEqual([]);
-    expect(body.emailType).toBe('none');
   });
 
-  test('requires the guardian name, relation and phone', async () => {
-    const { errors } = await check({ ...VALID, guardian: {} });
-    expect(errors).toEqual(expect.arrayContaining(['guardian.name', 'guardian.relation', 'guardian.phone']));
+  test('asks for no guardian details: the coach is the contact', async () => {
+    const { errors } = await check(VALID);
+    expect(errors.filter((path) => path.startsWith('guardian.'))).toEqual([]);
   });
 
   test('requires the coach to confirm guardian consent under 18', async () => {

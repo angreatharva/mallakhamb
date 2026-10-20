@@ -10,7 +10,7 @@ import RegisterPlayerDialog, { signInCardText } from './RegisterPlayerDialog';
 
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/services/api', () => ({
-  coachAPI: { playerDefaultPassword: { get: vi.fn() }, registerPlayer: vi.fn() },
+  coachAPI: { playerDefaultPassword: { get: vi.fn() }, registerPlayer: vi.fn(), getProfile: vi.fn() },
 }));
 
 const respond = (data, message) => Promise.resolve({ data: { data, message } });
@@ -54,14 +54,12 @@ const fillForm = () => {
   fireEvent.change(screen.getByLabelText(/^Last Name/), { target: { value: 'Patil' } });
   fireEvent.change(screen.getByLabelText(/^Date of Birth/), { target: { value: tenYearsAgo() } });
   fireEvent.change(screen.getByLabelText(/^Gender/), { target: { value: 'Male' } });
-  fireEvent.change(screen.getByLabelText(/^Parent\/Guardian Name/), { target: { value: 'Sunita Patil' } });
-  fireEvent.change(screen.getByLabelText(/^Relation to Player/), { target: { value: 'Mother' } });
-  fireEvent.change(screen.getByLabelText(/^Parent\/Guardian Phone/), { target: { value: '9876543210' } });
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   coachAPI.playerDefaultPassword.get.mockImplementation(() => respond({ isSet: true, readable: true, password: 'Shivaji2026' }));
+  coachAPI.getProfile.mockImplementation(() => respond({ firstName: 'Ravi', lastName: 'Kale', phone: '9123456780' }));
 });
 
 describe('RegisterPlayerDialog', () => {
@@ -84,10 +82,9 @@ describe('RegisterPlayerDialog', () => {
 
     await waitFor(() => expect(coachAPI.registerPlayer).toHaveBeenCalled());
     const body = coachAPI.registerPlayer.mock.calls[0][0];
-    expect(body).toMatchObject({
-      firstName: 'Aarav', lastName: 'Patil', gender: 'Male', guardianConsent: true,
-      guardian: { name: 'Sunita Patil', relation: 'Mother', phone: '9876543210' },
-    });
+    expect(body).toMatchObject({ firstName: 'Aarav', lastName: 'Patil', gender: 'Male', guardianConsent: true });
+    // The coach is the contact of record; the server fills it in.
+    expect(body).not.toHaveProperty('guardian');
     expect(body).not.toHaveProperty('email');
     expect(body).not.toHaveProperty('password');
 
@@ -96,6 +93,19 @@ describe('RegisterPlayerDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Enter in an age group now' }));
     expect(onEnterAgeGroup).toHaveBeenCalledWith(expect.objectContaining({ _id: 'p1', gender: 'Male' }));
+  });
+
+  it('shows the coach as the contact, with no guardian fields to fill', async () => {
+    renderDialog();
+    expect((await screen.findByTestId('coach-contact')).textContent).toBe('Ravi Kale · Coach · 9123456780');
+    expect(screen.queryByLabelText(/Parent\/Guardian Name/)).not.toBeInTheDocument();
+  });
+
+  it('blocks registering until the coach adds a phone', async () => {
+    coachAPI.getProfile.mockImplementation(() => respond({ firstName: 'Ravi', lastName: 'Kale', phone: null }));
+    renderDialog();
+    expect(await screen.findByText('Add your phone number first')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register player' })).toBeDisabled();
   });
 
   it('stops at a possible duplicate until the coach says it is someone else', async () => {
@@ -119,6 +129,6 @@ describe('RegisterPlayerDialog', () => {
     const text = signInCardText(CREATED.player, 'Shivaji2026', 'https://app.example/player/login');
     expect(text).toContain('Player ID: aarav.patil.150616.2');
     expect(text).toContain('Password:  Shivaji2026');
-    expect(text).not.toContain('Sunita');
+    expect(text).not.toContain('9123456780');
   });
 });

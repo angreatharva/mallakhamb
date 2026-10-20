@@ -4,6 +4,8 @@ import PropTypes from 'prop-types';
 import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCompetition } from '@/contexts/CompetitionContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { playerHasTeam } from '@/utils/auth/playerTeam';
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
 import { logger } from '@/infrastructure/logger';
@@ -84,6 +86,7 @@ LevelRow.propTypes = {
 const LevelSelectionScreen = ({ userType }) => {
   const navigate = useNavigate();
   const { assignedCompetitions, selectedLevel, setSelectedLevel, isLoading } = useCompetition();
+  const { user } = useAuth();
   const [pendingLevel, setPendingLevel] = useState(selectedLevel);
   const [scopedCompetitions, setScopedCompetitions] = useState(null);
   const [scopedLoading, setScopedLoading] = useState(false);
@@ -160,6 +163,12 @@ const LevelSelectionScreen = ({ userType }) => {
     }
     setSelectedLevel(pendingLevel);
     logger.log('[Level Selection] Level chosen', { userType, level: pendingLevel });
+    // A player picks their team before the meet: Level → Team → Competition.
+    // The meets offered are then the ones that team is entered in.
+    if (userType === 'player' && !playerHasTeam(user)) {
+      navigate('/player/select-team');
+      return;
+    }
     navigate(SELECT_COMPETITION_PATH[userType] || '/');
   };
 

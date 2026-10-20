@@ -1052,15 +1052,16 @@ function buildPaths() {
     description:
       'The "No email at all" path, done by the coach: Player ID sign-in only, the coach’s default '
       + 'player password, and the Player ID mailed to the coach. Under 18 needs `guardianConsent: true` '
-      + '(the coach confirms the guardian agreed). A player with the same name and date of birth is '
+      + '(the coach confirms the parent or guardian agreed). The coach is the player’s contact of record: '
+      + 'guardian = the coach’s name, relation "Coach" and phone (400 if the coach has no phone). '
+      + 'A player with the same name and date of birth is '
       + 'answered 409 with `error.details.matches`; resend with `confirmDuplicate: true` to create anyway. '
       + 'Entering the player in a meet is the separate add-player step.',
     requestBody: jsonBody(inline({
       firstName: S.str, lastName: S.str,
       dateOfBirth: { type: 'string', format: 'date' }, gender: S.gender,
-      guardian: inline({ name: S.str, relation: S.str, phone: S.str }, ['name', 'relation', 'phone']),
       guardianConsent: S.bool, confirmDuplicate: S.bool,
-    }, ['firstName', 'lastName', 'dateOfBirth', 'gender', 'guardian'])),
+    }, ['firstName', 'lastName', 'dateOfBirth', 'gender'])),
     responses: {
       201: ok('Registered', inline({
         player: inline({ _id: S.id, firstName: S.str, lastName: S.str, loginId: S.str, gender: S.gender, team: S.id }, []),

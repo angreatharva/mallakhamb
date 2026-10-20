@@ -1,5 +1,6 @@
 /**
- * The post-login level → competition flow, for every role.
+ * The post-login level → competition flow, for every role (players pick a
+ * team in between: Level → Team → Competition).
  *
  *   - The level chooser shows it is still counting, instead of "0 competitions"
  *     on every card until the fetch lands.
@@ -81,6 +82,27 @@ describe('Level chooser — counting', () => {
   });
 });
 
+describe('Level chooser — where a player goes next', () => {
+  const pickDistrictAndContinue = async () => {
+    h.playerList = reply([meet('c1')]);
+    render(<LevelSelectionScreen userType="player" />);
+    await screen.findByText('1 competition');
+    screen.getByText('District').click();
+    screen.getByText('Continue').click();
+  };
+
+  it('no team yet: the team comes next', async () => {
+    await pickDistrictAndContinue();
+    expect(h.navigate).toHaveBeenCalledWith('/player/select-team');
+  });
+
+  it('already on a team: straight to the competition', async () => {
+    h.user = { _id: 'u1', team: { _id: 'team-1' } };
+    await pickDistrictAndContinue();
+    expect(h.navigate).toHaveBeenCalledWith('/player/select-competition');
+  });
+});
+
 describe('Competition chooser — one competition goes straight through', () => {
   it('judge: one meet at the level opens the dashboard without drawing the list', async () => {
     h.judgeList = reply([meet('c1', 'district', 'SGAM-TRIALS-1')]);
@@ -107,10 +129,18 @@ describe('Competition chooser — one competition goes straight through', () => 
     expect(screen.queryByText(/Nothing at/)).not.toBeInTheDocument();
   });
 
-  it('player: one meet goes straight on to picking a squad', async () => {
+  it('player with no team: sent to pick a team first (Level → Team → Competition)', async () => {
     h.playerList = reply([meet('c1')]);
     render(<CompetitionSelectionScreen userType="player" />);
-    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/player/select-team?competitionId=c1'));
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/player/select-team', { replace: true }));
+    expect(h.navigate).not.toHaveBeenCalledWith(expect.stringContaining('competitionId'));
+  });
+
+  it('player with a team: one meet the team is in opens the dashboard', async () => {
+    h.user = { _id: 'u1', team: 'team-1' };
+    h.ctx.assignedCompetitions = [meet('c1')];
+    render(<CompetitionSelectionScreen userType="player" />);
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/player/dashboard?competitionId=c1'));
   });
 
   it('admin: one assigned meet goes straight to the dashboard', async () => {

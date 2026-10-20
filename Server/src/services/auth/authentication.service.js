@@ -673,17 +673,16 @@ class AuthenticationService {
       }
 
       if (type === 'player') {
-        // Player: fetch competitions where they are actually added to the team roster
-        // First get the player's team
+        // Player: every meet their TEAM is entered in. Players choose Level →
+        // Team → Competition, so right after joining a team they are on no
+        // squad yet — requiring that here (as this once did) left the choice
+        // empty until the coach placed them in an age group. Players are not
+        // scoped by meet (utils/security/competition-access.util), so this
+        // list is a menu, not a permission.
         if (!user.team) return [];
-        
-        // Find competitions where:
-        // 1. The player's team is registered
-        // 2. The player is in the team's players array
+
         const competitions = await this.competitionRepository.find({
-          'registeredTeams.team': user.team,
-          'registeredTeams.players.player': userId,
-          'registeredTeams.isActive': true
+          registeredTeams: { $elemMatch: { team: user.team, isActive: true } },
         });
         return competitions || [];
       }

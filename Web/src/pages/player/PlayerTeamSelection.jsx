@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { playerAPI } from '@/services/api';
 import { useCompetition } from '@/contexts/CompetitionContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/infrastructure/logger';
 import { EmptyState, Input, RunningOrder, RunningOrderItem, Tag } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
@@ -15,7 +16,8 @@ import { PageHeader } from '@/components/shell';
 const PlayerTeamSelection = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentCompetition } = useCompetition();
+  const { currentCompetition, fetchAssignedCompetitions } = useCompetition();
+  const { user, login } = useAuth();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,11 +25,12 @@ const PlayerTeamSelection = () => {
   const [joining, setJoining] = useState(false);
 
   /*
-   * The meet this player just chose.
+   * The meet, if one is already chosen.
    *
-   * Read from the URL first — the competition chooser appends it on the way
-   * here, which makes the scope survive a reload and keeps it visible in the
-   * address bar. The context is the fallback for arriving any other way.
+   * Usually there is none: players pick Level → Team → Competition, so this
+   * screen comes before the meet. A URL `competitionId` (older links) or the
+   * context's meet (the dashboard sending a teamless player here) still
+   * counts, and the player then returns to that meet after joining.
    *
    * Sent to both the team list and the join. The list does not honour it yet
    * (PlayerService.getAvailableTeams ignores its argument and returns every
@@ -67,10 +70,19 @@ const PlayerTeamSelection = () => {
       await playerAPI.updateTeam({ teamId: team._id, ...(competitionId && { competitionId }) });
       toast.success(`Successfully joined ${team.name}!`);
       logger.info('Player joined team', { teamId: team._id, teamName: team.name });
-      
-      // Small delay to show success state, then navigate to dashboard
+
+      // The choosers read the team off the stored user, and the meets offered
+      // next are the ones this team is entered in — refresh both now.
+      if (user) login({ ...user, team: team._id }, null, 'player');
+      await fetchAssignedCompetitions?.();
+
+      // Level → Team → Competition. A player who already chose a meet (an
+      // older link, or the dashboard sending them here) goes straight back.
+      const next = competitionId
+        ? `/player/dashboard?competitionId=${competitionId}`
+        : '/player/select-competition';
       setTimeout(() => {
-        navigate('/player/dashboard', { replace: true });
+        navigate(next, { replace: true });
       }, 500);
     } catch (error) {
       logger.error('Failed to join team:', error);

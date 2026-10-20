@@ -18,8 +18,13 @@ vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() 
 vi.mock('@/services/api', () => ({
   playerAPI: { getTeams: vi.fn(), updateTeam: vi.fn() },
 }));
+const h = vi.hoisted(() => ({ navigate: vi.fn(), login: vi.fn(), fetchAssigned: vi.fn(() => Promise.resolve()) }));
+vi.mock('react-router-dom', async (importOriginal) => ({ ...(await importOriginal()), useNavigate: () => h.navigate }));
 vi.mock('@/contexts/CompetitionContext', () => ({
-  useCompetition: () => ({ currentCompetition: null }),
+  useCompetition: () => ({ currentCompetition: null, fetchAssignedCompetitions: h.fetchAssigned }),
+}));
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { _id: 'p1', firstName: 'Aarav' }, login: h.login }),
 }));
 vi.mock('@/infrastructure/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), log: vi.fn() },
@@ -27,8 +32,8 @@ vi.mock('@/infrastructure/logger', () => ({
 
 const LOCKED = '"Spring Open" closed at the end of 2026-10-04 and is now locked. Only a super admin can make further changes.';
 
-const renderPage = () => render(
-  <MemoryRouter initialEntries={['/player/select-team?competitionId=c1']}>
+const renderPage = (path = '/player/select-team?competitionId=c1') => render(
+  <MemoryRouter initialEntries={[path]}>
     <PlayerTeamSelection />
   </MemoryRouter>
 );
@@ -59,5 +64,32 @@ describe('PlayerTeamSelection join errors', () => {
     fireEvent.click(await screen.findByText('IMSA-C'));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Team is full'));
+  });
+
+  it('Level, Team, Competition: after joining, the stored user gets the team and the meet comes next', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    playerAPI.updateTeam.mockResolvedValue({ data: { data: {} } });
+
+    renderPage('/player/select-team');
+    fireEvent.click(await screen.findByText('IMSA-C'));
+
+    await waitFor(() => expect(h.login).toHaveBeenCalledWith(expect.objectContaining({ _id: 'p1', team: 't1' }), null, 'player'));
+    expect(h.fetchAssigned).toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(h.navigate).toHaveBeenCalledWith('/player/select-competition', { replace: true });
+    vi.useRealTimers();
+  });
+
+  it('a meet already chosen: back to its dashboard after joining', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    playerAPI.updateTeam.mockResolvedValue({ data: { data: {} } });
+
+    renderPage('/player/select-team?competitionId=c1');
+    fireEvent.click(await screen.findByText('IMSA-C'));
+
+    await waitFor(() => expect(h.login).toHaveBeenCalled());
+    await vi.advanceTimersByTimeAsync(600);
+    expect(h.navigate).toHaveBeenCalledWith('/player/dashboard?competitionId=c1', { replace: true });
+    vi.useRealTimers();
   });
 });

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { playerHasTeam as hasTeam } from '@/utils/auth/playerTeam';
 import { coachAPI, playerAPI } from '@/services/api';
 import { judgeAPI } from '@/services/public/judge.api';
 import { authAPI } from '@/services/auth/auth.api';
@@ -94,9 +95,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
    * `team` comes back as either an id string or a populated object depending on
    * the endpoint, which is why this is not a plain truthiness check.
    */
-  const playerHasTeam = Boolean(
-    user?.team && (typeof user.team === 'string' ? user.team : (user.team._id || user.team.id))
-  );
+  const playerHasTeam = hasTeam(user);
 
   /*
    * Send anyone who arrives without a level back to the chooser.
@@ -110,8 +109,14 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   useEffect(() => {
     if (!selectedLevel && userType !== 'superadmin') {
       navigate(`/${userType}/select-level`, { replace: true });
+      return;
     }
-  }, [selectedLevel, userType, navigate]);
+    // Level → Team → Competition: a player with no team picks one first, and
+    // the meets shown here are then the ones that team is entered in.
+    if (userType === 'player' && !playerHasTeam) {
+      navigate('/player/select-team', { replace: true });
+    }
+  }, [selectedLevel, userType, navigate, playerHasTeam]);
 
   // Coach-specific data fetching
   useEffect(() => {

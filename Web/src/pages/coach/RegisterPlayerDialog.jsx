@@ -7,16 +7,9 @@ import { Check, Copy, Download, UserPlus } from 'lucide-react';
 import { coachAPI } from '@/services/api';
 import { logger } from '@/infrastructure/logger';
 import { Button, Dialog, Field, Input, Notice, Select, SpecList } from '@/components/ui';
-import { RELATIONS, needsConsent } from '@/pages/player/registration/playerRegistration';
+import { needsConsent } from '@/pages/player/registration/playerRegistration';
 import { errorMessage } from '@/pages/shared/account/AccountSections';
 
-const PHONE_RULES = {
-  required: 'Parent/guardian phone is required',
-  validate: (value) => {
-    const digits = String(value || '').replace(/\D/g, '');
-    return (digits.length >= 10 && digits.length <= 15) || 'Enter a valid phone number (10–15 digits)';
-  },
-};
 const NAME_RULES = (label) => ({
   required: `${label} is required`,
   minLength: { value: 2, message: `${label} must be at least 2 characters` },
@@ -53,7 +46,15 @@ const RegisterPlayerDialog = ({ open, onClose, onRegistered = null, onEnterAgeGr
   const [saving, setSaving] = useState(false);
   const [duplicates, setDuplicates] = useState(null);
   const [created, setCreated] = useState(null);
+  const [coach, setCoach] = useState(null);
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
+
+  useEffect(() => {
+    if (!open) return;
+    coachAPI.getProfile()
+      .then((response) => setCoach(response.data?.data || null))
+      .catch((error) => logger.error('Could not load the coach profile', error));
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -81,7 +82,6 @@ const RegisterPlayerDialog = ({ open, onClose, onRegistered = null, onEnterAgeGr
         lastName: values.lastName,
         dateOfBirth: values.dateOfBirth,
         gender: values.gender,
-        guardian: values.guardian,
         guardianConsent: needsConsent(values.dateOfBirth) ? Boolean(values.guardianConsent) : undefined,
         ...(confirmDuplicate ? { confirmDuplicate: true } : {}),
       };
@@ -204,19 +204,27 @@ const RegisterPlayerDialog = ({ open, onClose, onRegistered = null, onEnterAgeGr
                 <option value="Female">Female</option>
               </Select>
             </Field>
-            <Field id="coach-reg-guardian-name" label="Parent/Guardian Name" required error={errors.guardian?.name?.message}>
-              <Input autoComplete="off" {...register('guardian.name', { required: 'Parent/guardian name is required', minLength: { value: 2, message: 'At least 2 characters' } })} />
-            </Field>
-            <Field id="coach-reg-guardian-relation" label="Relation to Player" required error={errors.guardian?.relation?.message}>
-              <Select defaultValue="" {...register('guardian.relation', { required: 'Relation is required' })}>
-                <option value="" disabled>Select relation</option>
-                {RELATIONS.map((relation) => <option key={relation} value={relation}>{relation}</option>)}
-              </Select>
-            </Field>
-            <Field id="coach-reg-guardian-phone" label="Parent/Guardian Phone" required error={errors.guardian?.phone?.message}>
-              <Input type="tel" autoComplete="off" {...register('guardian.phone', PHONE_RULES)} />
-            </Field>
           </div>
+
+          {/* The coach is the player's contact of record; the server fills it in. */}
+          <div className="grid gap-1">
+            <p className="ui-field__label type-tag m-0">Parent/guardian contact</p>
+            {coach ? (
+              <p className="type-body-s m-0" data-testid="coach-contact">
+                {[coach.firstName, coach.lastName].filter(Boolean).join(' ')} · Coach · {coach.phone || 'no phone on your profile'}
+              </p>
+            ) : (
+              <p className="type-body-s text-fg-muted m-0">You, as their coach</p>
+            )}
+            <p className="text-fg-muted type-caption m-0">You are the contact for players you register.</p>
+          </div>
+
+          {coach && !coach.phone && (
+            <Notice tone="warning" title="Add your phone number first">
+              It is the contact for players you register.{' '}
+              <Link to="/coach/profile#details" onClick={close}>Go to my profile</Link>
+            </Notice>
+          )}
 
           {showConsent && (
             <div className="grid gap-1">
@@ -263,7 +271,7 @@ const RegisterPlayerDialog = ({ open, onClose, onRegistered = null, onEnterAgeGr
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button type="submit" className="flex-1" loading={saving} icon={saving ? null : UserPlus}>
+            <Button type="submit" className="flex-1" loading={saving} disabled={Boolean(coach && !coach.phone)} icon={saving ? null : UserPlus}>
               {saving ? 'Registering…' : 'Register player'}
             </Button>
             <Button variant="line" className="flex-1" onClick={close}>Cancel</Button>

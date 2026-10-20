@@ -6,6 +6,7 @@ import RouteContext from '@/contexts/RouteContext';
 import ErrorBoundary from '@/components/layout/ErrorBoundary';
 import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 import LevelSelectionScreen from '@/components/competition/LevelSelectionScreen';
+import { CoachPlayerPasswordGate, CoachPlayerPasswordSetup } from '@/pages/coach/CoachPlayerPasswordGate';
 import {
   Home,
   PlayerLogin,
@@ -92,10 +93,13 @@ const PlayerLayout = () => (
   </ProtectedRoute>
 );
 
+// A coach sets the default player password before anything else.
 const CoachLayout = () => (
   <ProtectedRoute requiredUserType="coach">
     <RouteErrorBoundary homePath="/coach/dashboard">
-      <Outlet />
+      <CoachPlayerPasswordGate>
+        <Outlet />
+      </CoachPlayerPasswordGate>
     </RouteErrorBoundary>
   </ProtectedRoute>
 );
@@ -153,11 +157,10 @@ export default function AppRoutes({ location }) {
         <Route path="/player/register" element={<UnifiedRegister />} />
         <Route path="/player" element={<PlayerLayout />}>
           {/*
-            * Level, then competition, then team. Team selection sits AFTER the
-            * competition on purpose: a squad only means anything inside a meet,
-            * and the endpoint behind it (`/players/teams/available`) already
-            * takes a competitionId — without one it falls back to listing teams
-            * across every open competition at once.
+            * Level, then team, then competition. A player with no team picks
+            * one right after the level; the meets offered next are the ones
+            * that team is entered in. A player who already has a team goes
+            * straight from the level to the competition.
             */}
           <Route path="select-level" element={<LevelSelectionScreen userType="player" />} />
           <Route path="select-competition" element={<CompetitionSelectionScreen userType="player" />} />
@@ -171,6 +174,7 @@ export default function AppRoutes({ location }) {
         <Route path="/coach/login" element={<CoachLogin />} />
         <Route path="/coach/register" element={<UnifiedRegister />} />
         <Route path="/coach" element={<CoachLayout />}>
+          <Route path="setup-player-password" element={<CoachPlayerPasswordSetup />} />
           <Route path="create-team" element={<CoachCreateTeam />} />
           <Route path="select-level" element={<LevelSelectionScreen userType="coach" />} />
           <Route path="select-competition" element={<CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />} />
