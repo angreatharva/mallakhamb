@@ -13,6 +13,8 @@ That builds the **render** preset, which is what is live. Two options exist for 
 
 **Live OCI set:** `oci-staging/` holds the four OCI dashboards, built with `build-dashboards.js deploy/monitoring/dashboards/oci-staging --platform=oci --staging`. They were imported into the **Mallakhamb** folder on 2026-10-17, next to the Render set. Their uids are `mallakhamb-api-overview-staging`, `mallakhamb-runtime-staging`, `mallakhamb-database-staging` and `mallakhamb-competition-day-staging`. The panels that count only real traffic (socket events, score submits, logins, payment webhooks, error routes, pool checkout failures) and the `DB_MONITOR_COMMANDS` panels stay "No data" until the OCI API sees that traffic. At C7 the production set is rebuilt with `--platform=oci` and these copies are deleted.
 
+**VM resources dashboard:** the VM presets also write `mallakhamb-oci-resources.json` (`mallakhamb-aws-resources.json` for aws), which is all about the VMs: CPU (steal, by mode, PSI), memory, disk I/O, network, the Always Free allowance gauges (4 OCPU / 24 GB / 200 GB / 10 TB a month) and Oracle's 7-day idle-reclaim test, plus what runs on the VMs. It keeps its uid and title under `--staging`, because the same VMs become production at C7; only its API panels follow the staging scrape job. It was imported on 2026-10-21 as **Mallakhamb OCI resources** (uid `mallakhamb-oci-resources`). Its **VM** variable picks one or both VMs, and the per-VM breakdowns repeat once for each VM picked.
+
 | File | uid | What it answers |
 |---|---|---|
 | `mallakhamb-api-overview.json` | `mallakhamb-api-overview` | Up? How busy, how fast, how many errors, which routes; capacity vs. every limit; outside-in checks |

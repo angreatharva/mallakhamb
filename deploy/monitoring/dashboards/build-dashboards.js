@@ -145,8 +145,13 @@ function pctTs(title, targets, gridPos, { description } = {}) {
 const text = (title, content, gridPos) => ({ id: ++id, type: 'text', title, gridPos, options: { mode: 'markdown', content } });
 const row = (title, y) => ({ id: ++id, type: 'row', title, collapsed: false, gridPos: { h: 1, w: 24, x: 0, y }, panels: [] });
 
-function dashboard({ uid, title, description, panels, refresh = '1m', from = 'now-6h', tags = [] }) {
-  if (STAGING) {
+/**
+ * `stable`: keep uid and title under --staging (the VM dashboard: the same
+ * VMs become production at C7, only the API scrape job changes).
+ * `variables` / `constants` are added after the shared ones.
+ */
+function dashboard({ uid, title, description, panels, refresh = '1m', from = 'now-6h', tags = [], stable = false, variables = [], constants = [] }) {
+  if (STAGING && !stable) {
     // Kept in the Mallakhamb folder next to the Render set until the C7 cutover.
     uid = `${uid}-staging`;
     title = `${title} (${PLATFORM === 'render' ? '' : `${PLATFORM.toUpperCase()} `}staging)`;
@@ -169,7 +174,8 @@ function dashboard({ uid, title, description, panels, refresh = '1m', from = 'no
           current: { text: 'grafanacloud-usage', value: 'grafanacloud-usage' },
           regex: '/usage/', hide: 2, refresh: 1,
         },
-        ...LIMITS.map(([name, value, label]) => ({
+        ...variables,
+        ...[...LIMITS, ...constants].map(([name, value, label]) => ({
           name, label, type: 'constant', query: value, hide: 2,
           current: { text: value, value }, options: [{ text: value, value, selected: true }],
         })),
@@ -476,12 +482,224 @@ const compDay = dashboard({
   ],
 });
 
+// ------------------------------------------------------------------ VM resources (VM presets only)
+// Everything Alloy reports about the VMs themselves, one dashboard. Grafana's
+// Asserts can add an asserts_env label that doubles a series, so every query
+// collapses to max by (instance, …) before it sums or divides.
+const vmResources = () => {
+  id = 0;
+  const cloud = PLATFORM.startsWith('oci') ? 'OCI' : PLATFORM.toUpperCase();
+  const HI = `${HS},instance=~"$instance"`;
+  const one = (m, by = '') => `max by (instance${by}) (${m})`;
+  const cpuBusy = `100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{${HI},mode="idle"}[5m])))`;
+  const memUsed = `100 * (1 - ${one(`node_memory_MemAvailable_bytes{${HI}}`)} / ${one(`node_memory_MemTotal_bytes{${HI}}`)})`;
+  const rootUsed = `100 * (1 - ${one(`node_filesystem_avail_bytes{${HI},mountpoint="/"}`)} / ${one(`node_filesystem_size_bytes{${HI},mountpoint="/"}`)})`;
+  const net = (dir, sel = HI) => `sum by (instance) (${one(`rate(node_network_${dir}_bytes_total{${sel},device!="lo"}[5m])`, ', device')})`;
+  const cores = (sel) => `count by (instance) (${one(`node_cpu_seconds_total{${sel},mode="idle"}`, ', cpu')})`;
+  const disk = 'device=~"sd.*|vd.*|nvme.*"';
+  const realFs = 'fstype!~"tmpfs|ramfs|squashfs|overlay"';
+  const p95over7d = (expr) => `quantile_over_time(0.95, (${expr})[7d:5m])`;
+  const reclaimSteps = [{ color: 'red', value: null }, { color: 'green', value: 20 }];
+  const ageSteps = [green, { color: 'orange', value: 93600 }, { color: 'red', value: 172800 }];
+
+  const free = PLATFORM.startsWith('oci')
+    ? [
+      ['free_ocpu', '4', 'Always Free A1 OCPUs (whole tenancy)'],
+      ['free_mem', String(24 * GIB), 'Always Free A1 memory, bytes (whole tenancy)'],
+      ['free_block', String(200 * 1000 ** 3), 'Always Free block + boot volume storage, bytes'],
+      ['free_egress', String(10 * 1000 ** 4), 'Always Free outbound data per month, bytes'],
+      ['nic_bps', String(1000 ** 3), 'Network bandwidth of a 1-OCPU A1 VM, bits/s'],
+    ]
+    : [];
+
+  const allowance = PLATFORM.startsWith('oci') ? [
+    row('Always Free allowance: the whole tenancy, every VM counted (deploy/oci/PLAN.md)', 13),
+    gauge('A1 OCPUs % of free (4)', [t(`100 * sum(${cores(HS)}) / $free_ocpu`)], { h: 6, w: 6, x: 0, y: 14 }, {
+      description: 'Cores the VMs report, against the 4 A1 OCPUs Always Free allows. Two 1-OCPU VMs = 50 %. The root quota mallakhamb-prod-quota-free-tier stops a launch past the limit.',
+    }),
+    gauge('A1 memory % of free (24 GB)', [t(`100 * sum(${one(`node_memory_MemTotal_bytes{${HS}}`)}) / $free_mem`)], { h: 6, w: 6, x: 6, y: 14 }, {
+      description: 'MemTotal of every VM against the 24 GB Always Free allows. The kernel keeps some memory for itself, so two 6 GB VMs show a little under 50 %.',
+    }),
+    gauge('Boot volumes % of free (200 GB)', [t(`100 * sum(${one(`node_filesystem_size_bytes{${HS},mountpoint="/"}`)}) / $free_block`)], { h: 6, w: 6, x: 12, y: 14 }, {
+      description: 'Root filesystem size of every VM (each sits on a 50 GB boot volume) against the 200 GB of block storage Always Free allows. Volume backups are a separate allowance (5).',
+    }),
+    gauge('Outbound data % of free (10 TB / month)', [t(`100 * sum(${one(`increase(node_network_transmit_bytes_total{${HS},device!="lo"}[7d])`, ', device')}) * 30 / 7 / $free_egress`)], { h: 6, w: 6, x: 18, y: 14 }, {
+      description: 'Bytes sent by every VM over the last 7 days, projected to 30 days, against the 10 TB a month Always Free includes.',
+    }),
+
+    row('Idle reclaim: Oracle may reclaim an Always Free VM that is idle for 7 days', 20),
+    stat('CPU p95 (7d)', [t(p95over7d(cpuBusy), '{{instance}}')], { h: 6, w: 6, x: 0, y: 21 }, {
+      unit: 'percent', decimals: 1, steps: reclaimSteps,
+      description: "95th percentile of CPU busy % over 7 days. Oracle's rule: a VM is idle when CPU p95, network and memory are ALL below 20 % for 7 days. Red = below 20 %.",
+    }),
+    stat('Memory p95 (7d)', [t(p95over7d(memUsed), '{{instance}}')], { h: 6, w: 6, x: 6, y: 21 }, {
+      unit: 'percent', decimals: 1, steps: reclaimSteps,
+      description: 'Memory used % over 7 days (95th percentile). The memory test applies to A1 shapes. Red = below 20 %.',
+    }),
+    stat('Network p95 (7d)', [t(p95over7d(`100 * 8 * (${net('receive')} + ${net('transmit')}) / $nic_bps`), '{{instance}}')], { h: 6, w: 6, x: 12, y: 21 }, {
+      unit: 'percent', decimals: 3, steps: reclaimSteps,
+      description: 'In + out as a share of the 1 Gbps a 1-OCPU A1 VM gets. Always red here: this app never comes near 20 % of a gigabit.',
+    }),
+    text('Reading this row', [
+      'Reclaim needs **all three** below 20 % for 7 days, measured by Oracle on its own agent; these numbers are the same tests from Alloy, so treat them as close, not exact.',
+      '',
+      'Light traffic leaves **both** VMs red here, not just the standby. CPU or memory steadily above 20 % on a VM takes it out of the rule.',
+    ].join('\n'), { h: 6, w: 6, x: 18, y: 21 }),
+  ] : [];
+  const y0 = allowance.length ? 27 : 13;
+
+  return dashboard({
+    uid: `mallakhamb-${PLATFORM.startsWith('oci') ? 'oci' : PLATFORM}-resources`,
+    title: `Mallakhamb ${cloud} resources`,
+    description: `The VMs themselves (${P.plan}): CPU, memory, disk, network, ${PLATFORM.startsWith('oci') ? 'the Always Free allowance and idle-reclaim risk, ' : ''}and what runs on them. Alloy, scrape_job mallakhamb-host (active) / mallakhamb-host-standby.`,
+    tags: ['host', PLATFORM],
+    stable: true,
+    from: 'now-24h',
+    variables: [{
+      name: 'instance', label: 'VM', type: 'query', datasource: DS,
+      query: { query: `label_values(node_uname_info{${HS}}, instance)`, refId: 'vms' },
+      definition: `label_values(node_uname_info{${HS}}, instance)`,
+      refresh: 2, sort: 1, multi: true, includeAll: true, hide: 0,
+      current: { text: ['All'], value: ['$__all'] }, options: [],
+    }],
+    constants: free,
+    panels: [
+      row('At a glance', 0),
+      table('VMs', [instant(one(`mallakhamb_release_info{${HI}}`, ', role, sha'))], { h: 6, w: 8, x: 0, y: 1 }, {
+        hide: ['Value'], keep: ['instance'],
+        description: 'Role and release on each VM. Both should show the same sha (alert "Standby behind the active").',
+      }),
+      stat('Reporting', [t(`(${one(`node_time_seconds{${HI}}`)} > bool 0) or (${one(`max_over_time(node_time_seconds{${HI}}[1d])`)} * 0)`, '{{instance}}')], { h: 6, w: 4, x: 8, y: 1 }, {
+        steps: upSteps, mappings: upMappings,
+        description: 'UP = Alloy sent a sample in the last 5 minutes. DOWN = it reported in the last day but has gone quiet: the VM is stopped, or Alloy is (systemctl status alloy).',
+      }),
+      stat('Uptime', [t(`time() - ${one(`node_boot_time_seconds{${HI}}`)}`, '{{instance}}')], { h: 6, w: 4, x: 12, y: 1 }, { unit: 's', description: 'Since the last kernel boot.' }),
+      stat('OCPUs', [t(cores(HI), '{{instance}}')], { h: 6, w: 4, x: 16, y: 1 }, { decimals: 0, description: 'Cores the kernel sees. On A1, 1 OCPU = 1 core.' }),
+      stat('Memory', [t(one(`node_memory_MemTotal_bytes{${HI}}`), '{{instance}}')], { h: 6, w: 4, x: 20, y: 1 }, { unit: 'bytes', decimals: 1 }),
+      gauge('CPU busy %', [t(cpuBusy, '{{instance}}')], { h: 6, w: 8, x: 0, y: 7 }, { description: 'All cores, every process, last 5 minutes. Bands at 70 / 80 / 90 %.' }),
+      gauge('Memory used %', [t(memUsed, '{{instance}}')], { h: 6, w: 8, x: 8, y: 7 }, { description: '1 − MemAvailable / MemTotal. Alert "Host memory high" at 85 % on the active.' }),
+      gauge('Root disk used %', [t(rootUsed, '{{instance}}')], { h: 6, w: 8, x: 16, y: 7 }, { description: 'Alerts "Disk filling" at 80 % and 90 %.' }),
+
+      ...allowance,
+
+      row('CPU', y0),
+      pctTs('CPU busy %', [t(cpuBusy, '{{instance}}')], { h: 8, w: 12, x: 0, y: y0 + 1 }, { description: 'All cores, every process. Dashed lines: 70 / 80 / 90 %.' }),
+      ts('CPU steal %', [t(`100 * avg by (instance) (rate(node_cpu_seconds_total{${HI},mode="steal"}[5m]))`, '{{instance}}')], { h: 8, w: 12, x: 12, y: y0 + 1 }, {
+        unit: 'percent', min: 0, softMax: 5,
+        description: 'Time the hypervisor gave this core to another tenant. Steady steal above a few % makes everything slower without the VM looking busy.',
+      }),
+      ts('CPU by mode: $instance', [t(`100 * avg by (mode) (rate(node_cpu_seconds_total{${HI},mode!="idle"}[5m]))`, '{{mode}}')], { h: 8, w: 12, x: 0, y: y0 + 9 }, {
+        unit: 'percent', min: 0, softMax: 100, stack: true,
+        description: 'user = the API, OCR and scripts; system = the kernel; iowait = waiting on the boot volume; steal = the hypervisor.',
+      }),
+      ts('Load vs cores', [
+        t(one(`node_load1{${HI}}`), '{{instance}} load 1m'),
+        t(one(`node_load5{${HI}}`), '{{instance}} load 5m'),
+        t(cores(HI), '{{instance}} cores'),
+      ], { h: 8, w: 12, x: 0, y: y0 + 17 }, { min: 0, description: 'Runnable + waiting tasks. Load above the core count for long = the VM is the bottleneck.' }),
+      ts('Pressure stall (PSI)', [
+        t(one(`rate(node_pressure_cpu_waiting_seconds_total{${HI}}[5m])`), '{{instance}} cpu'),
+        t(one(`rate(node_pressure_memory_waiting_seconds_total{${HI}}[5m])`), '{{instance}} memory'),
+        t(one(`rate(node_pressure_io_waiting_seconds_total{${HI}}[5m])`), '{{instance}} io'),
+      ], { h: 8, w: 12, x: 12, y: y0 + 17 }, {
+        unit: 'percentunit', min: 0,
+        description: 'Share of time at least one task was waiting for CPU, memory or disk. The earliest sign of a VM that is too small.',
+      }),
+
+      row('Memory', y0 + 25),
+      ts('Memory: $instance', [
+        t(`${one(`node_memory_MemTotal_bytes{${HI}}`)} - ${one(`node_memory_MemFree_bytes{${HI}}`)} - ${one(`node_memory_Buffers_bytes{${HI}}`)} - ${one(`node_memory_Cached_bytes{${HI}}`)} - ${one(`node_memory_SReclaimable_bytes{${HI}}`)}`, 'used by processes'),
+        t(`${one(`node_memory_Buffers_bytes{${HI}}`)} + ${one(`node_memory_Cached_bytes{${HI}}`)} + ${one(`node_memory_SReclaimable_bytes{${HI}}`)}`, 'cache (reclaimable)'),
+        t(one(`node_memory_MemFree_bytes{${HI}}`), 'free'),
+      ], { h: 8, w: 12, x: 0, y: y0 + 26 }, {
+        unit: 'bytes', min: 0, stack: true,
+        description: 'Stacks to the VM total. The cache is given back on demand, so only "used by processes" is pressure.',
+      }),
+      ts('Swap used', [t(`${one(`node_memory_SwapTotal_bytes{${HI}}`)} - ${one(`node_memory_SwapFree_bytes{${HI}}`)}`, '{{instance}}')], { h: 8, w: 8, x: 0, y: y0 + 34 }, {
+        unit: 'bytes', min: 0, description: 'Flat zero when the VM has no swap file.',
+      }),
+      ts('Major page faults/s', [t(one(`rate(node_vmstat_pgmajfault{${HI}}[5m])`), '{{instance}}')], { h: 8, w: 8, x: 8, y: y0 + 34 }, {
+        unit: 'ops', min: 0, description: 'Pages read back from disk. A rise together with high memory = the VM is thrashing.',
+      }),
+      ts('OOM kills (1h)', [t(one(`increase(node_vmstat_oom_kill{${HI}}[1h])`), '{{instance}}')], { h: 8, w: 8, x: 16, y: y0 + 34 }, {
+        min: 0, bars: true, description: 'The kernel killed a process for memory. Alert "Out-of-memory kill" pages on any.',
+      }),
+
+      row('Disk', y0 + 42),
+      pctTs('Filesystem used %', [t(`100 * (1 - ${one(`node_filesystem_avail_bytes{${HI},${realFs}}`, ', mountpoint')} / ${one(`node_filesystem_size_bytes{${HI},${realFs}}`, ', mountpoint')})`, '{{instance}} {{mountpoint}}')], { h: 8, w: 12, x: 0, y: y0 + 43 }, {
+        description: 'Every real mount. Dashed lines: 70 / 80 / 90 %.',
+      }),
+      ts('Root disk free', [t(one(`node_filesystem_avail_bytes{${HI},mountpoint="/"}`), '{{instance}}')], { h: 8, w: 12, x: 12, y: y0 + 43 }, {
+        unit: 'bytes', min: 0, description: 'Backups are written locally before the upload to Object Storage, so a dip each night is normal.',
+      }),
+      ts('Disk throughput', [
+        t(`sum by (instance) (${one(`rate(node_disk_read_bytes_total{${HI},${disk}}[5m])`, ', device')})`, '{{instance}} read'),
+        t(`sum by (instance) (${one(`rate(node_disk_written_bytes_total{${HI},${disk}}[5m])`, ', device')})`, '{{instance}} write'),
+      ], { h: 8, w: 8, x: 0, y: y0 + 51 }, {
+        unit: 'Bps', min: 0, description: 'Boot volume. Its limits scale with size (Balanced: 60 IOPS and 480 KB/s per GB).',
+      }),
+      ts('Disk IOPS', [
+        t(`sum by (instance) (${one(`rate(node_disk_reads_completed_total{${HI},${disk}}[5m])`, ', device')})`, '{{instance}} reads'),
+        t(`sum by (instance) (${one(`rate(node_disk_writes_completed_total{${HI},${disk}}[5m])`, ', device')})`, '{{instance}} writes'),
+      ], { h: 8, w: 8, x: 8, y: y0 + 51 }, { unit: 'iops', min: 0 }),
+      ts('Disk busy %', [t(`100 * max by (instance) (rate(node_disk_io_time_seconds_total{${HI},${disk}}[5m]))`, '{{instance}}')], { h: 8, w: 8, x: 16, y: y0 + 51 }, {
+        unit: 'percent', min: 0, softMax: 100, description: 'Share of time the volume had a request in flight. Near 100 % with iowait in the CPU panel = the disk is the bottleneck.',
+      }),
+
+      row('Network', y0 + 59),
+      ts('Throughput', [
+        t(`8 * ${net('receive')}`, '{{instance}} in'),
+        t(`8 * ${net('transmit')}`, '{{instance}} out'),
+      ], { h: 8, w: 12, x: 0, y: y0 + 60 }, { unit: 'bps', min: 0, description: 'Every interface except loopback.' }),
+      ts('Errors and drops', [
+        t(`sum by (instance) (${one(`rate(node_network_receive_errs_total{${HI},device!="lo"}[5m])`, ', device')})`, '{{instance}} rx errors'),
+        t(`sum by (instance) (${one(`rate(node_network_transmit_errs_total{${HI},device!="lo"}[5m])`, ', device')})`, '{{instance}} tx errors'),
+        t(`sum by (instance) (${one(`rate(node_network_receive_drop_total{${HI},device!="lo"}[5m])`, ', device')})`, '{{instance}} rx drops'),
+        t(`sum by (instance) (${one(`rate(node_network_transmit_drop_total{${HI},device!="lo"}[5m])`, ', device')})`, '{{instance}} tx drops'),
+      ], { h: 8, w: 12, x: 12, y: y0 + 60 }, { unit: 'pps', min: 0, description: 'Should be flat zero.' }),
+      ts('Data sent per day', [t(`sum by (instance) (${one(`increase(node_network_transmit_bytes_total{${HI},device!="lo"}[1d])`, ', device')})`, '{{instance}}')], { h: 8, w: 24, x: 0, y: y0 + 68 }, {
+        unit: 'bytes', min: 0, description: 'Rolling 24-hour total of outbound bytes. Competition days and nightly backups show as humps.',
+      }),
+
+      row('What runs on the VMs', y0 + 76),
+      stat('API (active VM)', [t(`up{${S}}`)], { h: 6, w: 4, x: 0, y: y0 + 77 }, {
+        steps: upSteps, mappings: upMappings, description: 'Grafana Cloud scraped the API on the reserved IP. The standby runs no API.',
+      }),
+      ts('API memory vs the VM', [
+        t(`max(process_resident_memory_bytes{${S}})`, 'API resident memory'),
+        t(`max(node_memory_MemTotal_bytes{scrape_job="mallakhamb-host"}) - max(node_memory_MemAvailable_bytes{scrape_job="mallakhamb-host"})`, 'active VM used'),
+        t('max(node_memory_MemTotal_bytes{scrape_job="mallakhamb-host"})', 'active VM total'),
+      ], { h: 6, w: 8, x: 4, y: y0 + 77 }, { unit: 'bytes', min: 0, description: 'How much of the active VM the API takes. The rest is Caddy, the OCR reader, Alloy and the page cache.' }),
+      stat('OCR reader', [t('max(mkwi_ocr_up{scrape_job="mallakhamb-host"}) or vector(0)')], { h: 6, w: 4, x: 12, y: y0 + 77 }, {
+        steps: upSteps, mappings: upMappings, description: 'Walk-in desk sidecar, active VM only (deploy/oci/PLAN.md O15).',
+      }),
+      stat('Last backup age', [t(`time() - ${one(`mallakhamb_backup_last_success_timestamp_seconds{${HI}}`)}`, '{{instance}}')], { h: 6, w: 8, x: 16, y: y0 + 77 }, {
+        unit: 's', steps: ageSteps, description: 'The nightly backup runs on the active; alert "Backup stale" above 26 h. A standby keeps the age it was cloned with.',
+      }),
+      stat('Nightly e2e: last pass', [t(`time() - ${one(`mallakhamb_e2e_last_success_timestamp_seconds{${HI}}`)} > 0`, '{{instance}}')], { h: 5, w: 12, x: 0, y: y0 + 83 }, {
+        unit: 's', steps: ageSteps, description: 'Time since the nightly lifecycle run (deploy/oci/PLAN.md O14) last passed on each VM.',
+      }),
+      stat('Nightly e2e: last result', [t(one(`mallakhamb_e2e_last_exit_code{${HI}}`), '{{instance}}')], { h: 5, w: 12, x: 12, y: y0 + 83 }, {
+        steps: [green, { color: 'red', value: 1 }],
+        mappings: [{ type: 'value', options: { 0: { text: 'PASS', color: 'green' } } }, { type: 'range', options: { from: 1, to: 255, result: { text: 'FAIL', color: 'red' } } }],
+        description: 'FAIL → journalctl -u mallakhamb-e2e on that VM.',
+      }),
+    ],
+  });
+};
+// Per-VM breakdowns repeat once per selected VM.
+const withRepeats = (d) => {
+  for (const pnl of d.panels) if (pnl.title.endsWith('$instance')) Object.assign(pnl, { repeat: 'instance', repeatDirection: 'h', maxPerRow: 2 });
+  return d;
+};
+
 const files = {
   'mallakhamb-api-overview.json': overview,
   'mallakhamb-runtime.json': runtime,
   'mallakhamb-database.json': database,
   'mallakhamb-competition-day.json': compDay,
 };
+if (P.host) files[`mallakhamb-${PLATFORM.startsWith('oci') ? 'oci' : PLATFORM}-resources.json`] = withRepeats(vmResources());
 fs.mkdirSync(OUT, { recursive: true });
 for (const [name, d] of Object.entries(files)) {
   fs.writeFileSync(path.join(OUT, name), JSON.stringify(d, null, 2) + '\n');
