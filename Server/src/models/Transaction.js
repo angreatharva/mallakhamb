@@ -42,6 +42,15 @@ const transactionSchema = new mongoose.Schema(
       enum: ['team_submission', 'player_add', 'other'],
       required: [true, 'Transaction type is required'],
     },
+    /*
+     * The Admin or Super Admin who took this payment at the walk-in desk on the
+     * coach's behalf. `source` stays 'coach' — it is the coach's entry and the
+     * coach's money; this only says whose hands it went through.
+     */
+    recordedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Admin',
+    },
     amount: {
       type: Number,
     },

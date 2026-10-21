@@ -1,0 +1,6 @@
+# The OCR sidecar's runtime. Pinned: all three ship manylinux aarch64 wheels,
+# which the OCI A1 VMs need (no compiler on the box). The model itself is not a
+# package — scripts/fetch-models.sh downloads it, checked against models.lock.
+numpy==2.2.6
+onnxruntime==1.23.2
+opencv-python-headless==5.0.0.93

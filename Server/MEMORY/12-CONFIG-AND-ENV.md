@@ -82,6 +82,9 @@ this doc — names only.**
 | `ENABLE_CACHING` | `true` | |
 | `ENABLE_METRICS` | `true` | |
 | `REDIS_URL` | `''` | Optional. Unset → in-memory token-invalidation fallback (per-process, resets on deploy) |
+| `OCR_URL` | `''` | Walk-in desk OCR sidecar (`ocr/`). Unset → desk is manual entry only |
+| `OCR_TOKEN` | `''` | Bearer sent to the sidecar; required by the public OCI address Render uses |
+| `OCR_TIMEOUT_MS` | `60000` | Per-page OCR request timeout |
 
 `FEATURES_FLAGS` — **removed 2026-09-23** along with `FeatureFlagService`
 and `getFeatureFlags()`/`config.features.flags` (the service had zero live

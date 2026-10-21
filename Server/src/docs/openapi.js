@@ -2399,6 +2399,120 @@ function buildPaths() {
     responses: { 200: ok('Cleared'), ...VALIDATION_ERROR, ...NOT_FOUND },
   });
 
+  // ===================== Walk-in desk =====================
+  // Admin / Super Admin register a coach, team and no-email players from a
+  // photographed paper form (services/walk-in). Admins only for their meets.
+
+  const desk = (path, method, config) => add(path, method, op({
+    tag: 'Walk-in desk', roles: 'admin, superadmin', ...config,
+  }));
+  const draftParam = [pathParam('draftId', 'Walk-in draft')];
+  const draftRow = inline({
+    _id: S.id, firstName: S.str, lastName: S.str,
+    dateOfBirth: { type: 'string', description: 'YYYY-MM-DD' },
+    gender: S.gender, ageGroup: S.ageGroup,
+    apparatus: { type: 'array', items: S.apparatus },
+    confirmDuplicate: S.bool,
+  });
+
+  desk('/api/desk/meets', 'get', {
+    operationId: 'deskOpenMeets', summary: 'Meets whose fee window is open now',
+    responses: { 200: ok('Meets') },
+  });
+  desk('/api/desk/ocr/status', 'get', {
+    operationId: 'deskOcrStatus', summary: 'Is the form reader configured and answering?',
+    responses: { 200: ok('Status', inline({ enabled: S.bool, healthy: S.bool })) },
+  });
+  desk('/api/desk/coaches', 'get', {
+    operationId: 'deskFindCoach', summary: 'Find a returning coach by email',
+    parameters: [queryParam('email', S.email, 'Coach email', true)],
+    responses: { 200: ok('The coach, or null'), ...VALIDATION_ERROR },
+  });
+  desk('/api/desk/coaches', 'post', {
+    operationId: 'deskCreateCoach', summary: 'Create a coach account at the desk',
+    description: 'The coach types their own password and their default player password.',
+    requestBody: jsonBody(inline({ firstName: S.str, lastName: S.str, email: S.email, phone: S.str, password: S.str, playerDefaultPassword: S.str },
+      ['firstName', 'lastName', 'email', 'phone', 'password', 'playerDefaultPassword'])),
+    responses: { 201: ok('Created'), ...VALIDATION_ERROR, 409: errorResponse('Email already registered') },
+  });
+  desk('/api/desk/coaches/{coachId}/player-default-password', 'put', {
+    operationId: 'deskSetCoachDefaultPassword', summary: 'Set a returning coach’s default player password',
+    parameters: [pathParam('coachId', 'Coach')],
+    requestBody: jsonBody(inline({ playerDefaultPassword: S.str, phone: S.str }, ['playerDefaultPassword'])),
+    responses: { 200: ok('Saved'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  });
+  desk('/api/desk/coaches/{coachId}/team', 'post', {
+    operationId: 'deskEnsureTeam', summary: 'Create the coach’s team unless they have one',
+    parameters: [pathParam('coachId', 'Coach')],
+    requestBody: jsonBody(inline({ name: S.str, description: S.str }, ['name'])),
+    responses: { 200: ok('Existing team'), 201: ok('Created'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  });
+  desk('/api/desk/forms/{competitionId}', 'get', {
+    operationId: 'deskFormPdf', summary: 'The printable walk-in form for a meet (A4 PDF)',
+    parameters: [pathParam('competitionId', 'Competition')],
+    responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } }, ...NOT_FOUND },
+  });
+  desk('/api/desk/drafts', 'get', {
+    operationId: 'deskListDrafts', summary: 'Unfinished walk-in forms at a meet',
+    parameters: [queryParam('competitionId', S.id, 'Competition', true)],
+    responses: { 200: ok('Drafts'), ...VALIDATION_ERROR },
+  });
+  desk('/api/desk/drafts', 'post', {
+    operationId: 'deskOpenDraft', summary: 'Enter the coach’s team in the meet and open (or resume) a form',
+    requestBody: jsonBody(inline({ competitionId: S.id, coachId: S.id }, ['competitionId', 'coachId'])),
+    responses: { 201: ok('Draft'), ...VALIDATION_ERROR, 409: errorResponse('Team already submitted'), 422: errorResponse('Meet not taking entries') },
+  });
+  desk('/api/desk/drafts/{draftId}', 'get', {
+    operationId: 'deskGetDraft', summary: 'A form with each row’s age, eligible groups and issues',
+    parameters: draftParam, responses: { 200: ok('Draft'), ...NOT_FOUND },
+  });
+  desk('/api/desk/drafts/{draftId}', 'delete', {
+    operationId: 'deskCancelDraft', summary: 'Discard a form nobody was registered from',
+    parameters: draftParam, responses: { 200: ok('Cancelled'), ...NOT_FOUND, 422: errorResponse('Players already registered') },
+  });
+  desk('/api/desk/drafts/{draftId}/scan', 'post', {
+    operationId: 'deskScanPage', summary: 'Read one photographed page into the form',
+    description: 'Body is the image itself (JPEG, PNG or WebP, at most 8 MB). Answers 503 `OCR_BUSY` / `OCR_UNAVAILABLE` when the reader cannot take it.',
+    parameters: [...draftParam, queryParam('page', S.int, 'Page number, used only if the QR code is unreadable')],
+    requestBody: { required: true, content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } } } },
+    responses: { 200: ok('Rows read, with row crops'), ...VALIDATION_ERROR, 422: errorResponse('Unreadable photo or wrong form'), 503: errorResponse('Reader busy or unavailable') },
+  });
+  desk('/api/desk/drafts/{draftId}/rows', 'put', {
+    operationId: 'deskSaveRows', summary: 'Save the review grid',
+    parameters: draftParam,
+    requestBody: jsonBody(inline({ rows: { type: 'array', items: draftRow, maxItems: 120 }, guardianConsent: S.bool }, ['rows'])),
+    responses: { 200: ok('Draft'), ...VALIDATION_ERROR },
+  });
+  desk('/api/desk/drafts/{draftId}/submit', 'post', {
+    operationId: 'deskSubmit', summary: 'Create and enter every player (resumable)',
+    parameters: draftParam,
+    responses: { 200: ok('Draft'), 409: errorResponse('Submit already running'), 422: errorResponse('Rows still invalid') },
+  });
+  desk('/api/desk/drafts/{draftId}/payment/order', 'post', {
+    operationId: 'deskPaymentOrder', summary: 'Razorpay order for the coach’s entry',
+    parameters: draftParam, responses: { 200: ok('Order'), 422: errorResponse('Not submitted yet') },
+  });
+  desk('/api/desk/drafts/{draftId}/payment/verify', 'post', {
+    operationId: 'deskPaymentVerify', summary: 'Verify the checkout and submit the team',
+    parameters: draftParam,
+    requestBody: jsonBody(inline({ razorpay_order_id: S.str, razorpay_payment_id: S.str, razorpay_signature: S.str }, ['razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature'])),
+    responses: { 200: ok('Paid'), ...VALIDATION_ERROR },
+  });
+  desk('/api/desk/drafts/{draftId}/payment/discount/quote', 'post', {
+    operationId: 'deskDiscountQuote', summary: 'Price the entry with the discount code',
+    parameters: draftParam, requestBody: jsonBody(inline({ discountCode: S.str }, ['discountCode'])),
+    responses: { 200: ok('Quote'), ...VALIDATION_ERROR },
+  });
+  desk('/api/desk/drafts/{draftId}/payment/discount', 'post', {
+    operationId: 'deskDiscountRedeem', summary: 'Submit the entry with the discount code',
+    parameters: draftParam, requestBody: jsonBody(inline({ discountCode: S.str }, ['discountCode'])),
+    responses: { 200: ok('Submitted'), ...VALIDATION_ERROR },
+  });
+  desk('/api/desk/drafts/{draftId}/slip', 'get', {
+    operationId: 'deskSlip', summary: 'The slip to hand the coach: Player IDs and payment',
+    parameters: draftParam, responses: { 200: ok('Slip'), ...NOT_FOUND },
+  });
+
   return paths;
 }
 /* eslint-enable max-lines-per-function */
@@ -2471,6 +2585,7 @@ function buildOpenApiDocument({ serverUrl = 'http://localhost:5000' } = {}) {
       { name: 'Payments', description: 'Razorpay orders, reconciliation and reporting' },
       { name: 'Public', description: 'Anonymous endpoints for the public site' },
       { name: 'Super admin', description: 'Platform-wide administration' },
+      { name: 'Walk-in desk', description: 'Competition-day registration from a paper form' },
     ],
     components: {
       securitySchemes: {

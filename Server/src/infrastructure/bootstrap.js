@@ -14,6 +14,7 @@ const TransactionRepository = require('../repositories/transaction.repository');
 const AuditLogRepository = require('../repositories/audit-log.repository');
 const PerformanceOrderRepository = require('../repositories/performance-order.repository');
 const TieBreakDrawRepository = require('../repositories/tie-break-draw.repository');
+const WalkInRegistrationRepository = require('../repositories/walk-in-registration.repository');
 const RefreshTokenRepository = require('../repositories/refresh-token.repository');
 const AccountRequestRepository = require('../repositories/account-request.repository');
 
@@ -42,6 +43,8 @@ const TeamService = require('../services/team/team.service');
 const ScoringService = require('../services/scoring/scoring.service');
 const CalculationService = require('../services/scoring/calculation.service');
 const TieBreakDrawService = require('../services/scoring/tie-break-draw.service');
+const WalkInService = require('../services/walk-in/walk-in.service');
+const OcrClient = require('../services/walk-in/ocr.client');
 const PaymentService = require('../services/payment/payment.service');
 
 const createCompetitionController = require('../controllers/competition.controller');
@@ -59,6 +62,7 @@ const createSuperAdminController = require('../controllers/super-admin.controlle
 const createPaymentController = require('../controllers/payment.controller');
 const createPerformanceOrderController = require('../controllers/performance-order.controller');
 const createTieBreakDrawController = require('../controllers/tie-break-draw.controller');
+const createWalkInController = require('../controllers/walk-in.controller');
 
 const HealthMonitor = require('./health-monitor');
 const { createMetrics } = require('./prometheus/registry');
@@ -112,6 +116,7 @@ function bootstrap() {
   container.register('auditLogRepository', (c) => new AuditLogRepository(c.resolve('logger')), 'singleton');
   container.register('performanceOrderRepository', (c) => new PerformanceOrderRepository(c.resolve('logger')), 'singleton');
   container.register('tieBreakDrawRepository', (c) => new TieBreakDrawRepository(c.resolve('logger')), 'singleton');
+  container.register('walkInRegistrationRepository', (c) => new WalkInRegistrationRepository(c.resolve('logger')), 'singleton');
   container.register('refreshTokenRepository', (c) => new RefreshTokenRepository(c.resolve('logger')), 'singleton');
   container.register('accountRequestRepository', (c) => new AccountRequestRepository(c.resolve('logger')), 'singleton');
 
@@ -199,6 +204,22 @@ function bootstrap() {
     teamRepository: c.resolve('teamRepository'),
     auditLogRepository: c.resolve('auditLogRepository'),
     otpService: c.resolve('otpService'),
+    config: c.resolve('config'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+  container.register('ocrClient', (c) => new OcrClient({ config: c.resolve('config'), logger: c.resolve('logger') }), 'singleton');
+  container.register('walkInService', (c) => new WalkInService({
+    walkInRegistrationRepository: c.resolve('walkInRegistrationRepository'),
+    competitionRepository: c.resolve('competitionRepository'),
+    coachRepository: c.resolve('coachRepository'),
+    teamRepository: c.resolve('teamRepository'),
+    playerRepository: c.resolve('playerRepository'),
+    adminRepository: c.resolve('adminRepository'),
+    authenticationService: c.resolve('authenticationService'),
+    coachService: c.resolve('coachService'),
+    coachPlayerService: c.resolve('coachPlayerService'),
+    auditLogRepository: c.resolve('auditLogRepository'),
+    ocrClient: c.resolve('ocrClient'),
     config: c.resolve('config'),
     logger: c.resolve('logger'),
   }), 'singleton');
@@ -362,6 +383,7 @@ function bootstrap() {
   container.register('paymentController', (c) => createPaymentController(c), 'singleton');
   container.register('performanceOrderController', (c) => createPerformanceOrderController(c), 'singleton');
   container.register('tieBreakDrawController', (c) => createTieBreakDrawController(c), 'singleton');
+  container.register('walkInController', (c) => createWalkInController(c), 'singleton');
 
   container.register('cacheWarmer', (c) => new CacheWarmer(
     c.resolve('competitionService'),

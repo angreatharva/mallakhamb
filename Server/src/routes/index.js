@@ -25,6 +25,7 @@ const createSuperAdminRoutes = require('./super-admin.routes');
 const createPaymentRoutes = require('./payment.routes');
 const createPublicRoutes = require('./public.routes');
 const createDocsRoutes = require('./docs.routes');
+const createWalkInRoutes = require('./walk-in.routes');
 
 // CSRF token endpoint
 const { csrfTokenHandler } = require('../middleware/csrf.middleware');
@@ -218,6 +219,9 @@ function loadRoutes(app, container, options = {}) {
   }
   apiRouter.use('/superadmin', superAdminRoutes);
   apiRouter.use('/judge', judgeRoutes);
+
+  // Walk-in desk (Admin / Super Admin): paper form → OCR → entries → payment.
+  apiRouter.use('/desk', createWalkInRoutes(container));
 
   // ============================================================
   // PUBLIC ROUTES (no authentication required)

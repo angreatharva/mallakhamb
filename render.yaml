@@ -109,6 +109,12 @@ services:
       # value lives in the Grafana scrape job, and the two must match.
       - key: METRICS_TOKEN
         sync: false
+      # Walk-in desk OCR: the OCI sidecar's public https://ocr-...sslip.io
+      # address and its bearer token (ocr/README.md). Unset = manual entry only.
+      - key: OCR_URL
+        sync: false
+      - key: OCR_TOKEN
+        sync: false
       # Email Configuration - Add in Render Dashboard (sensitive)
       - key: EMAIL_USER
         sync: false

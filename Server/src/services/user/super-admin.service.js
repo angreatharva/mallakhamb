@@ -131,6 +131,27 @@ function normalizeFeeWindow(payload, existing = null) {
     throw new ValidationError('Set a last date to pay fees before setting a late fee amount');
   }
 
+  /*
+   * The optional "Age cut-off year" (COP 1.8.3.2). Blank clears it, which
+   * means the year of the start date — see cop-rules#ageCutoffYear.
+   */
+  if (Object.prototype.hasOwnProperty.call(payload, 'ageCutoffYear')) {
+    const raw = payload.ageCutoffYear;
+    if (raw === null || raw === undefined || raw === '') {
+      body.ageCutoffYear = null;
+    } else {
+      const year = Number(raw);
+      if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+        throw new ValidationError('Age cut-off year must be a year between 2000 and 2100');
+      }
+      const startYear = start ? start.getUTCFullYear() : null;
+      if (startYear && (year < startYear - 1 || year > startYear)) {
+        throw new ValidationError('Age cut-off year must be the year of the start date or the year before it');
+      }
+      body.ageCutoffYear = year;
+    }
+  }
+
   return body;
 }
 

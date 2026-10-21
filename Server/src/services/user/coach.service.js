@@ -805,7 +805,7 @@ class CoachService extends UserService {
    * @param {string} discountCode
    * @returns {Promise<Object>}
    */
-  async redeemDiscountAndSubmit(coachId, competitionId, discountCode) {
+  async redeemDiscountAndSubmit(coachId, competitionId, discountCode, { recordedBy = null } = {}) {
     try {
       const coach = await this.repository.findById(coachId);
       if (!coach) {
@@ -877,6 +877,7 @@ class CoachService extends UserService {
           competition: competitionId,
           team: registeredTeam.team,
           coach: coachId,
+          ...(recordedBy && { recordedBy }),
           paymentStatus: 'completed',
           description: `Team ${team.name} submitted with a ${discount.percent}% discount code`,
           metadata: {
@@ -919,7 +920,13 @@ class CoachService extends UserService {
     }
   }
 
-  async createTeamPaymentOrder(coachId, competitionId) {
+  /**
+   * @param {string} coachId
+   * @param {string} competitionId
+   * @param {{recordedBy?: string}} [options] - the Admin taking the payment at
+   *   the walk-in desk; carried in the order notes so the receipt names them
+   */
+  async createTeamPaymentOrder(coachId, competitionId, { recordedBy = null } = {}) {
     try {
       // Validate coach exists
       const coach = await this.repository.findById(coachId);
@@ -984,7 +991,8 @@ class CoachService extends UserService {
           teamName: team.name,
           playerCount: playerCount,
           feePhase: feeWindow.phase,
-          lateFeePerPlayer: feeWindow.lateFeePerPlayer
+          lateFeePerPlayer: feeWindow.lateFeePerPlayer,
+          ...(recordedBy && { recordedBy: String(recordedBy), channel: 'walk-in-desk' })
         }
       });
 
@@ -1038,7 +1046,13 @@ class CoachService extends UserService {
     }
   }
 
-  async verifyTeamPaymentAndSubmit(coachId, competitionId, payload) {
+  /**
+   * @param {string} coachId
+   * @param {string} competitionId
+   * @param {Object} payload - Razorpay checkout callback
+   * @param {{recordedBy?: string}} [options] - the Admin at the walk-in desk
+   */
+  async verifyTeamPaymentAndSubmit(coachId, competitionId, payload, { recordedBy = null } = {}) {
     try {
       // Validate payload
       if (!payload?.razorpay_order_id || !payload?.razorpay_payment_id || !payload?.razorpay_signature) {
@@ -1224,8 +1238,11 @@ class CoachService extends UserService {
           competition: competitionId,
           team: registeredTeam.team,
           coach: coachId,
+          ...(recordedBy && { recordedBy }),
           paymentStatus: 'completed',
-          description: `Team ${team.name} submitted by coach for competition`,
+          description: recordedBy
+            ? `Team ${team.name} submitted at the walk-in desk`
+            : `Team ${team.name} submitted by coach for competition`,
           metadata: {
             razorpay_order_id: payload.razorpay_order_id,
             razorpay_payment_id: payload.razorpay_payment_id,
@@ -1241,7 +1258,27 @@ class CoachService extends UserService {
           }
         };
 
-        await this.transactionRepository.create([transactionData]);
+        try {
+          await this.transactionRepository.create([transactionData]);
+        } catch (error) {
+          /*
+           * The webhook got here first and recorded this payment (the unique
+           * index on metadata.razorpay_payment_id). The registration is already
+           * marked paid above, so answering an error now would tell a coach
+           * whose money has moved that it failed. Keep the webhook's row; only
+           * add who took the payment, which the webhook cannot know.
+           */
+          if (error?.code !== 11000) throw error;
+          if (recordedBy) {
+            await this.transactionRepository.updateMany(
+              { 'metadata.razorpay_payment_id': payload.razorpay_payment_id },
+              { recordedBy }
+            );
+          }
+          this.logger?.info?.('Payment already recorded by the webhook', {
+            paymentId: payload.razorpay_payment_id,
+          });
+        }
 
         this.logger?.info?.('Transaction record created', {
           coachId,

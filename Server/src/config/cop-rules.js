@@ -45,6 +45,98 @@ const AGE_GROUPS = Object.freeze([
 /** The two sexes a category is split by. */
 const GENDERS = Object.freeze(['Male', 'Female']);
 
+// ── Age eligibility (COP 1.8.3.2–1.8.3.5) ───────────────────────────────────
+//
+// The Web client has always known which brackets each gender plays
+// (Web/src/hooks/useAgeGroups.js); the server did not, and had no rule from a
+// date of birth to a bracket at all. The walk-in desk needs both on this side,
+// because it is the one path where an admin types a DOB off paper and the
+// server must refuse a child placed in a group too young for them.
+// Web/src/utils/competition/ageEligibility.js mirrors this; the Web
+// ageEligibilitySync.test.js fails if the two drift.
+
+/** The brackets each gender competes in, youngest first. */
+const AGE_GROUPS_BY_GENDER = Object.freeze({
+  Male: Object.freeze(['Under10', 'Under12', 'Under14', 'Under18', 'Above18']),
+  Female: Object.freeze(['Under10', 'Under12', 'Under14', 'Under16', 'Above16']),
+});
+
+/**
+ * The ages each bracket admits, inclusive. "Under N" INCLUDES N: the COP's own
+ * example puts a player who is 12 on 31 December in Under 12 and a 13-year-old
+ * in Under 14. "Above N" therefore starts at N + 1.
+ */
+const AGE_GROUP_RANGES = Object.freeze({
+  Under10: Object.freeze({ min: 0, max: 10 }),
+  Under12: Object.freeze({ min: 0, max: 12 }),
+  Under14: Object.freeze({ min: 0, max: 14 }),
+  Under16: Object.freeze({ min: 0, max: 16 }),
+  Under18: Object.freeze({ min: 0, max: 18 }),
+  Above16: Object.freeze({ min: 17, max: Infinity }),
+  Above18: Object.freeze({ min: 19, max: Infinity }),
+});
+
+/**
+ * The year whose 31 December ages are measured on: the meet's own
+ * `ageCutoffYear` when the Super Admin set one (a January–March meet that
+ * belongs to the previous season), otherwise the year of its `startDate`.
+ *
+ * @param {Object} competition
+ * @returns {number|null}
+ */
+function ageCutoffYear(competition) {
+  const override = Number(competition?.ageCutoffYear);
+  if (Number.isInteger(override) && override > 0) return override;
+  const start = competition?.startDate ? new Date(competition.startDate) : null;
+  return start && !Number.isNaN(start.getTime()) ? start.getUTCFullYear() : null;
+}
+
+/**
+ * Age on 31 December of `cutoffYear`. Measured on the last day of the year it
+ * is simply the difference of the years — every birthday has happened.
+ *
+ * @param {Date|string} dateOfBirth
+ * @param {number} cutoffYear
+ * @returns {number|null} null for a missing or unreadable date
+ */
+function ageOnCutoff(dateOfBirth, cutoffYear) {
+  const dob = dateOfBirth ? new Date(dateOfBirth) : null;
+  if (!dob || Number.isNaN(dob.getTime()) || !Number.isInteger(cutoffYear)) return null;
+  return cutoffYear - dob.getUTCFullYear();
+}
+
+/**
+ * The youngest bracket of this gender that admits `age` — where the player
+ * belongs unless they choose to play up.
+ *
+ * @param {number} age
+ * @param {string} gender
+ * @returns {string|null}
+ */
+function lowestAgeGroup(age, gender) {
+  const list = AGE_GROUPS_BY_GENDER[gender];
+  if (!list || !Number.isFinite(age) || age < 0) return null;
+  return list.find((group) => age >= AGE_GROUP_RANGES[group].min && age <= AGE_GROUP_RANGES[group].max) || null;
+}
+
+/**
+ * Every bracket this player may enter: their lowest one and each higher one
+ * (COP 1.8.3.3 lets a player play up, never down), narrowed to what the meet
+ * runs for the gender when `offered` is given.
+ *
+ * @param {number} age
+ * @param {string} gender
+ * @param {string[]} [offered] - the meet's brackets for this gender
+ * @returns {string[]} youngest first; empty when the player fits none
+ */
+function eligibleAgeGroups(age, gender, offered) {
+  const list = AGE_GROUPS_BY_GENDER[gender];
+  const lowest = lowestAgeGroup(age, gender);
+  if (!list || !lowest) return [];
+  const allowed = list.slice(list.indexOf(lowest));
+  return Array.isArray(offered) ? allowed.filter((group) => offered.includes(group)) : allowed;
+}
+
 // §3.3 — universal point distribution (all apparatus, all competitions)
 const POINT_CEILINGS = Object.freeze({
   difficulty: 3.80,
@@ -429,6 +521,12 @@ module.exports = {
   COP_EDITION,
   AGE_GROUPS,
   GENDERS,
+  AGE_GROUPS_BY_GENDER,
+  AGE_GROUP_RANGES,
+  ageCutoffYear,
+  ageOnCutoff,
+  lowestAgeGroup,
+  eligibleAgeGroups,
   COMPETITION_TYPE_SLUGS,
   COMPETITION_TYPE_DISPLAYS,
   APPARATUS,

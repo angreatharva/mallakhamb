@@ -1,0 +1,5 @@
+# name  sha256  url — scripts/fetch-models.sh refuses any file whose hash differs.
+# PP-OCRv5 mobile, English recognition, ONNX export by PaddlePaddle (Apache-2.0),
+# pinned to commit 3fafbc3b5dcf93dd72add9f48368be8a3a2cd33b.
+en_PP-OCRv5_mobile_rec/inference.onnx b5f833dfc5d0eb71da397b4efa06ebeee9b431b690a47d6af40d77d8eabc557f https://huggingface.co/PaddlePaddle/en_PP-OCRv5_mobile_rec_onnx/resolve/3fafbc3b5dcf93dd72add9f48368be8a3a2cd33b/inference.onnx
+en_PP-OCRv5_mobile_rec/inference.yml 27e91d0582f40168aa218303c76e184bc78fa7a5d105aad0cfbad8458b441067 https://huggingface.co/PaddlePaddle/en_PP-OCRv5_mobile_rec_onnx/resolve/3fafbc3b5dcf93dd72add9f48368be8a3a2cd33b/inference.yml

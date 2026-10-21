@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.pyc
+# Downloaded by scripts/fetch-models.sh, pinned in models.lock
+models/

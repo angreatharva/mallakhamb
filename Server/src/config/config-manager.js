@@ -154,6 +154,16 @@ class ConfigManager {
       redis: {
         url: this.getString('REDIS_URL', ''),
       },
+      /**
+       * The walk-in desk's OCR sidecar (ocr/). Empty URL = OCR off: the desk
+       * still works by manual entry. On OCI it is http://127.0.0.1:8090 on the
+       * same VM; Render reaches the OCI one over HTTPS and must send the token.
+       */
+      ocr: {
+        url: this.getString('OCR_URL', ''),
+        token: this.getString('OCR_TOKEN', ''),
+        timeoutMs: this.getNumber('OCR_TIMEOUT_MS', 60000),
+      },
       observability: {
         /**
          * Bearer token(s) for GET /metrics, which Grafana Cloud scrapes.
