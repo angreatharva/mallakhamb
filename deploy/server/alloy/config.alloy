@@ -14,6 +14,15 @@ prometheus.scrape "host" {
   forward_to      = [prometheus.relabel.host.receiver]
 }
 
+// The walk-in desk's OCR sidecar (deploy/oci/PLAN.md O15). Runs only on the
+// active, so on the standby this target is simply down and sends nothing.
+prometheus.scrape "ocr" {
+  targets         = [{"__address__" = "127.0.0.1:8090"}]
+  metrics_path    = "/metrics"
+  scrape_interval = "60s"
+  forward_to      = [prometheus.relabel.host.receiver]
+}
+
 prometheus.relabel "host" {
   rule {
     target_label = "scrape_job"

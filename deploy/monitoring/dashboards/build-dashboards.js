@@ -453,7 +453,26 @@ const compDay = dashboard({
       min: 0, description: 'rejected_signature → RAZORPAY_WEBHOOK_SECRET mismatch; error → server logs.',
     }),
 
-    ...capacityRow(28, ['cpu', 'mem', 'pool']),
+    // The walk-in desk's OCR sidecar (ocr/), on the active VM only: it runs
+    // where the API runs. No data on Render, where there is no sidecar.
+    row('Walk-in desk OCR (active VM; deploy/oci/PLAN.md O15)', 28),
+    stat('OCR reader', [t('max(mkwi_ocr_up{scrape_job="mallakhamb-host"}) or vector(0)')], { h: 8, w: 4, x: 0, y: 29 }, {
+      steps: upSteps, mappings: upMappings,
+      description: 'The sidecar answers /metrics on 127.0.0.1:8090. DOWN → systemctl status mallakhamb-ocr on the active. The desk still works by typing. Alert "OCR down".',
+    }),
+    ts('Pages read (15m) by outcome', [t('sum by (outcome) (increase(mkwi_ocr_pages_total{scrape_job="mallakhamb-host"}[15m]))', '{{outcome}}')], { h: 8, w: 8, x: 4, y: 29 }, {
+      min: 0, bars: true, description: 'ok / unreadable (no corner squares or code — the desk asks for a re-take) / busy (queue full) / error (a reader crash: journalctl -u mallakhamb-ocr).',
+    }),
+    ts('Seconds per page', [
+      t('histogram_quantile(0.95, sum by (le) (rate(mkwi_ocr_page_seconds_bucket{scrape_job="mallakhamb-host"}[15m])))', 'p95'),
+      t('sum(rate(mkwi_ocr_page_seconds_sum{scrape_job="mallakhamb-host"}[15m])) / sum(rate(mkwi_ocr_page_seconds_count{scrape_job="mallakhamb-host"}[15m]))', 'mean'),
+    ], { h: 8, w: 8, x: 12, y: 29 }, { unit: 's', min: 0, description: 'One page at a time on one core, at low CPU priority — live scoring always wins.' }),
+    stat('OCR queue', [t('max(mkwi_ocr_queue_waiting{scrape_job="mallakhamb-host"}) or vector(0)')], { h: 8, w: 4, x: 20, y: 29 }, {
+      decimals: 0, steps: [green, { color: 'orange', value: 2 }, { color: 'red', value: 4 }],
+      description: 'Photos waiting for the reader. The API answers "busy, try again" beyond 3.',
+    }),
+
+    ...capacityRow(37, ['cpu', 'mem', 'pool']),
   ],
 });
 

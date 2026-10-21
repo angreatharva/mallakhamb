@@ -1,0 +1,26 @@
+# The walk-in OCR, public ONLY so the Render API can use it before the move
+# (deploy/oci/PLAN.md O15.4). The sidecar refuses /v1/read without OCR_TOKEN;
+# Caddy forwards nothing but /health and /v1/read. Remove this site (and the
+# token) once production runs on OCI: the API there uses 127.0.0.1:8090.
+<STAGING_OCR_HOST> {
+    @allowed path /health /v1/read
+    handle @allowed {
+        request_body {
+            max_size 12MB
+        }
+        reverse_proxy 127.0.0.1:8090 {
+            transport http {
+                read_timeout 90s
+            }
+        }
+    }
+    handle {
+        respond 404
+    }
+    log {
+        output file /var/log/caddy/ocr-access.log {
+            roll_size 20MiB
+            roll_keep 5
+        }
+    }
+}

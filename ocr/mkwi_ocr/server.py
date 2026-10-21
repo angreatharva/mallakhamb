@@ -1,14 +1,14 @@
 """HTTP front of the OCR sidecar. Standard library only.
 
   GET  /health   {"status": "ok", "model": ...}  (no auth: carries nothing private)
-  GET  /metrics  Prometheus text: pages, seconds, queue, failures
+  GET  /metrics  Prometheus text: pages, seconds, queue, failures (no auth; never proxied publicly)
   POST /v1/read  {"image": base64, "pages": [layout...], "pageHint": n|null}
 
 ONE page is read at a time. A request that cannot get the reader within
 QUEUE_WAIT_SECONDS gets 503 and the API tells the desk to try again; the API
 itself also keeps its own short queue (Server/src/services/walk-in/ocr.client).
 
-When OCR_TOKEN is set every request except /health must carry
+When OCR_TOKEN is set, POST /v1/read must carry
 `Authorization: Bearer <token>` — required for the public address Render uses,
 harmless on 127.0.0.1.
 """
@@ -97,9 +97,9 @@ def make_handler(recognizer, model_name: str, token: str, metrics: Metrics, read
         def do_GET(self):
             if self.path == "/health":
                 return self._send(200, {"status": "ok", "model": model_name, "busy": reader_lock.locked()})
-            if not self._authorised():
-                return self._send(401, {"error": "unauthorised"})
             if self.path == "/metrics":
+                # Counts only, no auth: Alloy scrapes it on 127.0.0.1, and the
+                # public Caddy site (ocr-....sslip.io) never forwards it.
                 return self._send(200, metrics.render(), "text/plain; version=0.0.4")
             return self._send(404, {"error": "not found"})
 

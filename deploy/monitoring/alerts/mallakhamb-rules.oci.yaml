@@ -1185,6 +1185,59 @@ groups:
                 type: __expr__
                 uid: __expr__
         isPaused: false
+      - uid: mk-ocr-down
+        title: OCR down on the active
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: The walk-in desk form reader has not reported for 10 minutes on the active server.
+          description: >-
+            Walk-in registration still works by typing each row. On the active: systemctl status mallakhamb-ocr;
+            journalctl -u mallakhamb-ocr -n 100. Usually the model folder (/opt/mallakhamb/ocr-models) or the virtualenv
+            of the current release; sudo mallakhamb-deploy <sha> rebuilds both. Runbook: deploy/oci/PLAN.md O15.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-competition-day
+          __panelId__: '15'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'absent(mkwi_ocr_up{scrape_job="mallakhamb-host"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
       - uid: mk-standby-missing
         title: Standby missing
         condition: C

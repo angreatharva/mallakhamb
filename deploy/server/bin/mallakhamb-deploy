@@ -15,8 +15,15 @@ git -C "$BASE/repo.git" cat-file -e "${SHA}^{commit}"
 
 if [ ! -f "$REL/.complete" ]; then
   rm -rf "$REL" && mkdir -p "$REL"
-  git -C "$BASE/repo.git" archive "$SHA" Server Web | tar -x -C "$REL"
+  # ocr/ arrived with the walk-in desk; an older sha has none, and gets none.
+  PARTS="Server Web"; git -C "$BASE/repo.git" cat-file -e "${SHA}:ocr" 2>/dev/null && PARTS="$PARTS ocr"
+  git -C "$BASE/repo.git" archive "$SHA" $PARTS | tar -x -C "$REL"
   (cd "$REL/Server" && npm ci --omit=dev --no-audit --no-fund)
+  if [ -d "$REL/ocr" ]; then   # O15: the OCR sidecar's own virtualenv, built once per release
+    python3 -m venv "$REL/ocr/.venv"
+    "$REL/ocr/.venv/bin/pip" install -q --disable-pip-version-check -r "$REL/ocr/requirements.txt"
+    bash "$REL/ocr/scripts/fetch-models.sh" "$BASE/ocr-models"      # pinned by sha256 (ocr/models.lock); kept across releases
+  fi
   ln -sfn /etc/mallakhamb/app.env "$REL/Server/.env"
   rm -rf "$REL/Server/logs" && ln -sfn /var/log/mallakhamb "$REL/Server/logs"
   if [ -n "$WEBTAG" ]; then
@@ -34,6 +41,15 @@ fi
 
 /usr/local/bin/mallakhamb-render-env
 ROLE=active; [ -f /etc/mallakhamb/STANDBY ] && ROLE=standby
+ocr_selftest() {   # O15: read a synthetic filled form; $1 = sidecar URL, or empty to read in-process
+  [ -d "$REL/ocr" ] || return 0
+  local tmp; tmp="$(mktemp -d)"
+  (cd "$REL/Server" && node scripts/walkInFormFixture.js "$tmp" >/dev/null)
+  if (cd "$REL/ocr" && OCR_MODEL_DIR="$BASE/ocr-models/en_PP-OCRv5_mobile_rec" .venv/bin/python -m mkwi_ocr.selftest --layout "$tmp/layout.json" ${1:+--url "$1"}); then
+    rm -rf "$tmp"; return 0
+  fi
+  rm -rf "$tmp"; return 1
+}
 release_metric() {   # Grafana shows which release each server holds (C1.7 "Release" table)
   printf '# HELP mallakhamb_release_info Release deployed on this server\n# TYPE mallakhamb_release_info gauge\nmallakhamb_release_info{sha="%s",role="%s"} 1\n' "${SHA:0:7}" "$ROLE" > /var/lib/alloy/textfile/.release.tmp
   mv /var/lib/alloy/textfile/.release.tmp /var/lib/alloy/textfile/mallakhamb_release.prom
@@ -52,6 +68,7 @@ if [ "$ROLE" = standby ]; then
   # Standby: never migrates (the active already did), never serves. Prove the release can
   # start against production config + database without changing anything, then switch the folder.
   (cd "$REL/Server" && sudo -u mallakhamb node scripts/startup.js --check)
+  ocr_selftest "" || echo "WARNING: OCR self-test failed on this release (the desk falls back to typing)" >&2
   ln -sfn "$REL" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
   echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric
   echo "STANDBY UPDATED $SHA (service not started)"
@@ -76,6 +93,12 @@ if [ -z "$ok" ]; then
   exit 1
 fi
 echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric
+# The OCR is optional to the API (no rollback for it), but say so loudly.
+if [ -d "$REL/ocr" ]; then
+  systemctl restart mallakhamb-ocr || true
+  for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8090/health >/dev/null 2>&1 && break; sleep 2; done
+  ocr_selftest http://127.0.0.1:8090 || echo "WARNING: OCR not healthy — journalctl -u mallakhamb-ocr (the desk falls back to typing)" >&2
+fi
 CUR="$(readlink -f "$BASE/current")"
 ls -1dt "$BASE"/releases/*/ | sed 's#/$##' | grep -vx "$CUR" | tail -n +5 | xargs -r rm -rf   # live + 4 newest others
 echo "DEPLOYED $SHA"

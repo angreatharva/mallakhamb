@@ -96,6 +96,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 | 13 | **Standby VM** (`mallakhamb-b`) = drill C6E, then failover drill C6F | **O12**, COMMON **C6E/C6F** |
 | 14 | Cutover | COMMON **C7** (OCI values in O10) |
 | 15 | Run it, then decommission | COMMON **C8, C9** + **O11**, **O13** |
+| 16 | Walk-in desk OCR sidecar (outside meet days) | **O15** |
 
 ---
 
@@ -509,6 +510,46 @@ Checked after both: `BRMC_dev` record counts identical to the baseline taken bef
 - A manual run prints `verifySeed` OK, `<db>_e2e` is gone afterwards, the real DB's counts (`mallakhamb-counts`) are unchanged, no email was sent (Gmail "Sent" is empty for the run window).
 - Grafana shows the two new metrics for both VMs; force a failure (wrong `SEED_ADMIN_PASSWORD`) and the *E2E failed* alert fires.
 - After 7 nights: read OCI Monitoring CPU/memory p95 per VM and **record the numbers** in the record sheet — whether or not they cross 20%.
+
+## O15 — Walk-in desk OCR sidecar (after O14; never on or within 48 h of a meet day)
+
+**What:** the Admin/Super Admin walk-in desk (`/api/desk`, the "Walk-in" tab) reads a phone photo of the printed form with a small Python service, `ocr/` (PP-OCRv5 mobile English recognition on ONNX Runtime). It runs on **both** VMs but only **where the API runs**, listens on `127.0.0.1:8090` only, and the API on the same VM calls it. If it is down or not configured the desk still works by typing — nothing else in the app depends on it.
+
+**Design**
+
+| Piece | Choice | Why |
+|---|---|---|
+| Unit | `mallakhamb-ocr.service`: `BindsTo=mallakhamb.service`; `mallakhamb.service` has `Wants=mallakhamb-ocr.service` | starts with the API, stops with it: the standby never runs it, and **promote/demote need no new step** |
+| Limits | `MemoryMax=1G` (`MemoryHigh=800M`), `CPUWeight=20`, `Nice=10`, one page at a time; the API keeps a queue of 3 and answers "busy, retry" beyond it | a photo being read must never take memory or the one core from live scoring |
+| Build | `mallakhamb-deploy` builds `ocr/.venv` inside each release (pinned `ocr/requirements.txt`, aarch64 wheels) and fetches the model once into `/opt/mallakhamb/ocr-models/`, refusing any file whose SHA-256 differs from `ocr/models.lock` | once per commit like the API; the model is not re-downloaded per release |
+| Checks | deploy: self-test in-process on the standby, through `127.0.0.1:8090` on the active (warning only, **no rollback** — the API does not need it); nightly O14: the same self-test on both VMs (exit **9** when only the OCR failed) | a broken OCR shows up overnight, not at the desk |
+| Monitoring | Alloy scrapes `127.0.0.1:8090/metrics` (`mkwi_ocr_*`); Competition day → "Walk-in desk OCR" row; alert *OCR down on the active* (`absent(mkwi_ocr_up{scrape_job="mallakhamb-host"})` 10 m, warning) | same pattern as the standby rules |
+| Data | photos are never stored; drafts (text only) are in Atlas | a failover during an upload loses that one photo; the admin re-takes it on the new active |
+
+**O15.1 Env secret (owner, Cloud Shell — as in [03-env-secret.md](scripts/03-env-secret.md)):** add to the app env and create the new version (v5 → v6):
+
+```
+OCR_URL='http://127.0.0.1:8090'
+OCR_TOKEN='<new random — only if O15.4 is done; same value on both VMs>'
+```
+
+**O15.2 Standby first (app-02):** `sudo bash deploy/server/install.sh …` again (installs the new unit and the Alloy config change) → `sudo mallakhamb-deploy <sha>`; it ends with `OCR self-test passed: 3 rows read correctly`. `sudo mallakhamb-envcheck` shows `OCR_URL`.
+
+**O15.3 Active (app-01), in place, outside meet days:** the same two commands. The deploy restarts the API (a few seconds) and then `mallakhamb-ocr`; it ends with the self-test through `127.0.0.1:8090`. No role swap: nothing in the OS changes but one unit. Then in Grafana: Competition day → "OCR reader" **UP**, and the alert *OCR down on the active* quiet. If anything is wrong: `sudo mallakhamb-rollback`.
+
+**O15.4 Public address for Render (temporary — early testing only).** Render's API cannot reach `127.0.0.1` on OCI, so for testing on Render before the move the active VM also serves the OCR at `ocr-<reserved-IP-with-dashes>.sslip.io` (e.g. `ocr-137-23-63-84.sslip.io`):
+
+1. On **both** VMs: `printf "OCR_TOKEN='%s'\n" '<token>' | sudo install -m 0640 -o root -g mallakhamb /dev/stdin /etc/mallakhamb/ocr.env` (the sidecar then refuses `/v1/read` without it; `/health` and `/metrics` stay open on loopback).
+2. On the **active**: `sed "s#<STAGING_OCR_HOST>#ocr-…sslip.io#" deploy/server/caddy/sites/staging-ocr.caddy.tmpl | sudo tee /etc/caddy/sites/staging-ocr.caddy && sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy`. On the **standby** put the same file in `/etc/caddy/sites-standby/` — promote copies it across, and the reserved IP moves with failover, so the name keeps working.
+3. The same `OCR_TOKEN` in the OCI app env (O15.1) and, on Render, `OCR_URL=https://ocr-…sslip.io` + `OCR_TOKEN` (Dashboard → Environment; both `sync: false` in `render.yaml`).
+4. Check from your PC: `curl https://ocr-…sslip.io/health` → `{"status":"ok",…}`; `curl -X POST https://ocr-…sslip.io/v1/read` → **401**; `curl https://ocr-…sslip.io/metrics` → **404**.
+
+Caddy forwards only `/health` and `/v1/read` (12 MB body cap). This sends minors' photos across clouds over TLS, which is why it is for early testing only: **remove the site file and `OCR_TOKEN` from Render once production runs on OCI.**
+
+**Verify**
+- Admin → Walk-in → print a meet's form, fill a page, photograph it on a phone: rows appear with their photo strips; Competition day → "Pages read" counts it.
+- `sudo systemctl stop mallakhamb` on the active stops `mallakhamb-ocr` too; `sudo mallakhamb-demote` / `mallakhamb-promote` leave it off / on with the API.
+- `sudo systemctl show mallakhamb-ocr -p MemoryMax -p CPUWeight` → `1073741824` / `20`.
 
 ## 5. Single-VM fallback
 

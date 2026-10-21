@@ -4,7 +4,7 @@
 |---|---|
 | `apply-alerts.js` | **Source of truth.** The rules (13 on Render), the `owner-email` contact point and the `service=mallakhamb-api` notification route |
 | `mallakhamb-rules.yaml` | Generated from `apply-alerts.js` in Grafana's alert-rule export format, for reading and diffing. Don't edit it by hand |
-| `mallakhamb-rules.<platform>.yaml` | The same for each VM preset (`oci` 24 rules, `oci-single` and `aws` 22): the host and nightly-e2e rules added. **Not live**; applied at the cutover |
+| `mallakhamb-rules.<platform>.yaml` | The same for each VM preset (`oci` 25 rules, `oci-single` and `aws` 23): the host and nightly-e2e rules added. **Not live**; applied at the cutover |
 | `mallakhamb-rules.staging.yaml` | The `mallakhamb-oci-staging` group: the two nightly-e2e alerts (`-stg` copies) for the OCI staging servers, **live** before the cutover; the same paste with `PLATFORM='oci'` deletes it |
 | `export-yaml.js` | Regenerates every YAML, or prints per-rule hashes with `--hashes [--platform=<p>] [--staging]` |
 

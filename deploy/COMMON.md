@@ -171,6 +171,8 @@ Stored in the platform secret store [PLATFORM]. The server renders them into `/e
 | `KEEP_ALIVE` | `false` | `false` | no (Render-only) |
 | `ENABLE_API_DOCS`, `ENABLE_DEBUG_ROUTES` | `false` | `false` | yes |
 | `REDIS_URL` | don't set | don't set | yes |
+| `OCR_URL` | `http://127.0.0.1:8090` (walk-in desk OCR, OCI PLAN **O15**) | the same | Render: unset, or the OCI `https://ocr-….sslip.io` for early testing only |
+| `OCR_TOKEN` | only with the public OCR address (O15.4) | don't set (remove at cutover) | Render: the same token, testing only |
 | **Never set** | `ALLOW_TEST_TOKEN`, `ALLOW_LOSSY_*`, `PERF_*`, `NGROK_*`, `API_PUBLIC_URL`, `SEED_*`, `RENDER_EXTERNAL_URL`, `KEEP_ALIVE_URL` | | |
 
 \* The backup user is granted `read` on both `<db>_rehearsal` and `<db>` (C2.2), so the nightly backup can be tested during staging.

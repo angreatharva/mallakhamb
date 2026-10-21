@@ -1,7 +1,7 @@
 [Unit]
 Description=Mallakhamb API
 After=network-online.target
-Wants=network-online.target
+Wants=network-online.target mallakhamb-ocr.service
 
 [Service]
 Type=simple

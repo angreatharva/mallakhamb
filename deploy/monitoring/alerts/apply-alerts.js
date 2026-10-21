@@ -145,6 +145,14 @@
       'The nightly e2e timer has not fired on {{ $labels.instance }} for more than 26 hours.',
       'Meet days still count as a run (skipped), so this means the timer itself stopped: systemctl status mallakhamb-e2e.timer mallakhamb-e2e; a run longer than 2 h is killed (TimeoutStartSec). Runbook: PLAN.md §8.'],
   );
+  // The walk-in desk's OCR sidecar (deploy/oci/PLAN.md O15): bound to the API
+  // unit, so it runs only on the active. Warning, not critical — the desk
+  // still works by typing the form in.
+  if (P.host) RULES.push(
+    ['mk-ocr-down', 'OCR down on the active', `absent(mkwi_ocr_up{${HJ}})`, 'gt', 0, '10m', 'warning', 'mallakhamb-competition-day', 15,
+      'The walk-in desk form reader has not reported for 10 minutes on the active server.',
+      'Walk-in registration still works by typing each row. On the active: systemctl status mallakhamb-ocr; journalctl -u mallakhamb-ocr -n 100. Usually the model folder (/opt/mallakhamb/ocr-models) or the virtualenv of the current release; sudo mallakhamb-deploy <sha> rebuilds both. Runbook: deploy/oci/PLAN.md O15.'],
+  );
   if (P.standby) RULES.push(
     ['mk-standby-missing', 'Standby missing', 'absent(up{scrape_job="mallakhamb-host-standby"})', 'gt', 0, '30m', 'warning', 'mallakhamb-runtime', HOST_PANEL.release,
       'No metrics from the warm standby for 30 minutes: there is nothing to fail over to.',

@@ -156,4 +156,19 @@ as_app node scripts/setupApi.js --yes
 rc=$?
 clean_db after || { [ "$rc" = 0 ] && rc=3; }
 
+# 4. the walk-in desk's form reader (O15): a synthetic filled page read in-process
+# with this release's virtualenv and the pinned model, on BOTH VMs, so a broken OCR
+# shows up overnight rather than at the desk. Exit 9 when only this failed.
+OCR=/opt/mallakhamb/current/ocr
+if [ -x "$OCR/.venv/bin/python" ]; then
+  tmpdir=$(runuser -u mallakhamb -- mktemp -d -p /run/mallakhamb-e2e)
+  if runuser -u mallakhamb -- bash -c "cd '$REL' && node scripts/walkInFormFixture.js '$tmpdir' >/dev/null && cd '$OCR' &&        OCR_MODEL_DIR=/opt/mallakhamb/ocr-models/en_PP-OCRv5_mobile_rec .venv/bin/python -m mkwi_ocr.selftest --layout '$tmpdir/layout.json'"; then
+    echo "E2E: OCR self-test passed"
+  else
+    echo "E2E: OCR self-test FAILED" >&2
+    [ "$rc" = 0 ] && rc=9
+  fi
+  rm -rf "$tmpdir"
+fi
+
 finish "$rc"

@@ -46,7 +46,7 @@ The deploy health check and the nightly run (O14) use the `--url` form.
 |---|---|---|
 | `OCR_HOST` | `127.0.0.1` | Never `0.0.0.0` on OCI — the public address goes through Caddy |
 | `OCR_PORT` | `8090` | |
-| `OCR_TOKEN` | *(empty)* | When set, every route but `/health` needs `Authorization: Bearer …`. Required behind the public `ocr-…sslip.io` address Render uses |
+| `OCR_TOKEN` | *(empty)* | When set, `POST /v1/read` needs `Authorization: Bearer …` (`/health` and `/metrics` stay open; the public Caddy site forwards only `/health` and `/v1/read`). Required behind the public `ocr-…sslip.io` address Render uses |
 | `OCR_MODEL_DIR` | `ocr/models/en_PP-OCRv5_mobile_rec` | On OCI: `/opt/mallakhamb/ocr-models/en_PP-OCRv5_mobile_rec` |
 | `OCR_THREADS` | `1` | ONNX Runtime intra-op threads |
 | `OCR_QUEUE_WAIT_SECONDS` | `20` | |
