@@ -526,16 +526,36 @@ Checked after both: `BRMC_dev` record counts identical to the baseline taken bef
 | Monitoring | Alloy scrapes `127.0.0.1:8090/metrics` (`mkwi_ocr_*`); Competition day → "Walk-in desk OCR" row; alert *OCR down on the active* (`absent(mkwi_ocr_up{scrape_job="mallakhamb-host"})` 10 m, warning) | same pattern as the standby rules |
 | Data | photos are never stored; drafts (text only) are in Atlas | a failover during an upload loses that one photo; the admin re-takes it on the new active |
 
-**O15.1 Env secret (owner, Cloud Shell — as in [03-env-secret.md](scripts/03-env-secret.md)):** add to the app env and create the new version (v5 → v6):
+**O15.1 Add `OCR_URL` to the env secret (owner, Cloud Shell; v5 → v6).** Take the full staging env from your password manager and add one line: `OCR_URL='http://127.0.0.1:8090'` (no `OCR_TOKEN` unless you do O15.4). Then in Cloud Shell:
 
+```bash
+nano ~/app.env      # paste the WHOLE file, Ctrl+O Enter, Ctrl+X
+# check: every line KEY='value'; the main keys are there (prints names only, never values)
+if grep -vqE "^([A-Z][A-Z0-9_]*='[^']*'|#.*|)$" ~/app.env; then echo "FIX lines:"; grep -vnE "^([A-Z][A-Z0-9_]*='[^']*'|#.*|)$" ~/app.env | cut -d= -f1; else echo "format OK"; fi
+for k in MONGODB_URI JWT_SECRET RAZORPAY_KEY_ID DISCOUNT_CODE GMAIL_REFRESH_TOKEN METRICS_TOKEN OCR_URL; do grep -q "^$k=" ~/app.env && echo "OK      $k" || echo "MISSING $k"; done
+# upload as the next version — should print 6
+C=$(oci iam compartment list --compartment-id $OCI_TENANCY --name mallakhamb-prod --query 'data[0].id' --raw-output)
+SID=$(oci vault secret list -c $C --name mallakhamb-prod-bom-secret-api-env --lifecycle-state ACTIVE --query 'data[0].id' --raw-output)
+oci vault secret update-base64 --secret-id "$SID" --secret-content-content "$(grep -vE '^(#|$)' ~/app.env | base64 -w0)" --query 'data."current-version-number"' --raw-output
+shred -u ~/app.env
 ```
-OCR_URL='http://127.0.0.1:8090'
-OCR_TOKEN='<new random — only if O15.4 is done; same value on both VMs>'
+
+Never rebuild the file from memory: a key missing from v6 disappears from both VMs at their next deploy/restart.
+
+**O15.2 Update the standby (app-02), then O15.3 the active (app-01, not on a competition day).** Same command on each, over the Bastion, with the full sha of the master commit to deploy:
+
+```bash
+ssh <bastion options> ubuntu@<private ip> 'sudo bash -s -- <full-40-char-sha>' < deploy/oci/scripts/o15-update-vm.sh
 ```
 
-**O15.2 Standby first (app-02):** `sudo bash deploy/server/install.sh …` again (installs the new unit and the Alloy config change) → `sudo mallakhamb-deploy <sha>`; it ends with `OCR self-test passed: 3 rows read correctly`. `sudo mallakhamb-envcheck` shows `OCR_URL`.
+[`o15-update-vm.sh`](scripts/o15-update-vm.sh) installs only what O15 changed (`mallakhamb-deploy`, `-e2e`, `-envcheck`, `mallakhamb.service`, `mallakhamb-ocr.service`, the Alloy config), then runs `mallakhamb-deploy`. It does **not** re-run `install.sh` (that resets `platform.sh` and runs `apt upgrade`) and does **not** touch the timers (the nightly e2e timer is staggered per VM). It **stops** if the VM's `mallakhamb.service` was hand-edited beyond the `Wants=` line, showing the diff; re-run with `<sha> --force` once you have kept what matters.
 
-**O15.3 Active (app-01), in place, outside meet days:** the same two commands. The deploy restarts the API (a few seconds) and then `mallakhamb-ocr`; it ends with the self-test through `127.0.0.1:8090`. No role swap: nothing in the OS changes but one unit. Then in Grafana: Competition day → "OCR reader" **UP**, and the alert *OCR down on the active* quiet. If anything is wrong: `sudo mallakhamb-rollback`.
+What you should see:
+- **standby:** `OCR self-test passed: 3 rows read correctly`, `STANDBY UPDATED`, `OCR_URL = http://127.0.0.1:8090`, `O15 UPDATE DONE`. The first run takes a few minutes (Python environment + the 7.8 MB model, downloaded once).
+- **active:** a few seconds of API restart, `DEPLOYED <sha>`, the self-test through `127.0.0.1:8090`, `mallakhamb-ocr` **active (running)**. Then Grafana → Competition day → "Walk-in desk OCR" → *OCR reader* **UP**.
+- **If anything breaks** on the active: `sudo mallakhamb-rollback`. An OCR failure alone never rolls back the API — the desk falls back to typing.
+
+Later releases need nothing special: plain `sudo mallakhamb-deploy <sha>` builds and checks the OCR too.
 
 **O15.4 Public address for Render (temporary — early testing only).** Render's API cannot reach `127.0.0.1` on OCI, so for testing on Render before the move the active VM also serves the OCR at `ocr-<reserved-IP-with-dashes>.sslip.io` (e.g. `ocr-137-23-63-84.sslip.io`):
 
