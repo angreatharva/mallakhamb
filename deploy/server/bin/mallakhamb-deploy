@@ -45,7 +45,9 @@ ocr_selftest() {   # O15: read a synthetic filled form; $1 = sidecar URL, or emp
   [ -d "$REL/ocr" ] || return 0
   local tmp; tmp="$(mktemp -d)"
   (cd "$REL/Server" && node scripts/walkInFormFixture.js "$tmp" >/dev/null)
-  if (cd "$REL/ocr" && OCR_MODEL_DIR="$BASE/ocr-models/en_PP-OCRv5_mobile_rec" .venv/bin/python -m mkwi_ocr.selftest --layout "$tmp/layout.json" ${1:+--url "$1"}); then
+  # A running sidecar refuses /v1/read without OCR_TOKEN (O15.4); the self-test reads it
+  # from the environment, so load the sidecar's own env file here, never onto argv.
+  if (cd "$REL/ocr" && { [ -z "$1" ] || [ ! -f /etc/mallakhamb/ocr.env ] || { set -a; . /etc/mallakhamb/ocr.env; set +a; }; } && OCR_MODEL_DIR="$BASE/ocr-models/en_PP-OCRv5_mobile_rec" .venv/bin/python -m mkwi_ocr.selftest --layout "$tmp/layout.json" ${1:+--url "$1"}); then
     rm -rf "$tmp"; return 0
   fi
   rm -rf "$tmp"; return 1
@@ -80,8 +82,8 @@ ln -sfn "$REL" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
 systemctl restart mallakhamb
 
 ok=""
-for i in $(seq 1 60); do
-  curl -fsS -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null && { ok=1; break; }
+for i in $(seq 1 60); do   # the first tries land before the API listens: stay quiet, the loop retries
+  curl -fsS 2>/dev/null -H 'X-Forwarded-Proto: https' http://127.0.0.1:5000/api/health/ready >/dev/null && { ok=1; break; }
   sleep 3
 done
 if [ -z "$ok" ]; then
