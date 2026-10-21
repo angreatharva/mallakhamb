@@ -42,6 +42,7 @@ const { offeredApparatus } = require('../../utils/data/competition-apparatus.uti
 const { effectiveTeamSize, isValidTeamSize } = require('../../utils/scoring/team-championship.util');
 const { encrypt } = require('../../utils/security/data-encryption.util');
 const { buildFormLayout, parseQrPayload } = require('../../utils/walk-in/form-layout.util');
+const { matchKind } = require('../../utils/walk-in/player-match.util');
 const { renderFormPdf } = require('./form-pdf.service');
 
 /** Names on the form are English capitals: the Player ID is built from a–z only. */
@@ -481,6 +482,8 @@ class WalkInService {
         ageGroup: row.ageGroup || null,
         apparatus: (Array.isArray(row.apparatus) ? row.apparatus : []).filter((a) => APPARATUS.includes(a)),
         confirmDuplicate: row.confirmDuplicate === true,
+        matchChoice: ['existing', 'new'].includes(row.matchChoice) ? row.matchChoice : null,
+        matchPlayer: row.matchChoice === 'existing' && row.matchPlayer ? row.matchPlayer : null,
       };
     });
     // A locked row the client dropped is put back: it cannot be un-registered from here.
@@ -574,9 +577,11 @@ class WalkInService {
     const entries = registration?.players || [];
     const cap = isValidTeamSize(competition.maxTeamSize) ? Number(competition.maxTeamSize) : null;
 
-    // Same name + DOB already on the books?
-    const teamPlayers = await this.playerRepository.find({ team: idOf(draft.team) }, { select: 'firstName lastName dateOfBirth loginId' });
+    // Everyone already on the coach's team: compared against each row in full,
+    // so a misread name AND date still finds them (utils/walk-in/player-match).
+    const teamPlayers = await this.playerRepository.find({ team: idOf(draft.team) }, { select: 'firstName lastName dateOfBirth loginId gender team' });
     const duplicateKeys = new Map();
+    const linkedIds = new Set();
     const rows = [];
     let blocking = 0;
     const squadCount = new Map();
@@ -588,6 +593,8 @@ class WalkInService {
     for (const row of draft.rows || []) {
       const issues = [];
       const add = (field, level, message) => issues.push({ field, level, message });
+      let matches = [];
+      let link = { state: 'none' };
       const firstName = tidyName(row.firstName);
       const lastName = tidyName(row.lastName);
       const dob = parseDate(row.dateOfBirth);
@@ -635,22 +642,28 @@ class WalkInService {
           const key = `${firstName}|${lastName}|${row.dateOfBirth}`;
           if (duplicateKeys.has(key)) add('firstName', 'error', `Same player as row ${duplicateKeys.get(key)} on this form`);
           else duplicateKeys.set(key, rows.length + 1);
+        }
 
-          const onTeam = (teamPlayers || []).find((p) => tidyName(p.firstName).replace(/&#X27;/g, "'") === firstName
-            && tidyName(p.lastName).replace(/&#X27;/g, "'") === lastName
-            && p.dateOfBirth && new Date(p.dateOfBirth).toISOString().slice(0, 10) === row.dateOfBirth);
-          if (onTeam) {
-            const alreadyEntered = entries.some((e) => sameId(e.player, onTeam._id));
-            if (alreadyEntered) add('firstName', 'error', `Already entered in this competition (${onTeam.loginId})`);
-            else add('firstName', 'info', `Already on this team — will use Player ID ${onTeam.loginId}`);
-          } else {
-            const elsewhere = await this.coachPlayerService._findSamePerson(escapeName(titleCase(firstName)), escapeName(titleCase(lastName)), dob);
-            if (elsewhere.length > 0 && !row.confirmDuplicate) {
-              add('firstName', 'error', `A player with this name and date of birth exists (${elsewhere.map((m) => `${m.loginId}${m.team ? `, ${m.team}` : ''}`).join('; ')}). Confirm it is a different child to continue.`);
-            } else if (elsewhere.length > 0) {
-              add('firstName', 'warning', 'Confirmed as a different child from the existing player with this name and date of birth');
-            }
+        // Does this child already have a Player ID? Never give them a second one.
+        matches = firstName && lastName ? await this._matchesFor(row, draft, competition, teamPlayers) : [];
+        link = this._resolveMatch(row, matches);
+        if (link.state === 'linked') {
+          const m = link.match;
+          if (m.enteredFor === 'this-team') add('match', 'error', `${m.name} (${m.loginId}) is already entered in this competition for this team`);
+          else if (m.enteredFor) add('match', 'error', `${m.name} (${m.loginId}) is already entered in this competition for ${m.enteredFor}`);
+          else if (linkedIds.has(String(m._id))) add('match', 'error', `${m.loginId} is already used by another row on this form`);
+          else if (m.gender && gender && m.gender !== gender) add('match', 'error', `${m.loginId} is registered as ${m.gender === 'Male' ? 'a boy' : 'a girl'} — check the gender or choose "a different child"`);
+          else {
+            add('match', 'info', `Will use the existing Player ID ${m.loginId}${link.auto ? ' (same name and date of birth)' : ''}`);
+            if (m.team && !m.sameTeam) add('match', 'warning', `${m.name} moves from ${m.team} to this team`);
           }
+          linkedIds.add(String(m._id));
+        } else if (link.state === 'choose') {
+          add('match', 'error', matches.some((m) => m.kind === 'exact')
+            ? 'This child already has a Player ID. Choose the existing player, or “a different child”.'
+            : 'This may be a child who already has a Player ID (the photo may be misread). Choose one.');
+        } else if (link.state === 'new' && matches.some((m) => m.kind === 'exact')) {
+          add('match', 'warning', 'Registered as a different child from the existing player with this name and date of birth');
         }
       }
 
@@ -671,6 +684,13 @@ class WalkInService {
         apparatus: row.apparatus || [],
         confidence: row.confidence || {},
         confirmDuplicate: Boolean(row.confirmDuplicate),
+        matchChoice: row.matchChoice || (row.confirmDuplicate ? 'new' : null),
+        matchPlayer: row.matchPlayer || null,
+        matches: matches.map(({ enteredFor, ...m }) => ({ ...m, enteredHere: Boolean(enteredFor) })),
+        // The player this row will use: chosen by the admin, or picked by the desk.
+        linkedPlayer: link.state === 'linked'
+          ? { _id: link.match._id, loginId: link.match.loginId, name: link.match.name, auto: Boolean(link.auto) }
+          : null,
         age,
         lowestAgeGroup: lowest,
         eligibleAgeGroups: eligible,
@@ -681,11 +701,87 @@ class WalkInService {
       });
     }
 
-    const needsConsent = rows.some((r) => !r.player && r.dateOfBirth && parseDate(r.dateOfBirth)
+    const needsConsent = rows.some((r) => !r.player && !r.linkedPlayer && r.dateOfBirth && parseDate(r.dateOfBirth)
       && (Date.now() - parseDate(r.dateOfBirth).getTime()) < CONSENT_AGE * 365.25 * 24 * 3600 * 1000);
     if (needsConsent && !draft.guardianConsent) blocking += 1;
 
     return { cutoffYear, sections, rows, blocking, needsConsent };
+  }
+
+  /**
+   * Players who may be the child on this row: everyone on the coach's team,
+   * plus anyone in the database with the same date of birth or the same name.
+   * Each is classified by utils/walk-in/player-match; non-matches are dropped.
+   * @private
+   */
+  async _matchesFor(row, draft, competition, teamPlayers) {
+    const found = new Map();
+    const consider = (p) => { if (p && !found.has(String(p._id))) found.set(String(p._id), p); };
+    (teamPlayers || []).forEach(consider);
+
+    const literal = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const dob = parseDate(row.dateOfBirth);
+    const or = [{
+      firstName: new RegExp(`^${literal(escapeName(titleCase(row.firstName)))}$`, 'i'),
+      lastName: new RegExp(`^${literal(escapeName(titleCase(row.lastName)))}$`, 'i'),
+    }];
+    if (dob) or.push({ dateOfBirth: { $gte: dob, $lt: new Date(dob.getTime() + 24 * 3600 * 1000) } });
+    const others = await this.playerRepository.find({ $or: or }, { limit: 25, select: 'firstName lastName dateOfBirth loginId gender team' });
+    (others || []).forEach(consider);
+
+    const teamIds = [...new Set([...found.values()].map((p) => idOf(p.team)).filter(Boolean))];
+    const teams = teamIds.length ? await this.teamRepository.find({ _id: { $in: teamIds } }, { select: 'name' }) : [];
+    const teamName = new Map((teams || []).map((t) => [String(t._id), t.name]));
+    // Which team, if any, already entered this player in THIS meet.
+    const enteredBy = new Map();
+    for (const rt of competition.registeredTeams || []) {
+      for (const e of rt.players || []) {
+        if (e.player) enteredBy.set(String(e.player), sameId(rt.coach, draft.coach) ? 'this-team' : (teamName.get(idOf(rt.team)) || 'another team'));
+      }
+    }
+
+    const rank = { exact: 0, close: 1 };
+    return [...found.values()]
+      .map((p) => ({ p, kind: matchKind(row, p) }))
+      .filter(({ kind }) => kind)
+      .map(({ p, kind }) => ({
+        _id: p._id,
+        loginId: p.loginId,
+        name: [p.firstName, p.lastName].filter(Boolean).join(' ').replace(/&#x27;/gi, "'"),
+        dateOfBirth: p.dateOfBirth ? new Date(p.dateOfBirth).toISOString().slice(0, 10) : null,
+        gender: p.gender || null,
+        team: p.team ? (teamName.get(idOf(p.team)) || 'another team') : null,
+        sameTeam: sameId(p.team, draft.team),
+        kind,
+        enteredFor: enteredBy.get(String(p._id)) || null,
+      }))
+      .sort((a, b) => rank[a.kind] - rank[b.kind] || Number(b.sameTeam) - Number(a.sameTeam))
+      .slice(0, 5);
+  }
+
+  /**
+   * What a row does about its matches.
+   *  - the admin chose -> that ('existing' must name one of the matches);
+   *  - one exact match on this team or on no team -> use it, no question;
+   *  - anything else that matched -> the admin must choose (a move between
+   *    teams, two candidates, or a guess from a misread photo is never automatic).
+   * @private
+   * @returns {{state: 'none'|'new'|'linked'|'choose', match?: Object, auto?: boolean}}
+   */
+  _resolveMatch(row, matches) {
+    const choice = row.matchChoice || (row.confirmDuplicate ? 'new' : null);
+    if (choice === 'new') return { state: 'new' };
+    if (choice === 'existing') {
+      const match = matches.find((m) => sameId(m._id, row.matchPlayer));
+      if (match) return { state: 'linked', match };
+      return matches.length ? { state: 'choose' } : { state: 'none' };
+    }
+    if (matches.length === 0) return { state: 'none' };
+    const exact = matches.filter((m) => m.kind === 'exact');
+    if (matches.length === 1 && exact.length === 1 && (exact[0].sameTeam || !exact[0].team)) {
+      return { state: 'linked', match: exact[0], auto: true };
+    }
+    return { state: 'choose' };
   }
 
   // ── Step 6: submit ────────────────────────────────────────────────────────
@@ -714,8 +810,8 @@ class WalkInService {
     if (!locked) throw new ConflictError('This form is being submitted from another screen. Wait a moment and refresh.');
 
     const coachId = idOf(draft.coach);
+    const linkFor = new Map(checked.rows.map((r) => [String(r._id), r.linkedPlayer]));
     try {
-      const teamPlayers = await this.playerRepository.find({ team: idOf(draft.team) }, { select: 'firstName lastName dateOfBirth loginId' });
       for (const row of locked.rows) {
         let playerId = row.player;
         let loginId = row.loginId;
@@ -723,12 +819,23 @@ class WalkInService {
         if (!playerId) {
           const first = titleCase(row.firstName);
           const last = titleCase(row.lastName);
-          const reuse = (teamPlayers || []).find((p) => tidyName(p.firstName).replace(/&#X27;/g, "'") === tidyName(row.firstName)
-            && tidyName(p.lastName).replace(/&#X27;/g, "'") === tidyName(row.lastName)
-            && p.dateOfBirth && new Date(p.dateOfBirth).toISOString().slice(0, 10) === row.dateOfBirth);
+          const reuse = linkFor.get(String(row._id));
           if (reuse) {
-            playerId = reuse._id;
-            loginId = reuse.loginId;
+            // The child already has a Player ID: keep it, and bring them onto
+            // this coach's team if they are on none or on another.
+            const existing = await this.playerRepository.findById(reuse._id);
+            if (!existing) throw new NotFoundError('Player');
+            if (!sameId(existing.team, draft.team)) await this.playerRepository.updateTeam(existing._id, idOf(draft.team));
+            playerId = existing._id;
+            loginId = existing.loginId;
+            // The slip shows the account's own spelling, not the paper's.
+            await this.drafts.updateRow(draftId, row._id, {
+              firstName: tidyName(String(existing.firstName).replace(/&#x27;/gi, "'")),
+              lastName: tidyName(String(existing.lastName).replace(/&#x27;/gi, "'")),
+            });
+            await this._audit(actor, 'WALK_IN_PLAYER_LINKED', 'player', existing._id, {
+              loginId, draft: String(draftId), fromTeam: existing.team ? String(idOf(existing.team)) : null,
+            });
           } else {
             const { player } = await this.coachPlayerService.registerPlayer(coachId, {
               firstName: escapeName(first),

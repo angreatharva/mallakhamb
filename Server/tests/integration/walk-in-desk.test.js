@@ -280,3 +280,111 @@ describe('walk-in desk', () => {
     await expect(service.scanPage(actor, draft._id, Buffer.from('jpeg'))).rejects.toThrow(/different competition/);
   });
 });
+
+describe('walk-in desk: a child who already has a Player ID', () => {
+  const Team = require('../../src/models/Team');
+  const y = (age) => thisYear - age;
+
+  /** A meet, an open draft, and the coach/team behind it. */
+  async function setup() {
+    const { service } = build();
+    const competition = await meet();
+    const actor = superAdmin();
+    const draft = await deskUpTo(service, actor, competition);
+    return { service, competition, actor, draft };
+  }
+
+  async function existingPlayer({ firstName = 'Aarav', lastName = 'Patil', age = 11, team = null, gender = 'Male' } = {}) {
+    return Player.create({
+      firstName, lastName, gender, team,
+      dateOfBirth: new Date(`${y(age)}-03-14T00:00:00Z`),
+      emailType: 'self', email: `${firstName}.${lastName}.${Math.random()}@example.com`.toLowerCase(),
+      phone: '9000000001', password: 'PlayerPass1',
+    });
+  }
+
+  const aaravRow = (overrides = {}) => ({
+    firstName: 'AARAV', lastName: 'PATIL', dateOfBirth: `${y(11)}-03-14`, gender: 'Male', ageGroup: 'Under12',
+    apparatus: ['Pole Mallakhamb'], ...overrides,
+  });
+
+  test('a self-registered child on no team is linked automatically, not registered again', async () => {
+    const { service, actor, draft } = await setup();
+    const child = await existingPlayer();
+
+    const view = await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [aaravRow()] });
+    expect(view.rows[0].linkedPlayer).toMatchObject({ loginId: child.loginId, auto: true });
+    expect(view.blocking).toBe(0);
+
+    await service.submit(actor, draft._id);
+    expect(await Player.countDocuments({})).toBe(1);
+    const moved = await Player.findById(child._id).lean();
+    expect(String(moved.team)).toBe(String(draft.team._id));
+    const slip = await service.slip(actor, draft._id);
+    expect(slip.players.map((p) => p.loginId)).toEqual([child.loginId]);
+  });
+
+  test('a misread name is offered as a match, and the admin links it', async () => {
+    const { service, actor, draft } = await setup();
+    const child = await existingPlayer();
+
+    let view = await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [aaravRow({ firstName: 'AARAU' })] });
+    const row = view.rows[0];
+    expect(row.matches).toEqual([expect.objectContaining({ loginId: child.loginId, kind: 'close' })]);
+    expect(row.issues).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'match', level: 'error' })]));
+
+    view = await service.saveRows(actor, draft._id, {
+      guardianConsent: true,
+      rows: [{ ...aaravRow({ firstName: 'AARAU' }), _id: row._id, matchChoice: 'existing', matchPlayer: String(child._id) }],
+    });
+    expect(view.blocking).toBe(0);
+    await service.submit(actor, draft._id);
+    expect(await Player.countDocuments({})).toBe(1);
+    // The slip carries the account's spelling, not the misread one.
+    expect((await service.slip(actor, draft._id)).players[0].name).toBe('Aarav Patil');
+  });
+
+  test('a child on another coach\'s team is never moved without the admin choosing', async () => {
+    const { service, actor, draft } = await setup();
+    const otherCoach = await Coach.create({ firstName: 'Other', lastName: 'Coach', email: 'other.coach@example.com', phone: '9000000002', password: 'CoachPass1' });
+    const otherTeam = await Team.create({ name: 'Other Club', coach: otherCoach._id });
+    const child = await existingPlayer({ team: otherTeam._id });
+
+    const view = await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [aaravRow()] });
+    expect(view.rows[0].linkedPlayer).toBeNull();
+    expect(view.rows[0].matches[0]).toMatchObject({ kind: 'exact', team: 'Other Club', sameTeam: false });
+    expect(view.blocking).toBeGreaterThan(0);
+
+    // "A different child" registers a new one, with a warning on record.
+    const asNew = await service.saveRows(actor, draft._id, {
+      guardianConsent: true, rows: [{ ...aaravRow(), _id: view.rows[0]._id, matchChoice: 'new' }],
+    });
+    expect(asNew.blocking).toBe(0);
+    expect(asNew.rows[0].issues).toEqual(expect.arrayContaining([expect.objectContaining({ level: 'warning' })]));
+
+    // Linking moves them, with the move spelled out.
+    const linked = await service.saveRows(actor, draft._id, {
+      guardianConsent: true, rows: [{ ...aaravRow(), _id: view.rows[0]._id, matchChoice: 'existing', matchPlayer: String(child._id) }],
+    });
+    expect(linked.rows[0].issues.map((i) => i.message).join(' ')).toMatch(/moves from Other Club/);
+    await service.submit(actor, draft._id);
+    expect(await Player.countDocuments({})).toBe(1);
+    expect(String((await Player.findById(child._id).lean()).team)).toBe(String(draft.team._id));
+  });
+
+  test('a child already entered in this meet by another team cannot be linked', async () => {
+    const { service, actor, draft, competition } = await setup();
+    const otherCoach = await Coach.create({ firstName: 'Other', lastName: 'Coach', email: 'other2.coach@example.com', phone: '9000000003', password: 'CoachPass1' });
+    const otherTeam = await Team.create({ name: 'Rival Club', coach: otherCoach._id });
+    const child = await existingPlayer({ team: otherTeam._id });
+    await Competition.updateOne({ _id: competition._id }, { $push: { registeredTeams: {
+      team: otherTeam._id, coach: otherCoach._id, players: [{ player: child._id, gender: 'Male', ageGroup: 'Under12' }],
+    } } });
+
+    const view = await service.saveRows(actor, draft._id, {
+      guardianConsent: true, rows: [{ ...aaravRow(), matchChoice: 'existing', matchPlayer: String(child._id) }],
+    });
+    expect(view.rows[0].issues.map((i) => i.message).join(' ')).toMatch(/already entered in this competition for Rival Club/);
+    expect(view.blocking).toBeGreaterThan(0);
+  });
+});

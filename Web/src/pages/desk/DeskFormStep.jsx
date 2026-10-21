@@ -21,6 +21,8 @@ const editable = (row) => ({
   ageGroup: row.ageGroup || null,
   apparatus: row.apparatus || [],
   confirmDuplicate: Boolean(row.confirmDuplicate),
+  matchChoice: row.matchChoice || null,
+  matchPlayer: row.matchChoice === 'existing' ? row.matchPlayer || null : null,
 });
 
 /**

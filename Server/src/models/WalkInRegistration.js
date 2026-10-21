@@ -36,8 +36,16 @@ const rowSchema = new mongoose.Schema({
     lastName: Number,
     dateOfBirth: Number,
   },
-  /** The admin saw the "same name and date of birth" warning and went ahead. */
+  /** Legacy: "a different child" before matchChoice existed. Read as matchChoice 'new'. */
   confirmDuplicate: { type: Boolean, default: false },
+  /**
+   * The admin's answer when this row looks like a child who already has a
+   * Player ID (utils/walk-in/player-match): 'existing' links `matchPlayer`
+   * instead of creating an account; 'new' registers a different child.
+   * Unset means the desk decides when it safely can (see walk-in.service).
+   */
+  matchChoice: { type: String, enum: ['existing', 'new', null], default: null },
+  matchPlayer: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', default: null },
   player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player', default: null },
   loginId: { type: String, default: null },
   entered: { type: Boolean, default: false },

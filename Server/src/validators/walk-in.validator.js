@@ -66,6 +66,8 @@ const saveRows = () => [
   body('rows.*.ageGroup').optional({ values: 'null' }).isString(),
   body('rows.*.apparatus').optional().isArray({ max: 3 }),
   body('rows.*.confirmDuplicate').optional().isBoolean().toBoolean(),
+  body('rows.*.matchChoice').optional({ values: 'null' }).isIn(['existing', 'new']),
+  body('rows.*.matchPlayer').optional({ values: 'null' }).isMongoId(),
   body('guardianConsent').optional().isBoolean().toBoolean(),
 ];
 

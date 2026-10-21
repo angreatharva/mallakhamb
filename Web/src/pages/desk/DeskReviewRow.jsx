@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Trash2 } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { Field, IconButton, Input, Select, StatusTag } from '@/components/ui';
 import {
   ageCutoffYear, ageOnCutoff, eligibleAgeGroups, lowestAgeGroup,
@@ -41,7 +41,14 @@ const DeskReviewRow = ({ index, row, crop = null, competition, onChange, onRemov
   const help = (field) => (unsure(field) ? 'Unclear on the paper — check against the photo' : null);
   const id = (field) => `desk-row-${row._id || index}-${field}`;
   const set = (patch) => onChange({ ...row, ...patch });
-  const needsDuplicateConfirm = issues.some((i) => /exists \(/.test(i.message)) || row.confirmDuplicate;
+  const matches = row.matches || [];
+  // What the chooser shows as picked: the admin's answer, else the desk's own pick.
+  const picked = row.matchChoice === 'new' ? 'new'
+    : row.matchChoice === 'existing' ? String(row.matchPlayer)
+      : row.linkedPlayer ? String(row.linkedPlayer._id) : null;
+  const choose = (value) => (value === 'new'
+    ? set({ matchChoice: 'new', matchPlayer: null, confirmDuplicate: false })
+    : set({ matchChoice: 'existing', matchPlayer: value, confirmDuplicate: false }));
 
   return (
     <li className={`grid gap-3 p-4 border rounded-lg ${hasError ? 'border-line-strong bg-danger-tint' : 'border-line'}`} data-state={hasError ? 'error' : 'ok'} data-testid="desk-review-row">
@@ -122,10 +129,30 @@ const DeskReviewRow = ({ index, row, crop = null, competition, onChange, onRemov
         {errorFor('apparatus') && <p className="ui-field__error type-caption m-0" role="alert">{errorFor('apparatus')}</p>}
       </div>
 
-      {!locked && needsDuplicateConfirm && (
-        <CheckBox id={id('dup')} checked={Boolean(row.confirmDuplicate)} onChange={(on) => set({ confirmDuplicate: on })}>
-          This is a different child from the player already registered with this name and date of birth.
-        </CheckBox>
+      {!locked && matches.length > 0 && (
+        <fieldset className="grid gap-2 m-0 p-3 border border-line rounded-lg min-w-0" data-testid="desk-row-matches">
+          <legend className="ui-field__label type-tag px-1">This child may already have a Player ID</legend>
+          {matches.map((m) => (
+            <label key={m._id} className="ui-check" data-checked={picked === String(m._id) || undefined}>
+              <input type="radio" className="sr-only" name={id('match')} value={String(m._id)}
+                checked={picked === String(m._id)} onChange={() => choose(String(m._id))} />
+              <span className="ui-check__box" aria-hidden="true">{picked === String(m._id) && <Check className="w-3 h-3" />}</span>
+              <span className="type-body-s">
+                <strong>Use {m.name}</strong> · <code>{m.loginId}</code> · born {m.dateOfBirth}
+                {' · '}{m.sameTeam ? 'already on this team' : m.team ? `on ${m.team}` : 'no team yet'}
+                {m.kind === 'close' ? ' · spelling or date differs slightly' : ''}
+                {m.enteredHere ? ' · already entered in this competition' : ''}
+              </span>
+            </label>
+          ))}
+          <label className="ui-check" data-checked={picked === 'new' || undefined}>
+            <input type="radio" className="sr-only" name={id('match')} value="new"
+              checked={picked === 'new'} onChange={() => choose('new')} />
+            <span className="ui-check__box" aria-hidden="true">{picked === 'new' && <Check className="w-3 h-3" />}</span>
+            <span className="type-body-s">A different child — give them a new Player ID</span>
+          </label>
+          {errorFor('match') && <p className="ui-field__error type-caption m-0" role="alert">{errorFor('match')}</p>}
+        </fieldset>
       )}
 
       {notes.length > 0 && (
