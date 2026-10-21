@@ -2424,8 +2424,9 @@ function buildPaths() {
     responses: { 200: ok('Status', inline({ enabled: S.bool, healthy: S.bool })) },
   });
   desk('/api/desk/coaches', 'get', {
-    operationId: 'deskFindCoach', summary: 'Find a returning coach by email',
-    parameters: [queryParam('email', S.email, 'Coach email', true)],
+    operationId: 'deskFindCoach', summary: 'Find returning coaches by name, email, phone or team name',
+    description: '`q` (2+ characters) returns `{ coaches: [...] }`, up to 10; `email` alone is the exact lookup and returns `{ coach }`.',
+    parameters: [queryParam('q', S.str, 'Name, email, phone or team name'), queryParam('email', S.email, 'Exact coach email (when q is absent)')],
     responses: { 200: ok('The coach, or null'), ...VALIDATION_ERROR },
   });
   desk('/api/desk/coaches', 'post', {

@@ -15304,16 +15304,22 @@ paths:
     get:
       tags:
         - Walk-in desk
-      summary: Find a returning coach by email
+      summary: Find returning coaches by name, email, phone or team name
       operationId: deskFindCoach
       parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Name, email, phone or team name
         - name: email
           in: query
-          required: true
+          required: false
           schema:
             type: string
             format: email
-          description: Coach email
+          description: Exact coach email (when q is absent)
       responses:
         "200":
           description: The coach, or null
@@ -15352,7 +15358,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-      description: "**Roles:** admin, superadmin"
+      description: |-
+        `q` (2+ characters) returns `{ coaches: [...] }`, up to 10; `email` alone is the exact lookup and returns `{ coach }`.
+        
+        **Roles:** admin, superadmin
       security:
         - bearerAuth: []
         - cookieAuth: []

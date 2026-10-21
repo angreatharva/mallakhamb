@@ -253,6 +253,24 @@ describe('walk-in desk', () => {
     expect(again.draft.rows).toHaveLength(1);
   });
 
+  test('finds a returning coach by name, phone, email or team name', async () => {
+    const { service } = build();
+    const actor = superAdmin();
+    const coach = await service.createCoach(actor, {
+      firstName: 'Ravi', lastName: 'Kale', email: 'ravi.kale@example.com', phone: '+91 91234 56780',
+      password: 'CoachPass1', playerDefaultPassword: 'Shivaji2026',
+    });
+    await service.ensureTeam(actor, coach._id, { name: 'Shivaji Vyayamshala' });
+    const ids = async (q) => (await service.searchCoaches(q)).map((c) => String(c._id));
+
+    for (const q of ['ravi', 'Ravi Kale', 'kale@exa', '56780', '9123456780', 'vyayam']) {
+      expect(await ids(q)).toEqual([String(coach._id)]);
+    }
+    expect(await ids('nobody here')).toEqual([]);
+    expect(await ids('r')).toEqual([]);
+    expect((await service.searchCoaches('vyayam'))[0].team.name).toBe('Shivaji Vyayamshala');
+  });
+
   test('a form printed for another meet is refused', async () => {
     const competition = await meet();
     const ocrClient = { readPage: jest.fn(async () => ({ page: 1, qr: { text: qrPayload(String(new mongoose.Types.ObjectId()), 1, 1) }, rows: [] })) };

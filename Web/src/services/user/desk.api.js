@@ -14,6 +14,8 @@ export const deskAPI = {
   ocrStatus: () => api.get('/desk/ocr/status'),
 
   findCoach: (email) => api.get('/desk/coaches', { params: { email } }),
+  /** Up to 10 coaches matching part of a name, phone, email or team name. */
+  searchCoaches: (q) => api.get('/desk/coaches', { params: { q } }),
   createCoach: (data) => api.post('/desk/coaches', data),
   setDefaultPassword: (coachId, data) => api.put(`/desk/coaches/${coachId}/player-default-password`, data),
   ensureTeam: (coachId, data) => api.post(`/desk/coaches/${coachId}/team`, data),

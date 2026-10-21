@@ -18,7 +18,11 @@ function createWalkInController(container) {
 
     ocrStatus: asyncHandler(async (req, res) => ok(res, await service().ocrStatus())),
 
-    findCoach: asyncHandler(async (req, res) => ok(res, { coach: await service().findCoach(req.query.email) })),
+    findCoach: asyncHandler(async (req, res) => {
+      // ?q= searches name / email / phone / team; ?email= is the exact lookup.
+      if (req.query.q !== undefined) return ok(res, { coaches: await service().searchCoaches(req.query.q) });
+      return ok(res, { coach: await service().findCoach(req.query.email) });
+    }),
 
     createCoach: asyncHandler(async (req, res) => {
       res.set('Cache-Control', 'no-store');

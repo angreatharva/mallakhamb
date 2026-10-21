@@ -200,7 +200,37 @@ class WalkInService {
     return team || null;
   }
 
-  /** Look a returning coach up by email. Null when there is none. */
+  /**
+   * Find returning coaches by whatever the person at the desk can say: part of
+   * their name, their email, their phone, or their team's name. Up to 10.
+   * An empty list means "register a new coach".
+   */
+  async searchCoaches(query) {
+    const q = String(query || '').trim();
+    if (q.length < 2) return [];
+    const literal = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const like = new RegExp(literal(q), 'i');
+    const digits = q.replace(/\D/g, '');
+    const or = [{ firstName: like }, { lastName: like }, { email: like }];
+    // Phones are stored as typed ("+91 98765 43210"): match the digits in order.
+    if (digits.length >= 4) or.push({ phone: new RegExp(digits.split('').join('\\D*')) });
+    // "Ravi Kale" matches first + last name together.
+    const [first, ...rest] = q.split(/\s+/);
+    if (rest.length) {
+      const starts = (v) => new RegExp(`^${literal(v)}`, 'i');
+      or.push({ firstName: starts(first), lastName: starts(rest.join(' ')) });
+    }
+    const teams = await this.teamRepository.find({ name: like, isActive: true }, { limit: 10, select: 'coach' });
+    const teamCoaches = (teams || []).map((t) => t.coach).filter(Boolean);
+    if (teamCoaches.length) or.push({ _id: { $in: teamCoaches } });
+
+    const coaches = await this.coachRepository.find({ $or: or }, {
+      limit: 10, sort: { firstName: 1 }, select: '+playerDefaultPassword',
+    });
+    return Promise.all((coaches || []).map(async (c) => this._coachCard(c, await this._teamOf(c._id))));
+  }
+
+  /** Look a returning coach up by exact email. Null when there is none. */
   async findCoach(email) {
     const coach = await this.coachRepository.findByEmail(String(email || '').trim().toLowerCase(), {
       select: '+playerDefaultPassword',

@@ -18,36 +18,56 @@ const PHONE_RULE = {
  * Steps 1 and 2: who the coach is, and their team.
  *
  * The coach is at the desk and types their own passwords on this screen; the
- * admin never needs to know them. A returning coach is found by email; one
- * who has not set a default player password sets it here.
+ * admin never needs to know them. A returning coach is found by any part of
+ * their name, phone, email or team; a new one is registered here. One who has
+ * not set a default player password sets it here.
  */
 const DeskCoachStep = ({ onReady }) => {
-  const [email, setEmail] = useState('');
+  const [query, setQuery] = useState('');
   const [looking, setLooking] = useState(false);
-  const [coach, setCoach] = useState(undefined); // undefined: not looked up; null: none found
+  const [results, setResults] = useState(null); // null: not searched yet
+  const [registering, setRegistering] = useState(false);
+  const [coach, setCoach] = useState(null);
   const [saving, setSaving] = useState(false);
   const create = useForm();
   const defaults = useForm();
   const team = useForm();
 
-  const lookUp = async (event) => {
+  const search = async (event) => {
     event?.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      toast.error('Enter the coach’s email address');
+    if (query.trim().length < 2) {
+      toast.error('Type at least 2 letters of the coach’s name, phone, email or team');
       return;
     }
     setLooking(true);
     try {
-      const res = await deskAPI.findCoach(email.trim());
-      const found = res.data?.data?.coach || null;
-      setCoach(found);
-      if (!found) create.reset({ email: email.trim() });
+      const res = await deskAPI.searchCoaches(query.trim());
+      setResults(res.data?.data?.coaches || []);
+      setRegistering(false);
     } catch (error) {
-      toast.error(errorText(error, 'Could not look the coach up'));
+      toast.error(errorText(error, 'Could not search for the coach'));
     } finally {
       setLooking(false);
     }
   };
+
+  /** Open the new-coach form, carrying over whatever was typed in the search. */
+  const startRegistering = () => {
+    const typed = query.trim();
+    const digits = typed.replace(/\D/g, '');
+    const [firstName, ...rest] = /^[A-Za-z][A-Za-z' -]*$/.test(typed) ? typed.split(/\s+/) : [];
+    create.reset({
+      email: /@/.test(typed) ? typed : '',
+      phone: digits.length >= 10 && !/@/.test(typed) ? typed : '',
+      firstName: firstName || '',
+      lastName: rest.join(' '),
+    });
+    setRegistering(true);
+    setCoach(null);
+  };
+
+  const pick = (found) => { setCoach(found); setRegistering(false); };
+  const startOver = () => { setCoach(null); setResults(null); setRegistering(false); };
 
   const createCoach = create.handleSubmit(async (values) => {
     setSaving(true);
@@ -96,17 +116,49 @@ const DeskCoachStep = ({ onReady }) => {
     <Panel className="grid gap-5 p-5">
       <Heading level={3} step="display-s">Coach</Heading>
 
-      <form onSubmit={lookUp} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end" noValidate>
-        <Field id="desk-coach-email" label="Coach’s email" required>
-          <Input type="email" autoComplete="off" value={email} onChange={(e) => { setEmail(e.target.value); setCoach(undefined); }} />
-        </Field>
-        <Button type="submit" variant="line" icon={Search} loading={looking}>Find coach</Button>
-      </form>
+      {!coach && (
+        <>
+          <p className="type-body-s text-fg-muted m-0">
+            Search for the coach by any part of their name, phone, email or team. If they have never
+            registered, register them here.
+          </p>
+          <form onSubmit={search} className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end" noValidate>
+            <Field id="desk-coach-search" label="Name, phone, email or team">
+              <Input type="search" autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </Field>
+            <Button type="submit" variant="line" icon={Search} loading={looking}>Search</Button>
+            <Button type="button" icon={UserPlus} onClick={startRegistering}>Register new coach</Button>
+          </form>
+        </>
+      )}
 
-      {coach === null && (
+      {!coach && !registering && results && results.length === 0 && (
+        <Notice tone="info" title={`No coach matches “${query.trim()}”`}>
+          <p className="m-0 mb-3 type-body-s">Try another part of their name or their phone number — or, if they are new, register them.</p>
+          <Button size="sm" icon={UserPlus} onClick={startRegistering}>Register new coach</Button>
+        </Notice>
+      )}
+
+      {!coach && !registering && results && results.length > 0 && (
+        <ul className="grid gap-2 m-0 p-0 list-none" aria-label="Matching coaches">
+          {results.map((c) => (
+            <li key={c._id} className="flex flex-wrap items-center justify-between gap-3 p-3 border border-line rounded-lg">
+              <div className="grid gap-0.5 min-w-0">
+                <span className="type-body-s font-bold">{`${c.firstName || ''} ${c.lastName || ''}`.trim()}</span>
+                <span className="type-caption text-fg-muted break-all">
+                  {c.team?.name || 'No team yet'} · {c.email}{c.phone ? ` · ${c.phone}` : ''}
+                </span>
+              </div>
+              <Button size="sm" onClick={() => pick(c)}>This coach</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!coach && registering && (
         <form onSubmit={createCoach} className="grid gap-4" noValidate>
-          <Notice tone="info" title="New coach">
-            No account uses this email. Hand the screen to the coach to fill in their details and choose both passwords.
+          <Notice tone="info" title="Register a new coach">
+            Hand the screen to the coach to check their details and choose both passwords.
           </Notice>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="desk-coach-first" label="First name" required error={create.formState.errors.firstName?.message}>
@@ -128,7 +180,10 @@ const DeskCoachStep = ({ onReady }) => {
               <PasswordInput autoComplete="new-password" {...create.register('playerDefaultPassword', { required: 'Required', pattern: { value: STRONG, message: PASSWORD_HELP } })} />
             </Field>
           </div>
-          <Button type="submit" icon={UserPlus} loading={saving}>Create coach account</Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button type="submit" icon={UserPlus} loading={saving}>Create coach account</Button>
+            <Button type="button" variant="line" onClick={() => setRegistering(false)}>Back to search</Button>
+          </div>
         </form>
       )}
 
@@ -140,6 +195,7 @@ const DeskCoachStep = ({ onReady }) => {
           { label: 'Team', value: coach.team?.name || 'No team yet' },
         ]} />
       )}
+      {coach && <Button variant="ghost" size="sm" className="justify-self-start" onClick={startOver}>Choose a different coach</Button>}
 
       {coach && !coach.isActive && (
         <Notice tone="warning" title="This coach’s account is deactivated">Entries can still be made, but they cannot sign in.</Notice>

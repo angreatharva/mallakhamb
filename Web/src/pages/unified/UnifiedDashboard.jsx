@@ -19,7 +19,6 @@ const AdminTransactions = lazy(() => import('../admin/AdminTransactions'));
 const AdminLots = lazy(() => import('../admin/AdminLots'));
 const WalkInDesk = lazy(() => import('../desk/WalkInDesk'));
 const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
-const AccountRequestsPanel = lazy(() => import('@/components/account/AccountRequestsPanel'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
@@ -226,8 +225,6 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
   const NAV_TABS = isSuperAdmin ? [
     { id: 'overview', label: 'Overview' },
     { id: 'management', label: 'Management' },
-    // Resets and email additions for players with no email, when no coach can.
-    { id: 'requests', label: 'Requests' },
     { id: 'teams', label: 'Teams' },
     { id: 'lots', label: 'Lots' },
     { id: 'scores', label: 'Scores' },
@@ -556,8 +553,6 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return renderSuperAdminOverview();
         case 'management':
           return <SuperAdminManagement />;
-        case 'requests':
-          return <AccountRequestsPanel api={superAdminAPI.accountRequests} title="Player requests (all teams)" showTeam />;
         case 'teams':
           return <AdminTeams routePrefix={routePrefix} storagePrefix={storagePrefix} />;
         case 'lots':

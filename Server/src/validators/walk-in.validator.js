@@ -17,7 +17,8 @@ const { objectId, password, phone } = require('./common.validator');
 const draftId = () => [objectId('draftId')];
 
 const findCoach = () => [
-  query('email').trim().isEmail().withMessage('Enter the coach\'s email address').toLowerCase(),
+  query('q').optional().trim().isLength({ min: 2, max: 100 }).withMessage('Type at least 2 characters'),
+  query('email').if(query('q').not().exists()).trim().isEmail().withMessage("Enter the coach's email address").toLowerCase(),
 ];
 
 const createCoach = () => [
