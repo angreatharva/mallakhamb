@@ -380,7 +380,7 @@ const SuperAdminManagement = () => {
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
-    registrationOpenDate: '', feeDueDate: '', lateFee: ''
+    registrationOpenDate: '', feeDueDate: '', lateFee: '', ageCutoffYear: ''
   });
 
   // Admin management modal
@@ -546,7 +546,7 @@ const SuperAdminManagement = () => {
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
     description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
-    registrationOpenDate: '', feeDueDate: '', lateFee: ''
+    registrationOpenDate: '', feeDueDate: '', lateFee: '', ageCutoffYear: ''
   });
 
   const openCompetitionModal = (comp = null) => {
@@ -566,7 +566,8 @@ const SuperAdminManagement = () => {
         maxTeamSize: comp.maxTeamSize ?? null,
         registrationOpenDate: toDateInputValue(comp.registrationOpenDate),
         feeDueDate: toDateInputValue(comp.feeDueDate),
-        lateFee: Number.isFinite(Number(comp.lateFee)) && Number(comp.lateFee) > 0 ? Number(comp.lateFee) : ''
+        lateFee: Number.isFinite(Number(comp.lateFee)) && Number(comp.lateFee) > 0 ? Number(comp.lateFee) : '',
+        ageCutoffYear: Number.isInteger(comp.ageCutoffYear) ? comp.ageCutoffYear : ''
       });
     } else { setEditingCompetition(null); resetCompetitionForm(); }
     setAdminSearchQuery('');
@@ -611,7 +612,9 @@ const SuperAdminManagement = () => {
         apparatusFees: competitionFormData.apparatusFees,
         registrationOpenDate: competitionFormData.registrationOpenDate || null,
         feeDueDate: competitionFormData.feeDueDate || null,
-        lateFee: competitionFormData.lateFee === '' ? 0 : Number(competitionFormData.lateFee)
+        lateFee: competitionFormData.lateFee === '' ? 0 : Number(competitionFormData.lateFee),
+        // '' clears it: ages are then measured on 31 Dec of the start date's year.
+        ageCutoffYear: competitionFormData.ageCutoffYear === '' ? null : Number(competitionFormData.ageCutoffYear)
       });
       toast.success('Competition created');
       setShowCompetitionModal(false); resetCompetitionForm(); fetchData();
@@ -656,7 +659,9 @@ const SuperAdminManagement = () => {
         // and a key that is absent from the body is left alone by the service.
         registrationOpenDate: competitionFormData.registrationOpenDate || null,
         feeDueDate: competitionFormData.feeDueDate || null,
-        lateFee: competitionFormData.lateFee === '' ? 0 : Number(competitionFormData.lateFee)
+        lateFee: competitionFormData.lateFee === '' ? 0 : Number(competitionFormData.lateFee),
+        // '' clears it: ages are then measured on 31 Dec of the start date's year.
+        ageCutoffYear: competitionFormData.ageCutoffYear === '' ? null : Number(competitionFormData.ageCutoffYear)
       });
       toast.success('Competition updated');
       setShowCompetitionModal(false); setEditingCompetition(null); resetCompetitionForm(); fetchData();
@@ -1195,6 +1200,29 @@ const SuperAdminManagement = () => {
             setCompetitionFormData({ ...competitionFormData, lateFee: Number.isFinite(n) ? n : '' });
           }}
         />
+
+        {/*
+          * COP 1.8.3.2: ages are measured on 31 December. A meet held in
+          * January–March may belong to the previous season, as in the COP's
+          * own 2021-22 example — then the cut-off is the year before.
+          */}
+        {(() => {
+          const startYear = competitionFormData.startDate ? Number(competitionFormData.startDate.slice(0, 4)) : null;
+          if (!startYear) return null;
+          const options = [
+            { value: '', label: `31 Dec ${startYear} (year of the start date)` },
+            { value: startYear - 1, label: `31 Dec ${startYear - 1} (previous season)` },
+          ];
+          return (
+            <Dropdown
+              label="Age cut-off"
+              options={options}
+              value={options.find((o) => o.value === competitionFormData.ageCutoffYear) || options[0]}
+              onChange={(option) => setCompetitionFormData({ ...competitionFormData, ageCutoffYear: option.value })}
+              placeholder="Year of the start date"
+            />
+          );
+        })()}
 
         {/* Apparatus Fees (Optional) */}
         <div>

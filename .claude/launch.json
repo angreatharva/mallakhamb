@@ -100,6 +100,17 @@
       "cwd": "Server",
       "port": 5000,
       "//": "The api entry with METRICS_TOKEN=dev, so GET /metrics answers locally (curl -H 'Authorization: Bearer dev'). Leaves .env untouched."
+    },
+    {
+      "name": "api-desk-check",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.MONGODB_URI='mongodb://127.0.0.1:27017/mallakhamb_desk_check';process.env.EMAIL_PROVIDER='none';process.env.NODE_ENV='development';process.env.OCR_URL='http://127.0.0.1:8090';process.env.OCR_TOKEN='test-token';process.env.DISCOUNT_CODE_ENABLED='true';process.env.DISCOUNT_CODE='DESK-CHECK-FREE';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "The API on a throwaway LOCAL database with the walk-in desk's OCR sidecar (ocr/, started separately on 8090 with OCR_TOKEN=test-token) and a test discount code. Run prepare:db with the same MONGODB_URI first."
     }
   ]
 }

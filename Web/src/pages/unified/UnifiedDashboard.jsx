@@ -17,6 +17,7 @@ const AdminScores = lazy(() => import('../admin/AdminScores'));
 const AdminJudges = lazy(() => import('../admin/AdminJudges'));
 const AdminTransactions = lazy(() => import('../admin/AdminTransactions'));
 const AdminLots = lazy(() => import('../admin/AdminLots'));
+const WalkInDesk = lazy(() => import('../desk/WalkInDesk'));
 const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
 const AccountRequestsPanel = lazy(() => import('@/components/account/AccountRequestsPanel'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
@@ -232,6 +233,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'scores', label: 'Scores' },
     { id: 'judges', label: 'Judges' },
     { id: 'transactions', label: 'Transactions' },
+    // Competition-day registration from a paper form (pages/desk).
+    { id: 'desk', label: 'Walk-in' },
   ] : [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'teams', label: 'Teams' },
@@ -239,6 +242,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'scores', label: 'Scores' },
     { id: 'judges', label: 'Judges' },
     { id: 'transactions', label: 'Transactions' },
+    { id: 'desk', label: 'Walk-in' },
   ];
   // The tabs are links (TabNav): the base tab is the dashboard route itself.
   const baseTab = isSuperAdmin ? 'overview' : 'dashboard';
@@ -564,6 +568,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <AdminJudges routePrefix={routePrefix} storagePrefix={storagePrefix} />;
         case 'transactions':
           return <AdminTransactions />;
+        case 'desk':
+          return <WalkInDesk />;
         default:
           return null;
       }
@@ -581,6 +587,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <AdminJudges />;
         case 'transactions':
           return <AdminTransactions />;
+        case 'desk':
+          return <WalkInDesk />;
         default:
           return null;
       }

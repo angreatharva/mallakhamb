@@ -50,6 +50,9 @@ const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const CONSENT_AGE = 18;
 const MAX_ROWS = 120;
 
+/** 'Under12' → 'Under 12', for messages a person reads. */
+const groupLabel = (group) => String(group || '').replace(/^(Under|Above)(\d+)$/, '$1 $2');
+
 const idOf = (value) => (value?._id ?? value)?.toString?.() ?? null;
 const sameId = (a, b) => Boolean(a) && Boolean(b) && idOf(a) === idOf(b);
 
@@ -581,11 +584,8 @@ class WalkInService {
           else if (eligible.length === 0) add('ageGroup', 'error', 'This competition runs no age group this player may enter');
           else if (!row.ageGroup) add('ageGroup', 'error', 'Choose an age group');
           else if (!offeredGroups(gender).includes(row.ageGroup)) add('ageGroup', 'error', 'This competition does not run that age group');
-          else if (!eligible.includes(row.ageGroup)) add('ageGroup', 'error', `Too old for ${row.ageGroup} — choose ${eligible[0]} or higher`);
+          else if (!eligible.includes(row.ageGroup)) add('ageGroup', 'error', `Too old for ${groupLabel(row.ageGroup)} — choose ${groupLabel(eligible[0])} or higher`);
           else if (row.ageGroup !== lowest) add('ageGroup', 'info', 'Playing up — COP: cannot return to a lower age group later.');
-          if (row.writtenAgeGroup && row.ageGroup === row.writtenAgeGroup && !eligible.includes(row.writtenAgeGroup)) {
-            // already reported above; nothing moves silently
-          }
         }
 
         const offered = gender ? offeredApp(gender) : [];
