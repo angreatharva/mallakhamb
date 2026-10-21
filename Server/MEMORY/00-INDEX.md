@@ -47,6 +47,7 @@ the Time Keeper seat, Prometheus metrics, and the OCI staging build.
 | `src/middleware/` | Auth, CSRF, rate limits, competition scope/lock, validation, correlation, metrics, audit, coalescing — [modules/middleware.md](modules/middleware.md) |
 | `src/socket/` | Socket.IO — [08-REALTIME-SOCKETS.md](08-REALTIME-SOCKETS.md) |
 | `src/utils/` | Shared helpers, split by concern — [modules/utils.md](modules/utils.md) |
+| `src/services/walk-in/`, `../ocr/` | Walk-in desk + OCR sidecar, COP age rule — [modules/walk-in-desk.md](modules/walk-in-desk.md) |
 | `src/errors/` | Error taxonomy — [02-CONVENTIONS.md](02-CONVENTIONS.md) |
 | `src/migrations/` | Schema/data migrations — [04-DATA-MODEL.md](04-DATA-MODEL.md) |
 | `scripts/` | Seed/ops/perf scripts — [13-SCRIPTS-AND-OPS.md](13-SCRIPTS-AND-OPS.md) |

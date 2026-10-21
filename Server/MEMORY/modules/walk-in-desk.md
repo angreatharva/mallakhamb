@@ -1,0 +1,49 @@
+---
+doc: modules/walk-in-desk
+covers:
+  - src/services/walk-in/**
+  - src/utils/walk-in/**
+  - src/routes/walk-in.routes.js
+  - src/controllers/walk-in.controller.js
+  - src/validators/walk-in.validator.js
+  - src/models/WalkInRegistration.js
+  - src/repositories/walk-in-registration.repository.js
+  - ../ocr/**
+read_when: "touching the walk-in desk (/api/desk), the printed form, the OCR sidecar, or the COP age rule"
+depends_on: [03-DOMAIN-MODEL, 09-PAYMENTS, modules/user-services]
+verified_against_commit: 34c18db
+last_verified: 2026-10-21
+---
+
+Competition-day registration: an Admin or Super Admin turns a coach's filled
+paper form into a coach, a team, no-email players entered in a meet, and a
+payment. Web: `Web/src/pages/desk/*` (dashboard tab "Walk-in").
+
+## Flow (`/api/desk`, `requireAdmin`; admin scope + end-date lock in the SERVICE)
+
+1. `GET /meets` — meets whose fee window `canPay` now (`resolveFeeWindow`), admins only their own.
+2. Coach: `GET /coaches?email=`, `POST /coaches` (coach types password + default player password; via `authenticationService.register`), `PUT /coaches/:id/player-default-password` (no current-password check — the coach is at the desk).
+3. `POST /coaches/:id/team` → `coachService.createTeam` unless one exists.
+4. `POST /drafts` → `coachService.registerTeamForCompetition` + a `WalkInRegistration` draft (or the coach's open one). Refuses a registration already submitted.
+5. `POST /drafts/:id/scan` — raw image body (`express.raw`, 8 MB) → `OcrClient.readPage` → rows. The QR must name this meet. A re-scan replaces that page's rows (unless a player exists).
+6. `PUT /drafts/:id/rows`, `GET /drafts/:id` — `_check()` is the ONE place every row rule lives: names `^[A-Z][A-Z' -]*[A-Z]$` (Player ID needs a–z), DOB, age on 31 Dec, eligible groups, apparatus offered for the gender, squad cap, duplicates on the form / on the team (reused) / elsewhere (needs `confirmDuplicate`), guardian consent.
+7. `POST /drafts/:id/submit` — **resumable**: per row, create via `coachPlayerService.registerPlayer` → write `rows.$.player`; enter via `coachService.addPlayerToAgeGroup` → write `rows.$.entered`. A submit lock (`submitLockedAt`, stale after 2 min) stops double clicks. No Mongo transactions (BaseRepository ignores sessions).
+8. Payment: `coachService.createTeamPaymentOrder / verifyTeamPaymentAndSubmit / redeemDiscountAndSubmit(..., { recordedBy })` — `source: 'coach'`, `Transaction.recordedBy` = the admin. Verify now tolerates the webhook having recorded the payment first (11000 → adds `recordedBy`).
+9. `GET /drafts/:id/slip` — Player IDs. No passwords (the coach chose the default).
+
+## Age rule (COP 1.8.3.2–1.8.3.5) — `config/cop-rules.js`
+
+`ageCutoffYear(meet)` = `Competition.ageCutoffYear` (Super Admin, optional; start year or the year before) else start-date year. Age = cutoff − birth year. "Under N" includes N; Above16 ≥ 17, Above18 ≥ 19. `eligibleAgeGroups` = lowest + every higher group the meet runs. Mirrored in `Web/src/utils/competition/ageEligibility.js`; **`ageEligibilitySync.test.js` fails on drift**. Applied ONLY to desk submissions so far — coaches' own registrations are not checked (a separate decision).
+
+## Form geometry — `utils/walk-in/form-layout.util.js`
+
+The single description of the printed form (mm, A4). `form-pdf.service` draws it (pdfkit + qrcode); the API sends the same page layouts to the sidecar with every photo, so the reader never holds a copy. Change geometry → bump `FORM_VERSION` (old prints then fail the QR check instead of misreading).
+
+## OCR sidecar — `ocr/` (Python, see ocr/README.md)
+
+PP-OCRv5 mobile English rec on ONNX Runtime, no detection model; CTC decode masked to the field's alphabet. Corner markers → perspective warp at 10 px/mm; QR → page; tick boxes by ink ratio; row JPEG strips returned for review and never stored. `OCR_URL` unset = desk is manual entry only. `OcrClient` allows 1 in flight + 3 waiting per API process, then 503 `OCR_BUSY`. Self-test: `node scripts/walkInFormFixture.js <dir>` then `python -m mkwi_ocr.selftest --layout <dir>/layout.json [--url …]`. OCI: `deploy/oci/PLAN.md` O15.
+
+## Gotchas
+
+- The Coach model's email regex refuses some valid TLDs (`.test`) — use `example.com` in tests.
+- Stored names are HTML-escaped by the registration validators (`'` → `&#x27;`); the desk escapes the same way so duplicate checks match.
