@@ -12,7 +12,11 @@
       "mcp__claude-in-chrome__tabs_create_mcp",
       "mcp__claude-in-chrome__tabs_close_mcp",
       "Bash(bash -n \"D:/Mallakhamb-Repo/Mallakhamb-master/deploy/oci/scripts/02-platform.sh\")",
-      "mcp__claude-in-chrome__tabs_context_mcp"
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "Bash(curl -s -m 15 https://api-137-23-63-84.sslip.io/api/health/ready)",
+      "Bash(curl -s -o /dev/null -m 15 -w 'web: %{http_code}\\\\n' https://app-137-23-63-84.sslip.io/)",
+      "Bash(awk -F: '{print $NF}')",
+      "Bash(python - C:/Users/angre/.claude/projects/D--Mallakhamb-Repo-Mallakhamb-master/memory/MEMORY.md)"
     ]
   }
 }
