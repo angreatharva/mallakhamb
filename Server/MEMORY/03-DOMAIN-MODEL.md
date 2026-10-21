@@ -7,8 +7,8 @@ covers:
   - src/config/judge-seats.js
 read_when: "you need to understand an entity's meaning, lifecycle, or relationships before changing behavior around it — not just its schema shape (see 04-DATA-MODEL for schema/index detail)"
 depends_on: []
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## The entities, in one paragraph each
@@ -200,6 +200,25 @@ see the representation split below.
    (`isSubmittedRegistration`) is the one predicate every surface (judge
    dashboards, lot draw, public pages) must use rather than hand-rolling a
    check on `isSubmitted`/`isActive`.
+
+8. **A player's login is the Player ID; an email signs in only if it is the
+   player's own** (2026-10). `Player.emailType` is `self` | `guardian` |
+   `none`; only `self` addresses are unique and only they log in. A guardian's
+   address is shared by siblings. `Player.loginId` (`firstname.lastname.ddmmyy`,
+   `.2` on a clash) is assigned once by a model hook and **never recomputed** —
+   renaming a child would otherwise lock them out. Read `emailType` through
+   `emailTypeOf()`: `.lean()` skips the `self` default on old rows. Players
+   with no email get resets and email additions approved by **their current
+   team's coach**; a coach-registered player's requests are that coach's
+   alone, which is why coaches cannot be deactivated. See
+   [modules/accounts.md](modules/accounts.md).
+
+9. **Age eligibility is a COP rule on the server now** (2026-10,
+   `cop-rules.js`): age = cut-off year − birth year, measured on 31 Dec of
+   `ageCutoffYear(meet)` (`Competition.ageCutoffYear` or the start-date year);
+   "Under N" includes N; a player may play up, never down. Applied **only** to
+   walk-in desk submissions so far — coaches' own registrations are not
+   checked. Mirrored on the Web by `ageEligibility.js` with a drift test.
 
 ## Known live defects surfaced while researching this doc (→ also in GOTCHAS.md)
 

@@ -10,8 +10,8 @@ covers:
   - src/utils/competition/levels.js
 read_when: "changing ANY scoring math, fee/late-fee math, the competition-lock boundary, apparatus-shape reading, or panel-size logic on either stack — this is the file that tells you the other stack exists"
 depends_on: [11-SCORING-CLIENT]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Why this doc exists
@@ -28,7 +28,7 @@ and it takes the specific form of a coach being charged the wrong fee,
 a slip saving a wrong total, or a screen showing "editable" for a
 competition the server will 423.
 
-**Not all of these pairs are protected the same way.** Three have an
+**Not all of these pairs are protected the same way.** Five have an
 automated cross-stack test that literally imports the server file into
 a Vitest run and asserts identical output at the real inputs. The rest
 are either hand-verified-identical-in-prose (this doc) or genuinely
@@ -44,7 +44,9 @@ bucket a change falls into is the point of this table:
 | Competition-lock boundary | [competitionLock.js](../src/utils/scoring/competitionLock.js) | [competition-lock.util.js](../../Server/src/utils/security/competition-lock.util.js) | **Yes** — [competitionLockSync.test.js](../src/utils/scoring/competitionLockSync.test.js) |
 | Apparatus-shape reading (3-shape `Mixed` field) | [apparatus.js](../src/utils/scoring/apparatus.js) | [apparatus.util.js](../../Server/src/utils/data/apparatus.util.js) | **No** — see "apparatus.js has no drift detector" below |
 | "Unset apparatus = eligible for anything" gate | `isRegisteredFor` in apparatus.js:89-94 | ⚠️ UNVERIFIED — no equivalent found in apparatus.util.js; likely lives in a route/controller instead | **No** |
-| Competition levels enum | [levels.js](../src/utils/competition/levels.js) | `Competition.level` enum in `Server/src/models/Competition.js` | **No** — 4-value static enum, low drift risk, no test either direction |
+| Competition levels enum | [levels.js](../src/utils/competition/levels.js) | [competition-levels.js](../../Server/src/config/competition-levels.js) | **Yes** — [levels.test.js](../src/utils/competition/levels.test.js) (six values; see below) |
+| Age eligibility (COP 1.8.3: cut-off year, age on 31 Dec, lowest group, play up) | [ageEligibility.js](../src/utils/competition/ageEligibility.js) | `ageCutoffYear`/`ageOnCutoff`/`lowestAgeGroup`/`eligibleAgeGroups` in [cop-rules.js](../../Server/src/config/cop-rules.js) | **Yes** — [ageEligibilitySync.test.js](../src/utils/competition/ageEligibilitySync.test.js) (2026-10, walk-in desk) |
+| Player ID shape / "email or Player ID" | `LOGIN_ID_PATTERN`, `validateEmailOrPlayerId` in [form.validator.js](../src/validators/form.validator.js) | `LOGIN_ID_PATTERN` in `Server/src/utils/data/player-login-id.util.js`, `accountIdentifier` in `common.validator.js` | **No** — hand mirror; the server is the one that decides |
 | Tie-break math | *(none — client-only display of server-computed results)* | [tie-breaker.util.js](../../Server/src/utils/scoring/tie-breaker.util.js) | N/A — deliberately not duplicated, see below |
 
 ## The COP rules: server is "authoritative for detection", client is "authoritative for availability"

@@ -4,19 +4,21 @@ covers:
   - src/pages/player/PlayerTeamSelection.jsx
 read_when: "changing how a player joins a team, or investigating why the team list shows squads from other meets"
 depends_on: [08-API-INTEGRATION, 03-ROUTING-AND-NAV]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is
 
 `src/pages/player/PlayerTeamSelection.jsx` (~271 lines), route
-`/player/select-team` (`PlayerLayout`, protected). Per
-`routes/index.jsx`'s own comment
-(see [03-ROUTING-AND-NAV.md](../03-ROUTING-AND-NAV.md)), deliberately
-placed **after** competition selection in the flow, because the
-underlying endpoint takes a `competitionId` and a squad "only means
-anything inside a meet." A grid of joinable teams with client-side
+`/player/select-team` (`PlayerLayout`, protected). **Since 2026-10 it comes
+BEFORE the competition** (Level → Team → Competition, `b54095d`): the level
+and competition choosers send a teamless player here, and the meets offered
+afterwards are the ones the team is entered in (see
+[03-ROUTING-AND-NAV.md](../03-ROUTING-AND-NAV.md)). Usually no meet is chosen
+yet; a URL `competitionId` (older links) or the context's meet (the dashboard
+sending a teamless player here) still counts, and the player returns to that
+meet after joining. A grid of joinable teams with client-side
 search-filter (name/description/coach name) and a one-click join per
 card — no multi-step confirmation; clicking a team card immediately
 calls the join API.
@@ -79,3 +81,17 @@ correct even though the list shown is too broad.
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- **Flow reversed to Level → Team → Competition** (above). After a join the
+  screen calls `login(...)` with the updated user and
+  `fetchAssignedCompetitions()` so the choosers see the team and its meets,
+  then goes to `/player/select-competition` — or straight back to a meet that
+  was already chosen.
+- A 423 (meet locked by its end date) now shows its reason:
+  `error.competitionLockedMessage`, lifted by the api-client from
+  `data.error` (also used by `PlayerDashboard`'s team join).
+- A player with no email who joins a coach's team causes the server to mail
+  their Player ID to that coach — nothing to do on this screen.
+- Test: `PlayerTeamSelection.test.jsx`. See [account-and-player-identity.md](account-and-player-identity.md).

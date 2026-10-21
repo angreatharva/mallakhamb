@@ -9,8 +9,8 @@ covers:
   - src/pages/superadmin/SuperAdminDashboard.jsx
 read_when: "adding a route, a new role screen, or investigating why a URL doesn't render what you expect"
 depends_on: [10-AUTH-AND-SECURITY, 04-STATE-MANAGEMENT]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## §3.4 resolved: `UnifiedLogin`/`UnifiedDashboard` are the real implementations
@@ -70,13 +70,26 @@ for why only those two roles need it (one component,
 `AdminScoring`, is mounted at both `/admin/scoring` and
 `/superadmin/scoring`).
 
-**Per-role layout ordering is deliberate for the post-login flow**:
-level → competition → team-select-if-applicable → dashboard. The player
-route's comment (`:145-151`) spells out why team selection is *after*
-competition, not before: a squad only means anything inside a meet, and
-the endpoint behind team selection already takes a `competitionId` — ask
-before you have one and it silently falls back to listing teams across
-every open competition at once.
+**Per-role layout ordering for the post-login flow**: level →
+competition → dashboard. **Players are different since 2026-10
+(`b54095d`/`78461dd`): Level → Team → Competition.** A player with no team is
+sent from the level (and the competition chooser) to `/player/select-team`;
+the meets offered next are the ones that team is entered in (the server's
+assigned-competitions list for a player is now team-based). A player always
+picks the competition, even when there is only one — the single-meet
+auto-pick is for the other roles. The older reasoning ("a squad only means
+something inside a meet") was dropped: joining a team is an account fact,
+squad placement still happens per meet.
+
+**Added routes (2026-10).** `profile` under the player, coach, admin and
+superadmin layouts → `AccountProfile` (judges keep `/judge/profile`);
+`/coach/setup-player-password` → `CoachPlayerPasswordSetup`; public
+`/reset-password/coach` → `CoachCodeReset`. **Every coach route** is wrapped
+in `CoachPlayerPasswordGate`, which redirects to the setup page until the
+coach's default player password is set and readable (cached in
+`sessionStorage`). See
+[06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md).
+The walk-in desk is a dashboard **tab** (`desk`), not a route.
 
 ## Two real routing bugs this structure fixed — both worth knowing before you "simplify" it
 

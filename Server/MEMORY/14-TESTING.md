@@ -5,8 +5,8 @@ covers:
   - package.json (jest config)
 read_when: "writing a test for any layer, or figuring out where an existing test for a subsystem lives"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Setup
@@ -22,8 +22,9 @@ confirmed complete). Jest config (`package.json`): `testMatch:
 (`afterEach`) — tests share one in-memory Mongo instance but start each test
 with empty collections.
 
-Suite counts (2026-10-18): `tests/unit/` = 50, `tests/integration/` = 13,
-`tests/security/` = 12 — **75 suites, 953 tests, all green** (`npx jest`).
+Suite counts (2026-10-21, `ff89ca5`): `tests/unit/` = 57,
+`tests/integration/` = 21, `tests/security/` = 13 — **91 suites, 1084 tests,
+all green** (`npx jest`, ~4 min). Was 75 / 953 on 2026-10-18.
 `README.md` still claims 56; it is stale.
 
 ## Where to find/add a test, by subsystem
@@ -46,6 +47,30 @@ nothing and is refused in production off an `_e2e` DB),
 `unit/utils/security/account-lockout.util.test.js`,
 `security/csrf-cookieless.security.test.js` (cookieless requests — iPhones
 block the cross-site cookies — pass on the signed CSRF header).
+
+**Accounts / player identity** (2026-10, see
+[modules/accounts.md](modules/accounts.md)): `unit/player-login-id.test.js`
+(ID format, suffixes, accents, UTC dates),
+`integration/player-identity.test.js` (three registration paths, Player ID
+login, guardian email shared by siblings),
+`integration/player-login-id-migration.test.js` (012 backfill + index swap),
+`integration/account-service.test.js` (`/auth/me` edits, password change,
+email change), `integration/account-request-service.test.js` (coach approvals,
+coach-code reset), `integration/coach-only-requests.test.js` (super admin can't
+decide coach-registered players' requests; coaches can't be deactivated),
+`integration/coach-player-service.test.js`,
+`integration/player-assigned-competitions.test.js` (team's meets, not squad's),
+`security/account-routes.security.test.js`,
+`unit/services/auth/otp-coach-player-id.test.js`,
+`unit/services/player-join-team-coach-mail.test.js`,
+`unit/utils/security/data-encryption.util.test.js`,
+`unit/validators/coach-register-player.validator.test.js`.
+
+**Walk-in desk**: `integration/walk-in-desk.test.js` (the whole flow incl.
+resumable submit, coach search, existing-child linking),
+`unit/walk-in-player-match.test.js`, `unit/age-eligibility.test.js` (COP
+1.8.3; the Web `ageEligibilitySync.test.js` feeds the same cases to the client
+mirror).
 
 **Scoring / COP**: `unit/calculation.service.test.js`,
 `unit/v2-scoring.test.js` (panel sizes, tolerance/time tables, difficulty

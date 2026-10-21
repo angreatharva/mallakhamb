@@ -4,8 +4,8 @@ covers:
   - Server/**
 read_when: "always — the entry point for any change in Server/"
 depends_on: []
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 # MEMORY — router
@@ -20,6 +20,9 @@ commit `f0bdc1d` (2026-09-23); brought up to date against `06891b5`
 (2026-10-18) — tie-breaks per COP §1.12 with admin-recorded lucky draws,
 per-competition team size and best-N Team Championship, apparatus per gender,
 the Time Keeper seat, Prometheus metrics, and the OCI staging build.
+Refreshed again against `ff89ca5` (2026-10-21): Player IDs and players
+without their own email (migration 012), the account page for every role,
+coach-approved resets, coach-registered players, and the walk-in desk.
 
 ## Read order for a cold agent (only 3 docs)
 
@@ -48,6 +51,7 @@ the Time Keeper seat, Prometheus metrics, and the OCI staging build.
 | `src/socket/` | Socket.IO — [08-REALTIME-SOCKETS.md](08-REALTIME-SOCKETS.md) |
 | `src/utils/` | Shared helpers, split by concern — [modules/utils.md](modules/utils.md) |
 | `src/services/walk-in/`, `../ocr/` | Walk-in desk + OCR sidecar, COP age rule — [modules/walk-in-desk.md](modules/walk-in-desk.md) |
+| `src/services/auth/account*.service.js`, `src/services/user/coach-player.service.js`, `src/utils/data/player-login-id.util.js` | Player IDs, guardian/no email, `/auth/me/*`, coach approvals, coach-registered players — [modules/accounts.md](modules/accounts.md) |
 | `src/errors/` | Error taxonomy — [02-CONVENTIONS.md](02-CONVENTIONS.md) |
 | `src/migrations/` | Schema/data migrations — [04-DATA-MODEL.md](04-DATA-MODEL.md) |
 | `scripts/` | Seed/ops/perf scripts — [13-SCRIPTS-AND-OPS.md](13-SCRIPTS-AND-OPS.md) |
@@ -74,6 +78,11 @@ the Time Keeper seat, Prometheus metrics, and the OCI staging build.
 | Add a cached read | `CHANGE-RECIPES.md#add-cached-read`, `10-CACHING-AND-PERF.md` | the owning service, `cache.service.js` |
 | Add a background/seed/perf script | `CHANGE-RECIPES.md#add-background-script`, `13-SCRIPTS-AND-OPS.md` | `scripts/`, `scripts/lib/setup-chain.js` |
 | Write a test | `14-TESTING.md` | the matching `tests/{unit,integration,security}/` file |
+| Change Player IDs, guardian / no-email players, or who approves their resets | `modules/accounts.md`, `03-DOMAIN-MODEL.md` (invariant 8) | `src/utils/data/player-login-id.util.js`, `src/models/Player.js`, `src/services/auth/account-request.service.js` |
+| Change the account page (profile edit, password change, email change) | `modules/accounts.md` §2 | `src/services/auth/account.service.js`, `src/validators/account.validator.js` |
+| Change how a coach registers a no-email player or their default password | `modules/accounts.md` §4 | `src/services/user/coach-player.service.js`, `src/utils/security/data-encryption.util.js` |
+| Change the walk-in desk, its form, or the OCR sidecar | `modules/walk-in-desk.md` | `src/services/walk-in/*`, `src/utils/walk-in/*`, `../ocr/` |
+| Change who may enter which age group (COP 1.8.3) | `modules/walk-in-desk.md` (Age rule), `03-DOMAIN-MODEL.md` (invariant 9) | `src/config/cop-rules.js` + `Web/src/utils/competition/ageEligibility.js` (a drift test pins them together) |
 | Change password reset or outgoing email | `06-AUTH-AND-SECURITY.md#forgot-password--otp--reset`, `modules/email.md` | `src/services/auth/{authentication,otp}.service.js`, `src/services/email/*` — prod on Render must use `gmail-api` |
 | Change login/token/cookie/CSRF/rate-limit behavior | `06-AUTH-AND-SECURITY.md`, `modules/auth.md` | `src/middleware/{auth,csrf,security}.middleware.js`, `src/services/auth/*` |
 | Change competition scope or the end-date lock | `06-AUTH-AND-SECURITY.md`, `modules/competition.md` | `src/middleware/competition-{context,lock}.middleware.js`, `src/utils/security/competition-{access,lock}.util.js` |
@@ -105,9 +114,9 @@ tracks what's been read; update it if you add a new in-scope file.
 `08-REALTIME-SOCKETS` · `09-PAYMENTS` · `10-CACHING-AND-PERF` ·
 `11-OBSERVABILITY` · `12-CONFIG-AND-ENV` · `13-SCRIPTS-AND-OPS` ·
 `14-TESTING` · `15-DEPLOYMENT` · `CHANGE-RECIPES` · `GOTCHAS` ·
-`modules/{user-services,team,auth,competition,payment,public,cache,
+`modules/{user-services,team,auth,accounts,competition,payment,public,cache,
 feature-flags,scoring,socket,middleware,repositories,infrastructure,
-migrations,validators,utils}` · `_COVERAGE`.
+migrations,validators,utils,walk-in-desk}` · `_COVERAGE`.
 
 ## Worked cold-start traces
 

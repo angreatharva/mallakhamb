@@ -13,8 +13,8 @@ covers:
   - src/models/JudgeAccount.js
 read_when: "changing login/token/cookie behavior, adding a role guard, touching CSRF/rate-limiting, or working on competition scope/lock enforcement"
 depends_on: [01-ARCHITECTURE, 03-DOMAIN-MODEL]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Roles
@@ -168,6 +168,15 @@ Revoking only refresh tokens (skipping step 1) would leave the *current*
 access token valid until its natural rotated expiry — don't assume one
 mechanism covers the other.
 
+## Player sign-in by Player ID (2026-10)
+
+`POST /api/players/login` and the three reset routes take `identifier`: an
+email or a Player ID (`common.validator#accountIdentifier`). No `@` ⇒ Player
+ID ⇒ `playerRepository.findByLoginId`; it only ever names a player. An email
+finds a player only when it is that player's **own** (`emailType` `self`) —
+a guardian's address is shared by siblings and never signs in. Full rules:
+[modules/accounts.md](modules/accounts.md).
+
 ## Forgot-password → OTP → reset
 
 Rewritten 2026-10-07 (`b5b0672`). Every step takes an optional `userType`
@@ -213,6 +222,27 @@ the panel `judgeRepository` — a seat has no address).
    OTP flow writes **without an email** — anyone could reset any account
    with a pending code by guessing six digits. Don't restore it; the SPA
    route `/reset-password/:token` went with it.
+
+**Player IDs and players without their own email (2026-10).** `forgotPassword`
+takes an `identifier`. A Player ID finds the player; a `none` player has
+nowhere to receive a code, so it returns silently and the controller calls
+`accountRequestService.openPasswordResetIfNoEmail` — the coach approves and is
+shown a 24-hour code for `POST /auth/reset-password-coach`. A **guardian**
+address typed in finds no player (not their own), but the Player IDs
+registered under it are mailed there (`_remindGuardianOfPlayerIds`,
+best-effort). The response text is the same in every case. See
+[modules/accounts.md](modules/accounts.md) §3.
+
+**Signed-in password change** (`PUT /auth/me/password`) needs the current
+password, ends every other session (`revokeAllRefreshTokens` +
+`recordLogout`) and re-issues this session's token with `iat` set to the
+**next whole second** (`generateToken(..., { issuedAt })`) — otherwise a
+token minted in the same second as the logout is refused.
+
+**Reversible encryption** exists for exactly one value: a coach's default
+player password (`utils/security/data-encryption.util.js`, AES-256-GCM, key
+`DATA_ENCRYPTION_KEY` or HKDF of `JWT_SECRET`). Never use it for a password
+someone signs in with.
 
 **Admin reset never worked before 2026-10-07.** `Admin.js` lacked the
 `resetPassword*` fields every other account model had, so Mongoose strict

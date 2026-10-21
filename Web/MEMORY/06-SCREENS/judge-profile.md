@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeProfile.jsx
 read_when: "changing the judge's own account/profile screen"
 depends_on: [13-FORMS-AND-VALIDATION]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is
@@ -56,3 +56,15 @@ you add a new editable field here that other screens read off
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- The password section is now the shared `PasswordSection`, and an **email
+  section** was added (`EmailSection`) — both from
+  `pages/shared/account/AccountSections.jsx`, on the `/auth/me/*` endpoints.
+  The judge profile no longer edits the email directly (the server dropped
+  `email` from `PUT /judge/profile`); a new address has to prove itself with
+  a code first.
+- Loads `judgeAPI.getProfile()` and `accountAPI.get()` together; `#password`
+  / `#email` in the URL scroll to those sections (the account menu's targets).
+  See [account-and-player-identity.md](account-and-player-identity.md).

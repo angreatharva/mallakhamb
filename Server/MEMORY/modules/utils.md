@@ -4,8 +4,8 @@ covers:
   - src/utils/**
 read_when: "looking for an existing helper before writing a new one, especially anything touching ids, apparatus, dates, or PII projection"
 depends_on: [03-DOMAIN-MODEL, 06-AUTH-AND-SECURITY, 07-SCORING-ENGINE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Purpose
@@ -24,12 +24,13 @@ else for discoverability.
 | `competition-apparatus.util.js` | `normalizeApparatusByGender`, `applyApparatusByGender`, `offeredApparatus`, `hasGenderApparatus` | Which apparatus a **meet** runs per type **and gender** (`Competition.apparatusByGender`). `applyApparatusByGender(body, types)` stores it and derives `apparatusConfig` (the union of both genders) so the two can't disagree. `offeredApparatus(competition, type, gender)` falls back, for a meet saved before the split, to the per-type list minus what COP bars that gender from (Hanging for women) — what the coach dashboard offered before |
 | `day-boundary.util.js` | `toDate`, `endOfUtcDay`, `startOfUtcDay` | UTC calendar-day edges — shared by the fee window (`payment.config.js`) and the competition lock (`competition-lock.util.js`) so the two boundaries can never drift. `Web/src/utils/scoring/{competitionFee,competitionLock}.js` mirror these for the browser — keep the two sides in step |
 | `judge-assignment.util.js` | `SEQUENCE_JUDGE_TYPES`, `MINIMUM_PANEL_SEATS`, `PANEL_JUDGE_TYPES` (re-exported from `scoring/judge-slip.util`), `loadAssignments`, `assignmentCoversCategory`, `resolveAssignment`, `hasAnyRole`, `competitionsFor` | The single definition of "what can this judge do," used by auth middleware, socket auth, and the scoring controller alike — see [06-AUTH-AND-SECURITY.md](../06-AUTH-AND-SECURITY.md). `MINIMUM_PANEL_SEATS` = Senior Judge, Judge 1, Judge 2, Scorer, **Time Keeper** (required since 2026-09-26; may be the Scorer's own account). Seat numbers/types themselves live in `config/judge-seats.js` |
+| `player-login-id.util.js` | `baseLoginId`, `nextFreeLoginId`, `siblingsPattern`, `normalizeLoginId`, `namePart`, `birthPart`, `LOGIN_ID_PATTERN`, `looksLikeEmail`, `emailTypeOf`, `OWN_EMAIL_CLAUSE`, `COACH_RELATION`, `isCoachRegistered`, `COACH_REGISTERED_CLAUSE` | The Player ID (`firstname.lastname.ddmmyy[.N]`) and the email-type helpers. Use `emailTypeOf` rather than reading `emailType` — `.lean()` skips the `self` default. See [modules/accounts.md](accounts.md) |
 | `objectid.util.js` | `isValidObjectId`, `convertToObjectId`, `convertMultipleToObjectId`, `createObjectIdError`, `validateAndConvertObjectId`, `idStr` | `idStr(value)` is the one id-to-comparable-string helper — used to exist 3 times verbatim across the codebase before consolidation |
 | `pagination.util.js` | `paginate`, `getPaginationMeta` (unused — nothing calls it), `pageMeta` | `pageMeta(total,page,limit)` is the pagination envelope actually returned everywhere (`{total,page,pages}`) — spread it beside the named collection |
 | `request-context.util.js` | `competitionIdFromRequest` | The one fallback chain (token > fallback param > query > body > user fields > judge assignment) that used to be duplicated with subtly different orderings across `admin.controller.js` and `performance-order.controller.js` |
 | `scoring-room.util.js` | `SCORING_ROOM_PREFIX`, `DEFAULT_COMPETITION_TYPES`, `assignmentCompetitionTypes`, `scoringRoomIds`, `normalizeCompetitionType`, `alternateRoomId` | Socket room-id construction — see [08-REALTIME-SOCKETS.md](../08-REALTIME-SOCKETS.md) for the longest-first-match bug this fixed |
 | `team-visibility.util.js` | `isSubmittedRegistration`, `findSubmittedRegistration`, `registeredPlayerIds` | The one definition of "this team has finished registering" — `isSubmitted===true && isActive!==false`; "not submitted" and "no such team" must look identical from outside |
-| `user-projection.util.js` | `JUDGE_PUBLIC_FIELDS`, `JUDGE_ACCOUNT_CARD_FIELDS`, `flattenJudgeAccount`, `fullName`, `coachCard`, `enteredPlayerCard`, `toMongoProjection`, `stripSlipBreakdowns`, `SENSITIVE_USER_FIELDS`, `stripSensitiveFields`, `SUBMITTED_TEAM_COACH_FIELDS`/`SUBMITTED_TEAM_PLAYER_FIELDS` (+`_LIST` variants), `projectFields` | The security-control allow-lists — see below |
+| `user-projection.util.js` | (`SENSITIVE_USER_FIELDS` now also strips `playerDefaultPassword`) `JUDGE_PUBLIC_FIELDS`, `JUDGE_ACCOUNT_CARD_FIELDS`, `flattenJudgeAccount`, `fullName`, `coachCard`, `enteredPlayerCard`, `toMongoProjection`, `stripSlipBreakdowns`, `SENSITIVE_USER_FIELDS`, `stripSensitiveFields`, `SUBMITTED_TEAM_COACH_FIELDS`/`SUBMITTED_TEAM_PLAYER_FIELDS` (+`_LIST` variants), `projectFields` | The security-control allow-lists — see below |
 
 ### `user-projection.util.js` in detail — this is a security control, not a convenience
 

@@ -8,8 +8,8 @@ covers:
   - src/components/superadmin/AddPlayerForm.jsx
 read_when: "adding a form, changing password/phone/name validation rules, or wondering why two forms validate the same field differently"
 depends_on: [07-COMPONENTS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## The headline finding: `zodResolver` is never used, anywhere
@@ -174,7 +174,23 @@ manually and inline rather than through a shared helper.
   (`CoachCreateTeam`-adjacent flows, `UnifiedRegister`'s player path),
   it does not exist yet as a shared utility.
 
-## Since the last pass (2026-10-18)
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- `form.validator.js` gained `LOGIN_ID_PATTERN` (mirrors the server's
+  `player-login-id.util.js`), `validateEmailOrPlayerId` (returns `true` or the
+  message, so it plugs into react-hook-form `validate`) and
+  `playerLoginSchema` (zod; `identifier` + password) — used by `UnifiedLogin`
+  for players and by the reset screens. It still mirrors
+  `common.validator#accountIdentifier` by hand; no cross-stack test.
+- Player registration rules per path (own / guardian / none: guardian
+  name+relation+phone, consent under 18) live in
+  `pages/player/registration/playerRegistration.js`, checked at the field and
+  again by the server's `player.validator.js`.
+- The walk-in desk's review grid validates nothing itself beyond age: the
+  server's `issues` per row are what block (see
+  [06-SCREENS/walk-in-desk.md](06-SCREENS/walk-in-desk.md)).
+
+## Since the pass before (2026-10-18)
 
 - **One password meter** (responsive plan Phase 8.3, 2026-10-02):
   `components/auth/PasswordStrength.jsx` exports `PasswordStrengthIndicator`

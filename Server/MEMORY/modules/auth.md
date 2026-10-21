@@ -7,8 +7,8 @@ covers:
   - src/services/email/**
 read_when: "changing auth service internals, token/OTP mechanics, or email delivery"
 depends_on: [06-AUTH-AND-SECURITY]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 Flow-level narrative (login/refresh/logout/reset sequences, cookie
@@ -71,6 +71,22 @@ email service is configured), `notifyPasswordChanged(user, userType)`
 atomically and the code is discarded at `security.otpMaxAttempts`, default
 5), `clearOTP`, `getRepositoryByType` (includes judge account resolution).
 Exports `INVALID_CODE_MESSAGE` — the one message for every code failure.
+Added 2026-10 (all background, never reject): `sendEmailChangeCode(to, …)`,
+`notifyEmailChanged(oldAddress, …)`, `notifyPlayerLoginIds(to, players,
+'registered'|'reminder')`, `notifyCoachOfPlayerId(coachId, player,
+'registered-by-coach'|'joined-team', teamName)` (needs `coachRepository`).
+Mails use `userName: user.name || user.firstName || …` now.
+
+## `account.service.js` / `account-request.service.js` (2026-10)
+
+The signed-in user's own account (`/api/auth/me/*`) and the coach / super
+admin approvals for players with no email. Full detail:
+[modules/accounts.md](accounts.md). `authentication.service.js` gained
+`preparePlayerRegistration` (server sets `emailType`/`consentAt`, drops a
+client-sent `loginId`), Player-ID lookups in `login`/`findUserAcrossTypes`,
+the guardian Player-ID reminder in `forgotPassword`, and a silent return for a
+player with no email. `token.service.js#generateToken` takes
+`{ issuedAt }` (the password-change `iat` fix).
 
 ## `token-invalidation.service.js` (`TokenInvalidationService`)
 
@@ -94,7 +110,10 @@ shared helpers the services above call into.
 `sendLoginResponse` (sets both cookies, mints the refresh token, still
 returns `token` in the body). `utils/security/login-security.util.js` —
 `equalizeFailedLoginTiming`, `lockoutPolicy()`. `utils/security/account-lockout.util.js` —
-`getLockoutState`, `registerFailedAttempt`, `clearedLockoutState`. `utils/security/token-invalidation.util.js` —
+`getLockoutState`, `registerFailedAttempt`, `clearedLockoutState`. `utils/security/data-encryption.util.js` — `encrypt`/`decrypt` (AES-256-GCM,
+`v1:` prefix; key `DATA_ENCRYPTION_KEY` or HKDF of `JWT_SECRET`; `decrypt`
+returns null on a wrong key or tampering). One user: the coach's default
+player password. `utils/security/token-invalidation.util.js` —
 the synchronous-looking shim wired to `TokenInvalidationService` via
 `setTokenInvalidationService` at bootstrap.
 

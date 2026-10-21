@@ -6,8 +6,8 @@ covers:
   - "**/*.test.jsx"
 read_when: "adding a test, debugging a failing test, or deciding whether a test file already covers something"
 depends_on: [SHARED-CONTRACTS, 10-AUTH-AND-SECURITY, 13-FORMS-AND-VALIDATION]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Stack
@@ -63,7 +63,22 @@ the same provider stack, there's no existing `renderWithProviders` to
 extend — you'd be the first to add one**, or continue the established
 pattern of duplicating the wrapper inline.
 
-## Full test-file inventory (55 files, 496 tests — green 2026-10-18), by subsystem
+## Full test-file inventory (66 files, 550 tests — green 2026-10-21), by subsystem
+
+- **Added 2026-10-19..21** — 11: `components/account/AccountRequestsPanel.test.jsx`,
+  `pages/coach/{CoachPlayerPasswordGate,PlayerDefaultPasswordSection,RegisterPlayerDialog}.test.jsx`,
+  `pages/player/PlayerTeamSelection.test.jsx`,
+  `pages/shared/{AccountProfile,CoachCodeReset}.test.jsx`,
+  `pages/shared/ForgotPassword.player.test.jsx`,
+  `pages/unified/UnifiedRegister.player.test.jsx` (three registration paths,
+  Player ID screen), `services/api-client.refresh.test.js` (a failed refresh
+  rejects every queued request — the "stuck on Loading..." fix),
+  `utils/competition/ageEligibilitySync.test.js` (imports
+  `Server/src/config/cop-rules.js`; fails on drift). Changed:
+  `PostLoginFlow.test.jsx` (players always pick the meet),
+  `AuthProvider.test.jsx` (expiry reads `userType`, ends loading),
+  `shell.test.jsx` (account menu). See
+  [06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md).
 
 - **styles/** — 2: `alpha.test.js` (byte-exact `alpha()`),
   `colourHygiene.test.js` (fails on any `` `${hex}NN` `` concatenation —

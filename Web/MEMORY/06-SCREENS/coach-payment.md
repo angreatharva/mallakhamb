@@ -4,8 +4,8 @@ covers:
   - src/pages/coach/CoachPayment.jsx
 read_when: "changing ANY part of the payment flow — Razorpay integration or the discount-code bypass"
 depends_on: [SHARED-CONTRACTS, 08-API-INTEGRATION, 06-SCREENS/coach-dashboard]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is — the highest-stakes screen in the coach flow
@@ -138,3 +138,10 @@ that gates whether the discount-code UI renders at all.
   (`e2e/support/payment-flows.js`) accept the new headings.
 - Line numbers (`:NNN`) above predate the 2026-10 restyle and are
   approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- The Razorpay loader and theme moved to `src/utils/payment/razorpay.js`
+  (`loadRazorpayScript`, `RAZORPAY_THEME`), shared with the walk-in desk's
+  payment step. Behaviour unchanged. See
+  [walk-in-desk.md](walk-in-desk.md).

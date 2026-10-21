@@ -16,8 +16,8 @@ covers:
   - src/services/user/player.api.js
 read_when: "adding or changing any API call, touching CSRF/refresh/competition-lock handling, or looking up which endpoint a screen actually calls"
 depends_on: [10-AUTH-AND-SECURITY]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Two axios instances, one interceptor stack
@@ -137,8 +137,12 @@ mechanism exists to support.
 `isRefreshing` flag plus a `refreshSubscribers` queue
 (`:46-63, 249-279`) means if three requests 401 around the same time,
 only the first calls `attemptSilentRefresh()`; the other two queue a
-callback and get replayed once that one refresh resolves
-(`onTokenRefreshed()` drains the queue). If refresh fails, every
+subscriber and get replayed once that one refresh resolves
+(`onTokenRefreshed()` drains the queue). **Since `3fcdcc8` (2026-10-20) a
+failed refresh also rejects every queued request with its own 401**
+(`onTokenRefreshFailed()`); they used to be left pending forever, which kept a
+signed-out visit to a protected page on "Loading..." (StrictMode's second
+`/auth/me` queued behind the first). If refresh fails, every
 role-prefixed and legacy storage key is cleared
 (`:262-268`) and `dispatchAuthExpired({userType, reason:
 'refresh_failed'})` fires (see
@@ -201,9 +205,20 @@ default (`api`).
 | Function | Method + path |
 |---|---|
 | `me()` | GET `/auth/me` |
-| `forgotPassword(email, userType?)` | POST `/auth/forgot-password` |
-| `verifyOTP(email, otp, userType?)` | POST `/auth/verify-otp` |
-| `resetPasswordWithOTP(email, otp, password, userType?)` | POST `/auth/reset-password-otp` |
+| `forgotPassword(identifier, userType?)` | POST `/auth/forgot-password` — `identifier` = email or a player's Player ID |
+| `verifyOTP(identifier, otp, userType?)` | POST `/auth/verify-otp` |
+| `resetPasswordWithOTP(identifier, otp, password, userType?)` | POST `/auth/reset-password-otp` |
+| `resetWithCoachCode(identifier, code, password)` | POST `/auth/reset-password-coach` — a no-email player, with the code their coach was given |
+
+### `auth/account.api.js` (`accountAPI`, on `api`) — 2026-10, every role
+| Function | Method + path |
+|---|---|
+| `get()` | GET `/auth/me/account` |
+| `update(changes)` | PUT `/auth/me` |
+| `changePassword(currentPassword, newPassword)` | PUT `/auth/me/password` — returns a new token that must replace the stored one |
+| `requestEmailChange({newEmail, emailType, currentPassword})` | POST `/auth/me/email` |
+| `confirmEmailChange(code)` | POST `/auth/me/email/confirm` |
+| `cancelEmailChange()` | DELETE `/auth/me/email` |
 
 `userType` (player/coach/admin/judge) picks the account when one email owns
 several; the screens derive it from `?role=` via `pages/shared/resetPortal.js`.
@@ -295,7 +310,8 @@ dead/unrouted server-side, 404-only if called.
 | `updateAdmin(adminId, data)` | PUT `/superadmin/admins/:adminId` |
 | `deleteAdmin(adminId)` | DELETE `/superadmin/admins/:adminId` |
 | `getAllCoaches()` | GET `/superadmin/coaches` |
-| `updateCoachStatus(coachId, data)` | PUT `/superadmin/coaches/:coachId/status` |
+| `activateCoach(coachId)` | PUT `/superadmin/coaches/:coachId/status` `{isActive:true}` — replaces `updateCoachStatus`; coaches can't be deactivated (2026-10) |
+| `accountRequests.list/approve(id)/reject(id)` | `/superadmin/account-requests[/:id/approve\|reject]` — no screen uses it since the Requests tab was removed |
 | `deleteTeam(teamId)` | DELETE `/superadmin/teams/:teamId` |
 | `deleteJudge(judgeId)` | DELETE `/superadmin/judges/:judgeId` |
 | `createCompetition(data)` | POST `/superadmin/competitions` |
@@ -331,6 +347,17 @@ dead/unrouted server-side, 404-only if called.
 | `verifyPaymentAndSubmit(data)` | POST `/coaches/payments/verify-and-submit` |
 | `validateDiscountCode(discountCode)` | POST `/coaches/payments/discount/validate` (quote-only) |
 | `redeemDiscountCode(discountCode)` | POST `/coaches/payments/discount/redeem` (re-validates from scratch, doesn't trust the quote step) |
+| `accountRequests.list/approve(id)/reject(id)` | `/coaches/account-requests[/:id/approve\|reject]` (2026-10) |
+| `playerDefaultPassword.get()` / `.set(password, currentPassword)` | GET / PUT `/coaches/player-default-password` |
+| `registerPlayer(data)` | POST `/coaches/players` — 409 `POSSIBLE_DUPLICATE` unless `confirmDuplicate` |
+
+### `user/desk.api.js` (`deskAPI`) — 2026-10, Admin + Super Admin
+Every `/api/desk/*` route: `openMeets`, `ocrStatus`, `findCoach(email)`,
+`searchCoaches(q)`, `createCoach`, `setDefaultPassword`, `ensureTeam`,
+`formPdf` (blob), `listDrafts`, `openDraft`, `getDraft`, `cancelDraft`,
+`scan(id, blob, page)` (raw image body, 90 s), `saveRows`, `submit` (120 s),
+`createPaymentOrder`, `verifyPayment`, `quoteDiscount`, `redeemDiscount`,
+`slip`. See [06-SCREENS/walk-in-desk.md](06-SCREENS/walk-in-desk.md).
 
 ### `user/player.api.js` (`playerAPI`)
 | Function | Method + path |

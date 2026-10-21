@@ -8,21 +8,22 @@ covers:
   - src/docs/api-enums.js
 read_when: "adding/changing any HTTP endpoint, or checking what auth/lock/validator a route already has"
 depends_on: [01-ARCHITECTURE, 06-AUTH-AND-SECURITY]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Coverage check (per the build instructions' verification step)
 
 Grepping `router\.(get|post|put|patch|delete)\(` across every `src/routes/*.js`
-file yields **186** route definitions (2026-10-18; +4 for the lucky-draw
-routes); `src/routes/index.js` additionally
+file yields **221** route definitions (2026-10-21; was 186 on 2026-10-18 —
++35 for the account page, account requests, coach-registered players and the
+walk-in desk); `src/routes/index.js` additionally
 registers **2 more directly on `apiRouter`** (`GET /health-legacy`, `GET
-/csrf-token`) that the per-file grep misses — **188 routes total**, each also
+/csrf-token`) that the per-file grep misses — **223 routes total**, each also
 served at both `/api/...` and `/api/v1/...` (see
 [01-ARCHITECTURE.md](01-ARCHITECTURE.md)). `src/docs/openapi.js` documents
-**186** operations, and `npm run docs:openapi:check` (live Express stack vs.
-spec) reports 186/186 with no drift. The 2-route gap is exactly `docs.routes.js`'s own two
+**221** operations, and `npm run docs:openapi:check` (live Express stack vs.
+spec) reports 221/221 with no drift (re-run 2026-10-21). The 2-route gap is exactly `docs.routes.js`'s own two
 endpoints (`GET /api/docs`, `GET /api/docs/openapi.json`), which are
 self-referential and correctly excluded from the spec by design. Every other
 route was spot-checked path-by-path and method-by-method against the OpenAPI
@@ -66,12 +67,19 @@ noted). Full semantics of context/lock/rate-limit guards:
 | Method | Path | Auth | Rate limit | Controller |
 |---|---|---|---|---|
 | GET | `/api/csrf-token` | public | — | inline `csrfTokenHandler` |
-| POST | `/forgot-password` | public | `authLimiter` (IP) | authController.forgotPassword — always 200, no enumeration; body `{email, userType?}` |
-| POST | `/verify-otp` | public | `authLimiter` | authController.verifyOTP — `{email, otp, userType?}` |
-| POST | `/reset-password-otp` | public | `authLimiter` | authController.resetPasswordWithOTP — `{email, otp, password, userType?}` |
+| POST | `/forgot-password` | public | `authLimiter` (IP) | authController.forgotPassword — always 200, no enumeration; body `{identifier, userType?}` (`identifier` = email or Player ID; the old `email` field is still read). A no-email player's Player ID opens a coach-approval request instead |
+| POST | `/verify-otp` | public | `authLimiter` | authController.verifyOTP — `{identifier, otp, userType?}` |
+| POST | `/reset-password-otp` | public | `authLimiter` | authController.resetPasswordWithOTP — `{identifier, otp, password, userType?}` |
+| POST | `/reset-password-coach` | public | — | accountRequestController.completePasswordReset — `{identifier (Player ID), code, password}`; the code the coach was shown. [modules/accounts.md](modules/accounts.md) |
 | POST | `/set-competition` | authMiddleware | — | authController.setCompetition |
 | GET | `/competitions/assigned` | authMiddleware | — | authController.getAssignedCompetitions |
 | GET | `/me` | authMiddleware | — | authController.me |
+| GET | `/me/account` | authMiddleware | — | authController.getAccount — profile + pending email change, every role |
+| PUT | `/me` | authMiddleware | — | authController.updateAccount — `account.validator#updateMe`; fields outside the role's `EDITABLE_FIELDS` are ignored |
+| PUT | `/me/password` | authMiddleware | — | authController.changePassword — signs other sessions out, sets new cookies |
+| POST | `/me/email` | authMiddleware | — | authController.requestEmailChange — code to the new address |
+| POST | `/me/email/confirm` | authMiddleware | — | authController.confirmEmailChange |
+| DELETE | `/me/email` | authMiddleware | — | authController.cancelEmailChange |
 | POST | `/logout` | authMiddleware | — | authController.logout |
 | POST | `/refresh` | public (refresh-token cookie) | — | authController.refresh |
 
@@ -87,7 +95,7 @@ panel (shared NAT) via `/me`+`/set-competition` traffic.
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | POST | `/register` | public, `authLimiter` | `playerValidators.createPlayer()` |
-| POST | `/login` | public, `authLimiter` | inline validators |
+| POST | `/login` | public, `authLimiter` | `accountIdentifier()` — own email **or Player ID** |
 | GET | `/profile` | requirePlayer | |
 | GET | `/teams` | requirePlayer | no competition context required; `competitionId` query param is **silently discarded** by the service, see GOTCHAS.md |
 | GET | `/competitions/open` | requirePlayer | resolves `competitionService` directly, not via playerService |
@@ -114,6 +122,21 @@ panel (shared NAT) via `/me`+`/set-competition` traffic.
 | POST | `/payments/verify-and-submit` | requireCoach, context, unlocked | |
 | POST | `/payments/discount/validate` | requireCoach, `userRateLimit`, context, unlocked | rate-limited — a discount-code guessing surface |
 | POST | `/payments/discount/redeem` | requireCoach, `userRateLimit`, context, unlocked | |
+| GET | `/account-requests` | requireCoach | resets / email additions from no-email players on this coach's teams |
+| POST | `/account-requests/:requestId/approve`, `/reject` | requireCoach | approve of a reset returns a one-time code |
+| GET | `/player-default-password` | requireCoach | decrypted; `{isSet, readable, password, setAt}` |
+| PUT | `/player-default-password` | requireCoach, `userRateLimit` | `{password, currentPassword}` |
+| POST | `/players` | requireCoach, `userRateLimit` | register a no-email player onto the coach's team; 409 `POSSIBLE_DUPLICATE` unless `confirmDuplicate`. Not competition-scoped |
+
+### Walk-in desk — `/api/desk` (Admin + Super Admin; scope and end-date lock checked in the SERVICE against the draft's meet) — [modules/walk-in-desk.md](modules/walk-in-desk.md)
+`GET /meets`, `GET /ocr/status`, `GET /coaches?q=` (search name/phone/email/
+team, ≤10) or `?email=` (exact), `POST /coaches`, `PUT /coaches/:coachId/player-default-password`,
+`POST /coaches/:coachId/team`, `GET /form` (PDF), `GET|POST /drafts`,
+`GET|DELETE /drafts/:draftId`, `POST /drafts/:draftId/scan` (raw image, 8 MB),
+`PUT /drafts/:draftId/rows`, `POST /drafts/:draftId/submit`,
+`POST /drafts/:draftId/payment/{order,verify}`,
+`POST /drafts/:draftId/payment/discount/quote` and `/discount` (`userRateLimit`),
+`GET /drafts/:draftId/slip`. 19 routes.
 
 ### Admin — `/api/admin` (full write-flow trace: [modules/competition.md](modules/competition.md) and [06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md); service internals: [modules/user-services.md](modules/user-services.md))
 | Method | Path | Auth chain |
@@ -157,6 +180,11 @@ mirrors an admin capability:
   create/verify/add; admin CRUD; coach list+status; team list/details/delete;
   `judges/:judgeId` DELETE only; competition full CRUD + admin
   assign/remove; system stats/dashboard/transactions.
+- `GET /account-requests`, `POST /account-requests/:requestId/approve|reject`
+  → `accountRequestController.superAdmin.*` — every open no-email-player
+  request **except** coach-registered players' (those are the coach's alone).
+- `PUT /coaches/:coachId/status` now **refuses `isActive:false`** — coaches
+  cannot be deactivated (2026-10, `06b6b0d`).
 - Two age-group-start aliases (`/competition/age-group/start` and
   `/age-groups/start`) both → `adminController.startAgeGroup`, mirroring the
   admin router's own alias pair.
@@ -256,7 +284,8 @@ exists.
 
 ## Shared validators — `src/validators/common.validator.js`
 
-`objectId`/`mongoId`, `email`, `password` (≥8 chars **plus** upper+lower+digit
+`objectId`/`mongoId`, `email`, `accountIdentifier` (email or Player ID →
+`req.body.identifier`), `password` (≥8 chars **plus** upper+lower+digit
 regex), `phone` (10-15 digits after stripping punctuation, locale-agnostic
 by design), `pagination`, `dateRange`, `date`, `enumValue`, `string`
 (trim+length+`.escape()`), `number`, `boolean`, `array`. **Not every

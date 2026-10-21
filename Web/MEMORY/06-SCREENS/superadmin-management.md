@@ -4,8 +4,8 @@ covers:
   - src/pages/superadmin/SuperAdminManagement.jsx
 read_when: "changing any destructive superadmin action (delete competition/admin, remove admin), or the competition create/edit form"
 depends_on: [08-API-INTEGRATION, 06-SCREENS/unified-dashboard]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is — and what it is NOT
@@ -138,3 +138,15 @@ a form) for assign/remove-admin-per-competition, opened via a green
   actual location before documenting or modifying those flows.
 - Any new checkbox list in the competition form needs its own
   `.relative` scroll-container wrapper — see the repeated fix above.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- **Coaches can't be deactivated.** The coach toggle became "Activate" only
+  (`handleActivateCoach` → `superAdminAPI.activateCoach`), to bring back a
+  coach deactivated before the rule. A coach owns the requests of the players
+  they registered, which nobody else can decide.
+- The competition form has an optional **Age cut-off year** select: the start
+  date's year or the year before (COP 1.8.3.2); blank = the start year. Used
+  by the walk-in desk's age rule.
+- `addPlayerToTeam` (AddPlayerForm) may send `emailType` + `guardian` — the
+  server accepts the three player email types. See [account-and-player-identity.md](account-and-player-identity.md).

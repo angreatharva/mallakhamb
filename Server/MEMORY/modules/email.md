@@ -6,8 +6,8 @@ covers:
   - docs/gmail-api-email.md
 read_when: "changing email provider selection, templates, or what triggers an email"
 depends_on: [modules/auth]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 The reset flow that triggers these mails is in
@@ -26,7 +26,7 @@ service internals in [modules/auth.md](auth.md#email--srcservicesemail).
 | `src/services/email/gmail-api.adapter.js` | Gmail REST API over HTTPS (443). OAuth2 refresh token, exchanged for an access token cached until 60 s before expiry; MIME built with Nodemailer's `MailComposer`; sends as `EMAIL_USER`; scope `gmail.send` only; 10 s timeout; `fetch` injectable for tests |
 | `src/services/email/templates/otp.template.js` | The reset code (`otp.service.js:generateAndSendOTP`) |
 | `src/services/email/templates/password-reset.template.js` | The "password changed" notice after a successful reset (`otp.service.js:notifyPasswordChanged`) |
-| `src/services/email/templates/notification.template.js` | Implemented, **zero callers** |
+| `src/services/email/templates/notification.template.js` | Generic titled message. **Has callers since 2026-10**: `emailService.sendNotification` for the email-change code, the email-changed notice and the Player ID mails (`otp.service.js`). Turns `\n` in `message` into `<br>` |
 | `scripts/gmail-oauth-token.js` (`npm run gmail:token`) | One-time: mints the refresh token from a Desktop-type OAuth client, then **refreshes it once against the same client ID/secret before printing it** (so a later failure on Render can only mean the value changed in transit). Prints the token's length and the first 12 chars of the client ID to compare against Render. Reads `Server/.env` too; in PowerShell set `$env:GMAIL_CLIENT_ID`/`$env:GMAIL_CLIENT_SECRET` instead of the inline `VAR=value` form |
 | `docs/gmail-api-email.md` | The Google Cloud setup, step by step |
 

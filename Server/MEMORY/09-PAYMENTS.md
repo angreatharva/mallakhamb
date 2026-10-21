@@ -9,8 +9,8 @@ covers:
   - src/models/Transaction.js
 read_when: "changing pricing, the Razorpay flow, the discount code, registration fee windows, or the webhook"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, modules/user-services]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Two independent Razorpay flows, one gateway module
@@ -185,6 +185,19 @@ not divergent data. `PaymentService.reconcileWebhook` now catches Mongo code
 rather than a failure. Regression test:
 `tests/integration/payment-webhook-reconcile.test.js` ("a redelivered
 webhook for the same payment does not create a second Transaction").
+
+### Walk-in desk payments and the webhook-first race (2026-10)
+
+The walk-in desk takes a coach's payment through the **same** coach-service
+methods, with an extra `{ recordedBy }` option: `createTeamPaymentOrder`
+(adds `recordedBy` + `channel: 'walk-in-desk'` to the order notes),
+`verifyTeamPaymentAndSubmit` and `redeemDiscountAndSubmit` (write
+`Transaction.recordedBy` = the Admin; `source` stays `coach`). Because the
+desk's verify can lose the race to the webhook, `verifyTeamPaymentAndSubmit`
+now **catches `11000`** on the Transaction insert: the registration is already
+marked paid, so it keeps the webhook's row and only adds `recordedBy` to it,
+instead of telling a coach whose money moved that payment failed. This holds
+for the coach's own checkout too. See [modules/walk-in-desk.md](modules/walk-in-desk.md).
 
 ## Discount code (100%-off registration bypass)
 

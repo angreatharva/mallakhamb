@@ -146,6 +146,17 @@ Rewritten from the code and `docs/RESPONSIVE_UIUX_REPORT.md`:
 - Web/.env* — names only, via grep, never opened
 - src/assets/* binaries — sizes recorded (BHA.png, Mallakhamb.png, main-home.jpg), bytes not read
 
+## Update pass 2026-10-21 (`ff89ca5`)
+
+Commits `b996c2c..ff89ca5` touching `Web/` (player identity, account menu,
+coach-registered players, the walk-in desk, the signed-out spinner fix, npm
+audit). New files, all read:
+- [x] src/pages/desk/* (8), src/services/user/desk.api.js, src/utils/payment/razorpay.js, src/utils/competition/ageEligibility.js → 06-SCREENS/walk-in-desk, 08-API-INTEGRATION, SHARED-CONTRACTS
+- [x] src/pages/shared/{AccountProfile,CoachCodeReset}.jsx, src/pages/shared/account/AccountSections.jsx, src/pages/player/registration/*, src/pages/coach/{CoachPlayerPasswordGate,PlayerDefaultPasswordSection,RegisterPlayerDialog}.jsx, src/components/account/*, src/services/auth/account.api.js, src/utils/auth/playerTeam.js → 06-SCREENS/account-and-player-identity, 03-ROUTING-AND-NAV, 07-COMPONENTS, 08-API-INTEGRATION
+- [x] changed: Shell.jsx, AuthProvider.jsx, api-client.js, routes/index.jsx, lazy-pages.js, App.jsx, form.validator.js, UnifiedLogin/UnifiedRegister/UnifiedDashboard, ForgotPassword/ResetPassword/resetPortal, PlayerTeamSelection, Level/CompetitionSelectionScreen, CoachDashboard, CoachPayment, JudgeDashboard, JudgeProfile, SuperAdminManagement, coach/super-admin/auth api modules, teamSize.js header → 03, 07, 08, 10, 13, SHARED-CONTRACTS, GOTCHAS, the matching 06-SCREENS docs
+- [x] e2e/support/identity-roster.js, player-flows.js → 15-E2E-AND-SEEDING
+- [x] 11 new test files → 14-TESTING (66 files / 550 tests green)
+
 ## Re-verification 2026-10-11 (`cd66189`) — design-language leftovers, Home on phones, deploy blockers
 
 Commits since `58249df`: `a79c8cb`, `c32815c` (judge header and slip, 0 colour

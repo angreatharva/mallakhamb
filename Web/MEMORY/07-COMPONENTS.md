@@ -27,8 +27,8 @@ covers:
   - src/utils/security/sanitize.js
 read_when: "reusing or changing a shared (non-design-system, non-responsive) component"
 depends_on: [05-DESIGN-SYSTEM, SHARED-CONTRACTS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Scope
@@ -75,6 +75,16 @@ completeness.
 - `components/design-system/` is gone except `accessibility/LiveRegion`.
 
 ## `shell/` and `brand/` (design-language Phase 4, branch `look/phase-4-shells`)
+
+**2026-10: the account menu.** `Shell.jsx` exports `AccountMenu` (a `ui/Menu`:
+My profile, Change password → `#password`, Update email → `#email`;
+targets from `accountMenuTargets(profileTo)`) and `AccountControls` now
+renders Light/Dark, `AccountMenu`, Logout (`drawer` prop: plain links inside
+the phone sheet). `AppHeader` derives `profileTo = /${role}/profile` for
+every signed-in role. `JudgeDashboard` uses `AccountMenu` directly. See
+[06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md).
+`components/account/AccountRequestsPanel.jsx` (+ `account.css`) — the
+coach's approvals list for no-email players; documented there too.
 
 `@/components/shell`: `AppHeader` (wordmark, RoleIdent, competition
 "segment", TabNav from `lg`, AccountControls from `md`, a menu button

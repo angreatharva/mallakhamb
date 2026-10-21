@@ -155,7 +155,7 @@ etc.) before use.
 2. **Route count**: 182 `router.*` definitions across `src/routes/*.js` (independently re-confirmed via `grep -rEo "router\.(get|post|put|patch|delete)\(" src/routes/*.js | wc -l` → 182) + 2 inline in `routes/index.js` (`/health-legacy`, `/csrf-token`) = **184 total routes**. `src/docs/openapi.js` documents **182** operations — the gap is exactly `docs.routes.js`'s own 2 self-referential endpoints, correctly excluded by design. Reported in [05-API-SURFACE.md](05-API-SURFACE.md).
 3. **Env vars**: every `process.env.` reference found by the ops-docs-tests-envvars agent's grep pass is listed in [12-CONFIG-AND-ENV.md](12-CONFIG-AND-ENV.md) (app-level, routed through config-manager) or [13-SCRIPTS-AND-OPS.md](13-SCRIPTS-AND-OPS.md) (scripts-only, read directly). None missing.
 4. **npm scripts**: all 40 scripts in `package.json` appear in [13-SCRIPTS-AND-OPS.md](13-SCRIPTS-AND-OPS.md). ✓
-5. **Migrations**: all 11 numbered migrations (10 at initial build + 011 added in the 2026-09-23 follow-up pass) + the template appear in [04-DATA-MODEL.md](04-DATA-MODEL.md)'s migration table. ✓
+5. **Migrations**: all 12 numbered migrations (10 at initial build + 011 added in the 2026-09-23 follow-up pass + 012 on 2026-10-19) + the template appear in [04-DATA-MODEL.md](04-DATA-MODEL.md)'s migration table. ✓
 6. **Internal links**: every `[text](file.md)`/`[text](file.md#anchor)` link across the doc set points at a file that exists in `Server/MEMORY/`. Spot-checked during authoring; no dangling links to a doc that wasn't ultimately written.
 7. **Cold-start self-test**: see the three worked traces at the bottom of [00-INDEX.md](00-INDEX.md).
 
@@ -173,6 +173,21 @@ Summary:
 - `waitForInFlightRequests()`'s actual drain behavior during shutdown (modules/infrastructure, GOTCHAS)
 - MongoDB driver auto-reconnect sufficiency post-initial-connect (modules/infrastructure)
 - Whether `validateTeamForCompetition`/`getTeamRoster` have callers outside `team.controller.js` (modules/team)
+
+## Update pass 2026-10-21 (`ff89ca5`)
+
+Commits `b996c2c..ff89ca5` touching `Server/` — player identity, the account
+page, coach approvals, coach-registered players, the walk-in desk, npm audit.
+Every new file is in scope and covered:
+
+- [x] src/utils/data/player-login-id.util.js, src/utils/security/data-encryption.util.js → modules/accounts, modules/utils, modules/auth
+- [x] src/services/auth/{account,account-request}.service.js, src/controllers/account-request.controller.js, src/models/AccountRequest.js, src/repositories/account-request.repository.js, src/validators/account.validator.js → modules/accounts, 04-DATA-MODEL, 05-API-SURFACE, modules/{repositories,validators}
+- [x] src/services/user/coach-player.service.js, src/controllers/coach-player.controller.js → modules/accounts, modules/user-services, 05-API-SURFACE
+- [x] src/migrations/012_player_login_ids.js → 04-DATA-MODEL, modules/migrations, modules/accounts
+- [x] src/services/walk-in/*, src/utils/walk-in/*, src/controllers/walk-in.controller.js, src/routes/walk-in.routes.js, src/validators/walk-in.validator.js, src/models/WalkInRegistration.js, src/repositories/walk-in-registration.repository.js, scripts/walkInFormFixture.js → modules/walk-in-desk, 04-DATA-MODEL, 05-API-SURFACE, 13-SCRIPTS-AND-OPS
+- [x] changed: Player/Coach/Competition/Transaction/AuditLog models, auth/otp/token/authentication services, coach/super-admin/player/judge-account services, player repository, common/auth/player validators, config-manager (`DATA_ENCRYPTION_KEY`, `OCR_*`), cop-rules (age eligibility), notification template → 03/04/06/09/12, modules/{auth,email,user-services,repositories,validators}
+- [x] tests: 16 suites added (75 → 91) → 14-TESTING, modules/accounts
+- Route count re-checked: `npm run docs:openapi:check` 221/221.
 
 ## Re-verification 2026-10-11 (`cd66189`)
 

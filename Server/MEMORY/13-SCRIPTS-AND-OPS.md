@@ -5,8 +5,8 @@ covers:
   - package.json
 read_when: "running or changing a seed/ops/perf script, or checking what an npm script actually does before running it"
 depends_on: [01-ARCHITECTURE, 04-DATA-MODEL]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 All 40 npm scripts map cleanly to an existing file (`scripts/*.js`,
@@ -37,6 +37,7 @@ entries" callout claiming broken migrate aliases and phantom scripts is
 | `seedAccounts.js` | `seed` | Replays a capture straight into Mongo via the models (bypasses the service layer); dry-run by default | DB-direct when `--commit` |
 | `seedApi.js` | `seed:api` | The whole seed (admin/competitions/coaches/players/judges/squads) as real HTTP requests | Live HTTP, dozens of accounts/entries |
 | `seedScores.js` | `seed:scores`, `seed:scores:one` | Judges a whole meet (or all 12 with `--all`) over HTTP — posts slips, resolves tolerance mismatches, locks sheets — minutes instead of the ~7-hour Playwright equivalent | Live HTTP, hundreds of Score docs per meet |
+| `walkInFormFixture.js` | — (`node scripts/walkInFormFixture.js <dir> [--pdf]`) | Writes the walk-in form's page layouts (`layout.json`) and optionally the PDF, for the OCR sidecar's self-test. Reads no database | Local files only |
 | `payWithDiscount.js` | `pay:discount` | Final-submits + pays every/some seeded team via the real 100%-off discount endpoint (no fake signature) | Live HTTP; see [09-PAYMENTS.md](09-PAYMENTS.md) |
 | `setupAll.js` | `setup`, `setup:list`, `setup:dry` | Orchestrates the full seed chain end to end (mixes DB-direct/browser/API steps); `--from/--to/--only/--drop` | Can drop the whole DB |
 | `setupApi.js` | `setup:api`, `setup:api:list` | Same chain, every step after bootstrap goes over HTTP (no browser) | Live HTTP throughout |
@@ -114,6 +115,9 @@ rather than through `config-manager.js`:
 | `PERF_MONGODB_URI`, `PERF_BASE_URL`/`PERF_API_URL` | `scripts/perf/**` | Throwaway perf DB/API endpoints |
 | `OPENAPI_SERVER_URL` | `generateOpenApi.js` | Server URL embedded in the generated spec |
 | `DISCOUNT_CODE` | `payWithDiscount.js`, `setupUi.js` | Mirrors the config-manager var, read directly for the seed chain |
+
+Since 2026-10 a player registration under 18 needs `guardianConsent: true`;
+`seedApi.js` and `perf/testApi.js` send it (the seed roster is all minors).
 
 ## Change guidance
 

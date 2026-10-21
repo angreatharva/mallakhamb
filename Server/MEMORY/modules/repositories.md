@@ -4,8 +4,8 @@ covers:
   - src/repositories/**
 read_when: "writing or changing any DB query, or figuring out which repository method already does what you need"
 depends_on: [04-DATA-MODEL]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Purpose
@@ -129,7 +129,13 @@ their own accounts separate from panel seats.
 competition, `$pull`s it from every admin's `competitions[]`),
 `CoachRepository`/`PlayerRepository` (both: `findByEmail`, `findActive`,
 `isEmailTaken`, `findPaginated`; Player adds `findByTeam`,
-`findByAgeGroupAndGender`, `updateTeam`), `AuditLogRepository`
+`findByAgeGroupAndGender`, `updateTeam`, and since 2026-10 `findByLoginId`,
+`findByGuardianEmail`, plus a `create` override that retries up to 5× on a
+concurrent Player-ID collision. Player's `findByEmail`/`isEmailTaken` match
+**own addresses only** (`OWN_EMAIL_CLAUSE`) — a guardian's address finds
+nobody), `AccountRequestRepository` (`findOpen(user, userType, kind)`,
+`closeOpen(...)` — see [modules/accounts.md](accounts.md)),
+`WalkInRegistrationRepository` (see [modules/walk-in-desk.md](walk-in-desk.md)), `AuditLogRepository`
 (`logAction`, `getAuditLogs` — **bypasses `BaseRepository.find()` entirely**,
 queries `this.model` directly with its own pagination, so it doesn't get
 the (irrelevant here) soft-delete filter but also skips the base class's

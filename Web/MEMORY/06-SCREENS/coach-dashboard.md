@@ -4,8 +4,8 @@ covers:
   - src/pages/coach/CoachDashboard.jsx
 read_when: "changing the coach's team/roster management screen"
 depends_on: [SHARED-CONTRACTS, 07-COMPONENTS, 04-STATE-MANAGEMENT]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is
@@ -91,3 +91,16 @@ Re-fetched whenever `currentCompetition._id` changes (`:173-177`, from
   dashboard payload — in dev only (production builds set `drop_console`).
 - Line numbers (`:NNN`) above predate the 2026-10 restyle and are
   approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- **"Register player"** opens `RegisterPlayerDialog` — a player with no email,
+  straight onto the coach's team, signing in with a Player ID and the coach's
+  default player password. It stays available after the squad is submitted
+  (an account, not a squad place). Duplicate name + DOB → the coach picks the
+  existing account or registers anyway.
+- **`AccountRequestsPanel`** (resets / email additions from the coach's
+  no-email players) shows only when there are requests; it follows the team,
+  not the meet.
+- Every coach page sits behind `CoachPlayerPasswordGate` (default player
+  password first). See [account-and-player-identity.md](account-and-player-identity.md).

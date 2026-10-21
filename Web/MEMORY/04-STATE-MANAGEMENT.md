@@ -7,8 +7,8 @@ covers:
   - src/contexts/CompetitionContext.jsx
 read_when: "adding shared state, touching competition selection/auto-select, or debugging a session/competition mismatch"
 depends_on: [10-AUTH-AND-SECURITY, 08-API-INTEGRATION]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## No Redux/Zustand — React Context is the entire state-management story
@@ -149,6 +149,14 @@ assignment, via `judgeAPI.setCompetition`, documented in
 [08-API-INTEGRATION.md](08-API-INTEGRATION.md)) — if you're debugging
 why a judge's `CompetitionContext` looks empty, that's expected, not
 broken.
+
+### Player choosers (2026-10)
+
+`fetchAssignedCompetitions` for a player now returns the meets their **team**
+is entered in, so `PlayerTeamSelection` calls it right after a join; the level
+and competition screens route a teamless player to the team step first
+(`utils/auth/playerTeam.js#playerHasTeam`). See
+[03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md).
 
 ### Logout / role-switch cleanup
 

@@ -4,8 +4,8 @@ covers:
   - src/services/user/**
 read_when: "changing admin/coach/super-admin/judge/player user-facing behavior — team management, registration, payment, judge seating, or admin dashboards"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, 06-AUTH-AND-SECURITY]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Purpose
@@ -46,6 +46,7 @@ team.
 | `src/services/user/judge.service.js` | Judge-facing service. `loginJudge` counts `metrics.business.login('judge', success / failure / locked)` and now also selects `apparatusByGender` on the competitions it returns | — | ⚠️ pending (covered with scoring engine) |
 | `src/services/user/judge-account.service.js` | Judge account mgmt | — | ⚠️ pending (covered with scoring engine) |
 | `src/services/user/judge-panel.service.js` | Panel seating. `assertNotAlreadyOnPanel(..., judgeType)` ignores a clash when the two seats `maySeatTogether` (Scorer + Time Keeper, `config/judge-seats.js`) — the one pair one person may hold | — | ⚠️ pending (covered with scoring engine) |
+| `src/services/user/coach-player.service.js` | A coach registering no-email players + the coach's encrypted default player password (2026-10) | — | Full detail: [modules/accounts.md](accounts.md) §4 |
 | `src/services/user/user.service.js` | Shared base class | — | ⚠️ pending parallel research pass |
 | `src/services/user/README.md` | Existing doc | — | ⚠️ pending reconciliation pass |
 
@@ -183,7 +184,11 @@ Plain class (no `UserService` inheritance).
 - **`maxTeamSize` is required on create** (`isValidTeamSize`: 4 or 6, else `ValidationError` "Max team size must be 4 or 6 players per age group") and validated on update only when the payload carries it. Both `createCompetition` and `updateCompetition` run the body through `competition-apparatus.util.applyApparatusByGender`, which stores `apparatusByGender` and **derives** `apparatusConfig` (the union of both genders) from it.
 - **The squad cap applies to superadmin adds too**: `createPlayerPaymentOrder` and `addPlayer` check `hasRoomInSquad` before charging or writing, so an override can't overfill a squad.
 - **Superadmin's per-athlete add bypasses the registration WINDOW, not the PAYMENT** (`createPlayerPaymentOrder`, `:709-717`) — a coach is blocked outside the window; a superadmin override lifts the block but the athlete still pays (including any late fee).
+- **Coaches cannot be deactivated** (2026-10, `06b6b0d`): `updateCoachStatus` throws `ValidationError` unless `isActive` is `true`. A coach-registered player's account requests are that coach's alone, so a deactivated coach would strand them.
+- **`ageCutoffYear`** on create/update: blank clears it; otherwise an integer 2000–2100 that must be the start-date year or the year before (COP 1.8.3.2).
+- **`addPlayer` takes the three player email types** (`emailType` self/guardian/none + `guardian`), checks uniqueness for `self` only, and mails the Player ID to the email or, with none, to the team's coach. See [modules/accounts.md](accounts.md) §5.
 - **`addPlayer` is the only method across all 5 large files that opens an explicit Mongo transaction** (`:979-1061`) — Player creation, the `registeredTeams.players` push, and the Transaction record commit or abort together.
+- ⚠️ That transaction is weaker than it looks: `PlayerRepository.create` (like `BaseRepository.create`) **takes no options**, so the `{ session }` passed for the Player insert has always been ignored — the Player is written outside the transaction (noted in `player.repository.js`, 2026-10).
 - Errors: `NotFoundError`, `ValidationError` (invalid playerFee, fee-window ordering, missing payment payload, signature invalid, amount mismatch, invalid age group, duplicate player email).
 
 ### super-admin.service.js — change guidance
@@ -211,11 +216,11 @@ authenticationService=null, competitionRepository=null)`.
 | Method | Lines | Contract | Collaborators |
 |---|---|---|---|
 | `registerPlayer(payload)` | 38-43 | → `authenticationService.register(payload,'player')`; throws `ValidationError` if no auth service configured | authenticationService |
-| `loginPlayer(email,password)` | 45-50 | → `authenticationService.login(...,'player')` | authenticationService |
+| `loginPlayer(identifier,password)` | 45-50 | → `authenticationService.login(...,'player')`; `identifier` is the own email **or the Player ID** | authenticationService |
 | `getPlayerProfile(playerId)` | 52-95 | Calls own `getProfile()`, then if `ageGroup` is null, backfills it by scanning `competitionRepository.find({'registeredTeams.players.player':playerId,...})` — swallows lookup errors (logs, continues without ageGroup) | competitionRepository |
 | `getPlayerTeam(playerId, competitionId)` | 97-103 | `repository.findById(populate:'team')` | repository |
 | `getAvailableTeams()` | 105-114 | `teamRepository.find({isActive:true}, {sort:createdAt desc, limit:50, populate:'coach'})`. **Takes zero parameters** — see GOTCHAS.md, the controller's `competitionId` argument is silently discarded | teamRepository |
-| `joinTeam(playerId, teamId, competitionId=null)` | 123-200 | Validates player & team exist, sets `player.team`, optionally mints a new token (non-fatal if it fails) | teamRepository, authenticationService |
+| `joinTeam(playerId, teamId, competitionId=null)` | 123-200 | Validates player & team exist, sets `player.team`, optionally mints a new token (non-fatal if it fails). For an `emailType:'none'` player on a **real** team change, mails the Player ID to the new team's coach (`otpService.notifyCoachOfPlayerId`) | teamRepository, authenticationService |
 | `getProfile(playerId)` **(override)** | 208-235 | Populates `team`, strips sensitive fields — **does not call `super.getProfile()`, so `UserService`'s cache-wrap never applies to players** in the normal path | repository |
 | `assignToTeam(playerId, teamId)` | 245-316 | Refuses if already on a team; enforces ageGroup/gender match against the team | teamRepository |
 | `removeFromTeam(playerId)` | 325-365 | Refuses if not on a team | repository |

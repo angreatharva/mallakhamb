@@ -5,8 +5,8 @@ covers:
   - src/config/payment.config.js
 read_when: "adding a new env var, changing a default, or debugging why a config value isn't what you expect"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 All values loaded once via `config.load()` at process start
@@ -57,6 +57,7 @@ this doc — names only.**
 | `OTP_LENGTH` | `6` | Validated 4-8 |
 | `OTP_EXPIRY_MINUTES` | `10` | |
 | `OTP_MAX_ATTEMPTS` | `5` | Wrong guesses against one reset code before it is discarded (per account, not per IP) |
+| `DATA_ENCRYPTION_KEY` | `''` | Key for reversible encryption (today only a coach's default player password, `utils/security/data-encryption.util.js`). Unset → derived from `JWT_SECRET` by HKDF, so no deploy needs it. Changing it (or `JWT_SECRET` while it's unset) makes saved defaults unreadable; coaches are asked to set theirs again |
 | `MAX_LOGIN_ATTEMPTS` | `5` | Lockout threshold |
 | `LOCKOUT_DURATION_MINUTES` | `15` | |
 | `CSRF_ENABLED` | `true` | Must stay true in production — see [06-AUTH-AND-SECURITY.md](06-AUTH-AND-SECURITY.md) |

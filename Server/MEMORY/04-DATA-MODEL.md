@@ -7,8 +7,8 @@ covers:
   - src/infrastructure/database/index-manager.js
 read_when: "adding/changing a schema field, an index, or writing a migration"
 depends_on: [03-DOMAIN-MODEL, modules/repositories, modules/infrastructure]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 For entity meaning/relationships/lifecycle, see
@@ -48,7 +48,8 @@ invariant 4). Methods: `comparePassword`, `hasAccessToCompetition`,
 
 ### AuditLog (`src/models/AuditLog.js`)
 `adminId` (indexed, **no `ref`** — see GOTCHAS.md populate risk),
-`adminType` enum, `action` (indexed), `resource`, `resourceId` (indexed),
+`adminType` enum `[admin,superadmin,coach]` (`coach` since 2026-10: a coach
+approving a no-email player's reset/email, or registering a player), `action` (indexed), `resource`, `resourceId` (indexed),
 `details` Mixed, `ipAddress`, `userAgent`. `timestamps: {createdAt:true,
 updatedAt:false}`.
 
@@ -59,6 +60,11 @@ instead), `email` (unique), `phone` **not required** (client sends it, but
 was previously undeclared and silently dropped by strict mode), `password`/
 `loginAttempts`/`lockUntil` (select:false), `team` ref Team, `isActive`.
 Index `{team:1}` (built by migration 001, now also schema-declared).
+`playerDefaultPassword` (select:false, **AES-256-GCM encrypted, not hashed** —
+the coach views it to hand out; `utils/security/data-encryption.util.js`) +
+`playerDefaultPasswordSetAt`: the starting password of every player this
+coach registers. Stripped by `toJSON` and by `SENSITIVE_USER_FIELDS`. See
+[modules/accounts.md](modules/accounts.md).
 
 ### Competition (`src/models/Competition.js`) — the aggregate root
 `name`, `level` enum `COMPETITION_LEVELS`
@@ -160,7 +166,21 @@ wrong half the time)/`lotsDrawnByName`; `updatedBy`(un-ref'd)/
 clicks race on `E11000`, the service retries via upsert.
 
 ### Player (`src/models/Player.js`)
-`firstName`/`lastName` required, `email` (unique), `phone` not required
+`firstName`/`lastName` required. **Identity (2026-10, migration 012)**:
+`loginId` — the Player ID `firstname.lastname.ddmmyy[.N]`, assigned by a
+`pre('validate')` hook on every create path and **never recomputed**;
+`emailType` enum `[self,guardian,none]` default `self` (`.lean()` reads skip
+the default, so read it through `emailTypeOf()`); `email` required unless
+`emailType:'none'` (the hook unsets it then) and **unique only as a `self`
+address** (partial index `player_self_email_unique`; siblings share a guardian
+address); `guardian {name,relation,phone}` (required at the API boundary for
+guardian/none, not in the schema); `registeredByCoach` ref Coach (legacy
+coach-registered players are recognised by `guardian.relation === 'Coach'` —
+`isCoachRegistered`); `consentAt` (guardian consent for under-18s). Indexes:
+`player_login_id_unique` (partial on string), `player_self_email_unique`,
+`{email,emailType}`. Statics `Player.EMAIL_TYPES` and the two index names.
+Full semantics: [modules/accounts.md](modules/accounts.md).
+`phone` not required
 (same historical-drop pattern as Coach), `dateOfBirth` required,
 `password`/`loginAttempts`/`lockUntil` (select:false), `team` ref Team,
 `ageGroup`/`gender` (account-level defaults — **the competition entry's
@@ -236,10 +256,38 @@ GOTCHAS.md, ignore it.
 optional depending on `source`/`type`; `source` enum `[coach,superadmin]`;
 `type` enum `[team_submission,player_add,other]`; `amount`; `paymentStatus`
 enum `[pending,completed,failed]` default `completed`; `description`;
-`metadata` (plain object). Indexes: `{competition,createdAt:-1}`,
+`metadata` (plain object); `recordedBy` ref Admin — the Admin/Super Admin
+who took a walk-in-desk payment on the coach's behalf (`source` stays
+`coach`). Indexes: `{competition,createdAt:-1}`,
 `{competition,source,type}` (neither unique) · `{'metadata.razorpay_payment_id':1}`
 **unique, sparse** (added 2026-09-23, migration 011 — webhook-redelivery
 idempotency, see [09-PAYMENTS.md](09-PAYMENTS.md)).
+
+### AccountRequest (`src/models/AccountRequest.js`) — 2026-10
+A change to an account that can't finish in one request. `kind`
+`[email-change,password-reset]`, `userType` `[player,coach,admin,judge]`,
+`user`, `status` `[awaiting-code,awaiting-coach,approved,done,rejected,expired]`
+(open = the first three, `AccountRequest.OPEN_STATUSES`), `newEmail` +
+`newEmailType` (email-change), `codeHash` (sha256, select:false),
+`codeExpiresAt`, `attempts`, `verifiedAt`, `decidedBy {user,userType:coach|superadmin}`,
+`decidedAt`, `expiresAt` required. **The approving coach is NOT stored** —
+looked up from the player's team at decision time. Indexes
+`{user,userType,kind,status}`, `{status,createdAt:-1}`. See
+[modules/accounts.md](modules/accounts.md).
+
+### WalkInRegistration (`src/models/WalkInRegistration.js`) — 2026-10
+One paper form at the walk-in desk: `competition`/`coach`/`team`/`createdBy`
+(Admin), `status` `[draft,submitted,paid,cancelled]`, `guardianConsent`,
+`rows[]` (names, `dateOfBirth` as a `YYYY-MM-DD` **string**, `dobRaw`, gender,
+`writtenAgeGroup`/`ageGroup`, apparatus, OCR `confidence`, `matchChoice`/
+`matchPlayer`, and progress fields `player`/`loginId`/`entered` that make
+submit resumable), `scans[]`, `submitLockedAt`. Photos are never stored. See
+[modules/walk-in-desk.md](modules/walk-in-desk.md).
+
+### Competition additions (2026-10)
+`ageCutoffYear` (Number 2000–2100, optional; the Super Admin service only
+accepts the start year or the year before) — the year whose 31 Dec ages are
+measured on. Read only through `cop-rules#ageCutoffYear`.
 
 ## Repositories — see [modules/repositories.md](modules/repositories.md) for the full method-by-method map
 
@@ -281,6 +329,7 @@ mechanics (strict gapless `###_` ordering, batch rollback on failure).
 | 009 | `009_drop_unused_registration_index.js` | Drops the costly, unused `registeredTeams.paymentStatus` multikey index that 001 built | Yes — reversible, `down()` rebuilds it |
 | 010 | `010_panel_apparatus_indexes.js` | Builds apparatus-keyed unique Judge indexes (one panel **per apparatus**), then drops the old narrower pair (which `index-manager` would never auto-drop since it never removes undeclared indexes). Explicitly NOT a data migration — existing seats keep `apparatus:null`, matched by every apparatus query already | Builds-before-drops keeps uniqueness enforced throughout — safe to rerun. `down()` **can fail** with a duplicate-key error if a meet is already seated per-apparatus — intentional |
 | 011 | `011_transaction_webhook_idempotency.js` | Builds a unique+sparse index on `Transaction.metadata.razorpay_payment_id` so a redelivered Razorpay webhook can't insert a duplicate Transaction row (see [09-PAYMENTS.md](09-PAYMENTS.md)). Profiles for pre-existing duplicates first, same shape as 003 | Idempotent once applied. Unlike 003, duplicates found ARE auto-cleaned (keeping the earliest per payment id) behind `ALLOW_LOSSY_TRANSACTION_DEDUP=true` — safe because two rows sharing a payment id are provably the same event twice, not divergent data. `down()` just drops the index |
+| 012 | `012_player_login_ids.js` | **Data + index migration.** Marks every existing player `emailType:'self'`; backfills `loginId` oldest-account-first (so the first holder keeps the plain ID); drops the old whole-collection unique `email_1` and builds `player_login_id_unique` + `player_self_email_unique` + `{email,emailType}`. The index manager can't do the swap itself — same key, different options reads as a conflict and the old index stays, refusing a second sibling | Idempotent (fills only missing fields). `down()` **refuses** while any address is shared by several players; keeps the Player IDs |
 
 ## How to add a migration
 

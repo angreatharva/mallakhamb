@@ -4,8 +4,8 @@ covers:
   - Web/**
 read_when: "always — the entry point for any change in Web/"
 depends_on: []
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 # MEMORY — router
@@ -20,7 +20,10 @@ and why `document.cookie` can't be used to read the CSRF token). Built
 against commit `f0bdc1d` (2026-09-23); brought up to date against `06891b5`
 (2026-10-18) — the Time Keeper screen, the Scorer/Time Keeper role popup,
 per-gender apparatus and the squad cap, sign-out-on-back, the lucky-draw
-panel, the socket-URL fix, and local Home photos.
+panel, the socket-URL fix, and local Home photos. Refreshed again against
+`ff89ca5` (2026-10-21): the account menu and profile page for every role,
+Player ID sign-in and the three player registration paths, Level → Team →
+Competition for players, coach-registered players, and the walk-in desk.
 
 **Line numbers.** Many docs (06-SCREENS especially) cite `file:NNN` lines
 from before the 2026-10 restyle; where a doc says so, treat them as
@@ -30,7 +33,7 @@ approximate and search by the named function or constant.
 
 1. **[SHARED-CONTRACTS.md](SHARED-CONTRACTS.md)** — the single most
    important doc in this tree. This is a monorepo with two independent
-   implementations of the same scoring/fee/lock rules; only 4 duplicated
+   implementations of the same scoring/fee/lock rules; only 5 duplicated
    pairs have an automated drift test. Read this before
    touching anything that computes a number that gets saved.
 2. **[01-ARCHITECTURE.md](01-ARCHITECTURE.md)** — the app shell, and a
@@ -56,6 +59,8 @@ approximate and search by the named function or constant.
 | `src/components/` (everything else) | Shared, non-design-system, non-responsive components — [07-COMPONENTS.md](07-COMPONENTS.md) |
 | `src/validators/` | zod schemas (mostly unused — see the doc) — [13-FORMS-AND-VALIDATION.md](13-FORMS-AND-VALIDATION.md) |
 | `src/pages/admin/`, `src/pages/judge/`, `src/pages/coach/`, `src/pages/player/`, `src/pages/superadmin/`, `src/pages/unified/`, `src/pages/public/` | Individual screens, one doc per file >15KB — [06-SCREENS/](06-SCREENS/) |
+| `src/pages/shared/` (account, reset), `src/pages/player/registration/`, `src/components/account/` | Account page, Player ID sign-in/reset, registration paths, request approvals — [06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md) |
+| `src/pages/desk/` | Walk-in desk (Admin/Super Admin) — [06-SCREENS/walk-in-desk.md](06-SCREENS/walk-in-desk.md) |
 | `src/setupTests.js`, `**/*.test.{js,jsx}` | vitest unit tests — [14-TESTING.md](14-TESTING.md) |
 | `e2e/`, `playwright.config.js` | Dual-purpose Playwright test **and seeding** harness — writes to a real DB, read the safety notes — [15-E2E-AND-SEEDING.md](15-E2E-AND-SEEDING.md) |
 | `vite.config.js`, `postcss.config.js`, `eslint.config.js`, `package.json` | Build/lint/test config, no CI pipeline exists — [16-BUILD-AND-CONFIG.md](16-BUILD-AND-CONFIG.md), [02-CONVENTIONS.md](02-CONVENTIONS.md) |
@@ -71,6 +76,10 @@ approximate and search by the named function or constant.
 | Change the Time Keeper / stopwatch, or how a time reaches the Scorer | [06-SCREENS/time-keeper-scoring.md](06-SCREENS/time-keeper-scoring.md), [06-SCREENS/scorer-scoring.md](06-SCREENS/scorer-scoring.md), [09-REALTIME.md](09-REALTIME.md) | `src/pages/judge/{TimeKeeperScoring,timeKeeper,StopwatchFace}.js*`, `ScorerScoring.jsx` (`applyRecordedTime`) |
 | Change the Scorer / Time Keeper role choice for a person holding both | [06-SCREENS/judge-dashboard.md](06-SCREENS/judge-dashboard.md), [06-SCREENS/judge-scoring.md](06-SCREENS/judge-scoring.md) (dispatcher) | `JudgeDashboard.jsx` (`RECORDER_ROLES`, role popup), `useJudgePanelData.js` (`seatTypesFor`) |
 | Change how a tie is shown or a lucky draw is recorded | [06-SCREENS/admin-scores.md](06-SCREENS/admin-scores.md), [07-COMPONENTS.md](07-COMPONENTS.md#scores), [SHARED-CONTRACTS.md](SHARED-CONTRACTS.md#tie-break-math-is-deliberately-not-duplicated-on-the-client) | `src/components/scores/{LuckyDrawPanel,PlayerRankingBoard}.jsx`; the rule itself is `Server/src/utils/scoring/tie-breaker.util.js` |
+| Change the account menu or a role's profile page | [06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md) | `src/components/shell/Shell.jsx` (`AccountMenu`), `src/pages/shared/AccountProfile.jsx`, `src/pages/shared/account/AccountSections.jsx` |
+| Change player sign-in by Player ID, registration paths, or the coach-code reset | [06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md), [10-AUTH-AND-SECURITY.md](10-AUTH-AND-SECURITY.md) | `UnifiedLogin.jsx`, `UnifiedRegister.jsx`, `src/pages/player/registration/*`, `src/pages/shared/{ForgotPassword,ResetPassword,CoachCodeReset}.jsx`; server rules in `Server/MEMORY/modules/accounts.md` |
+| Change a coach registering no-email players | [06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md) | `src/pages/coach/{RegisterPlayerDialog,PlayerDefaultPasswordSection,CoachPlayerPasswordGate}.jsx` |
+| Change the walk-in desk | [06-SCREENS/walk-in-desk.md](06-SCREENS/walk-in-desk.md) | `src/pages/desk/*`, `src/services/user/desk.api.js`; age rule in `src/utils/competition/ageEligibility.js` **and** `Server/src/config/cop-rules.js` |
 | Change what Back does on a signed-in screen | [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#sign-out-on-back) | `src/hooks/useSignOutOnBack.js`, `src/components/auth/SignOutOnBackDialog.jsx`, `App.jsx` |
 | Add a socket event | `CHANGE-RECIPES.md#add-socket-event`, [09-REALTIME.md](09-REALTIME.md) | `Server/src/socket/events/event-types.js`, the relevant judge/admin screen |
 | Add a form | `CHANGE-RECIPES.md#add-form`, [13-FORMS-AND-VALIDATION.md](13-FORMS-AND-VALIDATION.md) | the relevant screen; check `form.validator.js` first, most forms don't use it |
@@ -129,7 +138,8 @@ coach-payment,coach-create-team,player-dashboard,player-team-selection,
 judge-shared,judge-scoring,time-keeper-scoring,judge-panel-review,judge-panel-data-hook,
 judge-team-players,judge-dashboard,judge-sequence,judge-profile,
 superadmin-management,superadmin-add-player-payment,unified-login,
-unified-register,unified-dashboard,public-home-and-scores}` ·
+unified-register,unified-dashboard,public-home-and-scores,
+account-and-player-identity,walk-in-desk}` ·
 `_COVERAGE`.
 
 No `06-SCREENS` doc exists for `ForgotPassword.jsx`/`ResetPassword.jsx`/

@@ -5,8 +5,8 @@ covers:
   - playwright.config.js
 read_when: "running ANY e2e/seed/audit npm script, or before pointing E2E_BASE_URL/E2E_API_URL at anything other than localhost"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Read this before running anything in `e2e/`
@@ -136,7 +136,7 @@ the JSON is normally the right place, not the reader.
 
 ## Full support-module map
 
-All 22 files under `e2e/support/`, one line each:
+All 25 files under `e2e/support/`, one line each:
 
 | File | Purpose |
 |---|---|
@@ -156,7 +156,10 @@ All 22 files under `e2e/support/`, one line each:
 | `panel-plan.js` | Reads the committed `panel-plan.json`, with heavy validation |
 | `payment-flows.js` | Drives the 100%-off discount-code payment path (not a real Razorpay charge). Accepts the post-submit headings `CoachPayment` shows since 2026-10-13 ("Team Submitted Successfully!" for a 100%-off submit, not "Team Already Submitted") |
 | `people.js` | Pure convention functions: email/password derivation, roster validation, `ONLY=` filter |
-| `player-flows.js` | Player registration/sign-in/join-team helpers |
+| `player-flows.js` | Player registration/sign-in/join-team helpers. Since 2026-10: picks "my own email" on the first registration screen (`?with=own`), ticks guardian consent when shown, passes the "Your Player ID" screen, and signs in through `#player-identifier` |
+| `audit-suite.js` | The responsive/appearance audit sweep as a function, so the phone/desktop and tablet passes share code (`ROLE=`, `WIDTHS=`) — see "The responsive & appearance audit harness" |
+| `contrast.js` | The contrast measurement shared by `look-specimen.spec.js` and `contrast-audit.spec.js` |
+| `identity-roster.js` | 2026-10: three players, one per registration path (none / guardian / own), all on SGAM-A (coach Rajesh) at district level — the fixture for checking Player IDs, the shared guardian email and coach-approved resets end to end against a throw-away local DB |
 | `roster-generated.js` | Deterministically generates ~108 extra athlete fixtures for 9 of the 12 teams |
 | `roster.js` | Static 70-athlete roster + merges `roster-generated.js`; validates age bands, apparatus, email collisions against `coach-roster.js` |
 | `scoring-flows.js` | Judge category picker, slip fill/submit, Senior Judge override, Scorer sheet fill — the largest support file |

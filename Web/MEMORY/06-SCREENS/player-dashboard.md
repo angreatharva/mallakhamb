@@ -4,8 +4,8 @@ covers:
   - src/pages/player/PlayerDashboard.jsx
 read_when: "changing the player's landing screen or competition-selection modal"
 depends_on: [08-API-INTEGRATION, 07-COMPONENTS, 04-STATE-MANAGEMENT]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is
@@ -75,3 +75,10 @@ fetch:
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- A team join refused by the end-date lock (423) now toasts
+  `error.competitionLockedMessage` before falling back to `data.message`.
+- A player with no team is routed to `/player/select-team` by the choosers
+  before they ever reach this dashboard (Level → Team → Competition).

@@ -12,8 +12,8 @@ covers:
   - src/components/auth/AuthLoadingSpinner.jsx
 read_when: "changing login/logout/session behavior, route guarding, cross-tab sync, or the password-reset screens"
 depends_on: [04-STATE-MANAGEMENT, 08-API-INTEGRATION]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Session model in one paragraph
@@ -382,7 +382,26 @@ that role's login, or `/` with no role), and `withPortal(path, portal)` (keeps
   by `judge.api.js`'s in-file comment and the progress log, not
   independently re-audited module-by-module.
 
-## Since the last pass (2026-10-18)
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- **Players sign in with their own email or a Player ID.** `UnifiedLogin`
+  uses `playerLoginSchema` (field `identifier`); the reset screens take
+  "Email or Player ID" for players (`resetPortal.js#accountFieldFor`) and send
+  `identifier`. A no-email player's reset goes through their coach and ends on
+  `/reset-password/coach` (`CoachCodeReset`). See
+  [06-SCREENS/account-and-player-identity.md](06-SCREENS/account-and-player-identity.md).
+- **Changing the password on the account page returns a new token** — the
+  server ends every other session — and `PasswordSection` calls `login(...)`
+  with it so this tab stays signed in.
+- **Expiry handler** (`AuthProvider`) reads `e.detail.userType` (it read
+  `role`, which the event never carried) and now calls `setLoading(false)`, so
+  an expiry raised by the bootstrap's own `/auth/me` no longer leaves the
+  login page behind the full-screen loader. Pairs with the api-client fix that
+  rejects queued requests when a refresh fails (08-API-INTEGRATION).
+- Logout's `sessionStorage.clear()` also clears the coach's
+  default-password gate flag (`coach_player_password_ready`).
+
+## Since the pass before (2026-10-18)
 
 - `ForgotPassword`, `ResetPassword`, `NotFound` and `AuthLoadingSpinner` were
   restyled onto the shared auth shell (`AuthLayout` / `AuthHeader`, look

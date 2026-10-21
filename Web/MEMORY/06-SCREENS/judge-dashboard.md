@@ -5,8 +5,8 @@ covers:
   - src/pages/judge/judgeCategoryOptions.js
 read_when: "changing the judge landing screen, the category picker, or multi-meet switching"
 depends_on: [SHARED-CONTRACTS, 09-REALTIME, 08-API-INTEGRATION]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is
@@ -152,3 +152,9 @@ a mixed legacy/specific seat set before assuming it's a bug.
 - Never default `selectedApparatus` to Pole when empty — treat empty as
   "whatever the athlete is registered for," per the two documented past
   bugs this caused.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- The header carries `AccountMenu` (My profile / Change password / Update
+  email → `/judge/profile`). Only here — not on the scoring screens, so
+  nothing new can take a judge off a slip. See [account-and-player-identity.md](account-and-player-identity.md).

@@ -128,7 +128,19 @@ auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
 - **`DatabaseConnection` has no custom reconnect for a connection that drops post-startup** — the retry/backoff logic only covers the *initial* connect; once connected, a later `disconnected` event is only logged, and reconnection is left entirely to the MongoDB driver's own topology monitoring. `src/infrastructure/database/README.md` overstates this as something the module "tracks."
 - **`getPoolStats()`** reads `mongoose.connection.db.serverConfig?.s?.poolSize`-style paths that are likely version-fragile against the modern driver and probably always resolve to `'N/A'` — the README's own example output shows exactly that.
 
+- **`SuperAdminService.addPlayer`'s Mongo transaction doesn't cover the Player insert.** `PlayerRepository.create`/`BaseRepository.create` take no options, so the `{ session }` it passes is ignored (noted in `player.repository.js`, 2026-10). The walk-in desk avoids transactions entirely for the same reason and makes submit resumable instead.
+
 ## Traps for a future agent (behavior that looks wrong but is deliberate — don't "fix" these)
+
+- **Player identity (2026-10) — read [modules/accounts.md](modules/accounts.md) first.**
+  - `Player.emailType` read off a `.lean()` row is `undefined` for every pre-2026-10 player — use `emailTypeOf()`, which treats missing as `self`.
+  - A player's `email` is unique **only** when `emailType` is `self`. Querying by email without `OWN_EMAIL_CLAUSE` can return a sibling's account via a shared guardian address.
+  - `loginId` is the Player ID. Request bodies already use `playerId` for the Mongo `_id` — don't rename either.
+  - A Player ID is **never recomputed** after a name/DOB correction, on purpose.
+  - Forgot-password for a no-email player returns the same 200 as everyone else and **sends nothing** — the reset waits on their coach. That is not a broken mailer.
+  - **Coaches cannot be deactivated** (`updateCoachStatus` refuses `false`). Don't restore the toggle without deciding who then owns their players' requests.
+  - A coach's `playerDefaultPassword` is encrypted, **not hashed**, on purpose — the coach must be able to read it back. Don't "fix" it to bcrypt.
+- **`PUT /auth/me/password` re-issues the token with `iat` set to the next whole second.** Without it, the new token is refused by the logout check it just triggered.
 
 - **`LOCKED_STATUS = 423`, not 403**, for a competition-lock refusal. Deliberate: the SPA already treats a 403 mentioning a competition as "stale competition context" and bounces the user to competition selection; reusing 403 here would trigger that redirect and effectively log out an admin legitimately *reading* a locked meet.
 - **A missing `endDate` does NOT lock a competition.** Fails open on purpose (defensive-only case for partial seeds/fixtures) — every other access rule (`competition-access.util`) still applies underneath, so "unlocked" here never means "unguarded."

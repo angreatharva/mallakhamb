@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedDashboard.jsx
 read_when: "changing the admin/superadmin dashboard shell, tab system, or competition auto-selection"
 depends_on: [03-ROUTING-AND-NAV, 04-STATE-MANAGEMENT, 06-SCREENS/superadmin-management]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## Scope correction: admin/superadmin only
@@ -126,3 +126,11 @@ in [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md).
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- New tab **`desk` ("Walk-in")** for both admin and superadmin, lazy-loading
+  `pages/desk/WalkInDesk.jsx` — see [walk-in-desk.md](walk-in-desk.md).
+- The Super Admin **"Requests"** tab (no-email players' account requests)
+  existed briefly and was removed in `3e8e269`: those requests are decided by
+  the player's coach.

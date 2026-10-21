@@ -237,6 +237,24 @@ your own machine.
   the progress log section first, never just the numbered finding
   headers.**
 
+## Player identity and accounts (2026-10)
+
+- **A player's sign-in field is `identifier`, not `email`** — own email or
+  Player ID. The reset screens keep the form field named `email` for every
+  portal but send it as `identifier`. A guardian's email signs nobody in.
+- **Players go Level → Team → Competition**, and always choose the meet even
+  when there is only one. Don't "restore" the single-meet auto-pick for
+  players, and don't move team selection back after the competition.
+- **Every coach route is behind `CoachPlayerPasswordGate`.** In tests or new
+  coach routes, mock `coachAPI.playerDefaultPassword.get` or set
+  `sessionStorage.coach_player_password_ready = '1'`, or the page redirects to
+  `/coach/setup-player-password`.
+- **Changing the password on the account page swaps the token.** Any new
+  password form must store the returned token (`login(user, token, role)`),
+  or the tab is signed out by the server's "end other sessions".
+- **The coach's default player password is shown in clear text on purpose.**
+- `superAdminAPI.updateCoachStatus` is gone — `activateCoach` only.
+
 ## Other traps worth knowing
 
 - **`CoachDashboard.jsx` still `console.log`s the whole dashboard payload**

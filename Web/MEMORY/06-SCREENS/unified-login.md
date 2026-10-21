@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedLogin.jsx
 read_when: "changing login for any role, lockout/rate-limit UI, or the judge-specific login path"
 depends_on: [13-FORMS-AND-VALIDATION, 03-ROUTING-AND-NAV, 10-AUTH-AND-SECURITY]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is
@@ -112,3 +112,11 @@ be removed rather than maintained.
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- **Players sign in with their own email or their Player ID.** For
+  `role === 'player'` the schema is `playerLoginSchema` and the field is
+  `#player-identifier` (label "Email or Player ID"); the body sends
+  `identifier`. A guardian's email never signs in. Other roles unchanged.
+  See [account-and-player-identity.md](account-and-player-identity.md).

@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedRegister.jsx
 read_when: "changing registration for player/coach/judge, or the post-registration redirect per role"
 depends_on: [13-FORMS-AND-VALIDATION, 03-ROUTING-AND-NAV]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: ff89ca5
+last_verified: 2026-10-21
 ---
 
 ## What it is
@@ -100,3 +100,16 @@ circumstance.
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-21, `ff89ca5`)
+
+- **Player registration has three paths.** `/player/register` first shows
+  `RegistrationChoice` (my own email / a parent's or guardian's email / no
+  email); the choice is `?with=own|guardian|none` so Back returns to it.
+  Guardian name, relation and phone are required unless `own`; under 18 a
+  guardian-consent tick appears (`#player-reg-guardianConsent`). Rules live in
+  `pages/player/registration/playerRegistration.js`.
+- After registering, a player stops on `PlayerIdScreen` ("Your Player ID",
+  Copy / Download, then Continue) — the redirect waits for it.
+- Rows are full width now (long labels misaligned inputs at half width).
+- Tests: `UnifiedRegister.player.test.jsx`. See [account-and-player-identity.md](account-and-player-identity.md).

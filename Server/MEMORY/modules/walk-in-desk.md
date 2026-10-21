@@ -11,7 +11,7 @@ covers:
   - ../ocr/**
 read_when: "touching the walk-in desk (/api/desk), the printed form, the OCR sidecar, or the COP age rule"
 depends_on: [03-DOMAIN-MODEL, 09-PAYMENTS, modules/user-services]
-verified_against_commit: 34c18db
+verified_against_commit: ff89ca5
 last_verified: 2026-10-21
 ---
 
@@ -23,7 +23,7 @@ payment. Web: `Web/src/pages/desk/*` (dashboard tab "Walk-in").
 
 0. `GET /form` — the blank PDF (same for every meet).
 1. `GET /meets` — meets whose fee window `canPay` now (`resolveFeeWindow`), admins only their own.
-2. Coach: `GET /coaches?email=`, `POST /coaches` (coach types password + default player password; via `authenticationService.register`), `PUT /coaches/:id/player-default-password` (no current-password check — the coach is at the desk).
+2. Coach: `GET /coaches?q=` (`searchCoaches`: any part of name, phone, email or team name, regex-escaped, ≤10 cards with team/email/phone; `3e8e269`) or `?email=` (exact `findCoach`), `POST /coaches` (coach types password + default player password; via `authenticationService.register`), `PUT /coaches/:id/player-default-password` (no current-password check — the coach is at the desk).
 3. `POST /coaches/:id/team` → `coachService.createTeam` unless one exists.
 4. `POST /drafts` → `coachService.registerTeamForCompetition` + a `WalkInRegistration` draft (or the coach's open one). Refuses a registration already submitted.
 5. `POST /drafts/:id/scan` — raw image body (`express.raw`, 8 MB) → `OcrClient.readPage` → rows. The QR must name this meet. A re-scan replaces that page's rows (unless a player exists).
