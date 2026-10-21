@@ -20,8 +20,8 @@ export const deskAPI = {
   setDefaultPassword: (coachId, data) => api.put(`/desk/coaches/${coachId}/player-default-password`, data),
   ensureTeam: (coachId, data) => api.post(`/desk/coaches/${coachId}/team`, data),
 
-  /** The printable form, as a Blob. */
-  formPdf: (competitionId) => api.get(`/desk/forms/${competitionId}`, { responseType: 'blob' }),
+  /** The printable form — one for every competition — as a Blob. */
+  formPdf: () => api.get('/desk/form', { responseType: 'blob' }),
 
   listDrafts: (competitionId) => api.get('/desk/drafts', { params: { competitionId } }),
   openDraft: (data) => api.post('/desk/drafts', data),

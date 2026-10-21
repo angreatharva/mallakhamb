@@ -21,6 +21,7 @@ payment. Web: `Web/src/pages/desk/*` (dashboard tab "Walk-in").
 
 ## Flow (`/api/desk`, `requireAdmin`; admin scope + end-date lock in the SERVICE)
 
+0. `GET /form` — the blank PDF (same for every meet).
 1. `GET /meets` — meets whose fee window `canPay` now (`resolveFeeWindow`), admins only their own.
 2. Coach: `GET /coaches?email=`, `POST /coaches` (coach types password + default player password; via `authenticationService.register`), `PUT /coaches/:id/player-default-password` (no current-password check — the coach is at the desk).
 3. `POST /coaches/:id/team` → `coachService.createTeam` unless one exists.
@@ -41,7 +42,7 @@ Every new row is compared with everyone on the coach's team plus anyone with the
 
 ## Form geometry — `utils/walk-in/form-layout.util.js`
 
-The single description of the printed form (mm, A4). `form-pdf.service` draws it (pdfkit + qrcode); the API sends the same page layouts to the sidecar with every photo, so the reader never holds a copy. Change geometry → bump `FORM_VERSION` (old prints then fail the QR check instead of misreading).
+**One form for every competition** (MKWI2, `GET /api/desk/form`): the meet is chosen at the desk, so nothing on paper names it. 10 fixed sections (Boys U10/U12/U14/U18/Above18, Girls U10/U12/U14/U16/Above16) × 6 rows (COP 1.9), 3 per page = 4 pages; Hanging only on boys' sections. Whatever a meet does not run (age group, apparatus, a 4-player squad cap) is an error on the review row, never silently dropped. Names: one box each, CAPITALS (per-letter boxes don't fit at writable size); date: **one box per digit** (`cells`), each read alone by the sidecar so box lines never read as "1". `form-pdf.service` draws it (pdfkit + qrcode); the API sends the same page layouts with every photo. QR = `MKWI2|page|pages`; an MKWI1 (old per-meet) QR is refused with "older version — print the current form". Change geometry → bump `FORM_VERSION`.
 
 ## OCR sidecar — `ocr/` (Python, see ocr/README.md)
 

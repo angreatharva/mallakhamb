@@ -359,9 +359,9 @@ class WalkInService {
 
   // ── The form ──────────────────────────────────────────────────────────────
 
-  async formPdf(actor, competitionId) {
-    const competition = await this._meetFor(actor, competitionId, { write: false });
-    return { pdf: await renderFormPdf(competition), name: competition.name };
+  /** The one form, the same for every competition (utils/walk-in/form-layout). */
+  async formPdf() {
+    return { pdf: await renderFormPdf() };
   }
 
   // ── Step 4: OCR ───────────────────────────────────────────────────────────
@@ -382,12 +382,12 @@ class WalkInService {
     if (draft.status !== 'draft') throw new BusinessRuleError('This form is already submitted.');
     if (!Buffer.isBuffer(image) || image.length === 0) throw new ValidationError('Attach a photo of the form page');
 
-    const layout = buildFormLayout(competition);
+    const layout = buildFormLayout();
     const reading = await this.ocr.readPage(image, layout.pages, { pageHint });
 
     const qr = parseQrPayload(reading?.qr?.text);
-    if (qr && qr.competitionId !== String(competition._id)) {
-      throw new BusinessRuleError('This form was printed for a different competition. Print this competition\'s form.');
+    if (qr && !qr.current) {
+      throw new BusinessRuleError('This is an older version of the walk-in form. Print the current form (Print blank form) and copy the players onto it, or type them in.');
     }
     const pageNo = Number(reading?.page) || qr?.page || Number(pageHint) || null;
     const page = layout.pages.find((p) => p.page === pageNo);
@@ -536,7 +536,7 @@ class WalkInService {
         feePhase: window.phase,
         lateFeePerPlayer: window.lateFeePerPlayer,
         sections: checked.sections,
-        formPages: buildFormLayout(competition).pages.map((p) => ({
+        formPages: buildFormLayout().pages.map((p) => ({
           page: p.page,
           sections: p.sections.map((s) => s.key),
         })),

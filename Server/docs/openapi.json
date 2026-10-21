@@ -23993,24 +23993,13 @@
         ]
       }
     },
-    "/api/desk/forms/{competitionId}": {
+    "/api/desk/form": {
       "get": {
         "tags": [
           "Walk-in desk"
         ],
-        "summary": "The printable walk-in form for a meet (A4 PDF)",
+        "summary": "The printable walk-in form (A4 PDF) — one form for every competition",
         "operationId": "deskFormPdf",
-        "parameters": [
-          {
-            "name": "competitionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Competition"
-          }
-        ],
         "responses": {
           "200": {
             "description": "PDF",

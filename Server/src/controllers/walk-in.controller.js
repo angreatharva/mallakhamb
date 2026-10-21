@@ -40,10 +40,9 @@ function createWalkInController(container) {
     }),
 
     formPdf: asyncHandler(async (req, res) => {
-      const { pdf, name } = await service().formPdf(actorOf(req), req.params.competitionId);
-      const file = `walk-in-form-${String(name || 'competition').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase()}.pdf`;
+      const { pdf } = await service().formPdf();
       res.set('Content-Type', 'application/pdf');
-      res.set('Content-Disposition', `attachment; filename="${file}"`);
+      res.set('Content-Disposition', 'attachment; filename="mallakhamb-walk-in-form.pdf"');
       res.send(pdf);
     }),
 

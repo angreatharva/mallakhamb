@@ -2448,9 +2448,8 @@ function buildPaths() {
     requestBody: jsonBody(inline({ name: S.str, description: S.str }, ['name'])),
     responses: { 200: ok('Existing team'), 201: ok('Created'), ...VALIDATION_ERROR, ...NOT_FOUND },
   });
-  desk('/api/desk/forms/{competitionId}', 'get', {
-    operationId: 'deskFormPdf', summary: 'The printable walk-in form for a meet (A4 PDF)',
-    parameters: [pathParam('competitionId', 'Competition')],
+  desk('/api/desk/form', 'get', {
+    operationId: 'deskFormPdf', summary: 'The printable walk-in form (A4 PDF) — one form for every competition',
     responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } }, ...NOT_FOUND },
   });
   desk('/api/desk/drafts', 'get', {

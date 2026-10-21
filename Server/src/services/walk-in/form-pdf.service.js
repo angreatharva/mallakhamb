@@ -53,27 +53,20 @@ function text(doc, value, x, y, { size = 8, bold = false, width, align = 'left',
     .text(value, pt(x), pt(y), { width: width ? pt(width) : undefined, align, lineBreak: false });
 }
 
-function drawHeader(doc, competition, page) {
+function drawHeader(doc, page) {
   text(doc, 'MALLAKHAMB - WALK-IN REGISTRATION FORM', 22, 10, { size: 12, bold: true });
-  text(doc, String(competition.name || ''), 22, 17, { size: 10, bold: true, width: 140 });
-  const where = [competition.place, competition.year].filter(Boolean).join(', ');
-  text(doc, where, 22, 22, { size: 8, width: 140 });
-  text(doc, `Page ${page.page} of ${page.pages}`, 22, 27, { size: 8 });
-
-  text(doc, 'Team: ____________________________   Coach: ____________________________', 22, 33, { size: 8 });
-  text(
-    doc,
-    'Write in CAPITAL LETTERS (A-Z) inside the boxes. Date of birth as DD MM YYYY. Tick the apparatus each player will perform.',
-    22, 39, { size: 7, width: 140, color: '#333333' }
-  );
+  text(doc, `Page ${page.page} of ${page.pages}  -  fill in only the sections you need; blank pages need not be handed in`, 22, 16.5, { size: 7.5, width: 140 });
+  // The same form serves every meet: the coach writes it in, the desk chooses it.
+  text(doc, 'Competition: ____________________________________________________', 22, 22, { size: 8 });
+  text(doc, 'Team: ____________________________   Coach: ____________________________', 22, 28, { size: 8 });
+  const note = { size: 7, color: '#333333' };
+  text(doc, 'Names in CAPITAL LETTERS (A-Z) only. Date of birth: ONE DIGIT PER BOX, e.g. 0 7 | 0 3 | 2 0 1 5.', 22, 35, note);
+  text(doc, 'Tick each apparatus the player will perform.', 22, 39, note);
   text(doc, 'Do not fold or write over the black squares or the code.', 22, 43, { size: 7, color: '#333333' });
 }
 
 function drawSection(doc, section) {
   text(doc, section.title, 12, section.top + 1, { size: 9.5, bold: true });
-  if (section.hint) {
-    text(doc, `(${section.hint})`, 60, section.top + 1.6, { size: 7.5, color: '#333333' });
-  }
 
   const head = section.headY;
   const headText = (value, col) => text(doc, value, COLUMNS[col].x, head + 0.8, { size: 6.5, bold: true, width: COLUMNS[col].w, align: 'center' });
@@ -90,7 +83,9 @@ function drawSection(doc, section) {
 
   for (const row of section.rows) {
     text(doc, String(row.rowNo), COLUMNS.rowNo.x, row.fields.firstName.y + 1.6, { size: 9, bold: true, width: COLUMNS.rowNo.w, align: 'center' });
-    Object.values(row.fields).forEach((field) => box(doc, field));
+    box(doc, row.fields.firstName);
+    box(doc, row.fields.lastName);
+    Object.values(row.cells).flat().forEach((cell) => box(doc, cell));
     row.ticks.forEach((tick) => box(doc, tick));
   }
 
@@ -100,15 +95,15 @@ function drawSection(doc, section) {
 }
 
 /**
- * @param {Object} competition - the meet (lean is fine)
+ * The one walk-in form, the same for every competition.
  * @returns {Promise<Buffer>} the PDF
  */
-function renderFormPdf(competition) {
-  const layout = buildFormLayout(competition);
+function renderFormPdf() {
+  const layout = buildFormLayout();
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: false, info: {
-      Title: `Walk-in registration form - ${competition.name || ''}`,
+      Title: 'Mallakhamb walk-in registration form',
       Creator: 'Mallakhamb competition platform',
     } });
     const chunks = [];
@@ -120,7 +115,7 @@ function renderFormPdf(competition) {
       doc.addPage({ size: 'A4', margin: 0 });
       page.markers.forEach((m) => doc.save().fillColor('#000000').rect(pt(m.x), pt(m.y), pt(m.size), pt(m.size)).fill().restore());
       drawQr(doc, page.qrText, page.qr);
-      drawHeader(doc, competition, page);
+      drawHeader(doc, page);
       page.sections.forEach((section) => drawSection(doc, section));
       text(doc, `${page.version}`, 22, 284, { size: 6, color: '#777777' });
     }

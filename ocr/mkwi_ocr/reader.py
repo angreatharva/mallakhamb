@@ -221,7 +221,28 @@ def read_page(image_bytes: bytes, pages: list[dict], recognizer, page_hint: int 
         for row in section["rows"]:
             fields_out = {}
             any_ink = False
+            cells = row.get("cells") or {}
             for name, rect in row["fields"].items():
+                if name in cells:
+                    # One digit per box: read each box alone, so a neighbour or a
+                    # box line can never join the number.
+                    digits, confs, inks = [], [], []
+                    for cell in cells[name]:
+                        ink = _ink(binary, cell, FIELD_INSET_MM)
+                        inks.append(ink)
+                        if ink < INK_EMPTY:
+                            continue
+                        reading = recognizer.read(_text_crop(flat, binary, cell), DIGIT_CHARS)
+                        digits.append(reading.text[:1] if reading.text else "?")
+                        confs.append(reading.confidence if reading.text else 0.0)
+                    if digits:
+                        any_ink = True
+                    fields_out[name] = {
+                        "text": "".join(digits),
+                        "confidence": round(min(confs), 3) if confs else 1.0,
+                        "ink": round(max(inks), 4) if inks else 0.0,
+                    }
+                    continue
                 ink = _ink(binary, rect, FIELD_INSET_MM)
                 if ink < INK_EMPTY:
                     fields_out[name] = {"text": "", "confidence": 1.0, "ink": round(ink, 4)}

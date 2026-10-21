@@ -211,13 +211,13 @@ describe('walk-in desk', () => {
 
   test('a scanned page lands in the draft as rows from its sections', async () => {
     const competition = await meet();
-    const layout = buildFormLayout(competition);
+    const layout = buildFormLayout();
     const page = layout.pages[0];
     const section = page.sections.find((s) => s.key === 'Male:Under12');
     const ocrClient = {
       readPage: jest.fn(async () => ({
         page: 1,
-        qr: { text: qrPayload(String(competition._id), 1, layout.pages.length) },
+        qr: { text: qrPayload(1, layout.pages.length) },
         rows: [
           {
             section: section.key, rowNo: 1, empty: false, crop: 'data:image/jpeg;base64,AAAA',
@@ -271,13 +271,43 @@ describe('walk-in desk', () => {
     expect((await service.searchCoaches('vyayam'))[0].team.name).toBe('Shivaji Vyayamshala');
   });
 
-  test('a form printed for another meet is refused', async () => {
-    const competition = await meet();
-    const ocrClient = { readPage: jest.fn(async () => ({ page: 1, qr: { text: qrPayload(String(new mongoose.Types.ObjectId()), 1, 1) }, rows: [] })) };
+  test('the one form serves every meet: a section this meet does not run is flagged, not dropped', async () => {
+    const competition = await meet(); // runs Male U10/U12/U14 and Female U12 only
+    const layout = buildFormLayout();
+    const page = layout.pages.find((p) => p.sections.some((s) => s.key === 'Male:Above18'));
+    const ocrClient = {
+      readPage: jest.fn(async () => ({
+        page: page.page,
+        qr: { text: qrPayload(page.page, layout.pages.length) },
+        rows: [{
+          section: 'Male:Above18', rowNo: 1, empty: false,
+          fields: {
+            firstName: { text: 'ROHAN', confidence: 0.99 }, lastName: { text: 'SHINDE', confidence: 0.99 },
+            dobDay: { text: '05' }, dobMonth: { text: '06' }, dobYear: { text: String(thisYear - 25) },
+          },
+          ticks: [{ apparatus: 'Hanging Mallakhamb', checked: true }],
+        }],
+      })),
+    };
     const { service } = build({ ocrClient });
     const actor = superAdmin();
     const draft = await deskUpTo(service, actor, competition);
-    await expect(service.scanPage(actor, draft._id, Buffer.from('jpeg'))).rejects.toThrow(/different competition/);
+
+    const { draft: view } = await service.scanPage(actor, draft._id, Buffer.from('jpeg'));
+    expect(view.rows).toHaveLength(1);
+    const messages = view.rows[0].issues.filter((i) => i.level === 'error').map((i) => i.message).join(' | ');
+    expect(messages).toMatch(/does not run that age group|runs no age group/);
+    expect(messages).toMatch(/Not offered for boys: Hanging Mallakhamb/);
+  });
+
+  test('a form of an older version is refused, not misread', async () => {
+    const competition = await meet();
+    // MKWI1 forms were printed per meet, with different boxes.
+    const ocrClient = { readPage: jest.fn(async () => ({ page: null, qr: { text: `MKWI1|${new mongoose.Types.ObjectId()}|1|2` }, rows: [] })) };
+    const { service } = build({ ocrClient });
+    const actor = superAdmin();
+    const draft = await deskUpTo(service, actor, competition);
+    await expect(service.scanPage(actor, draft._id, Buffer.from('jpeg'))).rejects.toThrow(/older version of the walk-in form/);
   });
 });
 

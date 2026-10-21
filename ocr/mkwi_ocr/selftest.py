@@ -51,7 +51,9 @@ def draw_page(layout: dict) -> np.ndarray:
     for section in layout["sections"]:
         cv2.putText(page, section["title"], (_px(12), _px(section["top"] + 5)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (20, 20, 20), 2)
         for row in section["rows"]:
-            for rect in list(row["fields"].values()) + row["ticks"]:
+            cells = row.get("cells") or {}
+            boxes = [r for n, r in row["fields"].items() if n not in cells] + [c for cs in cells.values() for c in cs]
+            for rect in boxes + row["ticks"]:
                 cv2.rectangle(page, (_px(rect["x"]), _px(rect["y"])), (_px(rect["x"] + rect["w"]), _px(rect["y"] + rect["h"])), (140, 140, 140), 2)
     return page
 
@@ -62,8 +64,15 @@ def fill(page: np.ndarray, layout: dict) -> list[dict]:
     expected = []
     rng = np.random.default_rng(7)
     for values, row in zip(PLANTED, section["rows"]):
+        cells = row.get("cells") or {}
         for name, rect in row["fields"].items():
             text = values[name]
+            if name in cells:  # one digit per box, as the form asks
+                for ch, cell in zip(text, cells[name]):
+                    cx = _px(cell["x"]) + 9 + int(rng.integers(0, 4))
+                    cy = _px(cell["y"] + cell["h"]) - 14 + int(rng.integers(-3, 3))
+                    cv2.putText(page, ch, (cx, cy), cv2.FONT_HERSHEY_DUPLEX, 1.25, (60, 30, 10), 3, cv2.LINE_AA)
+                continue
             x = _px(rect["x"]) + 12 + int(rng.integers(0, 10))
             y = _px(rect["y"] + rect["h"]) - 14 + int(rng.integers(-3, 3))
             cv2.putText(page, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, 1.35, (60, 30, 10), 3, cv2.LINE_AA)

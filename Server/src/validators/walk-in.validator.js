@@ -43,7 +43,6 @@ const ensureTeam = () => [
 ];
 
 const competitionInQuery = () => [objectId('competitionId', 'query')];
-const competitionInParam = () => [objectId('competitionId')];
 
 const openDraft = () => [
   objectId('competitionId', 'body'),
@@ -90,7 +89,6 @@ module.exports = {
   setDefaultPassword,
   ensureTeam,
   competitionInQuery,
-  competitionInParam,
   openDraft,
   scan,
   saveRows,

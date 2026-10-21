@@ -37,7 +37,8 @@ function createWalkInRoutes(container) {
   router.put('/coaches/:coachId/player-default-password', userRateLimit, check(v.setDefaultPassword()), controller.setDefaultPassword);
   router.post('/coaches/:coachId/team', check(v.ensureTeam()), controller.ensureTeam);
 
-  router.get('/forms/:competitionId', check(v.competitionInParam()), controller.formPdf);
+  // One form for every competition: the meet is chosen at the desk, not printed.
+  router.get('/form', controller.formPdf);
 
   router.get('/drafts', check(v.competitionInQuery()), controller.listDrafts);
   router.post('/drafts', check(v.openDraft()), controller.openDraft);

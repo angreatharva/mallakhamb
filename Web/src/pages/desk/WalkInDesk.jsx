@@ -64,8 +64,8 @@ const WalkInDesk = () => {
   const printForm = async () => {
     setPrinting(true);
     try {
-      const res = await deskAPI.formPdf(meetId);
-      saveBlob(res.data, `walk-in-form-${(meet?.name || 'competition').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}.pdf`);
+      const res = await deskAPI.formPdf();
+      saveBlob(res.data, 'mallakhamb-walk-in-form.pdf');
     } catch (error) {
       toast.error(errorText(error, 'Could not make the form'));
     } finally {
@@ -140,7 +140,7 @@ const WalkInDesk = () => {
                 ))}
               </Select>
             </Field>
-            <Button variant="line" icon={FileDown} disabled={!meetId} loading={printing} onClick={printForm}>Print blank form</Button>
+            <Button variant="line" icon={FileDown} loading={printing} onClick={printForm}>Print blank form</Button>
           </div>
           {meet && (
             <p className="type-caption text-fg-muted m-0">

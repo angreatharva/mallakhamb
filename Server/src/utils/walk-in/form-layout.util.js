@@ -1,8 +1,16 @@
 /**
  * Walk-in registration form — the ONE description of where everything sits.
  *
+ * There is ONE form for every competition. The meet is chosen at the desk
+ * before any page is photographed, so nothing on the paper names it: a club
+ * can print a stack once and use it all season. The form therefore carries
+ * every age group either gender plays and every apparatus that gender may
+ * perform; whatever a particular meet does not run is caught on the review
+ * screen ("this competition does not run that age group / apparatus"), where
+ * the admin fixes the row.
+ *
  * The printed PDF (services/walk-in/form-pdf.service) draws from this, and the
- * API sends the very same page layout to the OCR sidecar with every photo
+ * API sends the very same page layouts to the OCR sidecar with every photo
  * (ocr/), so the reader never carries a copy of the geometry that could drift
  * from what was printed. Change a number here and both ends move together;
  * bump FORM_VERSION when you do, so a form printed before the change is refused
@@ -12,23 +20,23 @@
  *
  * Page anatomy:
  *   - four solid square MARKERS in the corners: the OCR finds them, and maps
- *     their centres onto MARKER_CENTRES to undo the camera's perspective;
- *   - a QR code naming the version, the meet and the page;
- *   - up to SECTIONS_PER_PAGE sections, one per gender + age group the meet
- *     runs, each with one row per squad place (the meet's team size, 6 when
- *     unset — COP 1.9).
+ *     their centres onto the marker centres to undo the camera's perspective;
+ *   - a QR code naming the form version and the page;
+ *   - up to SECTIONS_PER_PAGE sections, one per gender + age group, each with
+ *     ROWS_PER_SECTION rows (6 — the COP 1.9 maximum squad).
  *
- * A row is: number · FIRST NAME box · LAST NAME box · DD · MM · YYYY · one tick
- * box per apparatus the meet offers that gender.
+ * A row is: number · FIRST NAME box · LAST NAME box · D D · M M · Y Y Y Y (one
+ * box per digit) · one tick
+ * box per apparatus the gender may perform.
  *
  * @module utils/walk-in/form-layout
  */
 
-const { AGE_GROUPS_BY_GENDER, AGE_GROUP_RANGES, ageCutoffYear } = require('../../config/cop-rules');
-const { offeredApparatus } = require('../data/competition-apparatus.util');
-const { effectiveTeamSize } = require('../scoring/team-championship.util');
+const { AGE_GROUPS_BY_GENDER, APPARATUS, isApparatusAllowedForGender } = require('../../config/cop-rules');
 
-const FORM_VERSION = 'MKWI1';
+/** MKWI1 was printed per competition (its QR named the meet); MKWI2 is the one form for all. */
+const FORM_VERSION = 'MKWI2';
+const QR_PREFIX = 'MKWI';
 
 const PAGE = Object.freeze({ width: 210, height: 297 });
 
@@ -49,9 +57,8 @@ const SECTION_TITLE_H = 7;
 const COLUMN_HEAD_H = 5;
 const ROW_H = 10;
 const FIELD_INSET_Y = 1.5;
-const SECTIONS_PER_PAGE_MAX = 3;
-/** Nothing may print below this line: the bottom markers start at 279. */
-const CONTENT_BOTTOM = 276;
+const SECTIONS_PER_PAGE = 3;
+const ROWS_PER_SECTION = 6;
 
 /** Column x positions and widths. */
 const COLUMNS = Object.freeze({
@@ -60,13 +67,23 @@ const COLUMNS = Object.freeze({
   lastName: Object.freeze({ x: 75, w: 54 }),
   dobDay: Object.freeze({ x: 131, w: 9 }),
   dobMonth: Object.freeze({ x: 142, w: 9 }),
-  dobYear: Object.freeze({ x: 153, w: 17 }),
+  dobYear: Object.freeze({ x: 153, w: 18 }),
 });
+/**
+ * The date is written one digit per box (DD MM YYYY = 2 + 2 + 4 cells of
+ * 4.5 mm), and each box is read on its own: a lone digit cannot be confused
+ * with its neighbour, and the box lines are never read as a "1". Names stay
+ * one box each — per-letter boxes for 15-letter names do not fit beside the
+ * date and apparatus at a size a child can write in, and the reader already
+ * reads a line of capitals well.
+ */
+const DIGIT_W = 4.5;
+const DIGIT_CELLS = Object.freeze({ dobDay: 2, dobMonth: 2, dobYear: 4 });
 const TICK_X0 = 173;
 const TICK_STEP = 8;
 const TICK_SIZE = 6;
 
-/** Short column heads for the tick boxes. */
+/** Short column heads for the tick boxes, in print order. */
 const APPARATUS_SHORT = Object.freeze({
   'Pole Mallakhamb': 'POLE',
   'Rope Mallakhamb': 'ROPE',
@@ -78,38 +95,20 @@ const GENDER_WORD = Object.freeze({ Male: 'BOYS', Female: 'GIRLS' });
 const ageGroupLabel = (group) => group.replace(/^(Under|Above)(\d+)$/, (_, kind, n) => `${kind.toUpperCase()} ${n}`);
 
 /**
- * "Born 2015 or later" — printed under each section title so the coach can
- * see where a child belongs without doing the COP arithmetic.
+ * Every section of the form, in print order: boys before girls, youngest
+ * first, each with the apparatus that gender may perform (no Hanging for girls).
  */
-function birthYearHint(ageGroup, cutoffYear) {
-  const range = AGE_GROUP_RANGES[ageGroup];
-  if (!range || !cutoffYear) return '';
-  if (Number.isFinite(range.max) && range.min === 0) return `born ${cutoffYear - range.max} or later`;
-  return `born ${cutoffYear - range.min} or earlier`;
-}
-
-/**
- * The meet's sections in print order: boys before girls, youngest first, only
- * the pairs the meet actually runs (and that the gender plays at all).
- */
-function formSections(competition) {
-  const configured = (competition?.ageGroups || []).map((entry) => `${entry.gender}:${entry.ageGroup}`);
-  const runs = (gender, group) => configured.length === 0 || configured.includes(`${gender}:${group}`);
-  const types = competition?.competitionTypes?.length ? competition.competitionTypes : ['competition_1'];
-  const cutoffYear = ageCutoffYear(competition);
-
+function formSections() {
   const sections = [];
   for (const gender of ['Male', 'Female']) {
-    const apparatus = [...new Set(types.flatMap((type) => offeredApparatus(competition, type, gender)))]
-      .sort((a, b) => Object.keys(APPARATUS_SHORT).indexOf(a) - Object.keys(APPARATUS_SHORT).indexOf(b));
+    const apparatus = Object.keys(APPARATUS_SHORT)
+      .filter((name) => APPARATUS.includes(name) && isApparatusAllowedForGender(name, gender));
     for (const ageGroup of AGE_GROUPS_BY_GENDER[gender]) {
-      if (!runs(gender, ageGroup)) continue;
       sections.push({
         key: `${gender}:${ageGroup}`,
         gender,
         ageGroup,
         title: `${GENDER_WORD[gender]} - ${ageGroupLabel(ageGroup)}`,
-        hint: birthYearHint(ageGroup, cutoffYear),
         apparatus,
       });
     }
@@ -136,6 +135,11 @@ function rowLayout(rowNo, y, apparatus) {
       dobMonth: field('dobMonth'),
       dobYear: field('dobYear'),
     },
+    // One rect per digit box, left to right (see DIGIT_CELLS).
+    cells: Object.fromEntries(Object.entries(DIGIT_CELLS).map(([col, count]) => [
+      col,
+      Array.from({ length: count }, (_, i) => rect(COLUMNS[col].x + i * DIGIT_W, fy, DIGIT_W, fh)),
+    ])),
     ticks: apparatus.map((name, i) => ({
       apparatus: name,
       ...rect(TICK_X0 + i * TICK_STEP, y + (ROW_H - TICK_SIZE) / 2, TICK_SIZE, TICK_SIZE),
@@ -143,37 +147,32 @@ function rowLayout(rowNo, y, apparatus) {
   };
 }
 
-function sectionHeight(rows) {
-  return SECTION_TITLE_H + COLUMN_HEAD_H + rows * ROW_H;
+/** What the QR code on a page says. */
+function qrPayload(page, pages) {
+  return `${FORM_VERSION}|${page}|${pages}`;
 }
 
-/**
- * The whole form for one meet, page by page.
- *
- * @param {Object} competition - needs _id, ageGroups, competitionTypes,
- *   apparatusByGender/apparatusConfig, maxTeamSize, startDate/ageCutoffYear
- * @returns {{version: string, competitionId: string, rowsPerSection: number,
- *   cutoffYear: number|null, pages: Object[]}}
- */
-function buildFormLayout(competition) {
-  const competitionId = String(competition?._id || '');
-  const rowsPerSection = effectiveTeamSize(competition?.maxTeamSize);
-  const height = sectionHeight(rowsPerSection);
-  const fit = Math.floor((CONTENT_BOTTOM - SECTION_TOP + SECTION_GAP) / (height + SECTION_GAP));
-  const perPage = Math.max(1, Math.min(SECTIONS_PER_PAGE_MAX, fit));
+let cached = null;
 
-  const sections = formSections(competition);
-  const pageCount = Math.max(1, Math.ceil(sections.length / perPage));
+/**
+ * The form, page by page. The same for every competition (and so built once).
+ *
+ * @returns {{version: string, rowsPerSection: number, pages: Object[]}}
+ */
+function buildFormLayout() {
+  if (cached) return cached;
+  const height = SECTION_TITLE_H + COLUMN_HEAD_H + ROWS_PER_SECTION * ROW_H;
+  const sections = formSections();
+  const pageCount = Math.ceil(sections.length / SECTIONS_PER_PAGE);
   const pages = [];
 
   for (let p = 0; p < pageCount; p += 1) {
-    const onPage = sections.slice(p * perPage, (p + 1) * perPage);
     let y = SECTION_TOP;
-    const laidOut = onPage.map((section) => {
+    const laidOut = sections.slice(p * SECTIONS_PER_PAGE, (p + 1) * SECTIONS_PER_PAGE).map((section) => {
       const top = y;
       const headY = top + SECTION_TITLE_H;
       const rowsTop = headY + COLUMN_HEAD_H;
-      const rows = Array.from({ length: rowsPerSection }, (_, i) =>
+      const rows = Array.from({ length: ROWS_PER_SECTION }, (_, i) =>
         rowLayout(i + 1, rowsTop + i * ROW_H, section.apparatus));
       y += height + SECTION_GAP;
       return { ...section, top, headY, rows };
@@ -181,10 +180,9 @@ function buildFormLayout(competition) {
 
     pages.push({
       version: FORM_VERSION,
-      competitionId,
       page: p + 1,
       pages: pageCount,
-      qrText: qrPayload(competitionId, p + 1, pageCount),
+      qrText: qrPayload(p + 1, pageCount),
       size: PAGE,
       markers: MARKERS,
       qr: QR,
@@ -192,26 +190,26 @@ function buildFormLayout(competition) {
     });
   }
 
-  return { version: FORM_VERSION, competitionId, rowsPerSection, cutoffYear: ageCutoffYear(competition), pages };
-}
-
-/** What the QR code on a page says. */
-function qrPayload(competitionId, page, pages) {
-  return `${FORM_VERSION}|${competitionId}|${page}|${pages}`;
+  cached = Object.freeze({ version: FORM_VERSION, rowsPerSection: ROWS_PER_SECTION, pages });
+  return cached;
 }
 
 /**
- * Read a QR payload back. Null for anything that is not one of ours.
+ * Read a QR payload back. Null for anything that is not one of our forms; a
+ * form of another version comes back with `current: false`, so the desk can
+ * say "print the new form" instead of misreading it.
+ *
  * @param {string} text
- * @returns {{version: string, competitionId: string, page: number, pages: number}|null}
+ * @returns {{version: string, current: boolean, page: number|null, pages: number|null}|null}
  */
 function parseQrPayload(text) {
   const parts = String(text || '').split('|');
-  if (parts.length !== 4 || parts[0] !== FORM_VERSION) return null;
-  const page = Number(parts[2]);
-  const pages = Number(parts[3]);
-  if (!Number.isInteger(page) || !Number.isInteger(pages) || page < 1 || page > pages) return null;
-  return { version: parts[0], competitionId: parts[1], page, pages };
+  if (!parts[0] || !parts[0].startsWith(QR_PREFIX)) return null;
+  if (parts[0] !== FORM_VERSION) return { version: parts[0], current: false, page: null, pages: null };
+  const page = Number(parts[1]);
+  const pages = Number(parts[2]);
+  if (parts.length !== 3 || !Number.isInteger(page) || !Number.isInteger(pages) || page < 1 || page > pages) return null;
+  return { version: parts[0], current: true, page, pages };
 }
 
 module.exports = {
@@ -224,8 +222,9 @@ module.exports = {
   ROW_H,
   COLUMN_HEAD_H,
   SECTION_TITLE_H,
+  ROWS_PER_SECTION,
+  DIGIT_CELLS,
   ageGroupLabel,
-  birthYearHint,
   formSections,
   buildFormLayout,
   qrPayload,
