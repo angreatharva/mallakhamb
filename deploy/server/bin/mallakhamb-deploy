@@ -56,6 +56,11 @@ release_metric() {   # Grafana shows which release each server holds (C1.7 "Rele
   printf '# HELP mallakhamb_release_info Release deployed on this server\n# TYPE mallakhamb_release_info gauge\nmallakhamb_release_info{sha="%s",role="%s"} 1\n' "${SHA:0:7}" "$ROLE" > /var/lib/alloy/textfile/.release.tmp
   mv /var/lib/alloy/textfile/.release.tmp /var/lib/alloy/textfile/mallakhamb_release.prom
 }
+prune_releases() {   # live + 4 newest others; both roles, or the standby keeps every release it was ever sent
+  local cur; cur="$(readlink -f "$BASE/current")"
+  # grep finds nothing when the live release is the only one; under pipefail that would fail the deploy
+  ls -1dt "$BASE"/releases/*/ | sed 's#/$##' | { grep -vx "$cur" || true; } | tail -n +5 | xargs -r rm -rf
+}
 printf "GIT_COMMIT=%s\n" "$SHA" > /etc/mallakhamb/release.env     # read by the service unit (C1.11 / F19)
 
 PREV="$(readlink -f "$BASE/current" || true)"
@@ -72,7 +77,7 @@ if [ "$ROLE" = standby ]; then
   (cd "$REL/Server" && sudo -u mallakhamb node scripts/startup.js --check)
   ocr_selftest "" || echo "WARNING: OCR self-test failed on this release (the desk falls back to typing)" >&2
   ln -sfn "$REL" "$BASE/current.new" && mv -Tf "$BASE/current.new" "$BASE/current"
-  echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric
+  echo "$SHA" > "$BASE/DEPLOYED_SHA"; touch "$REL"; release_metric; prune_releases
   echo "STANDBY UPDATED $SHA (service not started)"
   exit 0
 fi
@@ -101,6 +106,5 @@ if [ -d "$REL/ocr" ]; then
   for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8090/health >/dev/null 2>&1 && break; sleep 2; done
   ocr_selftest http://127.0.0.1:8090 || echo "WARNING: OCR not healthy — journalctl -u mallakhamb-ocr (the desk falls back to typing)" >&2
 fi
-CUR="$(readlink -f "$BASE/current")"
-ls -1dt "$BASE"/releases/*/ | sed 's#/$##' | grep -vx "$CUR" | tail -n +5 | xargs -r rm -rf   # live + 4 newest others
+prune_releases
 echo "DEPLOYED $SHA"
