@@ -30,6 +30,9 @@ PLANTED = [
     {"firstName": "AARAV", "lastName": "PATIL", "dobDay": "14", "dobMonth": "03", "dobYear": "2015", "ticks": [0]},
     {"firstName": "VEDANT", "lastName": "KULKARNI", "dobDay": "02", "dobMonth": "11", "dobYear": "2014", "ticks": [0, 1]},
     {"firstName": "SAI", "lastName": "MORE", "dobDay": "30", "dobMonth": "07", "dobYear": "2016", "ticks": [1]},
+    # Digits written over each box's left divider, as people do: a reader that cuts
+    # boxes at their edges reads this 2018 as 2213 (real forms, 2026-10-23).
+    {"firstName": "ISHAAN", "lastName": "SHAH", "dobDay": "26", "dobMonth": "08", "dobYear": "2018", "ticks": [0], "onLine": True},
 ]
 
 
@@ -59,17 +62,17 @@ def draw_page(layout: dict) -> np.ndarray:
 
 
 def fill(page: np.ndarray, layout: dict) -> list[dict]:
-    """Write PLANTED into the first section's first rows, as a person would."""
-    section = layout["sections"][0]
+    """Write PLANTED into the page's first rows, as a person would."""
+    rows = [(section, row) for section in layout["sections"] for row in section["rows"]]
     expected = []
     rng = np.random.default_rng(7)
-    for values, row in zip(PLANTED, section["rows"]):
+    for values, (section, row) in zip(PLANTED, rows):
         cells = row.get("cells") or {}
         for name, rect in row["fields"].items():
             text = values[name]
             if name in cells:  # one digit per box, as the form asks
                 for ch, cell in zip(text, cells[name]):
-                    cx = _px(cell["x"]) + 9 + int(rng.integers(0, 4))
+                    cx = _px(cell["x"]) + (-2 if values.get("onLine") else 9) + int(rng.integers(0, 4))
                     cy = _px(cell["y"] + cell["h"]) - 14 + int(rng.integers(-3, 3))
                     cv2.putText(page, ch, (cx, cy), cv2.FONT_HERSHEY_DUPLEX, 1.25, (60, 30, 10), 3, cv2.LINE_AA)
                 continue

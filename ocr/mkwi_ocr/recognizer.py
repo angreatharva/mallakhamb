@@ -73,6 +73,7 @@ class Recognizer:
         # Class 0 is the CTC blank, class k+1 is dict[k], and PaddleOCR appends a space last.
         self.classes = ["<blank>"] + load_character_dict(yml_path) + [" "]
         self._masks: dict[str, np.ndarray] = {}
+        self._digit_idx = [self.classes.index(d) for d in DIGIT_CHARS]
 
     def _mask(self, allowed: str) -> np.ndarray:
         if allowed not in self._masks:
@@ -96,12 +97,28 @@ class Recognizer:
         x = (x - 0.5) / 0.5
         return x.transpose(2, 0, 1)[None, ...]
 
-    def read(self, crop: np.ndarray, allowed: str) -> Reading:
+    def _run(self, crop: np.ndarray) -> np.ndarray:
         probs = self.session.run(None, {self.input_name: self._prepare(crop)})[0][0]  # (T, C)
         if probs.shape[-1] != len(self.classes):
             # Defensive: a model/dict mismatch must fail loudly, not read garbage.
             raise RuntimeError(f"model has {probs.shape[-1]} classes, dictionary {len(self.classes)}")
-        masked = np.where(self._mask(allowed)[None, :], probs, 0.0)
+        return probs
+
+    def read_digit(self, crop: np.ndarray) -> Reading:
+        """One boxed digit: whichever of 0-9 peaks highest in any frame.
+
+        A box holds exactly one digit, so there is nothing to decode. Confidence
+        is that digit's share of all ten peaks — "could this be another digit?".
+        A lone digit on white loses probability to the blank class, so its raw
+        peak (0.57 for a clear 6, against 0.01 for a 5) would flag every box.
+        """
+        peaks = self._run(crop)[:, self._digit_idx].max(axis=0)
+        best = int(peaks.argmax())
+        share = float(peaks[best] / max(float(peaks.sum()), 1e-9))
+        return Reading(text=DIGIT_CHARS[best], confidence=round(share, 3))
+
+    def read(self, crop: np.ndarray, allowed: str) -> Reading:
+        masked = np.where(self._mask(allowed)[None, :], self._run(crop), 0.0)
         best = masked.argmax(axis=1)
         out, scores, previous = [], [], 0
         for t, idx in enumerate(best):

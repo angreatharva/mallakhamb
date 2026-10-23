@@ -30,6 +30,12 @@ FIELD_INSET_MM = 0.7
 INK_EMPTY = 0.012      # share of dark pixels below which a box is blank
 TICK_CHECKED = 0.10    # share of dark pixels above which a tick box is ticked
 CROP_WIDTH = 900
+DIGIT_REACH_MM = 2.0   # how far past a date field's boxes a written digit may stray
+DIGIT_MIN_PX = 20      # smaller ink blobs in a digit box are specks, not strokes
+GAP_BRIDGE_PX = 11     # widest erased box line a digit's stroke is re-joined across
+DIGIT_ASPECT = 1.5     # a digit crop is whited out to at least this width:height
+LINE_SEARCH_MM = 1.0   # how far from its layout position a printed box line is looked for
+LINE_HALF_PX = 3       # half the width of the band erased over a box line
 
 
 class Unreadable(Exception):
@@ -165,6 +171,97 @@ def _text_crop(page: np.ndarray, binary: np.ndarray, rect: dict) -> np.ndarray:
     return cv2.copyMakeBorder(crop, 8, 8, 12, 12, cv2.BORDER_CONSTANT, value=(255, 255, 255))
 
 
+def _box_lines(ink: np.ndarray, cells: list[dict], x0: int, y0: int) -> tuple[np.ndarray, np.ndarray]:
+    """Bands over the printed box lines of one date field: (upright, across).
+
+    The layout says where each line is; the flattened photo puts it within a
+    pixel or two of that. Each line is found where the ink peaks near its
+    expected place (a digit is shorter than the line, so it cannot win), and a
+    thin band is laid over it. Guessing lines from their shape instead broke on
+    a blurred phone photo, whose lines come out thick and broken.
+    """
+    upright = np.zeros_like(ink)
+    across = np.zeros_like(ink)
+    search, half = round(LINE_SEARCH_MM * PX_PER_MM), LINE_HALF_PX
+    top = round(cells[0]["y"] * PX_PER_MM) - y0
+    bottom = round((cells[0]["y"] + cells[0]["h"]) * PX_PER_MM) - y0
+    left = round(cells[0]["x"] * PX_PER_MM) - x0
+    right = round((cells[-1]["x"] + cells[-1]["w"]) * PX_PER_MM) - x0
+    edges = sorted({round(c["x"] * PX_PER_MM) - x0 for c in cells} | {round((c["x"] + c["w"]) * PX_PER_MM) - x0 for c in cells})
+    for x in edges:
+        a, b = max(0, x - search), min(ink.shape[1], x + search + 1)
+        at = a + int(np.argmax(np.count_nonzero(ink[top:bottom, a:b], axis=0)))
+        upright[max(0, top - half):bottom + half + 1, max(0, at - half):at + half + 1] = 255
+    for y in (top, bottom):
+        a, b = max(0, y - search), min(ink.shape[0], y + search + 1)
+        at = a + int(np.argmax(np.count_nonzero(ink[a:b, left:right], axis=1)))
+        across[max(0, at - half):at + half + 1, max(0, left - half):right + half + 1] = 255
+    return upright, across
+
+
+def _digit_crops(page: np.ndarray, binary: np.ndarray, cells: list[dict]) -> list[np.ndarray | None]:
+    """One crop per digit box, or None where the box is empty.
+
+    People write each digit against the left edge of its box, across the printed
+    divider. Cutting every box at its own inset sliced those digits in half (the
+    0 of 2018 read as 2 or 7, the 8 as 3), so instead: erase the printed lines,
+    then give each box every ink stroke whose centre falls in it — the whole
+    stroke, even where it crosses into the next box — on white.
+    """
+    pad = round(DIGIT_REACH_MM * PX_PER_MM)
+    x0 = max(0, round(cells[0]["x"] * PX_PER_MM) - pad)
+    y0 = max(0, round(cells[0]["y"] * PX_PER_MM) - pad)
+    x1 = round((cells[-1]["x"] + cells[-1]["w"]) * PX_PER_MM) + pad
+    y1 = round((cells[0]["y"] + cells[0]["h"]) * PX_PER_MM) + pad
+    ink = binary[y0:y1, x0:x1]
+    upright, across = _box_lines(ink, cells, x0, y0)
+    strokes = cv2.bitwise_and(ink, cv2.bitwise_not(upright | across))
+    # Erasing a divider splits a digit written over it, and the left half would go
+    # to the wrong box. Bridge a stroke that continues on both sides of an erased
+    # line, filling only where that line was.
+    bridge = GAP_BRIDGE_PX
+    strokes |= cv2.morphologyEx(strokes, cv2.MORPH_CLOSE, np.ones((1, bridge), np.uint8)) & upright
+    strokes |= cv2.morphologyEx(strokes, cv2.MORPH_CLOSE, np.ones((bridge, 1), np.uint8)) & across
+    count, labels, stats, centroids = cv2.connectedComponentsWithStats(strokes, connectivity=8)
+    # A stroke written ALONG a line (the left side of an 8 on the divider) went
+    # with the line. Give back the line's ink between the first and last place a
+    # digit touches it, so the 8 does not become a 3, nor the 6 a 5.
+    line_ink = cv2.bitwise_and(ink, upright | across) > 0
+    near = np.ones((5, 5), np.uint8)
+    owned: list[np.ndarray | None] = [None for _ in cells]
+    for k in range(1, count):
+        if stats[k, cv2.CC_STAT_AREA] < DIGIT_MIN_PX:
+            continue
+        cx, cy = centroids[k][0] + x0, centroids[k][1] + y0
+        for i, c in enumerate(cells):
+            if c["x"] * PX_PER_MM <= cx < (c["x"] + c["w"]) * PX_PER_MM and \
+                    c["y"] * PX_PER_MM <= cy < (c["y"] + c["h"]) * PX_PER_MM:
+                piece = labels == k
+                contact = (cv2.dilate(piece.astype(np.uint8), near) > 0) & line_ink
+                if contact.any():
+                    ys, xs = np.nonzero(contact)
+                    span = np.zeros_like(piece)
+                    span[ys.min():ys.max() + 1, xs.min():xs.max() + 1] = True
+                    piece |= span & line_ink
+                owned[i] = piece if owned[i] is None else owned[i] | piece
+                break
+    crops: list[np.ndarray | None] = []
+    for mask in owned:
+        if mask is None:
+            crops.append(None)
+            continue
+        ys, xs = np.nonzero(mask)
+        a, b, c, d = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        crop = page[y0 + a:y0 + b, x0 + c:x0 + d].copy()
+        crop[~mask[a:b, c:d]] = 255
+        # White out to at least DIGIT_ASPECT:1, so the recogniser's minimum width never
+        # stretches the digit sideways (a stretched 6 reads as 5).
+        h, w = crop.shape[0] + 28, crop.shape[1]
+        side = max(18, (round(DIGIT_ASPECT * h) - w + 1) // 2)
+        crops.append(cv2.copyMakeBorder(crop, 14, 14, side, side, cv2.BORDER_CONSTANT, value=(255, 255, 255)))
+    return crops
+
+
 def _binary(page: np.ndarray) -> np.ndarray:
     gray = cv2.cvtColor(page, cv2.COLOR_BGR2GRAY)
     # Adaptive, so shadow across a phone photo does not read as ink.
@@ -224,15 +321,14 @@ def read_page(image_bytes: bytes, pages: list[dict], recognizer, page_hint: int 
             cells = row.get("cells") or {}
             for name, rect in row["fields"].items():
                 if name in cells:
-                    # One digit per box: read each box alone, so a neighbour or a
-                    # box line can never join the number.
+                    # One digit per box, read alone: the box line is erased and only
+                    # that box's own strokes are read (see _digit_crops).
                     digits, confs, inks = [], [], []
-                    for cell in cells[name]:
-                        ink = _ink(binary, cell, FIELD_INSET_MM)
-                        inks.append(ink)
-                        if ink < INK_EMPTY:
+                    for cell, crop in zip(cells[name], _digit_crops(flat, binary, cells[name])):
+                        inks.append(_ink(binary, cell, FIELD_INSET_MM))
+                        if crop is None or inks[-1] < INK_EMPTY:   # blank stays blank, as before
                             continue
-                        reading = recognizer.read(_text_crop(flat, binary, cell), DIGIT_CHARS)
+                        reading = recognizer.read_digit(crop)
                         digits.append(reading.text[:1] if reading.text else "?")
                         confs.append(reading.confidence if reading.text else 0.0)
                     if digits:

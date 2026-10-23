@@ -9,6 +9,13 @@ confidence per field and a small image of each row for the review screen.
   layout says where every box is.
 - **Alphabet restriction:** name boxes may only read `A–Z`, space, `-`, `'`;
   date boxes only `0–9`.
+- **Date boxes:** people write each digit over the box's left divider, so a
+  box is never cut at its own edges. The printed lines (found near where the
+  layout puts them) are erased, and each box gets every stroke whose centre is
+  in it, plus the line ink that stroke runs along; the crop is padded to 1.5:1
+  so it is not stretched. A box's confidence is its digit's share of the ten
+  digit scores. On the first real filled forms (2026-10-23) this took exact
+  dates from 0/26 to 26/26.
 - **Geometry is not stored here.** The API sends the layout of every page of
   the meet's form with each photo (`Server/src/utils/walk-in/form-layout.util.js`),
   so the reader can never disagree with what was printed.
