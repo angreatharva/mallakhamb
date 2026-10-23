@@ -63,7 +63,7 @@ Read [deploy/README.md](README.md) first for the comparison and the decisions.
 | D2 | Is anyone still using the Laravel app at `api.`? | It decides whether `api.` can be re-pointed (A) or the new API needs another name (B) |
 | D3 | Who owns the BigRock hosting account, and when does it renew? | DNS and email depend on it (F13). Keep it **paid and active** for now |
 | D4 | Platform | See README: OCI (recommended), AWS, or Render Starter |
-| D5 | `RATE_LIMIT_ENABLED` | **Copy Render** (at a venue every device shares one IP) |
+| D5 | `RATE_LIMIT_ENABLED` | **Copy Render** (at a venue every device shares one IP) — decided 2026-10-23: `false` on Render and OCI production |
 | D6 | Is the GitHub repo public? | Decides how serious F5 is |
 | D7 | Ship server logs off the machine? | **No** by default. Logs stay on the server for 14 days. Shipping them to a third party needs a check that they hold no personal data |
 | D8 | Cutover date | A weekday morning IST with no competition and no registration deadline within ±7 days |
@@ -159,7 +159,7 @@ Stored in the platform secret store [PLATFORM]. The server renders them into `/e
 | `JWT_SECRET` | new random | **another** new random | no (everyone re-logs in on the new host anyway) |
 | `JWT_EXPIRES_IN` | copy Render | copy Render | yes |
 | `CSRF_ENABLED` | `true` | `true` | yes |
-| `RATE_LIMIT_ENABLED` | `false` (load test) | **copy Render** (D5) | — |
+| `RATE_LIMIT_ENABLED` | `false` (load test) | `false` (D5, decided 2026-10-23) | — |
 | `METRICS_TOKEN` | new random (staging scrape job) | new random (production scrape job) | no: rotated |
 | `EMAIL_PROVIDER` | `gmail-api` | `gmail-api` | yes |
 | `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` | copy Render | copy Render | yes. **Paste the refresh token carefully: it must start with `1//`** |
