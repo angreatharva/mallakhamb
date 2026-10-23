@@ -48,11 +48,11 @@ Oracle may stop an Always Free VM whose CPU p95, network **and** memory are all 
 - [ ] **3.1** Decide the response, e.g.: a Grafana alert on "VM stopped / host metrics missing" that pages the owner; a written restart + failover runbook; check whether Oracle sends a reclaim notice email first, and to which address.
 - [ ] **3.2** After 7 nights of O14 runs, record the measured p95 numbers (O14 note).
 
-## 4. Database (C2 — not started)
+## 4. Database (C2 — replaced by self-hosting, in progress)
 
 Staging still uses `BRMC_dev` on the current Atlas cluster.
 
-- [ ] **4.1 Decide:** new Atlas **Flex** cluster in Mumbai (plan) or keep the current cluster.
+- [x] **4.1 Decided 2026-10-23: self-host** a 3-member replica set on app-01, app-02 and the Always Free micro VM `db-03`, instead of Atlas Flex. The current Atlas M0 stays as the hourly off-site copy. Plan, edge cases and progress M1–M8: [MONGODB-SELF-HOSTED-PLAN.md](MONGODB-SELF-HOSTED-PLAN.md). **M1 done** (quota + db-03 in FD-3 at 10.0.0.70). **M2 done** (mongod 8.0.34 on all three, localhost-only until M3; all three VMs moved to the 6.8 LTS kernel because MongoDB 8.0 won't start on 6.19+). Items 4.2–4.5 now apply to the replica set: users at M3, network at M2, alerts in Grafana and our own backups at M7.
 - [ ] **4.2 Users:** `mallakhamb_app` (readWrite `<db>`), `mallakhamb_backup` (read), `mallakhamb_staging` (rehearsal/perf/restoretest; deleted at cutover) (C2.2).
 - [ ] **4.3 Network access:** only the two VM IPs. Never `0.0.0.0/0` (C2.3).
 - [ ] **4.4 Atlas alerts:** connections > 300, throttled ops, storage > 70 %, cluster unavailable (C2.4).
