@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const os = require('os');
+const v8 = require('v8');
 
 /**
  * Health Monitor
@@ -326,7 +327,11 @@ class HealthMonitor {
       const rssMB = Math.round(memUsage.rss / 1024 / 1024);
       const externalMB = Math.round((memUsage.external || 0) / 1024 / 1024);
 
-      const heapUsagePercent = Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100);
+      // Against V8's ceiling, not heapTotal: V8 grows heapTotal lazily, so right after a
+      // restart heapUsed is ~93% of a 49 MB heap while the process has gigabytes to spare.
+      const heapLimit = v8.getHeapStatistics().heap_size_limit;
+      const heapLimitMB = Math.round(heapLimit / 1024 / 1024);
+      const heapUsagePercent = Math.round((memUsage.heapUsed / heapLimit) * 100);
 
       // System memory
       const totalMemory = os.totalmem();
@@ -363,6 +368,7 @@ class HealthMonitor {
         heap: {
           used: heapUsedMB,
           total: heapTotalMB,
+          limit: heapLimitMB,
           usagePercent: heapUsagePercent
         },
         rss: rssMB,
