@@ -1,7 +1,7 @@
 # OCI — Production Readiness Plan (what is left)
 
 Written 2026-10-23 from `deploy/oci/PLAN.md`, `deploy/COMMON.md`, the build notes and git history.
-Live OCI state was last checked 2026-10-21. This file is the to-do list; the step-by-step detail stays in COMMON.md / PLAN.md (section ids in brackets).
+Live OCI state was last checked 2026-10-23 (section 2). This file is the to-do list; the step-by-step detail stays in COMMON.md / PLAN.md (section ids in brackets).
 Tick a box here **and** in the source section when it is done.
 
 **Deadline that beats everything else: the domain expires 2026-11-14.**
@@ -34,11 +34,12 @@ Tick a box here **and** in the source section when it is done.
 
 ## 2. Loose ends on the servers
 
-- [ ] **2.1 Redeploy both VMs to current master.** They run `4750a25`; master is `95a47e8`, and `ff89ca5` changes `mallakhamb-deploy` itself — reinstall the script from `deploy/server/` first, then `mallakhamb-deploy <sha>` on the standby, then the active.
-- [ ] **2.2 app-01 `mallakhamb.service` was hand-edited** ("changed on disk"). Diff it against the repo unit, keep the repo version, `daemon-reload`.
-- [ ] **2.3 Rate limits:** staging has them DISABLED. Production must copy Render's `RATE_LIMIT_ENABLED` (D5).
-- [ ] **2.4 OCR token:** prove Render's `OCR_TOKEN` equals OCI's by reading one real form from Render's Walk-in tab.
-- [ ] **2.5 `/api/health` heap check** reports "unhealthy" right after a restart (heapUsed vs heapTotal). Confirm `ff89ca5` silenced it, or fix the check so alerts don't fire on it.
+- [x] **2.1 Redeploy both VMs to current master** (2026-10-23). They were already on `ff89ca5`, not `4750a25`. Every `mallakhamb-*` script and systemd unit on both VMs is byte-identical to `deploy/server/`, so no reinstall was needed. Deployed `95a47e8` (pushed master): app-02 `STANDBY UPDATED`, then app-01 `DEPLOYED`. The OCR self-test passed through the sidecar with its token, which proves `ff89ca5` works. Staging ready = 200.
+  - Small follow-up: the standby path in `mallakhamb-deploy` exits before the release prune, so app-02 keeps every release (15, 3.1 GB, disk 24 %). Prune there too.
+- [x] **2.2 app-01 `mallakhamb.service`** (2026-10-23). The installed unit now matches the repo unit byte for byte, there is no drop-in, and `NeedDaemonReload=no`. Already fixed by an earlier reinstall; nothing to do.
+- [ ] **2.3 Rate limits — checked 2026-10-23, the decision is left for cutover.** Staging has `RATE_LIMIT_ENABLED='false'` (intended for load tests, COMMON §5). **Render has them OFF too**: a CSRF-valid `POST /api/auth/verify-otp` to Render returns no `RateLimit-*` headers, the same as staging. So "copy Render" (D5) means production on OCI also runs with `false`, which leaves no per-IP limit on forgot-password / OTP / reset or player register/login. Before 8.3, decide: copy `false`, or turn it on (the limits are sized so a venue NAT is safe — see `routes/index.js`). Then set the production Vault value.
+- [ ] **2.4 OCR token:** prove Render's `OCR_TOKEN` equals OCI's by reading one real form from Render's Walk-in tab. Checked 2026-10-23: the sidecar access log on app-01 (`/var/log/caddy/ocr-access.log`) shows **no read from Render yet**. The only `/v1/read` hits are the two deliberate no-token 401s from 2026-10-21. To prove it, do one scan on Render's Walk-in tab, then look in that log for a `/v1/read` **200** from a non-OCI IP (a 401 means the tokens differ).
+- [x] **2.5 `/api/health` heap check** (2026-10-23). `ff89ca5` did **not** fix it; it only hid the deploy script's early `curl: (7)` lines. Fixed in `health-monitor.js`: heap use is now measured against V8's `heap_size_limit` (~2 GB), not the lazily grown `heapTotal`, and the response also reports `heap.limit`. New test `tests/unit/infrastructure/health-monitor-memory.test.js`; Server unit suite 737/737. Reaches Render and OCI with the next push to master and the next deploy.
 
 ## 3. Idle-reclaim risk (decision needed)
 
