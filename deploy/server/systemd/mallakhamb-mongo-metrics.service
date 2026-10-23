@@ -1,0 +1,7 @@
+[Unit]
+Description=Mallakhamb replica-set health gauges for Alloy (every member)
+After=mongod.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mallakhamb-mongo-metrics

@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# MONGODB-SELF-HOSTED-PLAN.md §4 — rebuild the application database as it was at <time> and put
+# the result in a SIDE database on the replica set, never over the live one:
+#
+#   sudo mallakhamb-pitr <UTC time, e.g. 2026-10-24T14:02:59Z> <side-db>
+#
+# Takes the newest pitr-base/ at or before <time> and the oplog/ slices after it (both written by
+# mallakhamb-oplog-slice), restores them into a throw-away mongod on 127.0.0.1:27099, replays the
+# oplog up to <time> (--oplogLimit), then copies the application database into <side-db> with the
+# app's own login. Check it, then swap or copy what you need by hand (plan §4: "check, then swap").
+set -euo pipefail
+WHEN="${1:?UTC time}"; SIDE="${2:?side database}"
+. /etc/mallakhamb/platform.sh
+TGT=$(date -u -d "$WHEN" +%s) || { echo "cannot read time $WHEN" >&2; exit 1; }
+URI="$(sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
+[[ "$URI" =~ ^(mongodb://[^/]+/)([^?]+)(\?.*)?$ ]] || { echo "MONGODB_URI is not the replica set" >&2; exit 1; }
+APP_DB="${BASH_REMATCH[2]}"; SIDE_URI="${BASH_REMATCH[1]}${SIDE}${BASH_REMATCH[3]}"
+[ "$SIDE" != "$APP_DB" ] || { echo "refusing: the side database cannot be the live one" >&2; exit 1; }
+umask 077
+W="$(mktemp -d)"; PORT=27099
+cleanup() { mongosh --quiet --port "$PORT" --eval 'db.getSiblingDB("admin").shutdownServer({force: true})' >/dev/null 2>&1 || true; rm -rf "$W"; }
+trap cleanup EXIT
+pos() { sed -E 's/.*_([0-9]+)\.([0-9]+)(-[0-9.]+)?\.(tar\.gz|bson\.gz)$/\1 \2/'; }   # name → "t i" of its start
+
+# 1. the newest base at or before the target
+mapfile -t BASES < <("$OCI" os object list --namespace "$OS_NAMESPACE" --bucket-name "$BACKUP_BUCKET" \
+  --prefix pitr-base/ --all --query 'data[].name' --raw-output | tr -d '[]", ' | grep . | sort)
+BASE=""; for b in "${BASES[@]}"; do read -r t _ <<<"$(echo "$b" | pos)"; [ "$t" -le "$TGT" ] && BASE="$b"; done
+[ -n "$BASE" ] || { echo "no base at or before $WHEN" >&2; exit 1; }
+read -r BT BI <<<"$(echo "$BASE" | pos)"
+echo "base: $BASE"
+"$OCI" os object get --namespace "$OS_NAMESPACE" --bucket-name "$BACKUP_BUCKET" --name "$BASE" --file "$W/base.tar.gz" >/dev/null
+tar -C "$W" -xzf "$W/base.tar.gz"
+
+# 2. the slices after it, in order, that start before the target
+mapfile -t SLICES < <("$OCI" os object list --namespace "$OS_NAMESPACE" --bucket-name "$BACKUP_BUCKET" \
+  --prefix oplog/ --all --query 'data[].name' --raw-output | tr -d '[]", ' | grep . \
+  | while read -r s; do read -r t i <<<"$(echo "$s" | pos)"; printf '%s %s %s\n' "$t" "$i" "$s"; done | sort -n -k1,1 -k2,2 \
+  | awk -v bt="$BT" -v bi="$BI" -v tg="$TGT" '($1 > bt || ($1 == bt && $2 >= bi)) && $1 <= tg {print $3}')
+mkdir -p "$W/replay"; : > "$W/replay/oplog.bson"
+for s in "${SLICES[@]}"; do
+  "$OCI" os object get --namespace "$OS_NAMESPACE" --bucket-name "$BACKUP_BUCKET" --name "$s" --file "$W/s.gz" >/dev/null
+  gzip -dc "$W/s.gz" >> "$W/replay/oplog.bson"
+done
+echo "slices: ${#SLICES[@]}"
+
+# 3. a throw-away mongod: base + its own oplog, then the slices up to the target second
+mkdir -p "$W/db"
+GLIBC_TUNABLES=glibc.pthread.rseq=0 mongod --dbpath "$W/db" --port "$PORT" --bind_ip 127.0.0.1 \
+  --wiredTigerCacheSizeGB 0.25 --fork --logpath "$W/mongod.log" --quiet >/dev/null
+# (--oplogReplay refuses namespace excludes; the base holds only the app DB and admin, and this
+# throw-away mongod has no auth, so restoring admin's users here is harmless.)
+mongorestore --port "$PORT" --dir "$W/base" --oplogReplay --quiet
+[ -s "$W/replay/oplog.bson" ] && mongorestore --port "$PORT" --dir "$W/replay" --oplogReplay --oplogLimit "${TGT}:0" --quiet
+
+# 4. the application database → the side database on the replica set (app login, target dropped first)
+mongodump --port "$PORT" --db "$APP_DB" --archive="$W/app.gz" --gzip --quiet
+printf 'uri: "%s"\n' "$SIDE_URI" > "$W/side.yaml"
+mongorestore --config="$W/side.yaml" --archive="$W/app.gz" --gzip --drop \
+  --nsInclude="${APP_DB}.*" --nsFrom="${APP_DB}.*" --nsTo="${SIDE}.*" --quiet
+U="$SIDE_URI" mongosh --quiet --nodb --eval '
+  const d = connect(process.env.U);
+  d.getCollectionNames().sort().forEach(c => print("  " + c.padEnd(30) + d[c].countDocuments({})));'
+echo "PITR done: $APP_DB as of $(date -u -d "@$TGT" +%FT%TZ) is in $SIDE (base $BT.$BI + ${#SLICES[@]} slices)"

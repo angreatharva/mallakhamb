@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# MONGODB-SELF-HOSTED-PLAN.md §4 — point-in-time backups for replica set "mallakhamb". Every 15 min
+# on the active (mallakhamb-oplog-slice.timer; promote/demote move it):
+#
+#   * once a UTC day, a BASE: a whole-set `mongodump --oplog` (consistent at the last oplog entry it
+#     captured) → pitr-base/<stamp>_<t>.<i>.tar.gz, where <t>.<i> is that exact oplog position;
+#   * every run, a SLICE: the oplog entries after the previous slice (the first slice after a base
+#     starts exactly at the base's position) → oplog/<stamp>_<from>-<to>.bson.gz.
+#
+# Base + the slices after it, replayed with --oplogLimit, rebuild the data at any second
+# (mallakhamb-pitr). Slices never overlap, so a replay never applies a write twice.
+# Reads a secondary as mallakhamb_backup (BACKUP_URI), so the primary is not loaded.
+set -euo pipefail
+[ -f /etc/mallakhamb/STANDBY ] && { echo "standby: oplog slices run on the active only"; exit 0; }
+. /etc/mallakhamb/platform.sh
+BACKUP_URI="$(sed -n "s/^BACKUP_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
+[[ "$BACKUP_URI" == *"replicaSet=mallakhamb"* ]] || { echo "BACKUP_URI is not the replica set; nothing to slice"; exit 0; }
+[[ "$BACKUP_URI" =~ ^(mongodb://[^/]+/)([^?]*)(\?.*)?$ ]] || { echo "cannot parse BACKUP_URI" >&2; exit 1; }
+SET_URI="${BASH_REMATCH[1]}${BASH_REMATCH[3]}"            # no database: the whole set, for --oplog
+STATE=/var/lib/mallakhamb/oplog-slice.state                  # "<base-day> <t> <i>"
+mkdir -p /var/lib/mallakhamb
+umask 077
+W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
+printf 'uri: "%s"\n' "$SET_URI" > "$W/set.yaml"
+STAMP=$(date -u +%Y-%m-%dT%H%MZ); TODAY=$(date -u +%F)
+last_ts() {   # the last oplog position in a .bson file → "t i" (empty if the file has no entries)
+  # "|| true": no entries is an answer, not an error (set -e + pipefail would end the script)
+  { bsondump --quiet "$1" 2>/dev/null | tail -1 | grep -o '"ts":{"\$timestamp":{"t":[0-9]*,"i":[0-9]*}}' \
+    | sed -E 's/.*"t":([0-9]+),"i":([0-9]+).*/\1 \2/'; } || true
+}
+newest_ts() { # the newest entry in a secondary's oplog right now → "t i"
+  SET_URI="$SET_URI" mongosh --quiet --nodb --eval '
+    const c = connect(process.env.SET_URI + (process.env.SET_URI.includes("?") ? "&" : "?") + "readPreference=secondaryPreferred");
+    const e = c.getSiblingDB("local").oplog.rs.find({}, { ts: 1 }).sort({ $natural: -1 }).limit(1).next();
+    print(e.ts.getHighBits() + " " + e.ts.getLowBits())'
+}
+metric() {    # $1 name, $2 help
+  local T=/var/lib/alloy/textfile
+  # (umask 022 here: this script runs under umask 077, and Alloy, user alloy, must read the file)
+  ( umask 022; printf '# HELP %s %s\n# TYPE %s gauge\n%s %s\n' "$1" "$2" "$1" "$1" "$(date +%s)" > "$T/.$1.tmp" && mv "$T/.$1.tmp" "$T/$1.prom" )
+}
+
+read -r BASE_DAY FROM_T FROM_I < "$STATE" 2>/dev/null || { BASE_DAY=""; FROM_T=""; FROM_I=""; }
+
+# 1. A new base, once a UTC day (and whenever there is no chain to continue, e.g. after a failover).
+if [ "$BASE_DAY" != "$TODAY" ] || [ -z "$FROM_T" ]; then
+  START=$(newest_ts)                    # if nothing is written during the dump, the base ends here
+  mongodump --config="$W/set.yaml" --readPreference=secondaryPreferred --oplog --out="$W/base" --quiet
+  END=$(last_ts "$W/base/oplog.bson"); END="${END:-$START}"
+  read -r FROM_T FROM_I <<<"$END"
+  tar -C "$W" -czf "$W/base.tar.gz" base
+  upload_backup "$W/base.tar.gz" "pitr-base/${STAMP}_${FROM_T}.${FROM_I}.tar.gz"
+  echo "$TODAY $FROM_T $FROM_I" > "$STATE"
+  metric mallakhamb_pitr_base_last_success_timestamp_seconds "Unix time of the last point-in-time base dump"
+  echo "base ok: pitr-base/${STAMP}_${FROM_T}.${FROM_I}.tar.gz ($(stat -c %s "$W/base.tar.gz") bytes)"
+fi
+
+# 2. The slice: every oplog entry after the last position, from a secondary.
+printf '{"ts":{"$gt":{"$timestamp":{"t":%s,"i":%s}}}}' "$FROM_T" "$FROM_I" > "$W/q.json"
+mongodump --config="$W/set.yaml" --readPreference=secondaryPreferred --db=local --collection=oplog.rs \
+  --queryFile="$W/q.json" --out="$W/slice" --quiet
+F="$W/slice/local/oplog.rs.bson"
+TO=$(last_ts "$F")
+if [ -n "$TO" ]; then
+  read -r TO_T TO_I <<<"$TO"
+  gzip -c "$F" > "$W/slice.bson.gz"
+  upload_backup "$W/slice.bson.gz" "oplog/${STAMP}_${FROM_T}.${FROM_I}-${TO_T}.${TO_I}.bson.gz"
+  echo "$TODAY $TO_T $TO_I" > "$STATE"
+  echo "slice ok: oplog/${STAMP}_${FROM_T}.${FROM_I}-${TO_T}.${TO_I}.bson.gz ($(stat -c %s "$W/slice.bson.gz") bytes)"
+else
+  echo "slice: no writes since ${FROM_T}.${FROM_I}"
+fi
+metric mallakhamb_oplog_slice_last_success_timestamp_seconds "Unix time of the last good oplog slice (empty slices count)"

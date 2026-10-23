@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# MONGODB-SELF-HOSTED-PLAN.md §6 — replica-set health as Prometheus gauges, every minute, on every
+# member (app-01, app-02, db-03). Written to Alloy's textfile directory, so Alloy ships them with
+# the host metrics and no database password ever goes into Alloy. Reads as mallakhamb_monitor
+# (clusterMonitor + read local), whose password is in /etc/mallakhamb/mongo-monitor.env (0600).
+set -uo pipefail
+T=/var/lib/alloy/textfile
+CA=/etc/mongodb/tls/ca.pem
+OUT="$T/.mongo.tmp"
+ENVF=/etc/mallakhamb/mongo-monitor.env
+up=0
+if [ -f "$ENVF" ] && [ -d "$T" ]; then
+  set -a; . "$ENVF"; set +a
+  # The application database: the app's MONGODB_URI path. db-03 has no app.env, so it reports
+  # replica-set health only; the size gauges come from the app VMs.
+  APP_DB=""
+  [ -f /etc/mallakhamb/app.env ] && APP_DB="$(sed -n "s/^MONGODB_URI='mongodb[^/]*\/\/[^/]*\/\([^?']*\).*/\1/p" /etc/mallakhamb/app.env)"
+  # The password reaches mongosh through its environment, never its command line (ps shows that).
+  if APP_DB="$APP_DB" mongosh --quiet --tls --tlsCAFile "$CA" --host localhost --eval '
+    if (!db.getSiblingDB("admin").auth("mallakhamb_monitor", process.env.MONGO_MONITOR_PASSWORD).ok) throw new Error("auth");
+    const L = [], g = (name, help, rows) => { L.push("# HELP " + name + " " + help, "# TYPE " + name + " gauge"); rows.forEach(r => L.push(r)); };
+    g("mallakhamb_mongo_up", "1 if this member answered over TLS with the monitor login", ["mallakhamb_mongo_up 1"]);
+    const s = rs.status();
+    const primary = s.members.find(m => m.stateStr === "PRIMARY");
+    g("mallakhamb_mongo_primary_present", "1 if this member sees a PRIMARY", ["mallakhamb_mongo_primary_present " + (primary ? 1 : 0)]);
+    // state: 1 PRIMARY, 2 SECONDARY, 8 DOWN, 6 UNKNOWN, ... (as THIS member sees each member)
+    g("mallakhamb_mongo_member_state", "replica-set state of each member as this member sees it", s.members.map(m => "mallakhamb_mongo_member_state{member=\"" + m.name.split(":")[0] + "\"} " + m.state));
+    if (primary) g("mallakhamb_mongo_replication_lag_seconds", "how far each member is behind the primary",
+      s.members.filter(m => m.optimeDate).map(m => "mallakhamb_mongo_replication_lag_seconds{member=\"" + m.name.split(":")[0] + "\"} " + Math.max(0, (primary.optimeDate - m.optimeDate) / 1000)));
+    // Oplog headroom: the window only means something once the oplog is full; until then report a
+    // large value, so a new replica set does not look as if it held too little history.
+    const lo = db.getSiblingDB("local"), st = lo.oplog.rs.stats();
+    const first = lo.oplog.rs.find().sort({ $natural: 1 }).limit(1).next(), last = lo.oplog.rs.find().sort({ $natural: -1 }).limit(1).next();
+    const windowS = last.ts.getHighBits() - first.ts.getHighBits();      // BSON Timestamp: high bits = seconds
+    const full = st.size >= 0.9 * st.maxSize;
+    g("mallakhamb_mongo_oplog_window_seconds", "history the oplog holds (1e9 while it is not yet 90 % full)", ["mallakhamb_mongo_oplog_window_seconds " + (full ? windowS : 1e9)]);
+    g("mallakhamb_mongo_oplog_used_ratio", "oplog bytes used / its maximum", ["mallakhamb_mongo_oplog_used_ratio " + (st.size / st.maxSize).toFixed(4)]);
+    const ss = db.serverStatus();
+    g("mallakhamb_mongo_connections_current", "open client connections on this member", ["mallakhamb_mongo_connections_current " + ss.connections.current]);
+    const app = process.env.APP_DB;
+    if (app) {
+      const d = db.getSiblingDB(app).stats();
+      g("mallakhamb_mongo_db_bytes", "data + index bytes of the application database", ["mallakhamb_mongo_db_bytes{db=\"" + app + "\"} " + (d.dataSize + d.indexSize)]);
+      const e2e = db.adminCommand({ listDatabases: 1, nameOnly: true }).databases.some(x => x.name === app + "_e2e");
+      g("mallakhamb_mongo_e2e_db_present", "1 while the nightly e2e database exists", ["mallakhamb_mongo_e2e_db_present " + (e2e ? 1 : 0)]);
+    }
+    print(L.join("\n"));' > "$OUT" 2>/dev/null; then
+    up=1
+  fi
+fi
+[ "$up" = 1 ] || printf '# HELP mallakhamb_mongo_up 1 if this member answered over TLS with the monitor login\n# TYPE mallakhamb_mongo_up gauge\nmallakhamb_mongo_up 0\n' > "$OUT"
+n=$(find /var/lib/mongodb/rollback -type f 2>/dev/null | wc -l)
+printf '# HELP mallakhamb_mongo_rollback_files files in mongod rollback/ (writes a failover undid)\n# TYPE mallakhamb_mongo_rollback_files gauge\nmallakhamb_mongo_rollback_files %s\n' "$n" >> "$OUT"
+mv -f "$OUT" "$T/mallakhamb_mongo.prom"

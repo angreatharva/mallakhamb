@@ -16,5 +16,5 @@ if [ -f /etc/default/alloy ]; then   # Alloy arrives with monitoring (C4.14); sk
   sed -i 's/^MK_SCRAPE_JOB=.*/MK_SCRAPE_JOB="mallakhamb-host"/' /etc/default/alloy && systemctl restart alloy
 fi
 sed -i 's/role="standby"/role="active"/' /var/lib/alloy/textfile/mallakhamb_release.prom 2>/dev/null || true
-systemctl enable --now mallakhamb-backup.timer
+systemctl enable --now mallakhamb-backup.timer mallakhamb-oplog-slice.timer mallakhamb-offsite-copy.timer   # backups run on the active only
 echo "PROMOTED — this server is now the active. If a meet is running: systemctl enable --now mallakhamb-backup-meet.timer"

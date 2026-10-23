@@ -34,6 +34,13 @@ const Admin = require('../../src/models/Admin');
 const Score = require('../../src/models/Score');
 const { COMBINATION_CHECKLISTS } = require('../../src/config/cop-rules');
 
+/** The database in a MongoDB URI: its path, as ConfigManager.databaseName reads it - not whatever
+ *  follows the last "/", which a query like tlsCAFile=/etc/... would win. */
+const dbNameOf = (uri) => {
+  const m = /^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]*)/.exec(uri || '');
+  return m ? decodeURIComponent(m[1]) : '';
+};
+
 const PERF_URI = process.env.PERF_MONGODB_URI || 'mongodb://127.0.0.1:27017/mallakhamb_perf';
 
 /** The one password every seeded account shares. */
@@ -94,7 +101,7 @@ function assertThrowawayDatabase(uri) {
   if (live && uri === live) {
     throw new Error('PERF_MONGODB_URI is the same as MONGODB_URI. Point it at a throwaway database.');
   }
-  const dbName = uri.split('/').pop().split('?')[0];
+  const dbName = dbNameOf(uri);
   if (!/perf|test|bench|scratch/i.test(dbName)) {
     throw new Error(
       `Database "${dbName}" is not obviously a throwaway. Name it something with `
@@ -395,6 +402,11 @@ async function seed() {
     registeredTeams,
   });
 
+  // Competition scope: an admin may only act on a meet it is assigned to (Admin.competitions,
+  // utils/security/competition-access.util.js). Without this every admin request in loadTest.js
+  // is refused at set-competition and the judge/scorer polls measure only that 400.
+  await Admin.updateOne({ _id: admin._id }, { $addToSet: { competitions: competition._id } });
+
   /*
    * Seat a full 6-judge panel on every category AND every apparatus, so any
    * category the benchmark picks has a complete panel and the "start age group"
@@ -468,7 +480,7 @@ async function seed() {
   }
 
   const summary = {
-    database: uri.split('/').pop().split('?')[0],
+    database: dbNameOf(uri),
     competitionId: String(competition._id),
     teams: teams.length,
     athletes: players.length,

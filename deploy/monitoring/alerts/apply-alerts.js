@@ -39,7 +39,7 @@
   const GIB = 1024 * 1024 * 1024;
   const PRESETS = {
     render: { cpu: 0.1, mem: 512 * 1024 * 1024, host: false, standby: false },
-    oci: { cpu: 1, mem: 3 * GIB, host: true, standby: true, failover: 'deploy/oci/PLAN.md O13' },
+    oci: { cpu: 1, mem: 3 * GIB, host: true, standby: true, mongo: true, failover: 'deploy/oci/PLAN.md O13' },
     'oci-single': { cpu: 1, mem: 4 * GIB, host: true, standby: false, failover: 'rebuild from the golden backup, deploy/oci/PLAN.md §5' },
     aws: { cpu: 1, mem: 1.5 * GIB, host: true, standby: false, failover: 'deploy/aws/PLAN.md' },
   };
@@ -161,6 +161,49 @@
       'The active and the standby hold different releases for 2 hours.',
       'A deploy reached one server only (Runtime → Host → Release shows the short shas). On the active: basename $(readlink /opt/mallakhamb/current) | cut -c1-40 gives the full sha; on the standby: sudo mallakhamb-deploy <that full 40-char sha>. Runbook: PLAN.md §8.'],
   );
+  // The self-hosted replica set (deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §6). Gauges come from
+  // mallakhamb-mongo-metrics on every member (app-01, app-02, db-03) through Alloy's textfile
+  // collector; the backup ages from mallakhamb-oplog-slice / -offsite-copy on the active.
+  const MJ = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db"';
+  const MDOC = 'Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).';
+  if (P.mongo) RULES.push(
+    ['mk-mongo-no-primary', 'MongoDB has no primary', `max(mallakhamb_mongo_primary_present{${MJ}})`, 'lt', 1, '1m', 'critical', 'mallakhamb-database', 1,
+      'No replica-set member sees a PRIMARY: nothing can be written.',
+      `Two of three members are down or cut off from each other. On each VM over the Bastion: systemctl status mongod; journalctl -u mongod -n 100. Bring a second member back and the set elects a primary by itself. Only if two members are gone for good: forced reconfig to the survivor (owner decision; it can undo unreplicated writes). ${MDOC}`],
+    ['mk-mongo-members-missing', 'MongoDB members not all answering', `count(mallakhamb_mongo_up{${MJ}} == 1) or vector(0)`, 'lt', 3, '5m', 'warning', 'mallakhamb-database', 1,
+      'Only {{ $values.A.Value }} of the 3 replica-set members answer their health check.',
+      `One member's mongod, VM or collector is down. Writes continue while two of three are up, but the next loss stops them. On the missing VM: systemctl status mongod mallakhamb-mongo-metrics.timer alloy. ${MDOC}`],
+    ['mk-mongo-member-unhealthy', 'MongoDB member not healthy', `count(max by (member) (mallakhamb_mongo_member_state{${MJ}}) != 1 != 2) or vector(0)`, 'gt', 0, '2m', 'warning', 'mallakhamb-database', 1,
+      'A replica-set member is not PRIMARY or SECONDARY (down, recovering or unreachable).',
+      `See which in mallakhamb_mongo_member_state (8 = down, 3 = recovering, 6 = unknown). On that VM: journalctl -u mongod -n 100. A member that fell off the oplog needs a resync (empty its dbPath and restart). ${MDOC}`],
+    ['mk-mongo-lag', 'MongoDB replication lag', `max(mallakhamb_mongo_replication_lag_seconds{${MJ}})`, 'gt', 30, '5m', 'warning', 'mallakhamb-database', 1,
+      'A member is {{ humanizeDuration $values.A.Value }} behind the primary.',
+      `Usually db-03 (the 1/8-OCPU micro) under heavy writes, or a slow disk. Harmless while app-01 and app-02 both run; with one of them down it slows every majority write. ${MDOC}`],
+    ['mk-mongo-oplog-window', 'MongoDB oplog window short', `min(mallakhamb_mongo_oplog_window_seconds{${MJ}})`, 'lt', 172800, '30m', 'warning', 'mallakhamb-database', 1,
+      'The oplog holds less than 48 h of history.',
+      `A member down longer than the window must be resynced, and point-in-time restore depends on the slices keeping up. Raise replication.oplogSizeMB in install-mongo.sh (rolling restart) or find what writes so much. ${MDOC}`],
+    ['mk-mongo-connections', 'MongoDB connections high', `max(mallakhamb_mongo_connections_current{${MJ}})`, 'gt', 300, '5m', 'warning', 'mallakhamb-database', 1,
+      '{{ $values.A.Value }} open connections on one member.',
+      `The API pool is up to 100 per process; more means a leak, a reconnect storm, or several API processes. ${MDOC}`],
+    ['mk-mongo-rollback', 'MongoDB rollback files', `max(mallakhamb_mongo_rollback_files{${MJ}})`, 'gt', 0, '0m', 'warning', 'mallakhamb-database', 1,
+      'A failover undid writes that had not reached a majority (files in mongod rollback/).',
+      `The app writes with w:"majority", so these should never be acknowledged writes. Look at /var/lib/mongodb/rollback on that member (bsondump) before deleting. ${MDOC}`],
+    ['mk-mongo-data-size', 'Database growing past the free-tier plan', `max(mallakhamb_mongo_db_bytes{${MJ}})`, 'gt', 250e6, '1h', 'warning', 'mallakhamb-database', 1,
+      'The application database is {{ humanize1024 $values.A.Value }}B (plan §4a alerts at 250 MB, Atlas M0 copy limit 512 MB).',
+      'Check plan §4a: the M0 off-site copy, the bucket and db-03 run out first. Look for files or logs stored in MongoDB.'],
+    ['mk-oplog-slice-stale', 'Point-in-time backups stalled', `time() - max(mallakhamb_oplog_slice_last_success_timestamp_seconds{${MJ}})`, 'gt', 2400, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.backup,
+      'No oplog slice for more than 40 minutes.',
+      `On the active: systemctl status mallakhamb-oplog-slice.timer; journalctl -u mallakhamb-oplog-slice -n 50. Point-in-time restore cannot go past the last slice. ${MDOC}`],
+    ['mk-pitr-base-stale', 'Point-in-time base stale', `time() - max(mallakhamb_pitr_base_last_success_timestamp_seconds{${MJ}})`, 'gt', 93600, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.backup,
+      'No point-in-time base dump for more than 26 hours.',
+      `The first slice of each UTC day takes the base; see journalctl -u mallakhamb-oplog-slice. ${MDOC}`],
+    ['mk-offsite-stale', 'Off-site copy stale', `time() - max(mallakhamb_offsite_last_success_timestamp_seconds{${MJ}})`, 'gt', 10800, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.backup,
+      'The hourly copy to Atlas has not succeeded for 3 hours.',
+      `On the active: journalctl -u mallakhamb-offsite-copy -n 50. Usually Atlas's network access list (the active's public IP), the Atlas user, or M0's 512 MB limit. This copy is the way out if Oracle is lost. ${MDOC}`],
+    ['mk-mongo-e2e-left', 'E2E database left behind', `max(mallakhamb_mongo_e2e_db_present{${MJ}}) > 0 and on() max(mallakhamb_e2e_last_exit_code{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"}) == 0`, 'gt', 0, '6h', 'warning', 'mallakhamb-runtime', HOST_PANEL.e2eResult,
+      'The nightly e2e database still exists 6 hours after a passing run.',
+      'The run drops it after a pass (a failed run keeps it for inspection). Cleanup broke: journalctl -u mallakhamb-e2e -n 50; it is excluded from backups but takes space.'],
+  );
     return { RULES };
   };
 
@@ -201,8 +244,10 @@
    * the originals in GROUP and this paste deletes the staging group.
    */
   const STAGING_GROUP = 'mallakhamb-oci-staging';
+  // Since M4 staging runs on the self-hosted replica set, so its rules are live here too.
+  const STAGING_PREFIXES = ['mk-e2e-', 'mk-mongo-', 'mk-oplog-', 'mk-pitr-', 'mk-offsite-'];
   const stagingRules = () => spec('oci').RULES
-    .filter(([uid]) => uid.startsWith('mk-e2e-'))
+    .filter(([uid]) => STAGING_PREFIXES.some((p) => uid.startsWith(p)))
     .map((r) => {
       const rule = buildRule([`${r[0]}-stg`, ...r.slice(1)]);
       delete rule.annotations.__dashboardUid__;

@@ -2,7 +2,14 @@
 
 Replaces readiness section 4 (COMMON C2, "Atlas Flex"). **Owner approved 2026-10-23:** self-host, allow one micro VM, keep Atlas M0 as the hourly off-site copy (§9).
 
-**Progress:** M1, M2 done (2026-10-23), **M3 done (2026-10-24)**. Next: M4 (rehearsal: restore into the set, point staging at it).
+**Progress:** M1–M2 done (2026-10-23); **M3–M7 done (2026-10-24)** — staging runs on the replica set, drills passed with no acknowledged write lost, point-in-time and off-site restores proven, monitoring live, load-tested. **M8 (the production cutover) is the owner's step inside C7** — runbook §7c.
+
+**M4 result (2026-10-24):** staging's own data (`BRMC_dev` on Atlas, 359 documents) copied into the set as **`BRMC_rehearsal`** with `deploy/server/mongo-copy-db.sh` — **IDENTICAL: 16 collections, 359 documents, every index definition equal**. Vault env `mallakhamb-prod-bom-secret-api-env` **v7 → v8**: only `MONGODB_URI` (as `mallakhamb_staging`) and `BACKUP_URI` (as `mallakhamb_backup`) changed, both `…/BRMC_rehearsal?replicaSet=mallakhamb&authSource=admin&tls=true&tlsCAFile=/etc/mallakhamb/mongo-ca.pem` (`deploy/oci/scripts/mongo-m4-staging-env.sh`; undo = `ROLLBACK_TO=7`). API restart: staging back in **7 s**; startup report "connected to BRMC_rehearsal in 181ms", 12 migrations already applied; the API holds connections to app-01 and app-02 only (hidden db-03 never serves reads); public `/competitions` and `/cop-rules` responses **byte-identical** to before. Staging backup from the set: OK (43 KB). Restore drill (`BRMC_rehearsal_restoretest`): every collection matches, 7 s.
+- **Deviation from the plan, on purpose:** the plan said copy *production* `BRMC`. Staging is a public URL, so it got its own test data instead; the production copy stays readiness 6.1 (rehearsal), after staging's email settings are confirmed.
+- **Grants widened:** `mallakhamb_staging` also has `BRMC_rehearsal_e2e` and `BRMC_rehearsal_restoretest`, because `mallakhamb-e2e` and `mallakhamb-restore-drill` derive `<db>_e2e` / `<db>_restoretest` from the app URI and sign in as the same user.
+- **API can read the CA:** `mongo-tls-fetch … install` also writes the public CA to `/etc/mallakhamb/mongo-ca.pem` (0644); the API user cannot enter `/etc/mongodb/tls`.
+- **At cutover (M8):** production's app user `mallakhamb_app` has `readWrite BRMC` only, so the nightly e2e (which would use `BRMC_e2e` with the app login) needs its own grant or a dedicated e2e user (`E2E_SECRET_OCID`).
+- Atlas is still production (Render) and still holds `BRMC_dev` untouched, so staging can go back with `ROLLBACK_TO=7` + restart.
 
 **M3 result (2026-10-24):** replica set `mallakhamb` is live — app-01.db PRIMARY (priority 2), app-02.db SECONDARY (1), db-03.db hidden SECONDARY (priority 0, votes 1); default write concern `{w: "majority"}`; oplog 2048 MB. Every member requires TLS (private CA, 10 years; member certificates for `<name>.db` + localhost + private IP, 2 years, expire 2028-10-22), authenticates members by x.509, requires users, and listens on 127.0.0.1 + its private IP. Users (SCRAM-SHA-256): `root_breakglass`, `mallakhamb_app` (readWrite BRMC), `mallakhamb_staging` (readWrite + dbAdmin on BRMC_rehearsal/_perf/_restoretest/_e2e), `mallakhamb_backup` (backup + read local), `mallakhamb_monitor` (clusterMonitor + read local). `deploy/server/mongo-auth-check.sh`: **11/11 PASS** (no anonymous access, wrong password refused, each user can do its job and nothing else). From app-01: TLS by name and by IP works; a connection without TLS is closed by the server. app-02 restarted → back as SECONDARY in ~4 s. Staging (still on Atlas) answered 200 throughout. Memory used: app-01 796 MB, app-02 688 MB, db-03 455 MB (500 MB available).
 - **How the secrets moved:** `deploy/oci/scripts/mongo-m3-cloudshell.sh` (Cloud Shell, owner's identity) made the CA, member certificates and passwords and stored them as six Vault secrets (`mallakhamb-prod-bom-secret-mongo-{ca-key,ca-cert,member-app-01,member-app-02,member-db-03,users}`); nothing was printed. The VMs pull their own: `deploy/server/mongo-tls-fetch.sh` (`/usr/local/bin/mongo-tls-fetch <vault> install|users|tar|untar`) reads Vault with the instance principal; db-03 (no OCI CLI, not in the dynamic group) gets its two files relayed from app-01 by `tar | untar`. `deploy/server/mongo-rs-init.sh` initiated the set (localhost exception), created the users and shredded `/root/mongo-users.env`.
@@ -151,13 +158,72 @@ Alloy's built-in `prometheus.exporter.mongodb` on each member → the existing G
 | M1 ✅ | **Done 2026-10-23.** Root quota `mallakhamb-prod-quota-free-tier` gained `set compute-core quota standard-e2-micro-core-count to 1 in tenancy` (10 statements now; `vm-standard-e2-1-micro-count` is not a valid quota name). Effective quota 1, used 1, so a second micro is refused. `mallakhamb-prod-bom-vm-db-03` (hostname `mallakhamb-prod-db-03`) is RUNNING: VM.Standard.E2.1.Micro, **FAULT-DOMAIN-3**, private **10.0.0.70**, ephemeral public IP (§5), 50 GB boot, image Canonical-Ubuntu-24.04-Minimal-2026.09.18-0, the app VMs' SSH key. Checked over the Bastion: Ubuntu 24.04.5 **x86_64**, AMD EPYC 7551 with **AVX/AVX2** (MongoDB 8 on x86 needs AVX), 954 MB RAM, no swap yet, outbound internet OK, iptables rejects all but SSH | yes (terminate) |
 | M2 ✅ | **Done 2026-10-23** (see Progress). `deploy/server/kernel-lts.sh` first, then `deploy/server/install-mongo.sh` (arm64 and amd64): repo, pinned 8.0.x, 2 GB swap on db-03, `mongod.conf` (bind, TLS, cache, oplog 2 GB, replSet), systemd hardening, `apt-mark hold`, iptables 27017 from the VCN | yes |
 | M3 ✅ | **Done 2026-10-24** (see Progress). Private CA + member certs into Vault; `rs.initiate` with the three members and priorities; users | yes |
-| M4 | Rehearsal on the replica set: restore `BRMC` → `BRMC_rehearsal`, counts identical, point **staging** at it (`MONGODB_URI` in the staging Vault secret). Atlas stays production | yes (switch staging back) |
-| M5 | Drills on staging: kill app-01 mid-judge-panel (auto election + promote), kill db-03, partition app-01 (iptables), fill the disk, restore from 15-min dump, oplog PITR, M0 copy restore | — |
-| M6 | Load test 6.7 **with mongod on the same core** (API + primary on 1 OCPU). Pass criteria unchanged | — |
-| M7 | Backups (nightly dump, 15-min oplog slices, hourly M0 copy) + Grafana rules live. Prerequisite: add db-03 to the `mallakhamb-prod-dg-app` dynamic group (it lives in the identity domain) so it can read Vault and write the bucket. `mallakhamb-e2e`: drop `<db>_e2e` only after a passing run (today it empties it after every run); keep a failed run's data for inspection until the next run | yes |
-| M8 | Cutover (C7 step 15 changes target): final dump from Atlas → restore into the replica set → counts → production `MONGODB_URI` → deploy. **Atlas M0 then becomes the hourly cold copy**, not deleted at C9 | rollback = point back at Atlas until GO |
+| M4 ✅ | **Done 2026-10-24** with staging's own data (see Progress). Rehearsal on the replica set: restore `BRMC` → `BRMC_rehearsal`, counts identical, point **staging** at it (`MONGODB_URI` in the staging Vault secret). Atlas stays production | yes (switch staging back) |
+| M5 ✅ | **Done 2026-10-24** — see "M5 drill results" below. Drills on staging: kill app-01 (auto election + promote), kill db-03, partition app-01 (iptables), two down, fill the disk, reboot, restore from dump, oplog PITR, M0 copy restore | — |
+| M6 ✅ | **Done 2026-10-24** — see "M6 result" below: mongod costs ≤ 23 % of the shared core; the limit is the API's own CPU on two heavy admin polls. Primary stays on app-01. The full C6C (external generator, real think time) stays readiness 6.7 | — |
+| M7 ✅ | **Done 2026-10-24** — see "M7 result" below. Backups (nightly dump, daily PITR base + 15-min oplog slices, hourly M0 copy) + Grafana rules live; `mallakhamb-e2e` drops `<db>_e2e` only after a passing run. db-03 was NOT added to the dynamic group: backups run on the active (reading a secondary), so it never needs Vault or the bucket; its certificate and monitor password are relayed by app-01 | yes |
+| M8 ⏸ | **Not executed — owner's step at the C7 cutover** (it moves production data and traffic; it needs the domain, Razorpay's approval and the D8 window). The runbook is below ("M8 runbook"). **Atlas M0 then becomes the hourly cold copy**, not deleted at C9 | rollback = point back at Atlas until GO |
 
 Code changes: none expected in the app. `MONGODB_URI` changes; the startup report already shows the replica-set name and host. The e2e nightly (`<db>_e2e`) moves to the replica set as a separate DB: excluded from every backup and the M0 copy, and dropped after each passing run.
+
+## 7a. M5 drill results (2026-10-24, staging, under a live write probe)
+
+`deploy/server/mongo-drill-writer.sh` inserted one document every 200 ms with `w: "majority"` (the app's driver path) through each drill, then checked every acknowledged write was still there; staging's `/api/health/ready` was polled every second from outside.
+
+| Drill | Writes acknowledged / refused / **lost** | Longest single write | API not-ready | What happened |
+|---|---|---|---|---|
+| Baseline | 97 / 0 / **0** | 0.0 s | 0 s | — |
+| Stop primary app-01 (clean) 60 s | 578 / 0 / **0** | 0.4 s | 0 s | graceful step-down: app-02 PRIMARY in 23 ms; app-01 took it back on return (priority 2) |
+| Kill -9 primary app-01, down 60 s | 526 / 0 / **0** | 11.0 s (retried, succeeded) | 8 s | election after the 10 s timeout; app-02 PRIMARY; app-01 back as primary; no rollback files |
+| Stop db-03 60 s | 435 / 0 / **0** | 0.0 s | 0 s | no effect (app-01 + app-02 = majority) |
+| Partition app-01 (27017 dropped both ways) 60 s | 250 / 2 / **0** | 29.9 s | 37 s | app-01 stepped down by itself after ~11 s, app-02 PRIMARY 1 s later — no split brain; the isolated API could not write (runbook: promote app-02); healed: app-01 rejoined, no rollback files |
+| app-02 + db-03 down together 45 s | 275 / 2 / **0** | 29.8 s | 29 s | app-01 stepped down (no majority), nothing writable; recovered by itself the moment app-02 returned |
+| Reboot db-03 under load | 724 / 0 / **0** | 0.0 s | 1 s* | back as hidden SECONDARY; `/etc/hosts` block and TLS survived the boot |
+| db-03 disk 100 % full 60 s | 630 / 0 / **0** | 0.0 s | 0 s | mongod on db-03 hit a fatal assertion (FTDC write), systemd retried every 5 s, recovered by itself once space was freed |
+
+\* one probe miss, not involving db-03 (the API never reads from it).
+Also: app-02's API starts against the set (`startup.js --check`: connected to BRMC_rehearsal in 354 ms) — a VM failover's app half works.
+
+**Restore drills:** nightly dump → `mallakhamb-restore-drill` (every collection matches, 7 s); **point-in-time** → `mallakhamb-pitr` rebuilt BRMC_rehearsal as of a chosen second (doc A before its later update, C not yet written) and as of "now" (both changes present) — base + 4 slices; **off-site** → Atlas `BRMC_rehearsal_offsite` restored into a side DB on the set: 16 collections / 359 documents identical to live, 7 s.
+
+## 7b. M7 result (2026-10-24)
+
+- **Nightly dump** unchanged (`mallakhamb-backup`, `BACKUP_URI` = the set as `mallakhamb_backup`, secondaryPreferred → app-02).
+- **Point-in-time**: `mallakhamb-oplog-slice` (timer every 15 min, active only — promote/demote move it): first run of each UTC day takes a whole-set `mongodump --oplog` **base** (`pitr-base/<stamp>_<t>.<i>.tar.gz`, consistent at that exact oplog position); every run uploads the oplog entries after the previous position (`oplog/<stamp>_<from>-<to>.bson.gz`), so slices never overlap. `mallakhamb-pitr <time> <side-db>` rebuilds into a throw-away mongod on 127.0.0.1:27099 (base + its oplog, then slices with `--oplogLimit`) and copies the app DB into the side DB. Bucket lifecycle: `pitr-base/` and `oplog/` deleted after 35 days (the bucket's 30-day retention keeps them at least that long).
+- **Off-site**: `mallakhamb-offsite-copy` (hourly at :07, active only) → Atlas `<db>_offsite` (refuses any other name), then compares counts. Target in Vault `mallakhamb-prod-bom-secret-mongo-offsite-uri` (the Atlas URI staging used before M4).
+- **Monitoring**: `mallakhamb-mongo-metrics` (every minute on all three members, as `mallakhamb_monitor`) writes gauges to Alloy's textfile directory; **Alloy installed on db-03** (job `mallakhamb-db`, token relayed from app-01). 12 new rules (`mk-mongo-*`, `mk-oplog-slice-stale`, `mk-pitr-base-stale`, `mk-offsite-stale`) in `apply-alerts.js` for `PLATFORM='oci'`, and their `-stg` copies **live** in the `mallakhamb-oci-staging` group (14 rules; Render's group unchanged, 13/13 hashes equal). **Fire drill:** db-03's mongod stopped → "MongoDB member not healthy" went **firing** after 2 min; cleared by itself after restart.
+- **Traps hit:** a `.prom` written under `umask 077` is unreadable to Alloy (silently missing metrics) — written 0644 now; `bsondump | grep` with no match + `pipefail` killed the slice job; `--oplogReplay` refuses namespace excludes; a BSON Timestamp has no `getTime()` (`getHighBits()` = seconds); the minimal image's apt keyring came out 0600 under a umask-077 wrapper; three scripts parsed the DB name as "after the last /" and took `mongo-ca.pem` from `tlsCAFile=` (fixed in `seedScale.js` and `setup-chain.js`; the app's own `ConfigManager.databaseName` was already right).
+
+## 7b2. M6 result (2026-10-24)
+
+Run ON app-01 — API code, primary mongod **and** the load generator on one OCPU (worse than real life, where the clients are phones). `Server/scripts/perf` from a scratch copy of the release against `BRMC_perf` on the set (100 teams × 10 athletes, scores), closed loop with zero think time, 8 / 56 / 200 concurrent clients:
+
+| Scenario | 8 clients | 56 clients (8 panels × 7 seats) | 200 clients | errors |
+|---|---|---|---|---|
+| `/api/auth/me` | 714 req/s, p95 20 ms | 787 req/s, p95 97 ms | 737 req/s, p95 446 ms | 0 |
+| `/api/health/live` | 1466 req/s, p95 8 ms | p95 67 ms | p95 180 ms | 0 |
+| `/api/public/scores` (spectators) | 977 req/s, p95 13 ms | 1271 req/s, p95 66 ms | 1273 req/s, p95 193 ms | 0 |
+| `/api/admin/teams/submitted` (judge dashboard) | 53 req/s, p95 160 ms | p95 1.5 s | p95 3.1 s | 0 |
+| `/api/admin/scores/team` (scorer) | 31 req/s, p95 296 ms | p95 1.5 s | p95 6.5 s | 0 |
+| Socket.IO live scoring, 8 panels | 2400/2400 slips delivered, fan-out p95 9.9 ms, 153 slips/s | | | 0 |
+
+- **mongod used avg 6–10 %, max 23 % of the core; host memory ≤ 33 %; zero 5xx.** Co-locating the primary with the API is not the bottleneck — the Node process (API + generator) is, on two heavy admin endpoints (~19 ms and ~32 ms of CPU per request). At a realistic rate (8 panels polling every 5–10 s ≈ 6–7 req/s) they use a fraction of their 31–53 req/s capacity; under this artificial zero-think-time load they miss C6C's p95 < 500 ms at 56 clients.
+- **Decision: keep the primary on app-01.** Moving it to app-02 would free only ~10–20 % of a core. Those two endpoints are the place to optimise (Server/docs/api-performance.md).
+- The harness had to be fixed first: `seedScale.js` never assigned its admin to the perf competition (competition scope came later), so every admin request measured the 400 "Competition context is required"; and it read the DB name from after the last `/` (fixed, see §7b). It cannot target a remote URL yet, so the real C6C (generator elsewhere, phones' think time) stays readiness 6.7.
+
+## 7c. M8 runbook — the database part of the C7 cutover (owner-run)
+
+Not run on 2026-10-24 on purpose: it moves production data and traffic, and belongs inside C7's window (domain, Razorpay, announcements, D8, two people). Every piece below exists and was proven on staging.
+
+1. **Before the window:** all `-stg` alerts quiet; last night's dump and today's PITR base present; `mallakhamb-auth-check` 11/11 (`deploy/server/mongo-auth-check.sh`).
+2. **Rehearse first (readiness 6.1):** `sudo bash deploy/server/mongo-copy-db.sh <vault> BRMC BRMC_rehearsal staging --from-atlas` on app-01 — proves the off-site secret's Atlas user can read production `BRMC` and gives the timing. If that user cannot read `BRMC`, store Render's production `MONGODB_URI` as the source secret instead (Cloud Shell, never printed).
+3. **T-0, after Render is suspended (no more writes):** on app-01 `sudo bash deploy/server/mongo-copy-db.sh <vault> BRMC BRMC app --from-atlas` → must print **IDENTICAL**.
+4. **Point production at the set:** `MONGODB_URI` → `mongodb://mallakhamb_app:<pw>@app-01.db:27017,app-02.db:27017,db-03.db:27017/BRMC?replicaSet=mallakhamb&authSource=admin&tls=true&tlsCAFile=/etc/mallakhamb/mongo-ca.pem`, `BACKUP_URI` the same with `mallakhamb_backup`. `deploy/oci/scripts/mongo-m4-staging-env.sh` does exactly this for staging; for production give it a target database and user (`DB=BRMC`, `mallakhamb_app` instead of `mallakhamb_staging`) — a two-line change made at cutover, reviewed by the owner (the auto-mode safety check refused to make a production-targeting change unattended). Then restart the API on the active, `mallakhamb-render-env` on the standby.
+5. **Nightly e2e:** with the production URI it would use `BRMC_e2e` as `mallakhamb_app`, which has no grant there. Set `E2E_SECRET_OCID` to a secret holding a `BRMC_e2e` URI as `mallakhamb_staging` (already granted), or grant `mallakhamb_app` readWrite on `BRMC_e2e`.
+6. **Monitoring:** paste `apply-alerts.js` with `PLATFORM='oci'` (C7 step 55): the production group gains the mongo rules and the staging group is deleted.
+7. **Off-site copy** then writes `BRMC_offsite` on Atlas automatically (the job derives the name; it can never write Atlas's `BRMC`, which stays as the frozen pre-cutover copy).
+8. **Rollback until GO:** Vault env back to the previous version (`ROLLBACK_TO=<n>`), restart, resume Render — Atlas `BRMC` is untouched by every step above.
+9. **After GO (C9):** drop `BRMC_rehearsal`; keep `mallakhamb_staging` only for `*_e2e` / `*_perf` / `*_restoretest` (or drop it if e2e gets its own user).
 
 ## 8. Honest trade-offs vs Atlas
 

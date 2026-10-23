@@ -8,6 +8,8 @@
 #   sudo mongo-tls-fetch <vault-ocid> users              # app-01: → /root/mongo-users.env (0600), for mongo-rs-init
 #   sudo mongo-tls-fetch <vault-ocid> tar <member>       # a member's two files as a tar on stdout, for a VM
 #   sudo mongo-tls-fetch -            untar              #   that cannot read Vault yet (db-03): tar on stdin
+#   sudo mongo-tls-fetch <vault-ocid> monitor            # → /etc/mallakhamb/mongo-monitor.env (monitor password only)
+#   sudo mongo-tls-fetch <vault-ocid> monitor-out | … monitor-in   # the same, relayed to db-03
 #
 # Nothing secret is printed; temporary copies are shredded.
 set -euo pipefail
@@ -25,11 +27,14 @@ place() { # $1 dir holding member.pem + ca.pem
   install -d -m 0750 -o root -g mongodb "$TLS"
   install -m 0400 -o mongodb -g mongodb "$1/member.pem" "$TLS/member.pem"
   install -m 0444 -o root -g mongodb "$1/ca.pem" "$TLS/ca.pem"
+  # The API runs as "mallakhamb" and cannot enter $TLS; MONGODB_URI's tlsCAFile points here.
+  # It is the CA's public certificate, nothing secret.
+  [ -d /etc/mallakhamb ] && install -m 0644 -o root -g root "$1/ca.pem" /etc/mallakhamb/mongo-ca.pem
   echo "installed: $(openssl x509 -in "$TLS/member.pem" -noout -subject -enddate | tr '\n' ' ')" >&2
 }
 
 case "$MODE" in
-  install|users|tar) . /etc/mallakhamb/platform.sh ;;
+  install|users|tar|monitor|monitor-out) . /etc/mallakhamb/platform.sh ;;
 esac
 case "$MODE" in
   install) [ -n "$NAME" ] || exit 2
@@ -38,6 +43,14 @@ case "$MODE" in
            get "mongo-member-$NAME" > "$T/member.pem"; get mongo-ca-cert > "$T/ca.pem"
            tar -C "$T" -cf - member.pem ca.pem ;;
   untar)   tar -x -C "$T" -f - member.pem ca.pem; place "$T" ;;
+  monitor) get mongo-users | grep '^MONGO_MONITOR_PASSWORD=' > "$T/m.env"
+           install -m 0600 -o root -g root "$T/m.env" /etc/mallakhamb/mongo-monitor.env
+           echo "monitor password placed for mallakhamb-mongo-metrics" >&2 ;;
+  monitor-out) get mongo-users | grep '^MONGO_MONITOR_PASSWORD=' ;;      # → stdout, for a VM without Vault
+  monitor-in)  install -d -m 0750 -o root -g root /etc/mallakhamb
+               cat > "$T/m.env"; grep -q '^MONGO_MONITOR_PASSWORD=' "$T/m.env" || { echo "no password on stdin" >&2; exit 1; }
+               install -m 0600 -o root -g root "$T/m.env" /etc/mallakhamb/mongo-monitor.env
+               echo "monitor password placed for mallakhamb-mongo-metrics" >&2 ;;
   users)   get mongo-users > "$T/users.env"
            install -m 0600 -o root -g root "$T/users.env" /root/mongo-users.env
            echo "users' passwords placed: $(grep -c '^MONGO_[A-Z]*_PASSWORD=' /root/mongo-users.env) entries" >&2 ;;

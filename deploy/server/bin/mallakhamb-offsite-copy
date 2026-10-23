@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# MONGODB-SELF-HOSTED-PLAN.md §4.3 — the escape hatch: every hour, on the active, copy the
+# application database off Oracle to the Atlas M0 cluster as <db>_offsite, then check the copy
+# (same collections, same document counts). The Atlas URI is the Vault secret
+# mallakhamb-prod-bom-secret-mongo-offsite-uri (OFFSITE_URI='...'), read with the VM's identity.
+# Refuses any target that does not end in _offsite, so it can never overwrite a real database.
+set -euo pipefail
+[ -f /etc/mallakhamb/STANDBY ] && { echo "standby: the off-site copy runs on the active only"; exit 0; }
+. /etc/mallakhamb/platform.sh
+. /etc/mallakhamb/mongo.env                                   # MONGO_VAULT_OCID
+BACKUP_URI="$(sed -n "s/^BACKUP_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
+[[ "$BACKUP_URI" =~ ^mongodb://[^/]+/([^?]+) ]] || { echo "BACKUP_URI is not the replica set" >&2; exit 1; }
+APP_DB="${BASH_REMATCH[1]}"; DST_DB="${APP_DB}_offsite"
+umask 077
+W="$(mktemp -d)"; trap 'find "$W" -type f -exec shred -u {} + 2>/dev/null; rm -rf "$W"' EXIT
+OFF="$("$OCI" secrets secret-bundle get-secret-bundle-by-name --vault-id "$MONGO_VAULT_OCID" \
+        --secret-name mallakhamb-prod-bom-secret-mongo-offsite-uri \
+        --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^OFFSITE_URI='\(.*\)'$/\1/p")"
+[[ "$OFF" =~ ^(mongodb(\+srv)?://[^/]+/)([^?]*)(\?.*)?$ ]] || { echo "cannot parse OFFSITE_URI" >&2; exit 1; }
+OFF_URI="${BASH_REMATCH[1]}${DST_DB}${BASH_REMATCH[4]}"
+[[ "$OFF_URI" != *"replicaSet=mallakhamb"* ]] || { echo "refusing: OFFSITE_URI points at the replica set itself" >&2; exit 1; }
+[[ "$DST_DB" == *_offsite ]] || { echo "refusing: target $DST_DB does not end in _offsite" >&2; exit 1; }
+
+printf 'uri: "%s"\n' "$BACKUP_URI" > "$W/src.yaml"
+printf 'uri: "%s"\n' "$OFF_URI" > "$W/dst.yaml"
+mongodump --config="$W/src.yaml" --readPreference=secondaryPreferred --db="$APP_DB" --archive="$W/app.gz" --gzip --quiet
+mongorestore --config="$W/dst.yaml" --archive="$W/app.gz" --gzip --drop \
+  --nsInclude="${APP_DB}.*" --nsFrom="${APP_DB}.*" --nsTo="${DST_DB}.*" --quiet
+SRC="$BACKUP_URI" DST="$OFF_URI" mongosh --quiet --nodb --eval '
+  const n = (u) => { const d = connect(u); return Object.fromEntries(d.getCollectionNames().filter(c => !c.startsWith("system.")).sort().map(c => [c, d[c].countDocuments({})])); };
+  const a = n(process.env.SRC + (process.env.SRC.includes("?") ? "&" : "?") + "readPreference=secondaryPreferred"), b = n(process.env.DST);
+  if (JSON.stringify(a) !== JSON.stringify(b)) { print("copy differs: " + JSON.stringify({ source: a, offsite: b })); quit(1); }
+  print("off-site copy matches: " + Object.keys(a).length + " collections, " + Object.values(a).reduce((x, y) => x + y, 0) + " documents");'
+T=/var/lib/alloy/textfile
+printf '# HELP mallakhamb_offsite_last_success_timestamp_seconds Unix time of the last checked off-site copy to Atlas\n# TYPE mallakhamb_offsite_last_success_timestamp_seconds gauge\nmallakhamb_offsite_last_success_timestamp_seconds %s\n' "$(date +%s)" > "$T/.offsite.tmp"
+chmod 0644 "$T/.offsite.tmp"              # umask 077 above; Alloy (user alloy) must read it
+mv -f "$T/.offsite.tmp" "$T/mallakhamb_offsite.prom"
+echo "offsite ok: $APP_DB → Atlas $DST_DB ($(stat -c %s "$W/app.gz") bytes)"

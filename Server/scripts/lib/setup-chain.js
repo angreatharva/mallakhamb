@@ -125,9 +125,16 @@ const releaseLock = () => {
   try { fs.unlinkSync(LOCK_PATH); } catch { /* already gone */ }
 };
 
+/** The database in a MongoDB URI: its path, as ConfigManager.databaseName reads it - not whatever
+ *  follows the last "/", which a query like tlsCAFile=/etc/... would win. */
+const dbNameOf = (uri) => {
+  const m = /^mongodb(?:\+srv)?:\/\/[^/]+\/([^?]*)/.exec(uri || '');
+  return m ? decodeURIComponent(m[1]) : '';
+};
+
 /** The database the chain is pointed at, as it reads in the URI. */
 const databaseName = () =>
-  String(process.env.MONGODB_URI || '').split('/').pop().split('?')[0];
+  dbNameOf(String(process.env.MONGODB_URI || ''));
 
 /**
  * Count what actually landed in the database.

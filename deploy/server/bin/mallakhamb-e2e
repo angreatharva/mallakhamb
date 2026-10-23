@@ -154,7 +154,13 @@ clean_db before || die "could not empty the e2e database before the run"
 # No --drop: the database was just emptied above (and the chain's own drop needs dbAdmin).
 as_app node scripts/setupApi.js --yes
 rc=$?
-clean_db after || { [ "$rc" = 0 ] && rc=3; }
+# Emptied after a PASSING run only: a failed run's data stays for inspection until the next
+# night, which empties it first (MONGODB-SELF-HOSTED-PLAN.md M7; alert mk-mongo-e2e-left-stg).
+if [ "$rc" = 0 ]; then
+  clean_db after || rc=3
+else
+  echo "E2E: run failed - the e2e database is kept for inspection; the next run empties it first"
+fi
 
 # 4. the walk-in desk's form reader (O15): a synthetic filled page read in-process
 # with this release's virtualenv and the pinned model, on BOTH VMs, so a broken OCR

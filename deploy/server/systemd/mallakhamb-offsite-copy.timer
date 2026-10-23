@@ -1,0 +1,9 @@
+[Unit]
+Description=Mallakhamb off-site copy every hour (enabled on the active by mallakhamb-promote)
+
+[Timer]
+OnCalendar=*-*-* *:07:00
+Persistent=false
+
+[Install]
+WantedBy=timers.target

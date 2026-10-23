@@ -1,0 +1,8 @@
+[Unit]
+Description=Mallakhamb point-in-time backup: daily base + 15-minute oplog slice (active only)
+After=network-online.target mongod.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mallakhamb-oplog-slice

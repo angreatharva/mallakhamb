@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 touch /etc/mallakhamb/STANDBY
-systemctl disable --now mallakhamb mallakhamb-backup.timer mallakhamb-backup-meet.timer 2>/dev/null || true
+systemctl disable --now mallakhamb mallakhamb-backup.timer mallakhamb-backup-meet.timer mallakhamb-oplog-slice.timer mallakhamb-offsite-copy.timer 2>/dev/null || true
 mkdir -p /etc/caddy/sites-standby
 shopt -s nullglob
 for f in /etc/caddy/sites/*.caddy; do mv "$f" /etc/caddy/sites-standby/; done

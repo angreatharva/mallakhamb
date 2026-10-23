@@ -1,0 +1,8 @@
+[Unit]
+Description=Mallakhamb off-site copy of the database to Atlas (active only)
+After=network-online.target mongod.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mallakhamb-offsite-copy

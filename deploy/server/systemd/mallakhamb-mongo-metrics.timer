@@ -1,0 +1,9 @@
+[Unit]
+Description=Mallakhamb replica-set health gauges every minute (every member)
+
+[Timer]
+OnCalendar=*:*:15
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

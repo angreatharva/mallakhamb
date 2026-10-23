@@ -48,7 +48,9 @@ done
 "${MSH[@]}" --eval '
   const admin = db.getSiblingDB("admin");
   admin.auth("root_breakglass", process.env.MONGO_ROOT_PASSWORD);
-  const staging = ["BRMC_rehearsal", "BRMC_perf", "BRMC_restoretest", "BRMC_e2e"]
+  // Staging runs on BRMC_rehearsal; mallakhamb-e2e and -restore-drill derive <db>_e2e and
+  // <db>_restoretest from the app URI and sign in as the same user, so those are granted too.
+  const staging = ["BRMC_rehearsal", "BRMC_rehearsal_e2e", "BRMC_rehearsal_restoretest", "BRMC_perf", "BRMC_restoretest", "BRMC_e2e"]
     .flatMap(d => [{ role: "readWrite", db: d }, { role: "dbAdmin", db: d }]);   // dbAdmin: e2e/seed drop their own DB
   const users = {
     mallakhamb_app:     { pwd: process.env.MONGO_APP_PASSWORD,     roles: [{ role: "readWrite", db: "BRMC" }] },
