@@ -13,7 +13,7 @@
 # and also listens on the member's private IP. Run it again after the certificates arrive.
 #
 # Sizing follows the VM: under 2 GB of RAM (db-03, the E2.1.Micro) gets a 0.25 GB cache
-# and a 2 GB swap file; the A1 VMs get a 1 GB cache (plan §3). Override with MONGO_CACHE_GB.
+# and a 2 GB swap file; the A1 VMs (4 GB since 2026-10-24, IDLE-RECLAIM-PLAN.md D1) get 0.75 GB. Override with MONGO_CACHE_GB.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
@@ -41,7 +41,7 @@ dpkg -s linux-oracle >/dev/null 2>&1 && echo "WARNING: rolling linux-oracle kern
 
 MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
 if [ "$MEM_MB" -lt 2048 ]; then SMALL=1; CACHE_GB="${MONGO_CACHE_GB:-0.25}"; SWAPPINESS=1
-else SMALL=0; CACHE_GB="${MONGO_CACHE_GB:-1}"; SWAPPINESS=1; fi
+else SMALL=0; CACHE_GB="${MONGO_CACHE_GB:-0.75}"; SWAPPINESS=1; fi
 
 # ── Swap on the 1 GB micro: mongod + OS + Alloy would otherwise meet the OOM killer ──
 if [ "$SMALL" = 1 ] && ! swapon --show=NAME --noheadings | grep -qx /swapfile; then

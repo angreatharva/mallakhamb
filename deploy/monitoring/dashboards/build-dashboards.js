@@ -525,7 +525,7 @@ const vmResources = () => {
       steps: FULL_BY_DESIGN,
     }),
     gauge('A1 memory % of free (12 GB)', [t(`100 * sum(${one(`node_memory_MemTotal_bytes{${HS}}`)}) / $free_mem`)], { h: 6, w: 5, x: 5, y: 14 }, {
-      description: 'MemTotal of the two A1 VMs against the 12 GB Always Free allows. The kernel keeps some memory for itself, so two 6 GB VMs show a little under 100 %. Green up to 100 %: using all of it is the plan.',
+      description: 'MemTotal of the two A1 VMs against the 12 GB Always Free allows. Two 4 GB VMs since 2026-10-24 (IDLE-RECLAIM-PLAN.md D1) read about 64 %; the kernel keeps some memory for itself. Green up to 100 %; never resize past it.',
       steps: FULL_BY_DESIGN,
     }),
     gauge('AMD micro VMs % of free (2)', [t('100 * count(max by (instance) (node_uname_info{scrape_job="mallakhamb-db"})) / $free_micro')], { h: 6, w: 5, x: 10, y: 14 }, {
@@ -696,6 +696,7 @@ const vmResources = () => {
         description: 'FAIL → journalctl -u mallakhamb-e2e on that VM.',
       }),
       ...(PLATFORM.startsWith('oci') ? costRow(y0 + 88) : []),
+      ...(PLATFORM.startsWith('oci') ? oracleIdleRow(y0 + 95) : []),
     ],
   });
 };
@@ -719,6 +720,31 @@ const costRow = (y) => [
   stat('Cost data age', [t(`time() - max(mallakhamb_oci_cost_updated_timestamp_seconds{${CJ}})`)], { h: 6, w: 6, x: 18, y: y + 1 }, {
     unit: 's', steps: [green, { color: 'orange', value: 7200 }, { color: 'red', value: 10800 }],
     description: 'Since the budget was last read (hourly). Alert "OCI cost data stale" above 3 h, because then the cost alerts are blind. OCI updates the spend a few times a day.',
+  }),
+];
+
+// Oracle's own idle test (deploy/oci/IDLE-RECLAIM-PLAN.md A1): mallakhamb-oci-idle reads the OCI agent
+// metrics Oracle judges by, hourly on both app VMs. The Alloy-based "Idle reclaim" row above is the
+// same test from our side; this one is the one that counts. No alert: it is expected red in quiet weeks.
+const OI = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby"';
+const under20Red = [{ color: 'red', value: null }, { color: 'green', value: 20 }];
+const oracleIdleRow = (y) => [
+  row("Oracle's idle test: its own agent metrics, 7-day p95 (an Always Free VM may be stopped when every measure is under 20 %)", y),
+  stat('May Oracle stop it?', [t(`max by (vm) (mallakhamb_oci_idle_eligible{${OI}})`, '{{vm}}')], { h: 6, w: 6, x: 0, y: y + 1 }, {
+    steps: [green, { color: 'red', value: 1 }],
+    mappings: [{ type: 'value', options: { 0: { text: 'NOT IDLE', color: 'green' }, 1: { text: 'IDLE: may stop', color: 'red' } } }],
+    description: 'Oracle rule: CPU p95, network and (A1 only) memory all under 20 % for 7 days. Red is not an outage: Oracle emails mallakhambindia@gmail.com a week before it stops anything, and the Resource Scheduler starts a stopped VM within 30 min. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md.',
+  }),
+  stat('Memory p95 (counts for A1)', [t(`max by (vm) (mallakhamb_oci_idle_p95{${OI},metric="memory"})`, '{{vm}}')], { h: 6, w: 6, x: 6, y: y + 1 }, {
+    unit: 'percent', decimals: 1, steps: under20Red,
+    description: 'OCI MemoryUtilization, 7-day p95. Counts only for the A1 VMs (app-01, app-02; 4 GB since 2026-10-24); not for db-03.',
+  }),
+  stat('CPU p95', [t(`max by (vm) (mallakhamb_oci_idle_p95{${OI},metric="cpu"})`, '{{vm}}')], { h: 6, w: 6, x: 12, y: y + 1 }, {
+    unit: 'percent', decimals: 1, steps: under20Red, description: 'OCI CpuUtilization, 7-day p95 of 5-minute means.',
+  }),
+  stat('Oracle data age', [t(`time() - max(mallakhamb_oci_idle_updated_timestamp_seconds{${OI}})`)], { h: 6, w: 6, x: 18, y: y + 1 }, {
+    unit: 's', steps: [green, { color: 'orange', value: 7200 }, { color: 'red', value: 10800 }],
+    description: 'Since mallakhamb-oci-idle last read OCI Monitoring (hourly at :41). Stale: journalctl -u mallakhamb-oci-idle; policy mallakhamb-prod-pol-metrics-read.',
   }),
 ];
 

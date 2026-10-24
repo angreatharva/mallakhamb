@@ -4,8 +4,8 @@
 |---|---|
 | `apply-alerts.js` | **Source of truth.** The rules (13 on Render), the `owner-email` contact point and the `service=mallakhamb-api` notification route |
 | `mallakhamb-rules.yaml` | Generated from `apply-alerts.js` in Grafana's alert-rule export format, for reading and diffing. Don't edit it by hand |
-| `mallakhamb-rules.<platform>.yaml` | The same for each VM preset (`oci` 41 rules, `oci-single` and `aws` 23): the host and nightly-e2e rules added, and for `oci` also the replica-set (`mk-mongo-*`, `mk-oplog-*`, `mk-pitr-*`, `mk-offsite-*`) and OCI cost (`mk-oci-cost-*`) rules. **Not live**; applied at the cutover |
-| `mallakhamb-rules.staging.yaml` | The `mallakhamb-oci-staging` group (18 rules): `-stg` copies of the nightly-e2e, replica-set, backup and OCI cost alerts, **live** before the cutover; the same paste with `PLATFORM='oci'` deletes it |
+| `mallakhamb-rules.<platform>.yaml` | The same for each VM preset (`oci` 42 rules, `oci-single` and `aws` 23): the host and nightly-e2e rules added, and for `oci` also the replica-set (`mk-mongo-*`, `mk-oplog-*`, `mk-pitr-*`, `mk-offsite-*`) and OCI cost (`mk-oci-cost-*`) rules. **Not live**; applied at the cutover |
+| `mallakhamb-rules.staging.yaml` | The `mallakhamb-oci-staging` group (21 rules): `-stg` copies of the nightly-e2e, replica-set, backup, OCI cost and VM-silent (`mk-host-missing`, `mk-standby-missing`, `mk-vm-db-missing`; idle reclaim) alerts, **live** before the cutover; the same paste with `PLATFORM='oci'` deletes it |
 | `export-yaml.js` | Regenerates every YAML, or prints per-rule hashes with `--hashes [--platform=<p>] [--staging]` |
 
 ## Platform

@@ -84,7 +84,7 @@ Measured on app-01: Ubuntu 24.04.5 aarch64, Neoverse CPU with `atomics`/`lrcpc`/
 | **Money** | Atlas M0 ₹0; the plan was Flex **₹700–2,700/month** (+ M10 ≈ **₹5,000+/month** if 15-min RPO every day) | **₹0**, and a better RPO than either |
 | Owner/ops time | Atlas patches itself | ~1 h/month: rolling patch, check backups; drills each season |
 
-Memory per A1 VM: OS + Alloy + Caddy ~0.8 GB, API ~0.3–0.6 GB, OCR ≤ 1 GB (active only), **mongod with `cacheSizeGB: 1`** ~0.6 GB at this data size → about 3 GB of 6. On db-03: `cacheSizeGB: 0.25`, a 2 GB swap file, Alloy with only the host + mongodb exporters.
+Memory per A1 VM: OS + Alloy + Caddy ~0.8 GB, API ~0.3–0.6 GB, OCR ≤ 1 GB (active only), **mongod with `cacheSizeGB: 1`** ~0.6 GB at this data size → about 3 GB of 6. *(2026-10-24: both A1 VMs resized to **4 GB** and the cache to **0.75 GB** for idle reclaim, IDLE-RECLAIM-PLAN.md D1; worst case ≈ 2.7 GB of 3.8.)* On db-03: `cacheSizeGB: 0.25`, a 2 GB swap file, Alloy with only the host + mongodb exporters.
 
 Side effect on idle reclaim (readiness §3): a running mongod raises real memory use on **both** A1 VMs (the standby too), moving them towards the 20 % line through genuine work. Not something to rely on.
 

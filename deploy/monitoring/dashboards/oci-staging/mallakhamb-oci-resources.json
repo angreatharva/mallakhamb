@@ -954,7 +954,7 @@
           "refId": "A"
         }
       ],
-      "description": "MemTotal of the two A1 VMs against the 12 GB Always Free allows. The kernel keeps some memory for itself, so two 6 GB VMs show a little under 100 %. Green up to 100 %: using all of it is the plan.",
+      "description": "MemTotal of the two A1 VMs against the 12 GB Always Free allows. Two 4 GB VMs since 2026-10-24 (IDLE-RECLAIM-PLAN.md D1) read about 64 %; the kernel keeps some memory for itself. Green up to 100 %; never resize past it.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -3495,6 +3495,291 @@
         }
       ],
       "description": "Since the budget was last read (hourly). Alert \"OCI cost data stale\" above 3 h, because then the cost alerts are blind. OCI updates the spend a few times a day.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 7200
+              },
+              {
+                "color": "red",
+                "value": 10800
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 54,
+      "type": "row",
+      "title": "Oracle's idle test: its own agent metrics, 7-day p95 (an Always Free VM may be stopped when every measure is under 20 %)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 122
+      },
+      "panels": []
+    },
+    {
+      "id": 55,
+      "type": "stat",
+      "title": "May Oracle stop it?",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 123
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (vm) (mallakhamb_oci_idle_eligible{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"})",
+          "legendFormat": "{{vm}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Oracle rule: CPU p95, network and (A1 only) memory all under 20 % for 7 days. Red is not an outage: Oracle emails mallakhambindia@gmail.com a week before it stops anything, and the Resource Scheduler starts a stopped VM within 30 min. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "NOT IDLE",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "IDLE: may stop",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 56,
+      "type": "stat",
+      "title": "Memory p95 (counts for A1)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 123
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (vm) (mallakhamb_oci_idle_p95{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",metric=\"memory\"})",
+          "legendFormat": "{{vm}}",
+          "refId": "A"
+        }
+      ],
+      "description": "OCI MemoryUtilization, 7-day p95. Counts only for the A1 VMs (app-01, app-02; 4 GB since 2026-10-24); not for db-03.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 20
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 57,
+      "type": "stat",
+      "title": "CPU p95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 123
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (vm) (mallakhamb_oci_idle_p95{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",metric=\"cpu\"})",
+          "legendFormat": "{{vm}}",
+          "refId": "A"
+        }
+      ],
+      "description": "OCI CpuUtilization, 7-day p95 of 5-minute means.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 20
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 58,
+      "type": "stat",
+      "title": "Oracle data age",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 123
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "time() - max(mallakhamb_oci_idle_updated_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "description": "Since mallakhamb-oci-idle last read OCI Monitoring (hourly at :41). Stale: journalctl -u mallakhamb-oci-idle; policy mallakhamb-prod-pol-metrics-read.",
       "fieldConfig": {
         "defaults": {
           "unit": "s",

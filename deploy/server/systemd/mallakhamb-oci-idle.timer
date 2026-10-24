@@ -1,0 +1,9 @@
+[Unit]
+Description=Mallakhamb Oracle idle-reclaim test every hour (both app VMs)
+
+[Timer]
+OnCalendar=*-*-* *:41:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

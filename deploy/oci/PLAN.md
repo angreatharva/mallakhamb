@@ -382,6 +382,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   - Compute → **each** instance → **Maintenance**: if a maintenance reboot falls within a competition week, **reschedule it** or do it early on a quiet day.
   - Bucket size (Storage → Buckets → `mallakhamb-backups` → *Approximate size*) is well under 10 GB.
   - **Patch the standby first**, check it (`startup.js --check` via a standby deploy), then patch the active **on a different day**, or the same day with the rolling pass below.
+- **Before any planned stop** (rolling pass, golden backup, resize): Console → Resource Scheduler → **disable** `mallakhamb-autostart-07` and `-37`, or they start the VM again within 30 min; re-enable when done (IDLE-RECLAIM-PLAN.md B1). A plain reboot does not need this.
 - **Rolling maintenance pass (OS updates, kernel, Node major).** Done 2026-10-16 for Node 22 → 24 + kernel 7.0; staging was down **62 s**. A stays serving until step 3.
   1. **Standby (B):** `apt-get upgrade` (and NodeSource `setup_<major>.x` + `apt-get install nodejs` for a Node change; re-pin `npm@11.6.2`) → reboot → `sudo rm "$(readlink -f /opt/mallakhamb/current)/.complete"` → `sudo mallakhamb-deploy $(cat /opt/mallakhamb/DEPLOYED_SHA)`. Releases are built once per SHA, so without removing `.complete` the old `node_modules` stay; the standby deploy ends with `startup.js --check` against the real config and database = the test.
   2. Cloud Shell `failover-ip.sh move <B>` → on B `sudo mallakhamb-promote` → `https://<API_HOST>/api/health/ready` = 200.

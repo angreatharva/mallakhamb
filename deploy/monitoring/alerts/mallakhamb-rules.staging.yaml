@@ -8,6 +8,59 @@ groups:
     folder: Mallakhamb
     interval: 1m
     rules:
+      - uid: mk-host-missing-stg
+        title: Host metrics missing
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: No host metrics from the active server for 10 minutes.
+          description: >-
+            Alloy on the active has stopped (systemctl status alloy; journalctl -u alloy), its Grafana token was
+            revoked, or the VM is down; check "API down" too. Console → Instances: if it is STOPPED (Oracle idle
+            reclaim) the Resource Scheduler starts it within 30 min; to serve sooner, or if the start fails (no A1
+            capacity), fail over. deploy/oci/IDLE-RECLAIM-PLAN.md §3C. If the VM is gone: deploy/oci/PLAN.md O13.
+            Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'absent(up{scrape_job="mallakhamb-host"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
       - uid: mk-e2e-failed-stg
         title: E2E failed
         condition: C
@@ -107,6 +160,57 @@ groups:
                     type: gt
                     params:
                       - 93600
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-standby-missing-stg
+        title: Standby missing
+        condition: C
+        for: 30m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'No metrics from the warm standby for 30 minutes: there is nothing to fail over to.'
+          description: >-
+            Over the Bastion on the standby: systemctl status alloy. If the VM is stopped (Oracle idle reclaim: the
+            Resource Scheduler starts it within 30 min, IDLE-RECLAIM-PLAN.md §3C) or gone, rebuild it from the golden
+            backup (deploy/oci/PLAN.md O12). Runbook: PLAN.md §8.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'absent(up{scrape_job="mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
               datasource:
                 type: __expr__
                 uid: __expr__
@@ -771,6 +875,58 @@ groups:
                 max(mallakhamb_mongo_e2e_db_present{scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db"})
                 > 0 and on() max(mallakhamb_e2e_last_exit_code{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})
                 == 0
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-vm-db-missing-stg
+        title: db-03 VM silent
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'No metrics from db-03, the replica set third member, for 10 minutes.'
+          description: >-
+            Console → Instances → mallakhamb-prod-db-03. STOPPED (Oracle idle reclaim, or a manual stop): the Resource
+            Scheduler starts it within 30 min; the set keeps its primary on 2 of 3 members meanwhile, but the next loss
+            stops writes. Running: systemctl status alloy over the Bastion. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md
+            §3C.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'absent(up{scrape_job="mallakhamb-db"})'
               instant: true
               range: false
               intervalMs: 60000

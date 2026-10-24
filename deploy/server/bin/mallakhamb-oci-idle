@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# deploy/oci/IDLE-RECLAIM-PLAN.md A1 — Oracle's own idle test as Grafana gauges, hourly on both app VMs
+# (Grafana takes the max). Oracle may stop an Always Free VM when, over 7 days, CPU p95 < 20 %,
+# network < 20 % and (A1 shapes only) memory < 20 %. This reads the same agent metrics Oracle
+# uses (namespace oci_computeagent) for every VM in this VM's compartment, with the VM's own
+# identity; the only permission it needs is policy mallakhamb-prod-pol-metrics-read.
+#
+# Gauges (percent): mallakhamb_oci_idle_p95{vm, metric="cpu|memory|network"}, and
+# mallakhamb_oci_idle_eligible{vm} = 1 when every measure that counts for the shape is under 20 %.
+# On any failure it writes nothing; the updated gauge then ages (dashboard "Oracle's idle test").
+set -euo pipefail
+. /etc/mallakhamb/platform.sh
+C=$(curl -fsS -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v2/instance/ \
+  | python3 -c 'import sys, json; print(json.load(sys.stdin)["compartmentId"])')
+W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
+S=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ); E=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+"$OCI" compute instance list -c "$C" --lifecycle-state RUNNING --all --output json \
+  --query 'data[].{id:id, shape:shape, gbps:"shape-config"."networking-bandwidth-in-gbps"}' > "$W/vms.json"   # inspect: no names
+# 5-minute means over 7 days (2016 points), the p95 computed below. Network: bytes/s from the
+# cumulative counter, as a share of the shape's bandwidth.
+"$OCI" monitoring metric-data summarize-metrics-data -c "$C" --namespace oci_computeagent --start-time "$S" --end-time "$E" \
+  --query-text 'CpuUtilization[5m].mean()' --output json > "$W/cpu.json"
+"$OCI" monitoring metric-data summarize-metrics-data -c "$C" --namespace oci_computeagent --start-time "$S" --end-time "$E" \
+  --query-text 'MemoryUtilization[5m].mean()' --output json > "$W/memory.json"
+"$OCI" monitoring metric-data summarize-metrics-data -c "$C" --namespace oci_computeagent --start-time "$S" --end-time "$E" \
+  --query-text 'NetworksBytesOut[5m].rate()' --output json > "$W/network.json"
+T=/var/lib/alloy/textfile
+python3 - "$W" > "$T/.oci_idle.tmp" <<'PY'
+import json, sys, time
+w = sys.argv[1]
+vms = {v['id']: v for v in json.load(open(f'{w}/vms.json'))}
+p95 = {}                                   # (vm id, metric) -> value
+names = {}                                 # the metrics carry the display name; "inspect instances" does not
+for metric in ('cpu', 'memory', 'network'):
+    by_vm = {}
+    for s in json.load(open(f'{w}/{metric}.json'))['data']:
+        rid = s['dimensions'].get('resourceId')
+        names[rid] = s['dimensions'].get('resourceDisplayName') or rid[-6:]
+        by_vm.setdefault(rid, []).extend(p['value'] for p in s['aggregated-datapoints'])  # network: one series per VNIC
+    for rid, vals in by_vm.items():
+        if rid not in vms or not vals:
+            continue
+        vals.sort()
+        v = vals[min(len(vals) - 1, int(0.95 * len(vals)))]
+        if metric == 'network':            # bytes/s -> % of the shape's bandwidth
+            v = 100 * v * 8 / ((vms[rid]['gbps'] or 1) * 1e9)
+        p95[(rid, metric)] = v
+name = lambda rid: names.get(rid, rid[-6:]).replace('mallakhamb-prod-bom-vm-', '').replace('mallakhamb-prod-', '')
+out = ['# HELP mallakhamb_oci_idle_p95 Oracle idle test: 7-day p95 from OCI agent metrics, percent (network: of the shape bandwidth)',
+       '# TYPE mallakhamb_oci_idle_p95 gauge']
+for (rid, metric), v in sorted(p95.items()):
+    out.append(f'mallakhamb_oci_idle_p95{{vm="{name(rid)}",metric="{metric}"}} {v:.3f}')
+out += ['# HELP mallakhamb_oci_idle_eligible 1 if Oracle may stop this Always Free VM as idle (every measure that counts < 20 %)',
+        '# TYPE mallakhamb_oci_idle_eligible gauge']
+for rid, v in vms.items():
+    counts = ['cpu', 'network'] + (['memory'] if 'A1' in v['shape'] else [])   # memory counts for A1 only
+    have = [p95.get((rid, m)) for m in counts]
+    if None in have:
+        continue
+    out.append(f'mallakhamb_oci_idle_eligible{{vm="{name(rid)}"}} {int(all(x < 20 for x in have))}')
+out += ['# HELP mallakhamb_oci_idle_updated_timestamp_seconds Unix time Oracle\'s metrics were last read',
+        '# TYPE mallakhamb_oci_idle_updated_timestamp_seconds gauge', f'mallakhamb_oci_idle_updated_timestamp_seconds {int(time.time())}']
+print('\n'.join(out))
+PY
+chmod 0644 "$T/.oci_idle.tmp"                    # Alloy (user alloy) must read it
+mv -f "$T/.oci_idle.tmp" "$T/mallakhamb_oci_idle.prom"
+grep -E '^mallakhamb_oci_idle_(p95|eligible)' "$T/mallakhamb_oci_idle.prom" | sed 's/^mallakhamb_oci_idle_/  /'

@@ -45,8 +45,10 @@ Tick a box here **and** in the source section when it is done.
 
 Oracle may stop an Always Free VM whose CPU p95, network **and** memory are all < 20 % for 7 days. On 2026-10-21 **both** VMs met all three (CPU ~3 %, memory ~11 %). PAYG is ruled out (owner decision) and fake load is ruled out.
 
-- [ ] **3.1** Decide the response, e.g.: a Grafana alert on "VM stopped / host metrics missing" that pages the owner; a written restart + failover runbook; check whether Oracle sends a reclaim notice email first, and to which address.
-- [ ] **3.2** After 7 nights of O14 runs, record the measured p95 numbers (O14 note).
+**Plan: [IDLE-RECLAIM-PLAN.md](IDLE-RECLAIM-PLAN.md)** (2026-10-24). On that day all three VMs (db-03 too) met Oracle's idle test. Oracle warns a week ahead by email to `mallakhambindia@gmail.com`, then **stops** the VMs (volumes kept; a restart needs free A1 capacity).
+
+- [x] **3.1** *(2026-10-24, built: VM-silent alerts, OCI Events email, hourly auto-start via Resource Scheduler, A1 VMs right-sized to 4 GB; db-03 stop drill: stopped → alerted → started again in 20 min. IDLE-RECLAIM-PLAN.md §7.)* Decide the response, e.g.: a Grafana alert on "VM stopped / host metrics missing" that pages the owner; a written restart + failover runbook; check whether Oracle sends a reclaim notice email first, and to which address.
+- [x] **3.2** After 7 nights of O14 runs, record the measured p95 numbers (O14 note). *(2026-10-24, Oracle's own agent metrics, now hourly in Grafana: app-01 CPU 4.8 / mem 16.9 %, app-02 4.4 / 14.7 %, db-03 CPU 7.8 %; network ~0.01 %. All three idle-eligible at 6 GB.)*
 
 ## 4. Database (C2 — self-hosted replica set; done except the cutover)
 

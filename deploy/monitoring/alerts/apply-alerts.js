@@ -118,7 +118,7 @@
   if (P.host) RULES.push(
     ['mk-host-missing', 'Host metrics missing', `absent(up{${HJ}})`, 'gt', 0, '10m', 'critical', 'mallakhamb-runtime', HOST_PANEL.cpu,
       'No host metrics from the active server for 10 minutes.',
-      `Alloy on the active has stopped (systemctl status alloy; journalctl -u alloy), its Grafana token was revoked, or the VM is down; check "API down" too. If the VM is gone: ${P.failover}. Runbook: PLAN.md §8.`],
+      `Alloy on the active has stopped (systemctl status alloy; journalctl -u alloy), its Grafana token was revoked, or the VM is down; check "API down" too.${P.mongo ? ' Console → Instances: if it is STOPPED (Oracle idle reclaim) the Resource Scheduler starts it within 30 min; to serve sooner, or if the start fails (no A1 capacity), fail over. deploy/oci/IDLE-RECLAIM-PLAN.md §3C.' : ''} If the VM is gone: ${P.failover}. Runbook: PLAN.md §8.`],
     ['mk-host-memory', 'Host memory high', `1 - node_memory_MemAvailable_bytes{${HJ}} / node_memory_MemTotal_bytes{${HJ}}`, 'gt', 0.85, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.mem,
       'The active server is using more than 85 % of its memory ({{ humanizePercentage $values.A.Value }}).',
       'First look: Runtime → "Memory: % of plan" (is it the API?) and the Host row. Something besides the API (a stuck mongodump, a runaway script) shows as host memory without API RSS. Runbook: PLAN.md §8.'],
@@ -156,7 +156,7 @@
   if (P.standby) RULES.push(
     ['mk-standby-missing', 'Standby missing', 'absent(up{scrape_job="mallakhamb-host-standby"})', 'gt', 0, '30m', 'warning', 'mallakhamb-runtime', HOST_PANEL.release,
       'No metrics from the warm standby for 30 minutes: there is nothing to fail over to.',
-      `Over the Bastion on the standby: systemctl status alloy. If the VM is stopped or gone, rebuild it from the golden backup (${P.failover.replace(' O13', ' O12')}). Runbook: PLAN.md §8.`],
+      `Over the Bastion on the standby: systemctl status alloy. If the VM is stopped${P.mongo ? ' (Oracle idle reclaim: the Resource Scheduler starts it within 30 min, IDLE-RECLAIM-PLAN.md §3C)' : ''} or gone, rebuild it from the golden backup (${P.failover.replace(' O13', ' O12')}). Runbook: PLAN.md §8.`],
     ['mk-standby-behind', 'Standby behind the active', 'count(count by (sha) (mallakhamb_release_info))', 'gt', 1, '2h', 'warning', 'mallakhamb-runtime', HOST_PANEL.release,
       'The active and the standby hold different releases for 2 hours.',
       'A deploy reached one server only (Runtime → Host → Release shows the short shas). On the active: basename $(readlink /opt/mallakhamb/current) | cut -c1-40 gives the full sha; on the standby: sudo mallakhamb-deploy <that full 40-char sha>. Runbook: PLAN.md §8.'],
@@ -208,6 +208,13 @@
     ['mk-mongo-e2e-left', 'E2E database left behind', `max(mallakhamb_mongo_e2e_db_present{${MJ}}) > 0 and on() max(mallakhamb_e2e_last_exit_code{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"}) == 0`, 'gt', 0, '6h', 'warning', 'mallakhamb-runtime', HOST_PANEL.e2eResult,
       'The nightly e2e database still exists 6 hours after a passing run.',
       'The run drops it after a pass (a failed run keeps it for inspection). Cleanup broke: journalctl -u mallakhamb-e2e -n 50; it is excluded from backups but takes space.'],
+  );
+  // db-03, the replica set's third member (readiness §3, IDLE-RECLAIM-PLAN.md A4): the app VMs have
+  // mk-host-missing / mk-standby-missing; this is the same check for the micro VM.
+  if (P.mongo) RULES.push(
+    ['mk-vm-db-missing', 'db-03 VM silent', 'absent(up{scrape_job="mallakhamb-db"})', 'gt', 0, '10m', 'warning', 'mallakhamb-oci-resources', 1,
+      'No metrics from db-03, the replica set third member, for 10 minutes.',
+      'Console → Instances → mallakhamb-prod-db-03. STOPPED (Oracle idle reclaim, or a manual stop): the Resource Scheduler starts it within 30 min; the set keeps its primary on 2 of 3 members meanwhile, but the next loss stops writes. Running: systemctl status alloy over the Bastion. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md §3C.'],
   );
   // OCI money (deploy/oci/PRODUCTION-READINESS.md 1.2). The tenancy is Always Free, so ANY charge is a
   // mistake. mallakhamb-oci-cost reads the budget mallakhamb-guard (SGD 1.50, the tenancy bills in
@@ -265,7 +272,8 @@
    */
   const STAGING_GROUP = 'mallakhamb-oci-staging';
   // Since M4 staging runs on the self-hosted replica set, so its rules are live here too.
-  const STAGING_PREFIXES = ['mk-e2e-', 'mk-mongo-', 'mk-oplog-', 'mk-pitr-', 'mk-offsite-', 'mk-oci-cost-'];
+  // Since 2026-10-24 also the VM-silent rules (idle reclaim, readiness §3): a stopped VM must page now.
+  const STAGING_PREFIXES = ['mk-e2e-', 'mk-mongo-', 'mk-oplog-', 'mk-pitr-', 'mk-offsite-', 'mk-oci-cost-', 'mk-host-missing', 'mk-standby-missing', 'mk-vm-'];
   const stagingRules = () => spec('oci').RULES
     .filter(([uid]) => STAGING_PREFIXES.some((p) => uid.startsWith(p)))
     .map((r) => {
