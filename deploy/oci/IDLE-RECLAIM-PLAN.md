@@ -1,6 +1,6 @@
 # Idle reclaim: plan (readiness §3)
 
-Status: **built 2026-10-24** (owner said go on all of it): A1–A4, B1, D1 and the §5 drill are done; §7 records what is live. A2 (Gmail filter) and confirming the two email subscriptions are the owner's.
+Status: **built 2026-10-24** (owner said go on all of it): A1–A4, B1, D1 and the §5 drill are done; §7 records what is live. A2 (Gmail filter forwarding Oracle idle/reclaim mail from `mallakhambindia@gmail.com` to `angreatharva08@gmail.com`, starred) and both email subscriptions were done by the owner the same day.
 Constraints that stay: Always Free forever (never PAYG), never fake load, no alerting changes on a
 competition day or in the 48 h before one (next: SGAM-TRIALS-1 on 2026-10-31, so alert changes go
 in by **2026-10-29**).
@@ -158,11 +158,11 @@ Record the times here and in readiness 3.1.
 | Step | What exists | Check |
 |---|---|---|
 | A1 | `mallakhamb-oci-idle` + `.timer` (hourly :41) on app-01 and app-02; policy `mallakhamb-prod-pol-metrics-read` (*read metrics* + *inspect instances* in `mallakhamb-prod`); dashboard **OCI resources → Oracle's idle test** | first read: app-01 CPU 4.8 / mem 16.9 / net 0.006 %, app-02 4.4 / 14.7 / 0.006, db-03 7.8 / (57, not counted) / 0.013 → all three idle-eligible, on 6 GB history. **This closes readiness 3.2.** |
-| A3 | Notifications topic `mallakhamb-ops` (both addresses, **PENDING until each clicks the confirmation email**); Events rule `mallakhamb-vm-state` (instance action begin/end, terminate) | after confirming: the next stop or start emails both |
+| A3 | Notifications topic `mallakhamb-ops` (both addresses **ACTIVE**, confirmed by the owner 2026-10-24); Events rule `mallakhamb-vm-state` (instance action begin/end, terminate) | after confirming: the next stop or start emails both |
 | A4 | `mk-host-missing-stg` (critical), `mk-standby-missing-stg`, `mk-vm-db-missing-stg` in `mallakhamb-oci-staging` (now 21 rules; Render 13 unchanged) | drill below |
 | B1 | Resource Scheduler `mallakhamb-autostart-07` and `-37` (CRON `7 * * * *` / `37 * * * *`, START all three VMs), policy `mallakhamb-prod-pol-autostart` (*use instances*, only those two schedules) | both runs SUCCEEDED |
 | D1 | app-01 and app-02 resized to **1 OCPU / 4 GB** (13:00–13:03 and 13:05–13:07 UTC; staging API down ~2 min for app-01); `cacheSizeGB` 1 → **0.75** on both, and the default in `install-mongo.sh` (old conf kept as `/etc/mongod.conf.bak-1g`) | after boot: app-01 880 MB of 3.9 GB (22.5 %), app-02 651 MB (16.7 %, rising as the cache warms); replica set 3/3 healthy, API ready 200 |
 
-**Drill (§5), db-03, 2026-10-24 UTC:** 13:17:10 soft stop → 13:18:15 STOPPED → 13:21:20 *MongoDB member not healthy* firing → 13:27:20 *members not all answering* → 13:32:20 *db-03 VM silent* (Prometheus marks the target gone after ~4 min, then the rule's 10 min) → **13:37:17 `mallakhamb-autostart-37` started it** → 13:38 RUNNING → 13:39–13:40 all three alerts resolved by themselves → 13:41 `rs.status()` 3/3 healthy, optimes equal. Stop to running: **20 min**. The Events email was not checked: the subscriptions were still PENDING.
+**Drill (§5), db-03, 2026-10-24 UTC:** 13:17:10 soft stop → 13:18:15 STOPPED → 13:21:20 *MongoDB member not healthy* firing → 13:27:20 *members not all answering* → 13:32:20 *db-03 VM silent* (Prometheus marks the target gone after ~4 min, then the rule's 10 min) → **13:37:17 `mallakhamb-autostart-37` started it** → 13:38 RUNNING → 13:39–13:40 all three alerts resolved by themselves → 13:41 `rs.status()` 3/3 healthy, optimes equal. Stop to running: **20 min**. The Events email was not checked in the drill (subscriptions confirmed afterwards); the next real stop or start tests it.
 
 **Watch:** the memory p95 now needs a few days at 4 GB to clear 20 % on the 7-day window (it needs > 5 % of the week's samples above 20 %, about 8.4 h, but the old 6 GB days stay in the window until 2026-10-31). app-02, the standby, runs no API, so it is the closer one; if its p95 stays under 20 % after 2026-10-31, it stays idle-eligible, and B1 is its safety net.
