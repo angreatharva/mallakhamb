@@ -36,6 +36,30 @@ describe('NoneAdapter', () => {
   });
 });
 
+describe('NoneAdapter capture (EMAIL_CAPTURE=true)', () => {
+  it('keeps recipient, subject and text in e2e_outbox, and still sends nothing', async () => {
+    const insertOne = jest.fn().mockResolvedValue({});
+    const db = { collection: jest.fn(() => ({ insertOne })) };
+    const adapter = new NoneAdapter({ capture: true }, logger, { db: () => db });
+    await adapter.sendEmail({ to: 'Coach@Example.com', subject: 'Your OTP', text: 'OTP 123456', html: '<b>x</b>' });
+    expect(db.collection).toHaveBeenCalledWith(NoneAdapter.OUTBOX);
+    expect(insertOne).toHaveBeenCalledWith(expect.objectContaining({ to: 'coach@example.com', subject: 'Your OTP', text: 'OTP 123456' }));
+  });
+
+  it('keeps nothing unless asked', async () => {
+    const db = { collection: jest.fn() };
+    const adapter = new NoneAdapter(null, logger, { db: () => db });
+    await adapter.sendEmail({ to: 'a@example.com', subject: 's', text: 't' });
+    expect(db.collection).not.toHaveBeenCalled();
+  });
+
+  it('a failed capture does not fail the send', async () => {
+    const db = { collection: () => ({ insertOne: () => Promise.reject(new Error('down')) }) };
+    const adapter = new NoneAdapter({ capture: true }, logger, { db: () => db });
+    await expect(adapter.sendEmail({ to: 'a@example.com', subject: 's' })).resolves.toMatchObject({ success: true });
+  });
+});
+
 describe('ConfigManager and EMAIL_PROVIDER=none', () => {
   const saved = { ...process.env };
   const BASE = {
@@ -79,5 +103,17 @@ describe('ConfigManager.databaseName', () => {
     ['', ''],
   ])('%s → "%s"', (uri, name) => {
     expect(ConfigManager.databaseName(uri)).toBe(name);
+  });
+});
+
+describe('ConfigManager and EMAIL_CAPTURE', () => {
+  const saved = { ...process.env };
+  afterEach(() => { process.env = { ...saved }; });
+  it('refuses capture with a provider that really sends', () => {
+    process.env = {
+      JWT_SECRET: 'x'.repeat(40), CORS_ORIGINS: 'https://app.example.com', NODE_ENV: 'development',
+      MONGODB_URI: 'mongodb://127.0.0.1:27017/x_e2e', EMAIL_PROVIDER: 'gmail-api', EMAIL_CAPTURE: 'true',
+    };
+    expect(() => new ConfigManager().load()).toThrow(/EMAIL_CAPTURE=true is only for EMAIL_PROVIDER=none/);
   });
 });

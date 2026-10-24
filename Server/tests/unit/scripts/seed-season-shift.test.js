@@ -55,7 +55,7 @@ describe('shiftSeason', () => {
 
   it('readMeets still returns the committed, valid season', () => {
     const meets = readMeets().meets;
-    expect(meets).toHaveLength(15);
+    expect(meets).toHaveLength(20);
     expect(meets.every((m) => day(m.startDate) === 6)).toBe(true);
   });
 });

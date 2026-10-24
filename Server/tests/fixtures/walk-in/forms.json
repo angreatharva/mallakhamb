@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "Three pages of the walk-in paper form, filled in, for the e2e chain's walk-in step",
+    "Five coaches' walk-in paper forms, filled in, for the lifecycle check's walk-in step",
     "(Server/scripts/seedWalkIn.js). The JPEGs beside this file are RENDERED from it:",
     "",
     "  npm --prefix Server run walkin:fixtures",
@@ -11,48 +11,139 @@
     "on a desk photographs a page. Re-run it after any change to the form's geometry",
     "(FORM_VERSION); the step refuses images whose version differs from the form's.",
     "",
-    "Everyone here is invented: no real child, coach or phone number. The coach and team",
-    "are the desk's own, created by the step; they are on no roster.",
+    "Everyone here is invented: no real child, coach or phone number. The coaches and",
+    "teams are the desk's own, created by the step; they are on no roster. Each desk",
+    "enters a different meet at a different level, so five meets get one more team, and",
+    "every child's name and birthday is unique, so the desk's one-child-one-Player-ID",
+    "check registers each of them rather than offering an existing account.",
     "",
     "`rows` is what the OCR must read back, field for field. The step asserts it before",
-    "anything is registered, so a misread fails the night's run instead of seeding a",
-    "misspelt child."
+    "anything is registered, so a misread fails the run instead of seeding a misspelt child."
   ],
   "formVersion": "MKWI2",
-  "meet": "Varanasi",
-  "coach": {
-    "firstName": "Kavita",
-    "lastName": "Lokhande",
-    "email": "kavita.lokhande@example.com",
-    "phone": "9405172863",
-    "password": "Kavita@2026",
-    "playerDefaultPassword": "KavitaSquad@2026"
-  },
-  "team": { "name": "DESK-WALKIN", "description": "Registered at the walk-in desk" },
-  "pages": [
+  "desks": [
     {
-      "file": "page-1.jpg",
-      "page": 1,
-      "rows": [
-        { "section": "Male:Under10", "rowNo": 1, "firstName": "OJAS", "lastName": "KHARAT", "dateOfBirth": "2017-05-12", "apparatus": ["Pole Mallakhamb"] },
-        { "section": "Male:Under12", "rowNo": 1, "firstName": "RUDRA", "lastName": "DHOLE", "dateOfBirth": "2015-02-08", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] },
-        { "section": "Male:Under14", "rowNo": 1, "firstName": "SHLOK", "lastName": "GHARAT", "dateOfBirth": "2013-09-21", "apparatus": ["Pole Mallakhamb", "Hanging Mallakhamb"] }
+      "meet": "Varanasi",
+      "coach": { "firstName": "Kavita", "lastName": "Lokhande", "email": "kavita.lokhande@example.com", "phone": "9405172863", "password": "Kavita@2026", "playerDefaultPassword": "KavitaSquad@2026" },
+      "team": { "name": "DESK-WALKIN", "description": "Registered at the walk-in desk" },
+      "pages": [
+        {
+          "file": "desk-1-page-1.jpg",
+          "page": 1,
+          "rows": [
+            { "section": "Male:Under10", "rowNo": 1, "firstName": "OJAS", "lastName": "KHARAT", "dateOfBirth": "2017-05-12", "apparatus": ["Pole Mallakhamb"] },
+            { "section": "Male:Under12", "rowNo": 1, "firstName": "RUDRA", "lastName": "DHOLE", "dateOfBirth": "2015-02-08", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] },
+            { "section": "Male:Under14", "rowNo": 1, "firstName": "SHLOK", "lastName": "GHARAT", "dateOfBirth": "2013-09-21", "apparatus": ["Pole Mallakhamb", "Hanging Mallakhamb"] }
+          ]
+        },
+        {
+          "file": "desk-1-page-2.jpg",
+          "page": 2,
+          "rows": [
+            { "section": "Male:Under18", "rowNo": 1, "firstName": "ARYAN", "lastName": "MOHITE", "dateOfBirth": "2010-06-30", "apparatus": ["Rope Mallakhamb"] },
+            { "section": "Female:Under10", "rowNo": 1, "firstName": "MIHIKA", "lastName": "BORSE", "dateOfBirth": "2017-11-03", "apparatus": ["Pole Mallakhamb"] }
+          ]
+        },
+        {
+          "file": "desk-1-page-3.jpg",
+          "page": 3,
+          "rows": [
+            { "section": "Female:Under12", "rowNo": 1, "firstName": "TANVI", "lastName": "JOSHI", "dateOfBirth": "2015-08-17", "apparatus": ["Rope Mallakhamb"] },
+            { "section": "Female:Under16", "rowNo": 2, "firstName": "GAURI", "lastName": "PATANKAR", "dateOfBirth": "2011-04-09", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] }
+          ]
+        }
       ]
     },
     {
-      "file": "page-2.jpg",
-      "page": 2,
-      "rows": [
-        { "section": "Male:Under18", "rowNo": 1, "firstName": "ARYAN", "lastName": "MOHITE", "dateOfBirth": "2010-06-30", "apparatus": ["Rope Mallakhamb"] },
-        { "section": "Female:Under10", "rowNo": 1, "firstName": "MIHIKA", "lastName": "BORSE", "dateOfBirth": "2017-11-03", "apparatus": ["Pole Mallakhamb"] }
+      "meet": "Thane",
+      "coach": { "firstName": "Pratibha", "lastName": "Kshirsagar", "email": "pratibha.kshirsagar@example.com", "phone": "9822041637", "password": "Pratibha@2026", "playerDefaultPassword": "PratibhaSquad@2026" },
+      "team": { "name": "DESK-THANE", "description": "Registered at the walk-in desk" },
+      "pages": [
+        {
+          "file": "desk-2-page-1.jpg",
+          "page": 1,
+          "rows": [
+            { "section": "Male:Under10", "rowNo": 2, "firstName": "ARNAV", "lastName": "SURVE", "dateOfBirth": "2018-03-27", "apparatus": ["Pole Mallakhamb"] },
+            { "section": "Male:Under14", "rowNo": 1, "firstName": "VIHAAN", "lastName": "PADWAL", "dateOfBirth": "2013-12-05", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] }
+          ]
+        },
+        {
+          "file": "desk-2-page-3.jpg",
+          "page": 3,
+          "rows": [
+            { "section": "Female:Under12", "rowNo": 3, "firstName": "KAVYA", "lastName": "MAHAJAN", "dateOfBirth": "2015-10-02", "apparatus": ["Pole Mallakhamb"] },
+            { "section": "Female:Under14", "rowNo": 1, "firstName": "ANVI", "lastName": "DIGHE", "dateOfBirth": "2013-07-19", "apparatus": ["Rope Mallakhamb"] }
+          ]
+        }
       ]
     },
     {
-      "file": "page-3.jpg",
-      "page": 3,
-      "rows": [
-        { "section": "Female:Under12", "rowNo": 1, "firstName": "TANVI", "lastName": "JOSHI", "dateOfBirth": "2015-08-17", "apparatus": ["Rope Mallakhamb"] },
-        { "section": "Female:Under16", "rowNo": 2, "firstName": "GAURI", "lastName": "PATANKAR", "dateOfBirth": "2011-04-09", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] }
+      "meet": "Nagpur",
+      "coach": { "firstName": "Rakesh", "lastName": "Wankhede", "email": "rakesh.wankhede@example.com", "phone": "9373518402", "password": "Rakesh@2026", "playerDefaultPassword": "RakeshSquad@2026" },
+      "team": { "name": "DESK-NAGPUR", "description": "Registered at the walk-in desk" },
+      "pages": [
+        {
+          "file": "desk-3-page-2.jpg",
+          "page": 2,
+          "rows": [
+            { "section": "Male:Under18", "rowNo": 2, "firstName": "SAHIL", "lastName": "UIKEY", "dateOfBirth": "2009-05-14", "apparatus": ["Hanging Mallakhamb"] },
+            { "section": "Male:Above18", "rowNo": 1, "firstName": "PRATIK", "lastName": "BHAGAT", "dateOfBirth": "2004-01-25", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb", "Hanging Mallakhamb"] }
+          ]
+        },
+        {
+          "file": "desk-3-page-4.jpg",
+          "page": 4,
+          "rows": [
+            { "section": "Female:Above16", "rowNo": 1, "firstName": "RUCHA", "lastName": "THAKRE", "dateOfBirth": "2007-09-08", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] },
+            { "section": "Female:Above16", "rowNo": 2, "firstName": "SHRUTI", "lastName": "BOBDE", "dateOfBirth": "2006-02-28", "apparatus": ["Rope Mallakhamb"] }
+          ]
+        }
+      ]
+    },
+    {
+      "meet": "Delhi",
+      "coach": { "firstName": "Harpreet", "lastName": "Sodhi", "email": "harpreet.sodhi@example.com", "phone": "9811206734", "password": "Harpreet@2026", "playerDefaultPassword": "HarpreetSquad@2026" },
+      "team": { "name": "DESK-DELHI", "description": "Registered at the walk-in desk" },
+      "pages": [
+        {
+          "file": "desk-4-page-1.jpg",
+          "page": 1,
+          "rows": [
+            { "section": "Male:Under10", "rowNo": 1, "firstName": "DEV", "lastName": "MALHOTRA", "dateOfBirth": "2016-08-11", "apparatus": ["Pole Mallakhamb"] },
+            { "section": "Male:Under12", "rowNo": 2, "firstName": "ISHAN", "lastName": "BATRA", "dateOfBirth": "2014-04-03", "apparatus": ["Rope Mallakhamb", "Hanging Mallakhamb"] }
+          ]
+        },
+        {
+          "file": "desk-4-page-3.jpg",
+          "page": 3,
+          "rows": [
+            { "section": "Female:Under12", "rowNo": 1, "firstName": "SIYA", "lastName": "ARORA", "dateOfBirth": "2015-03-21", "apparatus": ["Rope Mallakhamb"] },
+            { "section": "Female:Under16", "rowNo": 1, "firstName": "MEHAR", "lastName": "GILL", "dateOfBirth": "2011-12-30", "apparatus": ["Pole Mallakhamb"] }
+          ]
+        }
+      ]
+    },
+    {
+      "meet": "Goa",
+      "coach": { "firstName": "Joaquim", "lastName": "Fernandes", "email": "joaquim.fernandes@example.com", "phone": "9822760153", "password": "Joaquim@2026", "playerDefaultPassword": "JoaquimSquad@2026" },
+      "team": { "name": "DESK-GOA", "description": "Registered at the walk-in desk" },
+      "pages": [
+        {
+          "file": "desk-5-page-1.jpg",
+          "page": 1,
+          "rows": [
+            { "section": "Male:Under12", "rowNo": 1, "firstName": "NEIL", "lastName": "GAONKAR", "dateOfBirth": "2015-01-29", "apparatus": ["Pole Mallakhamb", "Hanging Mallakhamb"] },
+            { "section": "Male:Under14", "rowNo": 3, "firstName": "AARON", "lastName": "COLACO", "dateOfBirth": "2013-02-14", "apparatus": ["Hanging Mallakhamb"] }
+          ]
+        },
+        {
+          "file": "desk-5-page-2.jpg",
+          "page": 2,
+          "rows": [
+            { "section": "Male:Under18", "rowNo": 1, "firstName": "RYAN", "lastName": "PEREIRA", "dateOfBirth": "2010-11-11", "apparatus": ["Rope Mallakhamb"] },
+            { "section": "Female:Under10", "rowNo": 1, "firstName": "ALISHA", "lastName": "DSOUZA", "dateOfBirth": "2018-06-06", "apparatus": ["Pole Mallakhamb"] }
+          ]
+        }
       ]
     }
   ]

@@ -49,7 +49,7 @@ The deploy health check and the nightly run (O14) use the `--url` form.
 
 ## Form photos for the e2e chain
 
-`Server/tests/fixtures/walk-in/page-{1,2,3}.jpg` are three pages of the REAL
+`Server/tests/fixtures/walk-in/desk-<n>-page-<p>.jpg` are eleven pages (five coaches) of the REAL
 printed form with invented players printed into the boxes, which the chain's
 `walkin` step sends through the whole desk (`Server/scripts/seedWalkIn.js`).
 They are rendered, not photographed, so they reproduce byte for byte:

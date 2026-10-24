@@ -147,10 +147,10 @@ function build() {
    */
   const counters = { Male: 0, Female: 0 };
 
-  const add = (teamName, gender, firstNames, slot) => {
+  const add = (teamName, gender, firstNames, slot, extra = false) => {
     const index = counters[gender];
     const phone = String(PHONE_BASE + entries.length);
-    const kind = NO_EMAIL_SLOTS[`${teamName}/${gender}/${slot.ageGroup}`];
+    const kind = extra ? null : NO_EMAIL_SLOTS[`${teamName}/${gender}/${slot.ageGroup}`];
     entries.push({
       firstName: firstNames[index % firstNames.length],
       lastName: SURNAMES[Math.floor(index / firstNames.length) % SURNAMES.length],
@@ -159,6 +159,8 @@ function build() {
       phone,
       teamName,
       ageGroup: slot.ageGroup,
+      generated: true,
+      ...(extra ? { reserve: true } : {}),
       // `emailType` mirrors Player.emailType; a coach-registered player is
       // always 'none' on the server. The guardian's phone is the slot's.
       emailType: kind?.registeredBy === 'coach' ? 'none' : (kind?.emailType || 'self'),
@@ -173,6 +175,19 @@ function build() {
     for (const slot of MALE_SLOTS) add(teamName, 'Male', MALE_FIRST_NAMES, slot);
     for (const slot of FEMALE_SLOTS) add(teamName, 'Female', FEMALE_FIRST_NAMES, slot);
   }
+
+  /*
+   * One more boy and one more girl per generated team, in a second pass AFTER
+   * every team's ten, so the names above stay exactly what they were. Each
+   * doubles a different category per team, and the two athletes in a doubled
+   * category share it by meet (`squadAt` in roster.js): a squad is still one
+   * per category, but who is in it rotates — so every meet has somebody its
+   * judges must NOT see, which is the case a full squad never tests.
+   */
+  teams.forEach((teamName, index) => {
+    add(teamName, 'Male', MALE_FIRST_NAMES, MALE_SLOTS[index % MALE_SLOTS.length], true);
+    add(teamName, 'Female', FEMALE_FIRST_NAMES, FEMALE_SLOTS[(index + 2) % FEMALE_SLOTS.length], true);
+  });
 
   const capacity = {
     Male: MALE_FIRST_NAMES.length * SURNAMES.length,
@@ -201,5 +216,5 @@ function build() {
   return entries;
 }
 
-/** The generated athletes, for the twelve teams without a hand-written squad. */
+/** The generated athletes, for the teams without a hand-written squad: twelve each. */
 export const GENERATED_ENTRIES = build();

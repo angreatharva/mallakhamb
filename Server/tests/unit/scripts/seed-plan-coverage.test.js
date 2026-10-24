@@ -41,8 +41,10 @@ describe('walk-in fixtures', () => {
     expect(forms.formVersion).toBe(layout.version);
   });
 
+  const pages = forms.desks.flatMap((d) => d.pages);
+
   it('name rows that exist on their page, and images that are committed', () => {
-    for (const page of forms.pages) {
+    for (const page of pages) {
       expect(fs.existsSync(path.join(dir, page.file))).toBe(true);
       const sections = layout.pages.find((p) => p.page === page.page).sections;
       for (const row of page.rows) {
@@ -54,7 +56,15 @@ describe('walk-in fixtures', () => {
     }
   });
 
-  it('meet is a seeded meet', () => {
-    expect(readMeets().meets.some((m) => m.place === forms.meet)).toBe(true);
+  it('each desk enters a different seeded meet, with a coach of its own', () => {
+    const places = forms.desks.map((d) => d.meet);
+    expect(places.every((p) => readMeets().meets.some((m) => m.place === p))).toBe(true);
+    expect(new Set(places).size).toBe(places.length);
+    expect(new Set(forms.desks.map((d) => d.coach.email)).size).toBe(forms.desks.length);
+  });
+
+  it('never writes the same child twice (one child, one Player ID)', () => {
+    const keys = pages.flatMap((p) => p.rows.map((r) => `${r.firstName}|${r.lastName}|${r.dateOfBirth}`));
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });

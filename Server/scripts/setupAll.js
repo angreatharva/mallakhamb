@@ -58,8 +58,8 @@
  * success.
  *
  * BUDGET ABOUT TWO HOURS end to end, most of it in two steps: `squads` builds
- * 45 squads through the coach dashboard (~30 min) and `scores` judges all
- * fifteen meets (~35 min). Both are resumable — every step is independent and
+ * 68 squads through the coach dashboard (~45 min) and `scores` judges all
+ * twenty meets (~35 min). Both are resumable — every step is independent and
  * re-running finishes only what is outstanding — so `--from=` and `--to=` are
  * there for doing it in sittings.
  */
@@ -117,10 +117,10 @@ const STEPS = [
   {
     id: 'competitions',
     where: 'server',
-    title: 'The fifteen meets',
+    title: 'The twenty meets',
     command: ['node', 'scripts/createCompetitions.js'],
-    why: 'Bhausaheb Ranade Navodit at fifteen places — three at each of district, '
-      + 'state, national, international and university, laddered Oct 2026-Jan 2027, from '
+    why: 'Bhausaheb Ranade Navodit at twenty places — every level: three at district, '
+      + 'state, national and international, four at university and DSO, laddered Oct 2026-Feb 2027, from '
       + 'scripts/seed/meets.json. Assigns both admin accounts on BOTH sides of '
       + 'the link. Nothing else in the chain creates a competition, and a role '
       + 'with no meet behind any level cannot get past the level chooser. Also '
@@ -133,7 +133,7 @@ const STEPS = [
     needsApi: true,
     title: 'Coaches and teams',
     command: ['npm', 'run', 'seed:coaches'],
-    why: 'Registers 15 coaches through the UI, three per level, each creating one '
+    why: 'Registers 20 coaches through the UI, three or four per level, each creating one '
       + 'team. Stops at the team — entering a meet costs an entry fee and is the '
       + '`squads` step. Also captures every request body into '
       + 'scripts/seed/registrations.generated.json.',
@@ -144,8 +144,8 @@ const STEPS = [
     needsApi: true,
     title: 'Athletes and team membership',
     command: ['npm', 'run', 'seed:players'],
-    why: '133 athletes register and join their coach\'s team. The twelve generated '
-      + 'squads are ten each — exactly one per category panel, so no panel is '
+    why: '217 athletes register and join their coach\'s team. The seventeen generated '
+      + 'squads are twelve each, fielding ten per meet — exactly one per category panel, so no panel is '
       + 'seated with nobody to judge. The seven no-email university athletes '
       + '(guardian, none, coach-registered) are API-only: setup:api seeds them.',
   },
@@ -155,7 +155,7 @@ const STEPS = [
     needsApi: true,
     title: 'Judge accounts',
     command: ['npm', 'run', 'seed:judges'],
-    why: '20 judges register themselves — an admin cannot create a judge login. '
+    why: '51 judges register themselves — an admin cannot create a judge login. '
       + 'Registering leaves them on no panel; seating is the next-but-one step.',
   },
   {
@@ -164,11 +164,11 @@ const STEPS = [
     needsApi: true,
     title: 'Entries and squads',
     command: ['npm', 'run', 'seed:squads'],
-    why: 'Each team enters all three meets at its level — 45 entries, three per '
+    why: 'Each team enters every meet at its level — 68 entries, three or four per '
       + 'meet — and its athletes are placed into age group, gender and apparatus '
       + 'for each. This is what decides whether a judge sees anybody: eligibility '
       + 'is the squad row, not team membership. THE LONGEST STEP BY FAR: '
-      + 'forty-five squads through an eight-interaction modal each. Narrow it '
+      + 'sixty-eight squads through an eight-interaction modal each. Narrow it '
       + 'with LEVEL=state or PLACE=Pune and re-run — every test is independent.',
   },
   {
@@ -180,7 +180,7 @@ const STEPS = [
     title: 'Walk-in desk (paper form through OCR)',
     command: ['node', 'scripts/seedWalkIn.js'],
     why: 'The /desk flow over the API: committed form photos → OCR sidecar → exact '
-      + 'read-back → review → coach, team, 7 Player IDs, entry, discount payment. '
+      + 'read-back → review → 5 coaches, teams, 23 Player IDs, entries, discount payment. '
       + 'SKIPPED when the API has no reachable OCR sidecar (OCR_URL).',
   },
   {
@@ -192,10 +192,10 @@ const STEPS = [
     command: ['npm', 'run', 'seed:panels'],
     why: 'Seats judges on every category of every meet, to the sizes fixed in '
       + 'scripts/seed/panel-plan.json. District keeps its frozen sizes and seats '
-      + '(the scoring specs run against one); the other twelve meets were drawn. '
+      + '(the scoring specs run against one); the other seventeen meets were drawn. '
       + 'A panel missing any of Senior Judge, Judge 1, Judge 2 or Scorer is '
-      + 'refused. Over the admin API rather than the admin SCREEN: fifteen meets '
-      + 'is 150 panels, and the Manage Judges ladder is five dropdowns per one. '
+      + 'refused. Over the admin API rather than the admin SCREEN: twenty meets '
+      + 'is 200 panels, and the Manage Judges ladder is five dropdowns per one. '
       + '`npm --prefix Web run seed:panels` still does it through the browser, '
       + 'from the same plan, when that is what you want to exercise. Needs '
       + 'SEED_ADMIN_PASSWORD in .env (the API must be running either way).',
@@ -218,12 +218,26 @@ const STEPS = [
     needsApi: true,
     title: 'Judging every meet',
     command: ['npm', 'run', 'seed:scores'],
-    why: 'Judges all fifteen meets over the API — every athlete, every apparatus, '
+    why: 'Judges all twenty meets over the API — every athlete, every apparatus, '
       + 'both competition types, each meet by its OWN panel sizes and its own six '
       + 'judges. Posts the slips wrong first and corrects them, the way a panel '
       + 'actually reaches a score, rather than writing the settled numbers. THE '
       + 'SECOND-LONGEST STEP, about 35 minutes. `npm --prefix Server run '
       + 'seed:scores:one -- --place=Delhi` does a single meet.',
+  },
+  {
+    id: 'mail',
+    where: 'server',
+    needsApi: true,
+    skipExitCode: 78,
+    title: 'Email, read from the capture',
+    command: ['node', 'scripts/seedMail.js'],
+    why: 'Every email the season triggered, read back from e2e_outbox (the API '
+      + 'runs EMAIL_PROVIDER=none + EMAIL_CAPTURE=true: nothing is delivered). '
+      + 'Player ID mails to players and coaches, then password reset by emailed '
+      + 'code for a coach, a player and a judge, the no-email child who gets no '
+      + 'code, and the guardian reminded of every child under one address. '
+      + 'SKIPPED when the API is not capturing, so real reset mail is never sent.',
   },
 ];
 
@@ -235,14 +249,14 @@ start({
   steps: () => STEPS,
   epilogue: () => {
     line('\nWhere this leaves you:');
-    line('  15 meets — three each at district, state, national, international, university');
-    line('  15 coaches with one team apiece, three per level');
-    line('  45 entries — every team in all three meets at its level, three per meet');
-    line('  133 athletes (the 7 no-email ones are setup:api only), placed into squads');
-    line('  20 judges registered and seated across every category of every meet');
-    line('  the walk-in desk team at Varanasi, when an OCR sidecar is reachable');
+    line('  20 meets over all six levels (four at university and DSO)');
+    line('  20 coaches with one team apiece, three or four per level');
+    line('  68 entries — every team in every meet at its level');
+    line('  217 athletes (the 7 no-email ones are setup:api only), squads rotating by meet');
+    line('  51 judges registered and seated across every category of every meet');
+    line('  five walk-in desk teams, when an OCR sidecar is reachable');
     line('  every team final-submitted and paid, so the judges can see them');
-    line('  every meet judged and published — 20 categories each, 300 in total');
+    line('  every meet judged and published — 20 categories each, 400 in total');
     line('');
     line('ABOUT THAT PAYMENT:');
     line('  The `pay` step redeems the DISCOUNT CODE as each coach, over HTTP. That is');

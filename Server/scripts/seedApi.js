@@ -3,11 +3,11 @@
  * The seed, over HTTP. Everything the browser specs do, done as requests.
  *
  *   node scripts/seedApi.js admin          # the organiser account, as super admin
- *   node scripts/seedApi.js competitions   # the fifteen meets, as super admin
- *   node scripts/seedApi.js coaches        # 15 coaches, each with a team
- *   node scripts/seedApi.js players        # 140 athletes, each on their team
- *   node scripts/seedApi.js judges         # 20 judge accounts
- *   node scripts/seedApi.js squads         # 45 entries and every squad place
+ *   node scripts/seedApi.js competitions   # the twenty meets, as super admin
+ *   node scripts/seedApi.js coaches        # 20 coaches, each with a team
+ *   node scripts/seedApi.js players        # 224 athletes, each on their team
+ *   node scripts/seedApi.js judges         # 51 judge accounts
+ *   node scripts/seedApi.js squads         # 68 entries and every squad place
  *   node scripts/seedApi.js all            # the six, in that order
  *
  *   node scripts/seedApi.js squads --dry-run     # say what it would post
@@ -481,7 +481,7 @@ async function seedPlayers() {
   /*
    * The team list, fetched ONCE.
    *
-   * It is the same rows for all 140 athletes, and asking per athlete spends 140
+   * It is the same rows for all 224 athletes, and asking per athlete spends 224
    * round trips to learn nothing new. It needs a signed-in player to ask, so
    * the first one to hold a session fills it.
    */
@@ -604,15 +604,26 @@ async function seedSquads() {
     const meets = roster.selectedMeetsForCoach(coach);
     if (meets.length === 0) continue;
 
-    const squad = everyone.filter((p) => p.teamName === coach.teamName);
-    if (squad.length === 0) {
+    const teamAthletes = everyone.filter((p) => p.teamName === coach.teamName);
+    if (teamAthletes.length === 0) {
       skipped(coach.teamName, 'no athletes on this team in the roster');
       continue;
     }
 
+    /*
+     * Who is entered at each meet. A generated squad fields one athlete per
+     * category and ROTATES who, by the meet's place in its level's season — so
+     * every meet has athletes on the team who are not in its squad, and whom its
+     * judges must not see. Hand-written squads enter everyone, as before.
+     */
+    const levelMeets = roster.meetsForCoach(coach);
+    const squadFor = (meet) => roster.squadAt(
+      coach.teamName, levelMeets.findIndex((m) => m.place === meet.place), everyone
+    );
+
     if (DRY_RUN) {
       for (const meet of meets) {
-        say('would', `${coach.teamName} @ ${meet.place}`, `enter + ${squad.length} athlete(s)`);
+        say('would', `${coach.teamName} @ ${meet.place}`, `enter + ${(await squadFor(meet)).length} of ${teamAthletes.length} athlete(s)`);
       }
       continue;
     }
@@ -693,6 +704,7 @@ async function seedSquads() {
       let added = 0;
       let restated = 0;
       let refused = 0;
+      const squad = await squadFor(meet);
 
       for (const athlete of squad) {
         const label = `${athlete.firstName} ${athlete.lastName}`;

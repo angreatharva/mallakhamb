@@ -317,6 +317,31 @@ export const ROSTER = derive(applySeedCap([...ENTRIES, ...GENERATED_ENTRIES])).m
  */
 export const EMAIL_ROSTER = ROSTER.filter((p) => p.emailType === 'self');
 
+/**
+ * Who a team enters at the n-th meet of its level (0-based, season order).
+ *
+ * A hand-written squad enters everyone, every time — its depth within a
+ * category is the point of it. A generated squad enters ONE athlete per
+ * category, rotating through the athletes who share it, so a team of twelve
+ * fields ten and the other two sit that meet out. Every athlete plays at least
+ * every other meet; nobody is entered twice in one category.
+ *
+ * @param {string} teamName
+ * @param {number} meetIndex
+ * @param {typeof ROSTER} [people] - defaults to the whole roster
+ * @returns {typeof ROSTER}
+ */
+export const squadAt = (teamName, meetIndex, people = ROSTER) => {
+  const team = people.filter((p) => p.teamName === teamName);
+  if (!team.some((p) => p.generated)) return team;
+  const byCategory = new Map();
+  for (const p of team) {
+    const key = `${p.gender}/${p.ageGroup}`;
+    byCategory.set(key, [...(byCategory.get(key) || []), p]);
+  }
+  return [...byCategory.values()].map((sharing) => sharing[meetIndex % sharing.length]);
+};
+
 for (const player of ROSTER) {
   if (player.emailType === 'guardian' && !player.guardianEmail) {
     throw new Error(`${fullName(player)} uses a guardian's email but names none (guardianEmail).`);

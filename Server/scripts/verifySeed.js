@@ -100,7 +100,7 @@ async function verify() {
     .project({ competition: 1, gender: 1, ageGroup: 1, judgeType: 1, judgeAccount: 1 })
     .toArray();
   const scores = await db.collection('scores').find({})
-    .project({ competition: 1, gender: 1, ageGroup: 1, competitionType: 1, isLocked: 1, lockedApparatus: 1, 'playerScores.isFinalized': 1, 'playerScores.apparatus': 1 })
+    .project({ competition: 1, gender: 1, ageGroup: 1, competitionType: 1, isLocked: 1, lockedApparatus: 1, 'playerScores.isFinalized': 1, 'playerScores.apparatus': 1, 'playerScores.playerId': 1 })
     .toArray();
 
   const byId = Object.fromEntries(competitions.map((c) => [String(c._id), c]));
@@ -334,6 +334,25 @@ async function verify() {
     unpublished.length
       ? `${unpublished.length} unpublished: ${unpublished.slice(0, 6).join(' | ')}`
       : 'nothing has been scored at all');
+
+  /*
+   * Squads rotate (support/roster.js squadAt): a generated team fields one of
+   * its athletes per category at each meet, so every meet has team members it
+   * must NOT judge. Nobody may be scored at a meet whose squad does not hold
+   * them — and everyone on the roster plays somewhere.
+   */
+  const entered = new Map(competitions.map((c) => [String(c._id),
+    new Set((c.registeredTeams || []).flatMap((r) => (r.players || []).map((e) => String(e.player))))]));
+  const judgedOutside = scores.flatMap((score) => (score.playerScores || [])
+    .filter((row) => !entered.get(String(score.competition))?.has(String(row.playerId)))
+    .map((row) => `${byId[String(score.competition)]?.place || score.competition}: ${row.playerId}`));
+  check('scores', 'nobody judged at a meet they are not entered in',
+    scores.length > 0 && judgedOutside.length === 0,
+    `${judgedOutside.length}: ${judgedOutside.slice(0, 4).join(' | ')}`);
+  const enteredAnywhere = new Set([...entered.values()].flatMap((set) => [...set]));
+  checkEvery('entries', 'every athlete is in some meet\'s squad', players,
+    (p) => enteredAnywhere.has(String(p._id)),
+    (bad) => `${bad.length} never entered: ${bad.slice(0, 5).map((p) => p.loginId).join(', ')}`);
 
   const meetsWithScores = new Set([...byCategory.values()].map((r) => String(r.competition)));
   checkEvery('scores', 'no meet left unjudged', competitions,

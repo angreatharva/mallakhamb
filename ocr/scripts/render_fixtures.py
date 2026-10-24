@@ -4,7 +4,7 @@
         --forms Server/tests/fixtures/walk-in/forms.json --out Server/tests/fixtures/walk-in
 
 Driven by `npm --prefix Server run walkin:fixtures`, which prints the real form PDF
-and its layout first. Writes each page named in forms.json as a JPEG.
+and its layout first. Writes every desk's pages named in forms.json as JPEGs.
 
 A developer tool, not part of the sidecar: it needs PyMuPDF (`pip install pymupdf`)
 on top of ocr/requirements.txt, and the VMs never run it -- they read the committed
@@ -100,8 +100,11 @@ def main(argv=None) -> int:
     if forms["formVersion"] != layout["version"]:
         raise SystemExit(f"forms.json is for {forms['formVersion']}, the form is {layout['version']}: update forms.json")
 
-    doc = fitz.open(args.pdf)
-    for spec in forms["pages"]:
+    specs = [spec for desk in forms["desks"] for spec in desk["pages"]]
+    for index, spec in enumerate(specs):
+        # A fresh copy of the printed form for every page, so one desk's
+        # writing never shows through on another desk's sheet.
+        doc = fitz.open(args.pdf)
         page_layout = next(p for p in layout["pages"] if p["page"] == spec["page"])
         rows = {(s["key"], r["rowNo"]): r for s in page_layout["sections"] for r in s["rows"]}
         page = doc[spec["page"] - 1]
@@ -111,9 +114,10 @@ def main(argv=None) -> int:
                 raise SystemExit(f"page {spec['page']} has no row {values['section']} #{values['rowNo']}")
             write_row(page, row_layout, values)
         png = page.get_pixmap(dpi=DPI, alpha=False).tobytes("png")
+        doc.close()
         target = os.path.join(args.out, spec["file"])
         with open(target, "wb") as fh:
-            fh.write(photograph(png, seed=spec["page"]))
+            fh.write(photograph(png, seed=index + 1))
         print(f"wrote {target} ({os.path.getsize(target) // 1024} KB, {len(spec['rows'])} rows)")
     return 0
 

@@ -5,12 +5,17 @@
  *   node scripts/planPanels.js --force       # redraw, discarding the old one
  *   node scripts/planPanels.js --seed=12345  # reproduce a specific draw
  *   node scripts/planPanels.js --add-missing # plan ONLY meets the file lacks
+ *   node scripts/planPanels.js --add-missing --separate-time-keeper
+ *                                            # ...each with a 7th person as Time Keeper
  *
  * `--add-missing` is how a meet is added to a seated season: every meet the
  * plan already holds is left exactly as it is (sizes, seats, order), and only
  * the meets in seed/meets.json that it does not name are drawn, from their own
  * recorded seed under `additions`. Judges who hold no seat anywhere yet are
  * seated first, so a judge added to judges.json alongside the meets is used.
+ * `--separate-time-keeper` gives those meets a Time Keeper who is not the
+ * Scorer — legal since the seat was added, and otherwise never exercised,
+ * because every older plan lets the Scorer keep time.
  *
  * WHY THIS IS A FILE AND NOT A CONSTANT
  *
@@ -182,10 +187,10 @@ const shuffle = (random, list) => {
  *   front, so a caller can spread a queue over several meets); seat order is
  *   still drawn
  */
-const drawSeats = (random, pool, first = []) => {
-  if (pool.length < SEAT_NAMES.length) {
+const drawSeats = (random, pool, first = [], seatNames = SEAT_NAMES) => {
+  if (pool.length < seatNames.length) {
     throw new Error(
-      `Only ${pool.length} judges in the pool, but a panel needs ${SEAT_NAMES.length} distinct seats. ` +
+      `Only ${pool.length} judges in the pool, but a panel needs ${seatNames.length} distinct seats. ` +
       'Add more to Server/scripts/seed/judges.json.'
     );
   }
@@ -197,13 +202,13 @@ const drawSeats = (random, pool, first = []) => {
     return Object.fromEntries(SEAT_NAMES.map((seat, index) => [seat, shuffled[index]]));
   }
 
-  const chosen = first.slice(0, SEAT_NAMES.length);
+  const chosen = first.slice(0, seatNames.length);
   for (const email of shuffled) {
-    if (chosen.length === SEAT_NAMES.length) break;
+    if (chosen.length === seatNames.length) break;
     if (!chosen.includes(email)) chosen.push(email);
   }
   const order = shuffle(random, chosen);
-  return Object.fromEntries(SEAT_NAMES.map((seat, index) => [seat, order[index]]));
+  return Object.fromEntries(seatNames.map((seat, index) => [seat, order[index]]));
 };
 
 /**
@@ -217,7 +222,7 @@ const drawSeats = (random, pool, first = []) => {
  * @param {() => number} random
  * @param {string[]} pool
  */
-const planFor = (meet, random, pool, first = []) => {
+const planFor = (meet, random, pool, first = [], seatNames = SEAT_NAMES) => {
   if (meet.level === 'district') {
     return {
       place: meet.place,
@@ -234,7 +239,7 @@ const planFor = (meet, random, pool, first = []) => {
   return {
     place: meet.place,
     level: meet.level,
-    seats: drawSeats(random, pool, first),
+    seats: drawSeats(random, pool, first, seatNames),
     panels: CATEGORIES.map((category, index) => ({ ...category, size: sizes[index] })),
   };
 };
@@ -249,7 +254,7 @@ const planFor = (meet, random, pool, first = []) => {
  *
  * @param {number} seed
  */
-function addMissing(seed) {
+function addMissing(seed, { separateTimeKeeper = false } = {}) {
   const plan = readPlan();
   const planned = new Set(plan.meets.map((m) => m.place));
   const missing = allMeets().filter((meet) => !planned.has(meet.place));
@@ -265,10 +270,11 @@ function addMissing(seed) {
   const queue = pool.filter((email) => !seated.has(email));
   const drawnLevels = missing.filter((m) => m.level !== 'district').length;
   const perMeet = drawnLevels ? Math.ceil(queue.length / drawnLevels) : 0;
+  const seatNames = separateTimeKeeper ? [...SEAT_NAMES, 'Time Keeper'] : SEAT_NAMES;
 
   const added = missing.map((meet) => {
     const first = meet.level === 'district' ? [] : queue.splice(0, perMeet);
-    return planFor(meet, random, pool, first);
+    return planFor(meet, random, pool, first, seatNames);
   });
 
   const next = {
@@ -276,7 +282,12 @@ function addMissing(seed) {
     meets: [...plan.meets, ...added],
     additions: [
       ...(plan.additions || []),
-      { generatedAt: new Date().toISOString(), seed, places: added.map((m) => m.place) },
+      {
+        generatedAt: new Date().toISOString(),
+        seed,
+        places: added.map((m) => m.place),
+        ...(separateTimeKeeper ? { separateTimeKeeper: true } : {}),
+      },
     ],
   };
   writeFileSync(PLAN_PATH, `${JSON.stringify(next, null, 2)}
@@ -306,7 +317,7 @@ function main() {
 
   if (argv.includes('--add-missing')) {
     if (force) throw new Error('--add-missing never redraws; drop --force.');
-    addMissing(seed);
+    addMissing(seed, { separateTimeKeeper: argv.includes('--separate-time-keeper') });
     return;
   }
 

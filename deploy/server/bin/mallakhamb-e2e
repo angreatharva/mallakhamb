@@ -1,27 +1,55 @@
 #!/usr/bin/env bash
-# deploy/oci/PLAN.md O14 — the nightly full-season lifecycle check. Run by mallakhamb-e2e.timer (root).
+# deploy/oci/PLAN.md O14 — the full-season lifecycle check. Run by mallakhamb-e2e.timer (root)
+# four times a day, India time: 00:00 and 18:00 on the ACTIVE VM, 06:00 and 12:00 on the STANDBY.
+# Both VMs carry the same timer; the role decides at run time, so a failover moves the slots with it.
 #
-# The complete roster (15 meets, 15 teams, 140 athletes, 20 judges, 300 categories, plus the walk-in
-# desk through the OCR sidecar when it answers) through the real
-# API of THIS server's release, against a throw-away database, then verified and dropped:
-#   1. skip on meet days (/etc/mallakhamb/NO_E2E, or the meet backup timer is on)
-#   2. render /etc/mallakhamb/e2e.env = app.env + overrides. The database is the app's own with
-#      "_e2e" appended (same login, same cluster), or a dedicated user's if a secret is configured;
-#      it must end in "_e2e" and differ from the real one, or nothing runs
-#   3. start mallakhamb-e2e-api (127.0.0.1:5001, never in Caddy) → empty the e2e database →
-#      setup:api --yes (verifySeed is its last step) → empty it again → stop the API
+# The complete roster (20 meets over all six levels, 20 teams, 224 athletes, 51 judges, 400 categories,
+# five walk-in desks through the OCR sidecar when it answers, every email read back from the capture)
+# through the real API of THIS server's release, against a throw-away MongoDB, then verified:
+#   1. not my slot → exit quietly (no metrics). Skip on: /etc/mallakhamb/NO_E2E, the meet backup timer,
+#      or scripts/e2eGuard.js against the REAL database, read-only: a meet yesterday/today/tomorrow (IST),
+#      the walk-in desk used in the last hour, or (on the active) the live API busier than 1 request/s
+#   2. render /etc/mallakhamb/e2e.env = app.env + overrides: port 5001, the throw-away database,
+#      EMAIL_PROVIDER=none + EMAIL_CAPTURE=true (nothing is delivered; the run reads what WOULD be),
+#      no mail or payment credentials, fresh secrets
+#   3. start mallakhamb-e2e-mongod (127.0.0.1:27027, its own empty data directory — NOT the replica set,
+#      so the run never touches the real database or its oplog) and mallakhamb-e2e-api
+#      (127.0.0.1:5001, never in Caddy) → setup:api --yes (verifySeed is its last step) → stop both
 #   4. write the result to the Alloy textfile (Grafana: "E2E failed", "E2E stale")
+#
+#   sudo mallakhamb-e2e            # as the timer does (slot + skip checks)
+#   sudo mallakhamb-e2e --now      # by hand: ignore the slot, still honour the skip checks
+#   sudo mallakhamb-e2e --now --force   # ... and the skip checks too (never on a meet day)
+#
 # Never padded or looped to raise CPU: the reclaim question is answered by alerting, not by load.
 set -uo pipefail
 . /etc/mallakhamb/platform.sh
-. /etc/mallakhamb/e2e.conf                     # E2E_SECRET_OCID (install-e2e.sh)
+
+NOW=""; FORCE=""
+for a in "$@"; do
+  case "$a" in
+    --now) NOW=1 ;;
+    --force) FORCE=1 ;;
+    *) echo "usage: mallakhamb-e2e [--now] [--force]" >&2; exit 2 ;;
+  esac
+done
 
 REL=/opt/mallakhamb/current/Server
 ENV_FILE=/etc/mallakhamb/e2e.env
 PROM=/var/lib/alloy/textfile/mallakhamb_e2e.prom
 PRELOAD=/usr/local/lib/mallakhamb/e2e-forwarded-https.cjs
 API=http://127.0.0.1:5001
+E2E_DB_DIR=/var/lib/mallakhamb-e2e/db
+E2E_URI='mongodb://127.0.0.1:27027/mallakhamb_e2e'
 START=$(date +%s)
+
+# 1a. My slot? The active VM (the one running mallakhamb.service) takes 00 and 18 IST, the standby 06 and 12.
+if systemctl is-active --quiet mallakhamb.service; then ROLE=active; MINE="00 18"; else ROLE=standby; MINE="06 12"; fi
+HOUR=$(TZ=Asia/Kolkata date +%H)
+if [ -z "$NOW" ] && [[ " $MINE " != *" $HOUR "* ]]; then
+  echo "E2E: ${HOUR}:00 IST is not a slot for the $ROLE VM (mine: $MINE) — nothing to do"
+  exit 0
+fi
 
 prev() { sed -n "s/^$1 \([0-9.]*\)$/\1/p" "$PROM" 2>/dev/null | head -1; }
 write_metrics() {   # $1 exit code, $2 1 if skipped
@@ -29,62 +57,60 @@ write_metrics() {   # $1 exit code, $2 1 if skipped
   [ "$1" = 0 ] && [ "$2" = 0 ] && ok_ts=$(date +%s)
   local code=$1; [ "$2" = 1 ] && code=$(prev mallakhamb_e2e_last_exit_code) && code=${code:-0}
   {
-    echo "# HELP mallakhamb_e2e_last_run_timestamp_seconds Last time the nightly e2e timer fired (run or skip)"
+    echo "# HELP mallakhamb_e2e_last_run_timestamp_seconds Last time this VM's e2e slot ran (run or skip)"
     echo "# TYPE mallakhamb_e2e_last_run_timestamp_seconds gauge"
     echo "mallakhamb_e2e_last_run_timestamp_seconds $(date +%s)"
-    echo "# HELP mallakhamb_e2e_last_success_timestamp_seconds Last nightly e2e run that passed verifySeed"
+    echo "# HELP mallakhamb_e2e_last_success_timestamp_seconds Last e2e run that passed verifySeed"
     echo "# TYPE mallakhamb_e2e_last_success_timestamp_seconds gauge"
     echo "mallakhamb_e2e_last_success_timestamp_seconds $ok_ts"
-    echo "# HELP mallakhamb_e2e_last_exit_code Exit code of the last nightly e2e run that was not skipped (0 = passed)"
+    echo "# HELP mallakhamb_e2e_last_exit_code Exit code of the last e2e run that was not skipped (0 = passed)"
     echo "# TYPE mallakhamb_e2e_last_exit_code gauge"
     echo "mallakhamb_e2e_last_exit_code $code"
-    echo "# HELP mallakhamb_e2e_last_duration_seconds Duration of the last nightly e2e attempt"
+    echo "# HELP mallakhamb_e2e_last_duration_seconds Duration of the last e2e attempt"
     echo "# TYPE mallakhamb_e2e_last_duration_seconds gauge"
     echo "mallakhamb_e2e_last_duration_seconds $(( $(date +%s) - START ))"
-    echo "# HELP mallakhamb_e2e_skipped 1 if the last timer run was skipped (meet day)"
+    echo "# HELP mallakhamb_e2e_skipped 1 if the last slot was skipped (meet near, desk in use, API busy, NO_E2E)"
     echo "# TYPE mallakhamb_e2e_skipped gauge"
     echo "mallakhamb_e2e_skipped $2"
   } > "$PROM.tmp" && chown root:alloy "$PROM.tmp" && chmod 0644 "$PROM.tmp" && mv "$PROM.tmp" "$PROM"
 }
-finish() {   # $1 exit code
+stop_all() {
   systemctl stop mallakhamb-e2e-api 2>/dev/null || true
+  systemctl stop mallakhamb-e2e-mongod 2>/dev/null || true
+}
+finish() {   # $1 exit code
+  stop_all
   write_metrics "$1" 0
-  echo "E2E $( [ "$1" = 0 ] && echo PASSED || echo "FAILED (exit $1)" ) in $(( $(date +%s) - START )) s"
+  echo "E2E $( [ "$1" = 0 ] && echo PASSED || echo "FAILED (exit $1)" ) in $(( $(date +%s) - START )) s ($ROLE, ${HOUR}:00 IST)"
   exit "$1"
 }
+skipped() { echo "$1"; write_metrics 0 1; exit 0; }
 die() { echo "E2E ERROR: $*" >&2; finish "${2:-1}"; }
 
-# 1. meet days
-if [ -f /etc/mallakhamb/NO_E2E ] || systemctl is-active --quiet mallakhamb-backup-meet.timer; then
-  echo "E2E SKIPPED: meet day (NO_E2E flag or the meet backup timer is on)"
-  write_metrics 0 1; exit 0
-fi
+as_app() {   # run in the release as the unprivileged user, with only the given environment file
+  local envfile=$1; shift
+  runuser -u mallakhamb -- env -i PATH=/usr/bin:/bin HOME=/run/mallakhamb-e2e \
+    NODE_OPTIONS="--require $PRELOAD" E2E_API_ORIGIN="$API" \
+    SETUP_LOCK_PATH=/run/mallakhamb-e2e/.setup-running \
+    SEED_API_URL="$API/api" PERF_BASE_URL="$API" PERF_API_URL="$API" \
+    bash -c "cd '$REL' && set -a && . '$envfile' && set +a && exec \"\$@\"" _ "$@"
+}
+install -d -m 0750 -o mallakhamb -g mallakhamb /var/log/mallakhamb-e2e /run/mallakhamb-e2e
 
-# 2. the environment, and the two locks on the database
-db_of() { [[ "$1" =~ ^mongodb(\+srv)?://[^/]+/([^?]*) ]] && printf '%s' "${BASH_REMATCH[2]}"; }
-APP_URI=$(sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)
-if [ -n "${E2E_SECRET_OCID:-}" ]; then
-  # Optional, stronger: a dedicated Atlas user that can only reach <db>_e2e (scripts/04-e2e-secret.md).
-  E2E_URI=$("$OCI" secrets secret-bundle get --secret-id "$E2E_SECRET_OCID" \
-    --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p") \
-    || die "could not read the e2e secret"
-else
-  # Default (owner decision 2026-10-16): the app's own login and cluster, database renamed to <db>_e2e.
-  # Without authSource a plain mongodb:// URI authenticates against the path's database, so pin it
-  # to the original before renaming; mongodb+srv (Atlas) authenticates against admin either way.
-  [[ "$APP_URI" =~ ^(mongodb(\+srv)?://[^/]+/)([^?]+)(\?.*)?$ ]] || die "cannot read the database name in the app MONGODB_URI"
-  base=${BASH_REMATCH[1]}; db=${BASH_REMATCH[3]}; query=${BASH_REMATCH[4]}
-  if [ -z "${BASH_REMATCH[2]}" ] && [[ "$query" != *authSource=* ]]; then
-    query="${query:-?}"; [ "$query" = "?" ] || query="$query&"; query="${query}authSource=$db"
+# 1b. Stay off competitions and off real users.
+if [ -z "$FORCE" ]; then
+  if [ -f /etc/mallakhamb/NO_E2E ] || systemctl is-active --quiet mallakhamb-backup-meet.timer; then
+    skipped "E2E SKIPPED: meet day (NO_E2E flag or the meet backup timer is on)"
   fi
-  E2E_URI="${base}${db}_e2e${query}"
+  LIVE=(); [ "$ROLE" = active ] && LIVE=(--live-api http://127.0.0.1:5000)
+  guard=$(as_app /etc/mallakhamb/app.env env NODE_OPTIONS= node scripts/e2eGuard.js "${LIVE[@]}" 2>&1); grc=$?
+  echo "$guard"
+  [ "$grc" = 10 ] && skipped "$(echo "$guard" | tail -1)"
+  # A guard that cannot answer is a failure, not a skip: a skip would count as a run forever.
+  [ "$grc" = 0 ] || die "the skip check could not run (exit $grc) — see above" 11
 fi
-APP_DB=$(db_of "$APP_URI"); E2E_DB=$(db_of "$E2E_URI")
-[ -n "$E2E_DB" ] || die "the e2e MONGODB_URI names no database"
-[[ "$E2E_DB" == *_e2e ]] || die "refusing: e2e database \"$E2E_DB\" does not end in _e2e"
-[ "$E2E_DB" != "$APP_DB" ] || die "refusing: e2e database is the real one"
-[[ "$E2E_URI" != *"'"* ]] || die "the e2e MONGODB_URI contains a single quote"
 
+# 2. The environment.
 rnd() { openssl rand -hex "$1"; }
 OVERRIDES=(
   "PORT='5001'"
@@ -93,18 +119,21 @@ OVERRIDES=(
   "MIGRATE_ON_START='false'"
   "RATE_LIMIT_ENABLED='false'"
   "EMAIL_PROVIDER='none'"
+  "EMAIL_CAPTURE='true'"
   "EMAIL_USER=''" "EMAIL_PASS=''" "GMAIL_CLIENT_ID=''" "GMAIL_CLIENT_SECRET=''" "GMAIL_REFRESH_TOKEN=''"
   "RAZORPAY_KEY_ID=''" "RAZORPAY_KEY_SECRET=''" "RAZORPAY_WEBHOOK_SECRET=''"
   "DISCOUNT_CODE_ENABLED='true'"
   "DISCOUNT_CODE='E2E$(rnd 8 | tr a-f A-F)'"
   "JWT_SECRET='$(rnd 32)'"
-  "METRICS_TOKEN=''"
+  # The e2e API's own metrics, for the coverage step (which routes this run called); never scraped.
+  "METRICS_TOKEN='$(rnd 24)'"
+  "E2E_COVERAGE_OUT='/var/log/mallakhamb-e2e/coverage.json'"
   "KEEP_ALIVE='false'"
   "ENABLE_DEBUG_ROUTES='false'"
   "LOG_DIR='/var/log/mallakhamb-e2e'"
   # meets.json has fixed dates; slide the season (whole weeks) so no meet is already past its end-date lock
   "SEED_SEASON_LEAD_DAYS='14'"
-  # Throw-away accounts in a throw-away database: new passwords every night, kept only in this
+  # Throw-away accounts in a throw-away database: new passwords every run, kept only in this
   # root:mallakhamb 0640 file (never on a command line, where ps would show them).
   "SEED_ADMIN_PASSWORD='E2e-$(rnd 12)-Aa1!'"
   "SEED_SUPERADMIN_PASSWORD='E2e-$(rnd 12)-Aa1!'"
@@ -113,63 +142,42 @@ keys=$(printf '%s\n' "${OVERRIDES[@]}" | cut -d= -f1 | paste -sd'|')
 tmp=$(mktemp)
 { grep -vE "^(${keys})=" /etc/mallakhamb/app.env; printf '%s\n' "${OVERRIDES[@]}"; } > "$tmp"
 install -m 640 -o root -g mallakhamb "$tmp" "$ENV_FILE"; rm -f "$tmp"
-install -d -m 0750 -o mallakhamb -g mallakhamb /var/log/mallakhamb-e2e /run/mallakhamb-e2e
-echo "E2E: database $E2E_DB, release $(basename "$(readlink -f /opt/mallakhamb/current)" | cut -c1-7)"
+echo "E2E: $ROLE VM, ${HOUR}:00 IST slot, release $(basename "$(readlink -f /opt/mallakhamb/current)" | cut -c1-7), database $E2E_URI"
 
-# 3. the run
+# 3. A throw-away MongoDB with an EMPTY data directory: a failed run's data stays there for inspection
+#    until the next run, which wipes it first.
+systemctl stop mallakhamb-e2e-mongod 2>/dev/null || true
+rm -rf "$E2E_DB_DIR"; install -d -m 0750 -o mongodb -g mongodb "$E2E_DB_DIR"
+systemctl start mallakhamb-e2e-mongod || die "mallakhamb-e2e-mongod did not start"
+for _ in $(seq 1 30); do
+  as_app "$ENV_FILE" node -e "require('mongoose').connect(process.env.MONGODB_URI,{serverSelectionTimeoutMS:2000}).then(c=>{if(!/_e2e\$/.test(c.connection.name))process.exit(3);process.exit(0)}).catch(()=>process.exit(1))" && break
+  sleep 2
+done
+as_app "$ENV_FILE" node -e "require('mongoose').connect(process.env.MONGODB_URI,{serverSelectionTimeoutMS:2000}).then(c=>process.exit(/_e2e\$/.test(c.connection.name)?0:3)).catch(()=>process.exit(1))" \
+  || die "the throw-away MongoDB never answered on 127.0.0.1:27027 (or is not an _e2e database)"
+
 systemctl restart mallakhamb-e2e-api || die "mallakhamb-e2e-api did not start"
 for _ in $(seq 1 40); do
   curl -fsS -H 'X-Forwarded-Proto: https' "$API/api/health/live" >/dev/null 2>&1 && break; sleep 3
 done
 curl -fsS -H 'X-Forwarded-Proto: https' "$API/api/health/live" >/dev/null || die "the e2e API never answered on $API"
 
-as_app() {   # run in the release as the unprivileged user, with only the e2e environment
-  runuser -u mallakhamb -- env -i PATH=/usr/bin:/bin HOME=/run/mallakhamb-e2e \
-    NODE_OPTIONS="--require $PRELOAD" E2E_API_ORIGIN="$API" \
-    SETUP_LOCK_PATH=/run/mallakhamb-e2e/.setup-running \
-    SEED_API_URL="$API/api" PERF_BASE_URL="$API" PERF_API_URL="$API" \
-    bash -c "cd '$REL' && set -a && . '$ENV_FILE' && set +a && exec \"\$@\"" _ "$@"
-}
-# Empty the e2e database (before and after the run). dropDatabase needs dbAdmin, which the app's own
-# login may not have; then every collection is dropped instead (readWrite can). The database the
-# driver actually connected to is checked again here, so a wrong URI can never empty a real one.
-clean_db() {   # $1 before|after
-  as_app node -e "
-    const mongoose = require('mongoose');
-    (async () => {
-      const c = await mongoose.connect(process.env.MONGODB_URI);
-      const name = c.connection.name;
-      if (!/_e2e\$/.test(name)) throw new Error('refusing to empty \"' + name + '\": not an _e2e database');
-      try { await c.connection.dropDatabase(); console.log('E2E: dropped ' + name + ' ($1)'); }
-      catch (e) {
-        if (!/not authorized|unauthorized/i.test(e.message)) throw e;
-        const cols = (await c.connection.db.listCollections().toArray()).map((x) => x.name).filter((n) => !n.startsWith('system.'));
-        for (const n of cols) await c.connection.db.dropCollection(n);
-        console.log('E2E: emptied ' + name + ' collection by collection (' + cols.length + ', $1)');
-      }
-      await c.disconnect();
-    })().catch((e) => { console.error('E2E: cleaning the database failed: ' + e.message); process.exit(1); });"
-}
-
-clean_db before || die "could not empty the e2e database before the run"
-# No --drop: the database was just emptied above (and the chain's own drop needs dbAdmin).
-as_app node scripts/setupApi.js --yes
+as_app "$ENV_FILE" node scripts/setupApi.js --yes
 rc=$?
-# Emptied after a PASSING run only: a failed run's data stays for inspection until the next
-# night, which empties it first (MONGODB-SELF-HOSTED-PLAN.md M7; alert mk-mongo-e2e-left-stg).
 if [ "$rc" = 0 ]; then
-  clean_db after || rc=3
+  systemctl stop mallakhamb-e2e-api mallakhamb-e2e-mongod 2>/dev/null || true
+  rm -rf "$E2E_DB_DIR"
 else
-  echo "E2E: run failed - the e2e database is kept for inspection; the next run empties it first"
+  echo "E2E: run failed - $E2E_DB_DIR is kept for inspection (start mallakhamb-e2e-mongod to look); the next run wipes it"
 fi
 
-# 4. the walk-in desk's form reader (O15): a synthetic filled page read in-process
-# with this release's virtualenv and the pinned model, on BOTH VMs, so a broken OCR
-# shows up overnight rather than at the desk. Exit 9 when only this failed.
+# 4. The walk-in desk's form reader (O15): a synthetic filled page read in-process with this release's
+# virtualenv and the pinned model, on BOTH VMs — the standby has no sidecar, so this is its only OCR
+# check. Exit 9 when only this failed.
 OCR=/opt/mallakhamb/current/ocr
 if [ -x "$OCR/.venv/bin/python" ]; then
   tmpdir=$(runuser -u mallakhamb -- mktemp -d -p /run/mallakhamb-e2e)
-  if runuser -u mallakhamb -- bash -c "cd '$REL' && node scripts/walkInFormFixture.js '$tmpdir' >/dev/null && cd '$OCR' &&        OCR_MODEL_DIR=/opt/mallakhamb/ocr-models/en_PP-OCRv5_mobile_rec .venv/bin/python -m mkwi_ocr.selftest --layout '$tmpdir/layout.json'"; then
+  if runuser -u mallakhamb -- bash -c "cd '$REL' && node scripts/walkInFormFixture.js '$tmpdir' >/dev/null && cd '$OCR' && OCR_MODEL_DIR=/opt/mallakhamb/ocr-models/en_PP-OCRv5_mobile_rec .venv/bin/python -m mkwi_ocr.selftest --layout '$tmpdir/layout.json'"; then
     echo "E2E: OCR self-test passed"
   else
     echo "E2E: OCR self-test FAILED" >&2

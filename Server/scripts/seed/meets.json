@@ -10,11 +10,11 @@
     "the level a meet is NOT at simply finds no competitions, and the run dies on",
     "'Nothing at X Level', which reads like missing seed data rather than a stale map.",
     "",
-    "Three meets at each of five levels, laddered through the season so district",
-    "runs first and university last. University (added 2026-10-24) grew the nightly e2e",
-    "by a quarter; the year field stays 2026 even though Bhopal and Jaipur start in 2027,",
-    "because a meet is the SEASON's and the season slide moves every date anyway. Dates are",
-    "Saturdays, verified rather than",
+    "Twenty meets over all six levels, laddered through the season so district runs",
+    "first and DSO last: three each at district, state, national and international, four",
+    "each at university and DSO (added 2026-10-24 for the lifecycle check). The year field",
+    "stays 2026 for the 2027 dates because a meet is the SEASON's, and the season slide",
+    "moves every date anyway. Dates are Saturdays, verified rather than",
     "assumed; each meet ends the following day. The competition status rules key off",
     "these -- 'ongoing' is refused before the start date, and a started meet cannot be",
     "deleted -- so they sit far enough out to keep every meet in 'upcoming'.",
@@ -43,6 +43,12 @@
 
     { "place": "Varanasi", "level": "university", "startDate": "2026-12-26" },
     { "place": "Bhopal", "level": "university", "startDate": "2027-01-02" },
-    { "place": "Jaipur", "level": "university", "startDate": "2027-01-09" }
+    { "place": "Jaipur", "level": "university", "startDate": "2027-01-09" },
+    { "place": "Indore", "level": "university", "startDate": "2027-01-16" },
+
+    { "place": "Thane", "level": "dso", "startDate": "2027-01-23" },
+    { "place": "Satara", "level": "dso", "startDate": "2027-01-30" },
+    { "place": "Ratnagiri", "level": "dso", "startDate": "2027-02-06" },
+    { "place": "Latur", "level": "dso", "startDate": "2027-02-13" }
   ]
 }

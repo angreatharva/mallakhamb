@@ -13,6 +13,7 @@
  *   3. GET/POST /desk/coaches       the coach (created at the desk if new)
  *   4. POST /desk/coaches/:id/team  their team
  *   5. POST /desk/drafts            enters the team in the meet, opens the form
+ *   (all of it once per coach in forms.json — five coaches, five meets)
  *   6. POST /desk/drafts/:id/scan   each committed page photo, through the sidecar
  *      → every row must read back EXACTLY as tests/fixtures/walk-in/forms.json
  *        wrote it: names, date of birth, apparatus ticks, section and row
@@ -89,18 +90,19 @@ async function scan(client, draftId, file, page) {
 }
 
 async function main() {
-  const forms = JSON.parse(fs.readFileSync(path.join(FIXTURES, 'forms.json'), 'utf8'));
+  const file = JSON.parse(fs.readFileSync(path.join(FIXTURES, 'forms.json'), 'utf8'));
   const version = buildFormLayout().version;
-  if (forms.formVersion !== version) {
+  if (file.formVersion !== version) {
     throw new StepError(
-      `the fixture images are of form ${forms.formVersion} but the desk prints ${version}. `
+      `the fixture images are of form ${file.formVersion} but the desk prints ${version}. `
       + 'Re-render them: npm --prefix Server run walkin:fixtures'
     );
   }
-  const expected = forms.pages.flatMap((p) => p.rows.map((r) => ({ ...r, page: p.page })));
+  const pages = file.desks.flatMap((d) => d.pages);
+  const players = pages.reduce((n, p) => n + p.rows.length, 0);
 
   console.log(`\nWalk-in desk — ${BASE_URL}${DRY_RUN ? '  (dry run)' : ''}`);
-  console.log(`  ${forms.pages.length} page photo(s), ${expected.length} player(s), meet ${forms.meet}\n`);
+  console.log(`  ${file.desks.length} coach(es), ${pages.length} page photo(s), ${players} player(s)\n`);
 
   const admin = new ApiClient({ baseUrl: BASE_URL, label: ADMIN.email });
   const login = await admin.login('/api/admin/login', ADMIN);
@@ -117,8 +119,17 @@ async function main() {
   }
   say('ok', 'form reader', status.detail?.model || 'healthy');
 
-  // 2. The meet, from the desk's own list of meets taking entries now.
+  // 2. The meets, from the desk's own list of meets taking entries now.
   const meets = dataOf(await admin.get('/api/desk/meets')) || [];
+  for (const desk of file.desks) {
+    console.log(`\n  — ${desk.coach.firstName} ${desk.coach.lastName}, ${desk.team.name} @ ${desk.meet}`);
+    await runDesk(admin, meets, desk);
+  }
+}
+
+/** One coach at the desk: their form, start to slip. */
+async function runDesk(admin, meets, forms) {
+  const expected = forms.pages.flatMap((p) => p.rows.map((r) => ({ ...r, page: p.page })));
   const meet = meets.find((m) => m.place === forms.meet);
   if (!meet) {
     throw new StepError(`${forms.meet} is not taking entries at the desk. Open: ${meets.map((m) => m.place).join(', ') || 'none'}`);

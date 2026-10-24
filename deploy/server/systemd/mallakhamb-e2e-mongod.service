@@ -1,0 +1,25 @@
+[Unit]
+Description=Mallakhamb e2e throw-away MongoDB (127.0.0.1:27027; deploy/oci/PLAN.md O14)
+# Started and stopped only by mallakhamb-e2e (the runner), with an EMPTY data directory each run.
+# A standalone mongod, NOT a member of the "mallakhamb" replica set: the lifecycle check never
+# writes to the real database or churns its oplog (point-in-time restore depends on that window).
+# Localhost only, no auth: it holds nothing but the seeded season, wiped before every run.
+After=network-online.target
+
+[Service]
+Type=simple
+User=mongodb
+Group=mongodb
+ExecStart=/usr/bin/mongod --port 27027 --bind_ip 127.0.0.1 --dbpath /var/lib/mallakhamb-e2e/db --wiredTigerCacheSizeGB 0.25 --nounixsocket --quiet
+Restart=no
+# Small on purpose: the VM has 4 GB, shared with the live API, the replica-set member and the OCR sidecar.
+MemoryMax=700M
+MemoryHigh=600M
+CPUWeight=50
+Nice=5
+TimeoutStopSec=60
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/mallakhamb-e2e

@@ -31,7 +31,8 @@ import { LEVELS, meetsAtLevel } from './meets.js';
  */
 
 /**
- * Three coaches, and so three teams, at each of the five seeded levels.
+ * Three coaches, and so three teams, at each of the six levels — four at
+ * university and DSO, which run four meets each.
  *
  * THREE IS A DELIBERATE FLOOR, not an arbitrary number. It is the smallest
  * field that gives a team ranking a genuine middle place — with two, every
@@ -52,7 +53,7 @@ import { LEVELS, meetsAtLevel } from './meets.js';
  * several meets is a supported path, not a shortcut: `registerTeam` only refuses
  * a duplicate entry into the SAME competition.
  *
- * Levels are also why the clubs are named in five families — a district club
+ * Levels are also why the clubs are named in six families — a district club
  * appearing at an international meet is exactly the kind of detail that makes a
  * fixture read as fake.
  *
@@ -100,6 +101,14 @@ const ENTRIES = [
   { firstName: 'Abhijit', lastName: 'Bhosale', phone: '9561247830', teamName: 'AIUM-A', level: 'university', teamDescription: 'AIUM Team A' },
   { firstName: 'Tushar', lastName: 'Mhatre', phone: '8007413962', teamName: 'AIUM-B', level: 'university', teamDescription: 'AIUM Team B' },
   { firstName: 'Vikram', lastName: 'Shinde', phone: '7387105624', teamName: 'AIUM-C', level: 'university', teamDescription: 'AIUM Team C' },
+  { firstName: 'Sandeep', lastName: 'Gavali', phone: '9158204736', teamName: 'AIUM-D', level: 'university', teamDescription: 'AIUM Team D' },
+
+  // ── dso — District Sports Office school teams ─────────────────────────────
+  // Added with the four DSO meets. Also appended last, for the same reason.
+  { firstName: 'Ajay', lastName: 'Mane', phone: '9604381527', teamName: 'DSOM-A', level: 'dso', teamDescription: 'DSO School Team A' },
+  { firstName: 'Rupesh', lastName: 'Kokate', phone: '8669027413', teamName: 'DSOM-B', level: 'dso', teamDescription: 'DSO School Team B' },
+  { firstName: 'Manoj', lastName: 'Tawde', phone: '7720915348', teamName: 'DSOM-C', level: 'dso', teamDescription: 'DSO School Team C' },
+  { firstName: 'Sharad', lastName: 'Pingle', phone: '9370642185', teamName: 'DSOM-D', level: 'dso', teamDescription: 'DSO School Team D' },
 ];
 
 export const COACH_ROSTER = derive(ENTRIES);

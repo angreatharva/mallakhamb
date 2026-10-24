@@ -59,7 +59,7 @@ class EmailService {
           this.logger
         );
       } else if (providerType === 'none') {
-        this.provider = new NoneAdapter(null, this.logger);
+        this.provider = new NoneAdapter({ capture: this.config.get('email.capture') === true }, this.logger);
       } else {
         // Default to nodemailer
         this.provider = new NodemailerAdapter(

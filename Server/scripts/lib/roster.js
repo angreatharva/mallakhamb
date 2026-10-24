@@ -101,6 +101,12 @@ async function playerDefaultPasswordFor(coach) {
   return derive(coach);
 }
 
+/** Who a team enters at the n-th meet of its level (roster.js squadAt: generated squads rotate). */
+async function squadAt(teamName, meetIndex, people) {
+  const { squadAt: pick, ROSTER } = await load('roster.js');
+  return pick(teamName, meetIndex, people || ROSTER);
+}
+
 /** Every athlete, ignoring ONLY= / TEAM= — what a whole season must contain. */
 async function allPlayers() {
   const { ROSTER } = await load('roster.js');
@@ -160,5 +166,5 @@ function selectedMeetsForCoach(coach) {
 }
 
 module.exports = {
-  coaches, allCoaches, players, allPlayers, judges, allJudges, playerDefaultPasswordFor, meetsForCoach, selectedMeetsForCoach,
+  coaches, allCoaches, players, allPlayers, squadAt, judges, allJudges, playerDefaultPasswordFor, meetsForCoach, selectedMeetsForCoach,
 };

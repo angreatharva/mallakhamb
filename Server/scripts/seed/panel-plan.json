@@ -1026,6 +1026,331 @@
           "size": 4
         }
       ]
+    },
+    {
+      "place": "Indore",
+      "level": "university",
+      "seats": {
+        "Senior Judge": "dinesh.h@gmail.com",
+        "Judge 1": "amol.b@gmail.com",
+        "Judge 2": "chetan.g@gmail.com",
+        "Judge 3": "bhushan.d@gmail.com",
+        "Judge 4": "swati.c@gmail.com",
+        "Scorer": "harish.j@gmail.com",
+        "Time Keeper": "gajanan.i@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 4
+        }
+      ]
+    },
+    {
+      "place": "Thane",
+      "level": "dso",
+      "seats": {
+        "Senior Judge": "narendra.n@gmail.com",
+        "Judge 1": "omkar.p@gmail.com",
+        "Judge 2": "kedar.l@gmail.com",
+        "Judge 3": "madhura.k@gmail.com",
+        "Judge 4": "pankaj.r@gmail.com",
+        "Scorer": "rajendra.s@gmail.com",
+        "Time Keeper": "mahesh.m@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 4
+        }
+      ]
+    },
+    {
+      "place": "Satara",
+      "level": "dso",
+      "seats": {
+        "Senior Judge": "neha.w@gmail.com",
+        "Judge 1": "sagar.t@gmail.com",
+        "Judge 2": "santosh.u@gmail.com",
+        "Judge 3": "tanmay.y@gmail.com",
+        "Judge 4": "shekhar.v@gmail.com",
+        "Scorer": "vijay.a@gmail.com",
+        "Time Keeper": "uday.z@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Ratnagiri",
+      "level": "dso",
+      "seats": {
+        "Senior Judge": "rohan.f@gmail.com",
+        "Judge 1": "ketan.h@gmail.com",
+        "Judge 2": "pooja.d@gmail.com",
+        "Judge 3": "pravin.e@gmail.com",
+        "Judge 4": "ajit.c@gmail.com",
+        "Scorer": "siddharth.g@gmail.com",
+        "Time Keeper": "yogesh.b@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 4
+        }
+      ]
+    },
+    {
+      "place": "Latur",
+      "level": "dso",
+      "seats": {
+        "Senior Judge": "gajanan.i@gmail.com",
+        "Judge 1": "sachin.a@gmail.com",
+        "Judge 2": "anil.j@gmail.com",
+        "Judge 3": "varun.i@gmail.com",
+        "Judge 4": "rahul.j@gmail.com",
+        "Scorer": "yatin.n@gmail.com",
+        "Time Keeper": "kunal.k@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 4
+        }
+      ]
     }
   ],
   "additions": [
@@ -1037,6 +1362,18 @@
         "Bhopal",
         "Jaipur"
       ]
+    },
+    {
+      "generatedAt": "2026-10-24T15:15:33.094Z",
+      "seed": 327179533,
+      "places": [
+        "Indore",
+        "Thane",
+        "Satara",
+        "Ratnagiri",
+        "Latur"
+      ],
+      "separateTimeKeeper": true
     }
   ]
 }
