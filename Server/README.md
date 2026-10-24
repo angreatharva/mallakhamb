@@ -339,7 +339,7 @@ lock, and end by counting what actually landed in the database.
 ```bash
 npm run setup -- --drop       # FAST: whichever surface seeds each step quickest (~2 h)
 npm run setup:api -- --drop   # every step over HTTP, no browser (~25-40 min)
-npm run setup:ui -- --drop    # every step through the browser (all 12 meets: most of a day)
+npm run setup:ui -- --drop    # every step through the browser (all 15 meets: most of a day)
 ```
 
 `--list` prints the plan without running anything, and labels each step `API`,

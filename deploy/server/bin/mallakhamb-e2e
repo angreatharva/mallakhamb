@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # deploy/oci/PLAN.md O14 — the nightly full-season lifecycle check. Run by mallakhamb-e2e.timer (root).
 #
-# The complete roster (12 meets, 12 teams, 110 athletes, 16 judges, 240 categories) through the real
+# The complete roster (15 meets, 15 teams, 140 athletes, 20 judges, 300 categories, plus the walk-in
+# desk through the OCR sidecar when it answers) through the real
 # API of THIS server's release, against a throw-away database, then verified and dropped:
 #   1. skip on meet days (/etc/mallakhamb/NO_E2E, or the meet backup timer is on)
 #   2. render /etc/mallakhamb/e2e.env = app.env + overrides. The database is the app's own with

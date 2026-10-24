@@ -1,0 +1,59 @@
+{
+  "_comment": [
+    "Three pages of the walk-in paper form, filled in, for the e2e chain's walk-in step",
+    "(Server/scripts/seedWalkIn.js). The JPEGs beside this file are RENDERED from it:",
+    "",
+    "  npm --prefix Server run walkin:fixtures",
+    "",
+    "which prints the real form (src/services/walk-in/form-pdf.service.js), writes these",
+    "values into its boxes in a printed hand -- one digit per date box, names in capitals,",
+    "a tick in each apparatus box -- rasterises it and tilts it slightly, the way a phone",
+    "on a desk photographs a page. Re-run it after any change to the form's geometry",
+    "(FORM_VERSION); the step refuses images whose version differs from the form's.",
+    "",
+    "Everyone here is invented: no real child, coach or phone number. The coach and team",
+    "are the desk's own, created by the step; they are on no roster.",
+    "",
+    "`rows` is what the OCR must read back, field for field. The step asserts it before",
+    "anything is registered, so a misread fails the night's run instead of seeding a",
+    "misspelt child."
+  ],
+  "formVersion": "MKWI2",
+  "meet": "Varanasi",
+  "coach": {
+    "firstName": "Kavita",
+    "lastName": "Lokhande",
+    "email": "kavita.lokhande@example.com",
+    "phone": "9405172863",
+    "password": "Kavita@2026",
+    "playerDefaultPassword": "KavitaSquad@2026"
+  },
+  "team": { "name": "DESK-WALKIN", "description": "Registered at the walk-in desk" },
+  "pages": [
+    {
+      "file": "page-1.jpg",
+      "page": 1,
+      "rows": [
+        { "section": "Male:Under10", "rowNo": 1, "firstName": "OJAS", "lastName": "KHARAT", "dateOfBirth": "2017-05-12", "apparatus": ["Pole Mallakhamb"] },
+        { "section": "Male:Under12", "rowNo": 1, "firstName": "RUDRA", "lastName": "DHOLE", "dateOfBirth": "2015-02-08", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] },
+        { "section": "Male:Under14", "rowNo": 1, "firstName": "SHLOK", "lastName": "GHARAT", "dateOfBirth": "2013-09-21", "apparatus": ["Pole Mallakhamb", "Hanging Mallakhamb"] }
+      ]
+    },
+    {
+      "file": "page-2.jpg",
+      "page": 2,
+      "rows": [
+        { "section": "Male:Under18", "rowNo": 1, "firstName": "ARYAN", "lastName": "MOHITE", "dateOfBirth": "2010-06-30", "apparatus": ["Rope Mallakhamb"] },
+        { "section": "Female:Under10", "rowNo": 1, "firstName": "MIHIKA", "lastName": "BORSE", "dateOfBirth": "2017-11-03", "apparatus": ["Pole Mallakhamb"] }
+      ]
+    },
+    {
+      "file": "page-3.jpg",
+      "page": 3,
+      "rows": [
+        { "section": "Female:Under12", "rowNo": 1, "firstName": "TANVI", "lastName": "JOSHI", "dateOfBirth": "2015-08-17", "apparatus": ["Rope Mallakhamb"] },
+        { "section": "Female:Under16", "rowNo": 2, "firstName": "GAURI", "lastName": "PATANKAR", "dateOfBirth": "2011-04-09", "apparatus": ["Pole Mallakhamb", "Rope Mallakhamb"] }
+      ]
+    }
+  ]
+}

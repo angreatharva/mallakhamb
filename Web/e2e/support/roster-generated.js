@@ -8,8 +8,8 @@ import { COACH_ROSTER } from './coach-roster.js';
  *
  * SGAM-A, SGAM-B and SGAM-C are real people who were registered by hand before
  * the roster file existed, and `roster.js` remains the single record of who
- * they are. The other nine teams exist to put three squads into each of the
- * twelve meets, and writing ninety more names out by hand would be ninety more
+ * they are. The other twelve teams exist to put three squads into each of the
+ * fifteen meets, and writing 120 more names out by hand would be 120 more
  * chances to typo a phone number or a date of birth into a run that fails
  * twenty minutes in.
  *
@@ -87,6 +87,34 @@ const FEMALE_SLOTS = [
   { ageGroup: 'Above16', age: 17 },
 ];
 
+/**
+ * The athletes who sign in with a Player ID instead of an email of their own.
+ *
+ * Keyed `<team>/<gender>/<ageGroup>`: the slot keeps its generated name, date of
+ * birth and squad place, and only HOW the account is made changes. Seven, on
+ * the university teams, so every kind is on a scored squad at three meets:
+ *
+ *   guardian  self-registered with a parent's email (`emailType: 'guardian'`).
+ *             The guardian address never signs in; the child uses the Player ID.
+ *             One address is shared by a brother and sister, as families do.
+ *   none      self-registered with no email at all (`emailType: 'none'`).
+ *   coach     registered BY the coach (`POST /coaches/players`), straight onto
+ *             the coach's team with the coach's default player password.
+ *
+ * Every other athlete is `self` — their own email, which still gets a Player ID.
+ * The guardian's details are invented, like everything else in this file.
+ */
+const NO_EMAIL_SLOTS = {
+  'AIUM-A/Male/Under10': { emailType: 'none', guardian: { name: 'Meera Latke', relation: 'Mother' } },
+  'AIUM-A/Female/Under10': { emailType: 'guardian', guardianEmail: 'latke.family@example.com', guardian: { name: 'Meera Latke', relation: 'Mother' } },
+  'AIUM-B/Male/Under12': { registeredBy: 'coach' },
+  'AIUM-B/Female/Under12': { registeredBy: 'coach' },
+  'AIUM-B/Female/Under14': { emailType: 'none', guardian: { name: 'Prakash Ingle', relation: 'Grandfather' } },
+  // Brother and sister on one parent's address: the address is not an identity.
+  'AIUM-C/Male/Under14': { emailType: 'guardian', guardianEmail: 'naik.family@example.com', guardian: { name: 'Sudhir Naik', relation: 'Father' } },
+  'AIUM-C/Female/Under14': { emailType: 'guardian', guardianEmail: 'naik.family@example.com', guardian: { name: 'Sudhir Naik', relation: 'Father' } },
+};
+
 /** Teams whose athletes are written out by hand in roster.js. */
 const HAND_WRITTEN_TEAMS = new Set(['SGAM-A', 'SGAM-B', 'SGAM-C']);
 
@@ -121,14 +149,22 @@ function build() {
 
   const add = (teamName, gender, firstNames, slot) => {
     const index = counters[gender];
+    const phone = String(PHONE_BASE + entries.length);
+    const kind = NO_EMAIL_SLOTS[`${teamName}/${gender}/${slot.ageGroup}`];
     entries.push({
       firstName: firstNames[index % firstNames.length],
       lastName: SURNAMES[Math.floor(index / firstNames.length) % SURNAMES.length],
       gender,
       dateOfBirth: agedExactly(slot.age),
-      phone: String(PHONE_BASE + entries.length),
+      phone,
       teamName,
       ageGroup: slot.ageGroup,
+      // `emailType` mirrors Player.emailType; a coach-registered player is
+      // always 'none' on the server. The guardian's phone is the slot's.
+      emailType: kind?.registeredBy === 'coach' ? 'none' : (kind?.emailType || 'self'),
+      ...(kind?.registeredBy ? { registeredBy: kind.registeredBy } : {}),
+      ...(kind?.guardianEmail ? { guardianEmail: kind.guardianEmail } : {}),
+      ...(kind?.guardian ? { guardian: { ...kind.guardian, phone } } : {}),
     });
     counters[gender] += 1;
   };
@@ -153,8 +189,17 @@ function build() {
     }
   }
 
+  const placed = new Set(entries.map((e) => `${e.teamName}/${e.gender}/${e.ageGroup}`));
+  const stray = Object.keys(NO_EMAIL_SLOTS).filter((key) => !placed.has(key));
+  if (stray.length) {
+    throw new Error(
+      `NO_EMAIL_SLOTS names ${stray.join(', ')}, which no generated squad has. ` +
+      'A no-email kind that matches no athlete is silently never tested.'
+    );
+  }
+
   return entries;
 }
 
-/** The generated athletes, for the nine teams without a hand-written squad. */
+/** The generated athletes, for the twelve teams without a hand-written squad. */
 export const GENERATED_ENTRIES = build();

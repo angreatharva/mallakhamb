@@ -32,6 +32,8 @@ const { allMeets, LEVELS } = require('./lib/meets');
 const { allJudges } = require('./lib/judges');
 const { readPlan, planForPlace, seatsFor } = require('./lib/panel-plan');
 const { apparatusKey } = require('../src/config/cop-rules');
+const { baseLoginId } = require('../src/utils/data/player-login-id.util');
+const roster = require('./lib/roster');
 
 const QUIET = process.argv.includes('--quiet');
 
@@ -85,7 +87,14 @@ async function verify() {
     .toArray();
   const teams = await db.collection('teams').find({}).project({ name: 1, coach: 1 }).toArray();
   const coaches = await db.collection('coaches').find({}).project({ email: 1 }).toArray();
-  const players = await db.collection('players').find({}).project({ email: 1, team: 1 }).toArray();
+  const players = await db.collection('players').find({})
+    .project({ email: 1, team: 1, loginId: 1, emailType: 1, registeredByCoach: 1, firstName: 1, lastName: 1, dateOfBirth: 1 })
+    .toArray();
+  const deskForms = await db.collection('walkinregistrations').find({ status: { $ne: 'cancelled' } })
+    .project({ competition: 1, team: 1, status: 1, rows: 1 })
+    .toArray();
+  const rosterCoaches = await roster.allCoaches();
+  const rosterPlayers = await roster.allPlayers();
   const judgeAccounts = await db.collection('judges').find({}).project({ email: 1 }).toArray();
   const assignments = await db.collection('judgeassignments').find({})
     .project({ competition: 1, gender: 1, ageGroup: 1, judgeType: 1, judgeAccount: 1 })
@@ -124,7 +133,30 @@ async function verify() {
     `${coaches.length} coach(es), ${teams.length} team(s)`);
 
   checkEvery('accounts', 'every athlete is on a team', players, (p) => p.team,
-    (bad) => `${bad.length} teamless: ${bad.slice(0, 5).map((p) => p.email).join(', ')}`);
+    (bad) => `${bad.length} teamless: ${bad.slice(0, 5).map((p) => p.email || p.loginId).join(', ')}`);
+
+  // Every account has a Player ID — the one login a child without an email has —
+  // and it is the one their name and date of birth give (no `.2`: the seed has no
+  // two children sharing both, so a suffix means somebody was registered twice).
+  checkEvery('accounts', 'every athlete has their own Player ID', players,
+    (p) => p.loginId && p.loginId === baseLoginId(p.firstName, p.lastName, p.dateOfBirth),
+    (bad) => `${bad.length}: ${bad.slice(0, 5).map((p) => `${p.loginId || 'none'} (${p.firstName} ${p.lastName})`).join(', ')}`);
+
+  // The no-email kinds, counted against the roster: own email, a guardian's, none,
+  // and registered by the coach (who is the contact of record).
+  const kindOf = (p) => (p.registeredByCoach ? 'coach' : (p.emailType || 'self'));
+  const rosterKindOf = (p) => (p.registeredBy === 'coach' ? 'coach' : p.emailType);
+  const deskPlayerIds = new Set(deskForms.flatMap((f) => (f.rows || []).map((r) => String(r.player || ''))).filter(Boolean));
+  const seasonPlayers = players.filter((p) => !deskPlayerIds.has(String(p._id)));
+  for (const kind of ['self', 'guardian', 'none', 'coach']) {
+    const want = rosterPlayers.filter((p) => rosterKindOf(p) === kind).length;
+    const got = seasonPlayers.filter((p) => kindOf(p) === kind).length;
+    check('accounts', `${kind} accounts: ${want}`, got === want, `found ${got}`);
+  }
+  checkEvery('accounts', 'no-email accounts hold no email, guardian ones the guardian\'s',
+    players.filter((p) => p.emailType && p.emailType !== 'self'),
+    (p) => (p.emailType === 'none' ? !p.email : Boolean(p.email)),
+    (bad) => `${bad.length}: ${bad.slice(0, 5).map((p) => p.loginId).join(', ')}`);
 
   const expectedJudges = allJudges();
   check('accounts', `${expectedJudges.length} judge accounts exist`,
@@ -145,10 +177,30 @@ async function verify() {
     (c) => (c.registeredTeams || []).length > 0,
     (bad) => `empty: ${bad.map((c) => c.place).join(', ')}`);
 
-  const perMeet = new Set(competitions.map((c) => (c.registeredTeams || []).length));
-  check('entries', 'every meet has the same number of teams',
-    competitions.length > 0 && perMeet.size === 1,
-    `sizes seen: ${[...perMeet].join(', ') || 'none'}`);
+  /*
+   * Exactly the roster's teams at each meet's level — plus any team the walk-in
+   * desk entered there. This was "every meet has the same number of teams",
+   * which a desk entry breaks for the right reason; naming the teams is the
+   * stronger check anyway (a team in the wrong level's meet had the right count).
+   */
+  const teamName = new Map(teams.map((t) => [String(t._id), t.name]));
+  const wrongField = [];
+  for (const competition of competitions) {
+    const want = new Set(rosterCoaches.filter((c) => c.level === competition.level).map((c) => c.teamName));
+    for (const form of deskForms) {
+      if (String(form.competition) === String(competition._id)) want.add(teamName.get(String(form.team)));
+    }
+    const got = new Set((competition.registeredTeams || []).map((r) => teamName.get(String(r.team))));
+    const missingTeams = [...want].filter((t) => !got.has(t));
+    const extraTeams = [...got].filter((t) => !want.has(t));
+    if (missingTeams.length || extraTeams.length) {
+      wrongField.push(`${competition.place}: ${missingTeams.length ? `missing ${missingTeams.join(', ')}` : ''}`
+        + `${extraTeams.length ? ` unexpected ${extraTeams.join(', ')}` : ''}`);
+    }
+  }
+  check('entries', 'every meet has its level\'s roster teams (+ desk entries)',
+    competitions.length > 0 && wrongField.length === 0,
+    wrongField.slice(0, 4).join(' | '));
 
   checkEvery('entries', 'every entry has a squad', entries,
     (e) => (e.players || []).length > 0,
@@ -160,6 +212,30 @@ async function verify() {
   checkEvery('entries', 'every entry is paid', entries,
     (e) => e.paymentStatus === 'completed',
     (bad) => `${bad.length} outstanding: ${bad.slice(0, 6).map((e) => e.place).join(', ')}`);
+
+  // ── walk-in desk ───────────────────────────────────────────────────────────
+  //
+  // Only when the desk step ran: it is skipped where no OCR sidecar answers, and
+  // a season without it is complete. When it did run, the form is paid, every
+  // row became an entered player, and those players sit in that meet's entry —
+  // where the scoring checks below then hold them to the same bar as everyone.
+  if (deskForms.length > 0) {
+    checkEvery('walk-in', 'every desk form is paid', deskForms, (f) => f.status === 'paid',
+      (bad) => `${bad.length}: ${bad.map((f) => f.status).join(', ')}`);
+    const rows = deskForms.flatMap((f) => (f.rows || []).map((r) => ({ ...r, form: f })));
+    checkEvery('walk-in', 'every desk row is a registered, entered player', rows,
+      (r) => r.player && r.entered && r.loginId,
+      (bad) => `${bad.length} unfinished`);
+    checkEvery('walk-in', 'every desk player is in that meet\'s squad', rows, (r) => {
+      const meet = byId[String(r.form.competition)];
+      const entry = (meet?.registeredTeams || []).find((t) => String(t.team) === String(r.form.team));
+      return (entry?.players || []).some((e) => String(e.player) === String(r.player));
+    }, (bad) => `${bad.length} missing: ${bad.slice(0, 5).map((r) => r.loginId).join(', ')}`);
+    checkEvery('walk-in', 'desk players were registered by the coach, with no email',
+      players.filter((p) => deskPlayerIds.has(String(p._id))),
+      (p) => p.registeredByCoach && p.emailType === 'none' && !p.email,
+      (bad) => `${bad.length}: ${bad.slice(0, 5).map((p) => p.loginId).join(', ')}`);
+  }
 
   // ── panels ─────────────────────────────────────────────────────────────────
   const plan = readPlan();
@@ -271,6 +347,7 @@ async function verify() {
     coaches: coaches.length,
     teams: teams.length,
     players: players.length,
+    deskPlayers: deskPlayerIds.size,
     judges: judgeAccounts.length,
     entries: entries.length,
     squadPlaces: entries.reduce((n, e) => n + (e.players || []).length, 0),

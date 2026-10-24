@@ -89,6 +89,24 @@ async function players() {
  * @returns {Promise<Array<{firstName: string, lastName: string, email: string,
  *   password: string, phone: string, stateUnit: string, certificationLevel: string}>>}
  */
+/** Every coach, ignoring ONLY= — for finding a team's coach from a player. */
+async function allCoaches() {
+  const { COACH_ROSTER } = await load('coach-roster.js');
+  return COACH_ROSTER;
+}
+
+/** The default password a coach gives the children they register (people.js). */
+async function playerDefaultPasswordFor(coach) {
+  const { playerDefaultPasswordFor: derive } = await load('people.js');
+  return derive(coach);
+}
+
+/** Every athlete, ignoring ONLY= / TEAM= — what a whole season must contain. */
+async function allPlayers() {
+  const { ROSTER } = await load('roster.js');
+  return ROSTER;
+}
+
 async function judges() {
   const { selectedJudges } = await load('judge-roster.js');
   return selectedJudges();
@@ -141,4 +159,6 @@ function selectedMeetsForCoach(coach) {
   return meets;
 }
 
-module.exports = { coaches, players, judges, allJudges, meetsForCoach, selectedMeetsForCoach };
+module.exports = {
+  coaches, allCoaches, players, allPlayers, judges, allJudges, playerDefaultPasswordFor, meetsForCoach, selectedMeetsForCoach,
+};

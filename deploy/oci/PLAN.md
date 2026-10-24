@@ -455,17 +455,18 @@ What users notice:
 |---|---|---|
 | prepare, superadmin | bootstrap (migrations, first super admin) | — |
 | admin | `POST /superadmin/admins` (organiser) | 1 |
-| competitions | 3 per level: district Mumbai/Pune/Nashik, state Nagpur/Kolhapur/Aurangabad, national Delhi/Bengaluru/Chennai, international Goa/Hyderabad/Kolkata | 12 meets |
-| coaches | one team each, entered into the 3 meets at its level | 12 coaches / 12 teams / 36 entries |
-| players | register + join team | 110 athletes |
-| judges | register | 16 judges |
-| squads | squad places per meet entry (gender rule enforced) | — |
-| pay | discount-code redemption — verifies, never fakes (`paymentStatus` is never written directly) | 36 entries |
-| panels | seat panels from `seed/panel-plan.json` | 120 panels |
-| scores | judges score, Sr. Judge submits, results published | 240 categories |
-| verify | `scripts/verifySeed.js` | pass / fail |
+| competitions | 3 per level: district Mumbai/Pune/Nashik, state Nagpur/Kolhapur/Aurangabad, national Delhi/Bengaluru/Chennai, international Goa/Hyderabad/Kolkata, university Varanasi/Bhopal/Jaipur | 15 meets |
+| coaches | one team each, entered into the 3 meets at its level | 15 coaches / 15 teams / 45 entries |
+| players | register + join team; 133 with their own email, 7 by Player ID only (3 guardian email, 2 none, 2 registered by their coach) | 140 athletes |
+| judges | register | 20 judges |
+| squads | squad places per meet entry (gender rule enforced) | 420 places |
+| walkin | the walk-in desk: 3 committed form photos → OCR sidecar → exact read-back → review → coach + team + 7 Player IDs → discount payment, at Varanasi. **Skipped** (not failed) when the API's `OCR_URL` sidecar does not answer | 1 coach / 7 players |
+| pay | discount-code redemption — verifies, never fakes (`paymentStatus` is never written directly) | 45 entries |
+| panels | seat panels from `seed/panel-plan.json` | 150 panels |
+| scores | judges score, Sr. Judge submits, results published | 300 categories |
+| verify | `scripts/verifySeed.js` | pass / fail (34 checks with the desk, 30 without) |
 
-About 25–40 min end to end (most of it in `scores`).
+About 25–40 min end to end (most of it in `scores`). Grown by a quarter on 2026-10-24 — see *Roster growth* below the first-runs table.
 
 **Design**
 
@@ -508,6 +509,20 @@ About 25–40 min end to end (most of it in `scores`).
 | 5 | app-01 (active, serving) | 801b5fa | **PASSED** — 11/11 steps, 24/24 checks | 708 s |
 
 Checked after both: `BRMC_dev` record counts identical to the baseline taken before run 1; no `BRMC_dev_e2e` left; every e2e API start logged `provider: none`, 0 real sends (this flow sends no mail at all); port 5001 unreachable from outside on both IPs; the five `mallakhamb_e2e_*` metrics in Grafana. While run 5 worked beside the live API, `GET /api/health/ready` stayed 200 on all 18 probes but slowed (avg 0.53 s, peak 1.8 s, vs ~0.13 s idle): the one OCPU and the Atlas cluster are shared — fine at 03:00 IST, and the reason meet days skip. ~12 min end to end, not 25–40. Found on the way, not O14's: every stop of the API exits **7** (graceful shutdown logs after ending the logger) — separate fix. The *E2E failed / stale* alerts are in the OCI preset, so they go live with the rest at the cutover (C7).
+
+**Roster growth + walk-in stage (2026-10-24, branch `test/e2e-roster-growth-ocr`, not deployed)** — real coverage, not load: every addition is a flow the chain did not exercise or a level it never seeded.
+- **University level** added: 3 meets, 3 teams (AIUM-A/B/C), 30 generated athletes, 4 judges (Prashant Kulkarni, Hemant Nerurkar, Sachin Apte, Vivek Bapat). Panel plans for the three new meets were **appended** with `planPanels.js --add-missing` (seed 90981495, recorded under `additions`); the twelve existing plans are byte-identical, nothing was redrawn. Judges with no seat anywhere are seated first, so all 20 hold one.
+- **No-email accounts** in the university squads: self-registered with a guardian's email (a brother and sister share one), with no email, and registered by the coach (`POST /coaches/players` with the default player password). The players step signs each one in **by Player ID** and checks the ID (`firstname.lastname.ddmmyy`, no `.2`) and the stored email; verifySeed counts each kind against the roster.
+- **Walk-in stage** (`scripts/seedWalkIn.js`, before panels so the desk's players are judged and published with everyone else): `tests/fixtures/walk-in/page-{1,2,3}.jpg`, rendered from the real printed form (`npm --prefix Server run walkin:fixtures`, PyMuPDF on a dev machine; reproducible byte for byte, invented people only). Asks the API's own `GET /desk/ocr/status`: no reader → one `SKIPPED walk-in OCR stage: …` line, exit 78, reported `[skipped]`. On the VMs this means it runs on the **active** (sidecar bound to the live API, already inside its `MemoryMax=1G`) and skips on the standby, which still has the in-process self-test below. Nothing new is started, so peak memory does not move.
+- verifySeed: "every meet has the same number of teams" became "every meet has exactly its level's roster teams, plus its desk entries" (named, not counted); new checks: every account's Player ID, the four account kinds, and — when a desk form exists — paid, every row entered, in that meet's squad, coach-registered with no email.
+
+| Run (local, Windows PC, local mongod) | Code | Result | Time |
+|---|---|---|---|
+| baseline | master 2f97f49 | 11/11 steps, 24/24 checks; 3,606 slips, 696 results | 280 s |
+| grown, OCR up | branch | 12/12 steps (walkin 7 s, 7/7 rows exact), 34/34 checks; 4,620 slips, 896 results | 374 s |
+| grown, no sidecar, from empty | branch | walkin `[skipped]`, 30/30 checks | 414 s (jest running alongside) |
+
+×1.34 wall time for +25 % meets/panels/categories, +27 % athletes, +28 % slips, +29 % squad places → **expect ~16 min on the VMs** (709 s × 1.34 ≈ 950 s), inside the 20 min budget. Re-measure on the first night after deploying.
 
 **Verify**
 - A manual run prints `verifySeed` OK, `<db>_e2e` is gone afterwards, the real DB's counts (`mallakhamb-counts`) are unchanged, no email was sent (Gmail "Sent" is empty for the run window).

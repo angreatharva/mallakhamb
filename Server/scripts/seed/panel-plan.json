@@ -834,6 +834,209 @@
           "size": 3
         }
       ]
+    },
+    {
+      "place": "Varanasi",
+      "level": "university",
+      "seats": {
+        "Senior Judge": "prashant.k@gmail.com",
+        "Judge 1": "yatin.n@gmail.com",
+        "Judge 2": "girish.o@gmail.com",
+        "Judge 3": "hemant.n@gmail.com",
+        "Judge 4": "sanjay.b@gmail.com",
+        "Scorer": "ashwin.r@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Bhopal",
+      "level": "university",
+      "seats": {
+        "Senior Judge": "ashwin.r@gmail.com",
+        "Judge 1": "vivek.b@gmail.com",
+        "Judge 2": "dattatray.l@gmail.com",
+        "Judge 3": "ravi.g@gmail.com",
+        "Judge 4": "sachin.a@gmail.com",
+        "Scorer": "yatin.n@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 3
+        }
+      ]
+    },
+    {
+      "place": "Jaipur",
+      "level": "university",
+      "seats": {
+        "Senior Judge": "vivek.b@gmail.com",
+        "Judge 1": "rahul.j@gmail.com",
+        "Judge 2": "mayur.p@gmail.com",
+        "Judge 3": "ashwin.r@gmail.com",
+        "Judge 4": "hemant.n@gmail.com",
+        "Scorer": "prashant.k@gmail.com"
+      },
+      "panels": [
+        {
+          "gender": "Male",
+          "ageGroup": "Under10",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under12",
+          "size": 5
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Under18",
+          "size": 4
+        },
+        {
+          "gender": "Male",
+          "ageGroup": "Above18",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under10",
+          "size": 4
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under12",
+          "size": 5
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under14",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Under16",
+          "size": 3
+        },
+        {
+          "gender": "Female",
+          "ageGroup": "Above16",
+          "size": 4
+        }
+      ]
+    }
+  ],
+  "additions": [
+    {
+      "generatedAt": "2026-10-24T12:58:25.481Z",
+      "seed": 90981495,
+      "places": [
+        "Varanasi",
+        "Bhopal",
+        "Jaipur"
+      ]
     }
   ]
 }

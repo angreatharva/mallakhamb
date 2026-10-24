@@ -10,8 +10,11 @@
     "the level a meet is NOT at simply finds no competitions, and the run dies on",
     "'Nothing at X Level', which reads like missing seed data rather than a stale map.",
     "",
-    "Three meets at each of the four levels, laddered through the season so district",
-    "runs first and international last. Dates are Saturdays, verified rather than",
+    "Three meets at each of five levels, laddered through the season so district",
+    "runs first and university last. University (added 2026-10-24) grew the nightly e2e",
+    "by a quarter; the year field stays 2026 even though Bhopal and Jaipur start in 2027,",
+    "because a meet is the SEASON's and the season slide moves every date anyway. Dates are",
+    "Saturdays, verified rather than",
     "assumed; each meet ends the following day. The competition status rules key off",
     "these -- 'ongoing' is refused before the start date, and a started meet cannot be",
     "deleted -- so they sit far enough out to keep every meet in 'upcoming'.",
@@ -36,6 +39,10 @@
 
     { "place": "Goa", "level": "international", "startDate": "2026-12-05" },
     { "place": "Hyderabad", "level": "international", "startDate": "2026-12-12" },
-    { "place": "Kolkata", "level": "international", "startDate": "2026-12-19" }
+    { "place": "Kolkata", "level": "international", "startDate": "2026-12-19" },
+
+    { "place": "Varanasi", "level": "university", "startDate": "2026-12-26" },
+    { "place": "Bhopal", "level": "university", "startDate": "2027-01-02" },
+    { "place": "Jaipur", "level": "university", "startDate": "2027-01-09" }
   ]
 }

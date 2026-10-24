@@ -4,6 +4,13 @@
  *   node scripts/planPanels.js               # refuses if a plan already exists
  *   node scripts/planPanels.js --force       # redraw, discarding the old one
  *   node scripts/planPanels.js --seed=12345  # reproduce a specific draw
+ *   node scripts/planPanels.js --add-missing # plan ONLY meets the file lacks
+ *
+ * `--add-missing` is how a meet is added to a seated season: every meet the
+ * plan already holds is left exactly as it is (sizes, seats, order), and only
+ * the meets in seed/meets.json that it does not name are drawn, from their own
+ * recorded seed under `additions`. Judges who hold no seat anywhere yet are
+ * seated first, so a judge added to judges.json alongside the meets is used.
  *
  * WHY THIS IS A FILE AND NOT A CONSTANT
  *
@@ -159,7 +166,23 @@ const drawSizes = (random) => {
  * @param {string[]} pool - every registered judge's email
  * @returns {Object} seat name → email
  */
-const drawSeats = (random, pool) => {
+const shuffle = (random, list) => {
+  const shuffled = [...list];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+/**
+ * @param {() => number} random
+ * @param {string[]} pool - every registered judge's email
+ * @param {string[]} [first] - judges who must be among the six (taken from the
+ *   front, so a caller can spread a queue over several meets); seat order is
+ *   still drawn
+ */
+const drawSeats = (random, pool, first = []) => {
   if (pool.length < SEAT_NAMES.length) {
     throw new Error(
       `Only ${pool.length} judges in the pool, but a panel needs ${SEAT_NAMES.length} distinct seats. ` +
@@ -167,14 +190,20 @@ const drawSeats = (random, pool) => {
     );
   }
 
-  // Fisher-Yates over a copy, then take the first six.
-  const shuffled = [...pool];
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  // Fisher-Yates over a copy, then take the first six. With nobody to seat
+  // first this is exactly the original draw, so an old seed still reproduces.
+  const shuffled = shuffle(random, pool);
+  if (first.length === 0) {
+    return Object.fromEntries(SEAT_NAMES.map((seat, index) => [seat, shuffled[index]]));
   }
 
-  return Object.fromEntries(SEAT_NAMES.map((seat, index) => [seat, shuffled[index]]));
+  const chosen = first.slice(0, SEAT_NAMES.length);
+  for (const email of shuffled) {
+    if (chosen.length === SEAT_NAMES.length) break;
+    if (!chosen.includes(email)) chosen.push(email);
+  }
+  const order = shuffle(random, chosen);
+  return Object.fromEntries(SEAT_NAMES.map((seat, index) => [seat, order[index]]));
 };
 
 /**
@@ -188,7 +217,7 @@ const drawSeats = (random, pool) => {
  * @param {() => number} random
  * @param {string[]} pool
  */
-const planFor = (meet, random, pool) => {
+const planFor = (meet, random, pool, first = []) => {
   if (meet.level === 'district') {
     return {
       place: meet.place,
@@ -205,10 +234,67 @@ const planFor = (meet, random, pool) => {
   return {
     place: meet.place,
     level: meet.level,
-    seats: drawSeats(random, pool),
+    seats: drawSeats(random, pool, first),
     panels: CATEGORIES.map((category, index) => ({ ...category, size: sizes[index] })),
   };
 };
+
+/**
+ * Plan only the meets the file does not have yet, leaving the rest untouched.
+ *
+ * The existing meets are not re-read from meets.json or re-validated against
+ * it: they are copied through as they are, because they may already be seated
+ * and scored somewhere. Judges nobody has seated yet go first, spread over the
+ * new meets, so a judge added with them is not left with nothing to judge.
+ *
+ * @param {number} seed
+ */
+function addMissing(seed) {
+  const plan = readPlan();
+  const planned = new Set(plan.meets.map((m) => m.place));
+  const missing = allMeets().filter((meet) => !planned.has(meet.place));
+
+  if (missing.length === 0) {
+    console.log(`Nothing to add: all ${plan.meets.length} meets in seed/meets.json are planned.`);
+    return;
+  }
+
+  const random = mulberry32(seed);
+  const pool = judgeEmails();
+  const seated = new Set(plan.meets.flatMap((m) => Object.values(m.seats)));
+  const queue = pool.filter((email) => !seated.has(email));
+  const drawnLevels = missing.filter((m) => m.level !== 'district').length;
+  const perMeet = drawnLevels ? Math.ceil(queue.length / drawnLevels) : 0;
+
+  const added = missing.map((meet) => {
+    const first = meet.level === 'district' ? [] : queue.splice(0, perMeet);
+    return planFor(meet, random, pool, first);
+  });
+
+  const next = {
+    ...plan,
+    meets: [...plan.meets, ...added],
+    additions: [
+      ...(plan.additions || []),
+      { generatedAt: new Date().toISOString(), seed, places: added.map((m) => m.place) },
+    ],
+  };
+  writeFileSync(PLAN_PATH, `${JSON.stringify(next, null, 2)}
+`);
+
+  console.log(`🎲 Added ${added.length} meet(s) with seed ${seed}; the other ${plan.meets.length} are unchanged`);
+  console.table(added.map((meet) => ({
+    meet: meet.place,
+    level: meet.level,
+    spread: SIZES.map((s) => `${meet.panels.filter((p) => p.size === s).length}×${s}`).join('  '),
+    seats: Object.values(meet.seats).join(' '),
+  })));
+  const stillIdle = pool.filter((email) => !next.meets.some((m) => Object.values(m.seats).includes(email)));
+  if (stillIdle.length) console.log(`Hold no seat anywhere: ${stillIdle.join(', ')}`);
+  console.log(`
+Written to ${PLAN_PATH}. Commit it, then seat the new meets with:`);
+  console.log('  SEED_ADMIN_PASSWORD=... npm --prefix Server run seed:panels');
+}
 
 function main() {
   const argv = process.argv.slice(2);
@@ -217,6 +303,12 @@ function main() {
   const seed = given ? Number(given.slice('--seed='.length)) : Math.floor(Math.random() * 2 ** 31);
 
   if (Number.isNaN(seed)) throw new Error(`--seed must be a number, got "${given}"`);
+
+  if (argv.includes('--add-missing')) {
+    if (force) throw new Error('--add-missing never redraws; drop --force.');
+    addMissing(seed);
+    return;
+  }
 
   if (existsSync(PLAN_PATH) && !force) {
     const existing = readPlan();

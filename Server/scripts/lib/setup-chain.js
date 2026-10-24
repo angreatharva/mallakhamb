@@ -244,7 +244,11 @@ async function apiIsUp(port) {
  *
  * @param {Object} step
  * @param {boolean} dryRun
- * @returns {boolean} whether it succeeded
+ * A step that declares `skipExitCode` may exit with it to say "nothing to do
+ * here, by design" — the walk-in desk with no OCR sidecar reachable. That is
+ * reported as skipped and the chain carries on; any other non-zero is a failure.
+ *
+ * @returns {'ok'|'skipped'|'FAILED'}
  */
 function runStep(step, dryRun) {
   const cwd = step.where === 'web' ? WEB_DIR : SERVER_DIR;
@@ -264,7 +268,7 @@ function runStep(step, dryRun) {
 
   if (dryRun) {
     line('  (dry run — not executed)');
-    return true;
+    return 'ok';
   }
 
   const result = spawnSync(command, rest, {
@@ -275,7 +279,9 @@ function runStep(step, dryRun) {
     shell: process.platform === 'win32',
   });
 
-  return result.status === 0;
+  if (result.status === 0) return 'ok';
+  if (step.skipExitCode && result.status === step.skipExitCode) return 'skipped';
+  return 'FAILED';
 }
 
 /** How a step's surface reads in the plan. */
@@ -462,10 +468,10 @@ async function runChain(definition) {
       continue;
     }
     const startedAt = Date.now();
-    const ok = runStep(step, args.dryRun);
+    const state = runStep(step, args.dryRun);
     const seconds = Math.round((Date.now() - startedAt) / 1000);
-    outcomes.push({ id: step.id, state: ok ? 'ok' : 'FAILED', seconds });
-    if (!ok) failedStep = step;
+    outcomes.push({ id: step.id, state, seconds });
+    if (state === 'FAILED') failedStep = step;
   }
 
   // ── The step report, printed whether the run succeeded or not ──────────────
@@ -476,7 +482,7 @@ async function runChain(definition) {
   const mmss = (s) => (s === null ? '' : `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`);
   const width = Math.max(...outcomes.map((o) => o.id.length)) + 2;
   for (const outcome of outcomes) {
-    const mark = { ok: '[ok]     ', FAILED: '[FAILED] ', 'not run': '[not run]' }[outcome.state];
+    const mark = { ok: '[ok]     ', skipped: '[skipped]', FAILED: '[FAILED] ', 'not run': '[not run]' }[outcome.state];
     line(`  ${mark} ${outcome.id.padEnd(width)}${mmss(outcome.seconds)}`);
   }
 

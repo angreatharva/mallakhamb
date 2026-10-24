@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { apiGet, captureEntry, captureSquad, clearSession, watchConsole } from './support/browser.js';
 import { COACH_ROSTER, meetsForTeam } from './support/coach-roster.js';
 import { MEET_NAME, MEET_YEAR } from './support/meets.js';
-import { ROSTER } from './support/roster.js';
+import { EMAIL_ROSTER as ROSTER } from './support/roster.js';
 import { coachSignIn, registerTeamForCompetition } from './support/coach-flows.js';
 import { addPlayerToSquad, saveTeam } from './support/squad-flows.js';
 

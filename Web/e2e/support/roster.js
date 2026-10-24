@@ -39,7 +39,7 @@
  */
 
 import { COACH_ROSTER } from './coach-roster.js';
-import { agedExactly, derive, fullName, onlyMatching, validateRoster } from './people.js';
+import { agedExactly, derive, fullName, onlyMatching, playerDefaultPasswordFor, validateRoster } from './people.js';
 import { GENERATED_ENTRIES } from './roster-generated.js';
 
 /**
@@ -282,7 +282,7 @@ const applySeedCap = (entries) => {
 
 /**
  * Everyone seeded: the hand-written SGAM squads (capped where SEED_CAP says so)
- * and the generated squads for the other nine teams.
+ * and the generated squads for the other twelve teams.
  *
  * The generated half is built in `roster-generated.js` and joins here rather
  * than staying separate, so every check below — apparatus, age group, email
@@ -292,10 +292,40 @@ const applySeedCap = (entries) => {
  *
  * @type {(RosterEntry & {email: string, password: string, apparatus: string[]})[]}
  */
-export const ROSTER = derive(applySeedCap([...ENTRIES, ...GENERATED_ENTRIES])).map((entry) => ({
-  ...entry,
-  apparatus: entry.apparatus || APPARATUS_DEFAULT(entry),
-}));
+export const ROSTER = derive(applySeedCap([...ENTRIES, ...GENERATED_ENTRIES])).map((entry) => {
+  const coach = entry.registeredBy === 'coach'
+    ? COACH_ROSTER.find((c) => c.teamName === entry.teamName)
+    : null;
+  return {
+    ...entry,
+    emailType: entry.emailType || 'self',
+    apparatus: entry.apparatus || APPARATUS_DEFAULT(entry),
+    // A coach-registered child signs in with the coach's default password.
+    ...(coach ? { password: playerDefaultPasswordFor(coach) } : {}),
+  };
+});
+
+/*
+ * The players the BROWSER chain can register: those with an email of their own.
+ *
+ * The no-email kinds (guardian, none, coach-registered — see roster-generated.js)
+ * are seeded over the API only (`setup:api`, `setup`); `register-players` and
+ * `build-squads` do not yet drive the Player-ID choice on the registration form
+ * or the coach's "register a player" screen, so a UI-seeded database has those
+ * six squad places empty. Their categories still have athletes from the other
+ * teams, so no panel is left with nobody to judge.
+ */
+export const EMAIL_ROSTER = ROSTER.filter((p) => p.emailType === 'self');
+
+for (const player of ROSTER) {
+  if (player.emailType === 'guardian' && !player.guardianEmail) {
+    throw new Error(`${fullName(player)} uses a guardian's email but names none (guardianEmail).`);
+  }
+  // A coach-registered child's guardian is the coach, taken from the coach's account.
+  if (player.emailType !== 'self' && player.registeredBy !== 'coach' && !player.guardian?.name) {
+    throw new Error(`${fullName(player)} has no email of their own, so needs a guardian (name, relation, phone).`);
+  }
+}
 
 /*
  * Every athlete needs an age group before a coach can put them in a squad.
@@ -346,11 +376,11 @@ for (const player of ROSTER) {
  * `ONLY=Purva`, or any combination. Unset seeds everyone.
  * @returns {typeof ROSTER}
  */
-export const selectedRoster = () => {
+export const selectedRoster = ({ emailOnly = false } = {}) => {
   const { TEAM, AGE_GROUP } = process.env;
   // ONLY works the same way on all three rosters — a one-person re-run should
   // not need a different flag depending on which role you are seeding.
-  let filtered = onlyMatching(ROSTER);
+  let filtered = onlyMatching(emailOnly ? EMAIL_ROSTER : ROSTER);
 
   if (TEAM) {
     filtered = filtered.filter((p) => p.teamName === TEAM);

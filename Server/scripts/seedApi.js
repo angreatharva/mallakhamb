@@ -3,11 +3,11 @@
  * The seed, over HTTP. Everything the browser specs do, done as requests.
  *
  *   node scripts/seedApi.js admin          # the organiser account, as super admin
- *   node scripts/seedApi.js competitions   # the twelve meets, as super admin
- *   node scripts/seedApi.js coaches        # 12 coaches, each with a team
- *   node scripts/seedApi.js players        # 110 athletes, each on their team
- *   node scripts/seedApi.js judges         # 16 judge accounts
- *   node scripts/seedApi.js squads         # 36 entries and every squad place
+ *   node scripts/seedApi.js competitions   # the fifteen meets, as super admin
+ *   node scripts/seedApi.js coaches        # 15 coaches, each with a team
+ *   node scripts/seedApi.js players        # 140 athletes, each on their team
+ *   node scripts/seedApi.js judges         # 20 judge accounts
+ *   node scripts/seedApi.js squads         # 45 entries and every squad place
  *   node scripts/seedApi.js all            # the six, in that order
  *
  *   node scripts/seedApi.js squads --dry-run     # say what it would post
@@ -53,6 +53,7 @@ const { ApiClient, DEFAULT_BASE } = require('./perf/lib/client');
 const roster = require('./lib/roster');
 const { allMeets } = require('./lib/meets');
 const { buildCompetition } = require('./lib/competition-document');
+const { baseLoginId } = require('../src/utils/data/player-login-id.util');
 
 const argv = process.argv.slice(2);
 const STEP = argv.find((a) => !a.startsWith('--')) || 'all';
@@ -350,32 +351,60 @@ async function seedCoaches() {
 }
 
 /**
- * Every athlete, registered and put on their coach's team.
- *
- * The team is resolved from `/players/teams`, which is the list the selection
- * screen renders. It is NOT scoped to a competition — `getAvailableTeams`
- * ignores the argument and returns every active team — which is what makes this
- * work before any team has entered a meet.
+ * The Player ID the server should give this athlete: `firstname.lastname.ddmmyy`
+ * with no `.2` — the roster has no two people with one name and birthday, so a
+ * suffix means the account was registered twice.
  */
-async function seedPlayers() {
-  const people = await roster.players();
+const expectedLoginId = (player) => baseLoginId(player.firstName, player.lastName, player.dateOfBirth);
 
-  /*
-   * The team list, fetched ONCE.
-   *
-   * It is the same fifty-odd rows for all 110 athletes, and asking per athlete
-   * spends 110 round trips to learn nothing new. It needs a signed-in player to
-   * ask, so the first one to hold a session fills it.
-   */
-  let teamsByName = null;
+/** Sign a player in by Player ID, the way a child without an email does. */
+const signInByLoginId = (player) =>
+  signIn('/api/players/login', { identifier: expectedLoginId(player), password: player.password });
 
-  for (const player of people) {
-    const who = `${player.firstName} ${player.lastName}`;
+/**
+ * A coach's session for registering children, with the default player password
+ * set to the roster's. `PUT /coaches/player-default-password` needs the coach's
+ * own password as the second factor, exactly as on the profile screen. One
+ * session per coach per run.
+ */
+const coachSessions = new Map();
+async function coachForRegistering(teamName) {
+  if (coachSessions.has(teamName)) return coachSessions.get(teamName);
+  const coach = (await roster.allCoaches()).find((c) => c.teamName === teamName);
+  if (!coach) throw new Error(`no coach owns ${teamName}`);
+  const client = await signIn('/api/coaches/login', coach);
+  if (!client) throw new Error(`${coach.email} cannot sign in — run the coaches step first`);
+  const want = await roster.playerDefaultPasswordFor(coach);
+  const current = await client.get('/api/coaches/player-default-password');
+  if ((current.body?.data ?? current.body)?.password !== want) {
+    const set = await client.put('/api/coaches/player-default-password', {
+      password: want,
+      currentPassword: coach.password,
+    });
+    if (!set.ok) throw new Error(`set default player password: ${reasonFor(set)}`);
+  }
+  coachSessions.set(teamName, client);
+  return client;
+}
 
-    if (DRY_RUN) { say('would', who, `register + join ${player.teamName}`); continue; }
-
+/**
+ * Register one athlete the way their kind of account is made.
+ *
+ *   self      POST /players/register with their own email (the original path)
+ *   guardian  POST /players/register, emailType 'guardian', the parent's email
+ *   none      POST /players/register, emailType 'none', no email at all
+ *   coach     POST /coaches/players as their coach — on the team from the start
+ *
+ * The no-email kinds are tried by Player ID FIRST. "Already registered" is never
+ * the answer for them — an address is not an identity (siblings share one) and
+ * a child with none has nothing to collide on — so registering again would
+ * quietly make a second child with a `.2` Player ID.
+ *
+ * @returns {Promise<{client: ApiClient, isNew: boolean}|{skip: string}|{fail: string[]}>}
+ */
+async function registerAthlete(player) {
+  if (player.emailType === 'self') {
     let client = new ApiClient({ baseUrl: BASE_URL, label: player.email });
-
     const registration = await client.post('/api/players/register', {
       firstName: player.firstName,
       lastName: player.lastName,
@@ -387,30 +416,115 @@ async function seedPlayers() {
       // The roster is all minors, and a minor's registration needs it.
       guardianConsent: true,
     });
-
-    if (!registration.ok) {
-      if (!alreadyExists(registration)) {
-        failed(who, 'register', reasonFor(registration));
-        continue;
-      }
-      client = await signIn('/api/players/login', player);
-      if (!client) {
-        skipped(who, 'exists with different credentials — left untouched');
-        continue;
-      }
-    } else {
+    if (registration.ok) {
+      // Registration signs the player in; keep that session.
       const token = registration.body?.data?.token || registration.body?.token;
       if (token) client.bearer = token;
+      return { client, isNew: true };
     }
+    if (!alreadyExists(registration)) return { fail: ['register', reasonFor(registration)] };
+    client = await signIn('/api/players/login', player);
+    return client ? { client, isNew: false } : { skip: 'exists with different credentials — left untouched' };
+  }
+
+  const existing = await signInByLoginId(player);
+  if (existing) return { client: existing, isNew: false };
+
+  if (player.registeredBy === 'coach') {
+    const coach = await coachForRegistering(player.teamName);
+    const made = await coach.post('/api/coaches/players', {
+      firstName: player.firstName,
+      lastName: player.lastName,
+      dateOfBirth: player.dateOfBirth,
+      gender: player.gender,
+      guardianConsent: true,
+    });
+    if (!made.ok) return { fail: ['coach registers', reasonFor(made)] };
+  } else {
+    const client = new ApiClient({ baseUrl: BASE_URL, label: expectedLoginId(player) });
+    const registration = await client.post('/api/players/register', {
+      firstName: player.firstName,
+      lastName: player.lastName,
+      emailType: player.emailType,
+      ...(player.emailType === 'guardian' ? { email: player.guardianEmail } : {}),
+      guardian: player.guardian,
+      password: player.password,
+      gender: player.gender,
+      dateOfBirth: player.dateOfBirth,
+      guardianConsent: true,
+    });
+    if (!registration.ok) return { fail: ['register', reasonFor(registration)] };
+  }
+
+  // Signed in by the Player ID itself, which is the claim worth proving.
+  const client = await signInByLoginId(player);
+  return client
+    ? { client, isNew: true }
+    : { fail: ['sign in', `registered, but ${expectedLoginId(player)} with its password is refused`] };
+}
+
+/**
+ * Every athlete, registered and put on their coach's team.
+ *
+ * The team is resolved from `/players/teams`, which is the list the selection
+ * screen renders. It is NOT scoped to a competition — `getAvailableTeams`
+ * ignores the argument and returns every active team — which is what makes this
+ * work before any team has entered a meet.
+ *
+ * Every account is then checked for its Player ID — own-email players get one
+ * too — and for the email it was stored with: the athlete's own, the
+ * guardian's, or none. A coach-registered child is on the team from the start.
+ */
+async function seedPlayers() {
+  const people = await roster.players();
+
+  /*
+   * The team list, fetched ONCE.
+   *
+   * It is the same rows for all 140 athletes, and asking per athlete spends 140
+   * round trips to learn nothing new. It needs a signed-in player to ask, so
+   * the first one to hold a session fills it.
+   */
+  let teamsByName = null;
+
+  for (const player of people) {
+    const who = `${player.firstName} ${player.lastName}`;
+    const kind = player.registeredBy === 'coach' ? 'coach-registered' : player.emailType;
+
+    if (DRY_RUN) { say('would', who, `register (${kind}) + join ${player.teamName}`); continue; }
+
+    let outcome;
+    try {
+      outcome = await registerAthlete(player);
+    } catch (error) {
+      outcome = { fail: ['register', error.message] };
+    }
+    if (outcome.fail) { failed(who, ...outcome.fail); continue; }
+    if (outcome.skip) { skipped(who, outcome.skip); continue; }
+    const { client, isNew } = outcome;
+
+    const profile = await client.get('/api/players/profile');
+    const me = profile.body?.data ?? profile.body ?? {};
+    if (me.loginId !== expectedLoginId(player)) {
+      failed(who, 'Player ID', `got ${me.loginId || 'none'}, expected ${expectedLoginId(player)}`);
+      continue;
+    }
+    const storedEmail = me.email ? String(me.email).toLowerCase() : null;
+    const wantEmail = { self: player.email, guardian: player.guardianEmail, none: null }[player.emailType] || null;
+    if (storedEmail !== wantEmail) {
+      failed(who, 'email', `stored ${storedEmail || 'none'}, expected ${wantEmail || 'none'} (${kind})`);
+      continue;
+    }
+    const label = player.emailType === 'self' ? '' : ` · ${kind} · ${me.loginId}`;
 
     /*
      * Already on a team? Asked of the profile rather than assumed from the
      * registration outcome: the interesting partial state is an account that
      * registered and never joined, and only the profile knows.
      */
-    const profile = await client.get('/api/players/profile');
-    if (profile.body?.data?.team || profile.body?.team) {
-      skipped(who, `already on a team`);
+    if (me.team) {
+      if (isNew) created(who, `${player.teamName}${label}`);
+      else skipped(who, `already on a team${label}`);
       continue;
     }
 
@@ -433,7 +547,7 @@ async function seedPlayers() {
       continue;
     }
 
-    created(who, player.teamName);
+    created(who, `${player.teamName}${label}`);
   }
 }
 
@@ -585,17 +699,21 @@ async function seedSquads() {
 
         /*
          * The athlete's id, searched by EMAIL rather than by name. The endpoint
-         * matches first name, surname or email against one term, and the roster
-         * has people who share a first name — one of whom holds a player
-         * account and a coach account under it.
+         * matches first name, surname, email or Player ID against one term, and
+         * the roster has people who share a first name — one of whom holds a
+         * player account and a coach account under it. A child with no email
+         * of their own (or a parent's, shared with a sibling) is found by the
+         * Player ID, which is unique.
          */
+        const byLoginId = athlete.emailType !== 'self';
+        const term = byLoginId ? expectedLoginId(athlete) : athlete.email;
         const found = await client.get('/api/coaches/search-players', {
-          query: { query: athlete.email },
+          query: { query: term },
         });
         const hits = listFrom(found, 'players');
-        const account = hits.find(
-          (p) => String(p.email).toLowerCase() === athlete.email.toLowerCase()
-        );
+        const account = hits.find((p) => (byLoginId
+          ? p.loginId === term
+          : String(p.email).toLowerCase() === athlete.email.toLowerCase()));
         if (!account) {
           failed(label, 'search', `not on ${coach.teamName} — run the players step first`);
           refused += 1;
@@ -632,7 +750,7 @@ async function seedSquads() {
 
 const STEPS = {
   admin: { title: 'Organiser account', run: seedAdmin },
-  competitions: { title: 'The twelve meets', run: seedCompetitions },
+  competitions: { title: 'The meets in seed/meets.json', run: seedCompetitions },
   coaches: { title: 'Coaches and teams', run: seedCoaches },
   players: { title: 'Athletes and team membership', run: seedPlayers },
   judges: { title: 'Judge accounts', run: seedJudges },

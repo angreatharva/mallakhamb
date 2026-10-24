@@ -15,9 +15,9 @@
     "Both sides derive them the same way -- see people.js on the Web side and the",
     "emailFor helper in lib/judges.js on the Server side.",
     "",
-    "Sixteen of them, so the twelve meets can be staffed by different panels rather",
-    "than the same six people everywhere. A panel needs six seats (Senior Judge,",
-    "Judge 1-4, Scorer), and the schema forbids one person holding two seats on the",
+    "Twenty of them (four added 2026-10-24 with the university meets), so the fifteen",
+    "meets can be staffed by different panels rather than the same six people everywhere.",
+    "A panel needs six seats (Senior Judge, Judge 1-4, Scorer), and the schema forbids one person holding two seats on the",
     "SAME panel -- but the same person sitting at several MEETS is normal, and is",
     "exactly what the post-login level flow exists to let them switch between.",
     "",
@@ -46,6 +46,11 @@
     { "firstName": "Umesh", "lastName": "Vartak", "phone": "9819254063", "certificationLevel": "District" },
     { "firstName": "Rahul", "lastName": "Joglekar", "phone": "9930518724", "certificationLevel": "State" },
     { "firstName": "Dattatray", "lastName": "Limaye", "phone": "9869140372", "certificationLevel": "National" },
-    { "firstName": "Shirish", "lastName": "Muley", "phone": "9773406185", "certificationLevel": "Club" }
+    { "firstName": "Shirish", "lastName": "Muley", "phone": "9773406185", "certificationLevel": "Club" },
+
+    { "firstName": "Prashant", "lastName": "Kulkarni", "phone": "9822615087", "certificationLevel": "National" },
+    { "firstName": "Hemant", "lastName": "Nerurkar", "phone": "9757318246", "certificationLevel": "State" },
+    { "firstName": "Sachin", "lastName": "Apte", "phone": "9867490531", "certificationLevel": "State" },
+    { "firstName": "Vivek", "lastName": "Bapat", "phone": "9920836174", "certificationLevel": "District" }
   ]
 }
