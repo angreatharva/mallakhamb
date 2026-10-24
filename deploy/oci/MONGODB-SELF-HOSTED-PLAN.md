@@ -148,7 +148,8 @@ Alloy's built-in `prometheus.exporter.mongodb` on each member → the existing G
 - connections > 300 (old 4.4 item) · disk > 80 % on any member
 - last oplog slice older than 40 min · last nightly dump older than 26 h · last M0 copy older than 3 h
 - production data size > 250 MB (§4a)
-- an `_e2e` database still present 24 h after a **passing** run (cleanup broke)
+- an `_e2e` database still present 6 h after a **passing** run (cleanup broke)
+- any member's disk > 80 % (the host rules watch the active only)
 - any file in mongod's `rollback/` directory
 
 ## 7. How it gets built (phases, each reversible until cutover)
@@ -191,7 +192,7 @@ Also: app-02's API starts against the set (`startup.js --check`: connected to BR
 - **Nightly dump** unchanged (`mallakhamb-backup`, `BACKUP_URI` = the set as `mallakhamb_backup`, secondaryPreferred → app-02).
 - **Point-in-time**: `mallakhamb-oplog-slice` (timer every 15 min, active only — promote/demote move it): first run of each UTC day takes a whole-set `mongodump --oplog` **base** (`pitr-base/<stamp>_<t>.<i>.tar.gz`, consistent at that exact oplog position); every run uploads the oplog entries after the previous position (`oplog/<stamp>_<from>-<to>.bson.gz`), so slices never overlap. `mallakhamb-pitr <time> <side-db>` rebuilds into a throw-away mongod on 127.0.0.1:27099 (base + its oplog, then slices with `--oplogLimit`) and copies the app DB into the side DB. Bucket lifecycle: `pitr-base/` and `oplog/` deleted after 35 days (the bucket's 30-day retention keeps them at least that long).
 - **Off-site**: `mallakhamb-offsite-copy` (hourly at :07, active only) → Atlas `<db>_offsite` (refuses any other name), then compares counts. Target in Vault `mallakhamb-prod-bom-secret-mongo-offsite-uri` (the Atlas URI staging used before M4).
-- **Monitoring**: `mallakhamb-mongo-metrics` (every minute on all three members, as `mallakhamb_monitor`) writes gauges to Alloy's textfile directory; **Alloy installed on db-03** (job `mallakhamb-db`, token relayed from app-01). 12 new rules (`mk-mongo-*`, `mk-oplog-slice-stale`, `mk-pitr-base-stale`, `mk-offsite-stale`) in `apply-alerts.js` for `PLATFORM='oci'`, and their `-stg` copies **live** in the `mallakhamb-oci-staging` group (14 rules; Render's group unchanged, 13/13 hashes equal). **Fire drill:** db-03's mongod stopped → "MongoDB member not healthy" went **firing** after 2 min; cleared by itself after restart.
+- **Monitoring**: `mallakhamb-mongo-metrics` (every minute on all three members, as `mallakhamb_monitor`) writes gauges to Alloy's textfile directory; **Alloy installed on db-03** (job `mallakhamb-db`, token relayed from app-01). 13 new rules (`mk-mongo-*`, `mk-oplog-slice-stale`, `mk-pitr-base-stale`, `mk-offsite-stale`; `mk-mongo-disk` added later the same day, because the host disk rules watch the active only) in `apply-alerts.js` for `PLATFORM='oci'`, and their `-stg` copies **live** in the `mallakhamb-oci-staging` group (15 rules; Render's group unchanged, 13/13 hashes equal). **Fire drill:** db-03's mongod stopped → "MongoDB member not healthy" went **firing** after 2 min; cleared by itself after restart.
 - **Traps hit:** a `.prom` written under `umask 077` is unreadable to Alloy (silently missing metrics) — written 0644 now; `bsondump | grep` with no match + `pipefail` killed the slice job; `--oplogReplay` refuses namespace excludes; a BSON Timestamp has no `getTime()` (`getHighBits()` = seconds); the minimal image's apt keyring came out 0600 under a umask-077 wrapper; three scripts parsed the DB name as "after the last /" and took `mongo-ca.pem` from `tlsCAFile=` (fixed in `seedScale.js` and `setup-chain.js`; the app's own `ConfigManager.databaseName` was already right).
 
 ## 7b2. M6 result (2026-10-24)

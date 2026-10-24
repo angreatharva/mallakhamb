@@ -1724,6 +1724,63 @@ groups:
                 type: __expr__
                 uid: __expr__
         isPaused: false
+      - uid: mk-mongo-disk
+        title: MongoDB member disk filling
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'The root disk of {{ $labels.instance }} is more than 80 % full ({{ humanizePercentage $values.A.Value }}).'
+          description: >-
+            At 100 % mongod on that member stops (drilled: it recovers by itself once space is freed). First look on
+            that VM: sudo du -xh / --max-depth=2 | sort -h | tail; journalctl --disk-usage; /var/log/mongodb. Runbook:
+            deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-runtime
+          __panelId__: '16'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                max by (instance) (1 -
+                node_filesystem_avail_bytes{scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db",mountpoint="/"}
+                /
+                node_filesystem_size_bytes{scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db",mountpoint="/"})
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.8
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
       - uid: mk-mongo-data-size
         title: Database growing past the free-tier plan
         condition: C

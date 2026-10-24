@@ -188,6 +188,11 @@
     ['mk-mongo-rollback', 'MongoDB rollback files', `max(mallakhamb_mongo_rollback_files{${MJ}})`, 'gt', 0, '0m', 'warning', 'mallakhamb-database', 1,
       'A failover undid writes that had not reached a majority (files in mongod rollback/).',
       `The app writes with w:"majority", so these should never be acknowledged writes. Look at /var/lib/mongodb/rollback on that member (bsondump) before deleting. ${MDOC}`],
+    // The host "Disk filling" rules watch the active only; every member holds a full copy of
+    // the data (and db-03 runs on a 1 GB micro), so the members' disks get their own rule.
+    ['mk-mongo-disk', 'MongoDB member disk filling', `max by (instance) (1 - node_filesystem_avail_bytes{${MJ},mountpoint="/"} / node_filesystem_size_bytes{${MJ},mountpoint="/"})`, 'gt', 0.80, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.disk,
+      'The root disk of {{ $labels.instance }} is more than 80 % full ({{ humanizePercentage $values.A.Value }}).',
+      `At 100 % mongod on that member stops (drilled: it recovers by itself once space is freed). First look on that VM: sudo du -xh / --max-depth=2 | sort -h | tail; journalctl --disk-usage; /var/log/mongodb. ${MDOC}`],
     ['mk-mongo-data-size', 'Database growing past the free-tier plan', `max(mallakhamb_mongo_db_bytes{${MJ}})`, 'gt', 250e6, '1h', 'warning', 'mallakhamb-database', 1,
       'The application database is {{ humanize1024 $values.A.Value }}B (plan §4a alerts at 250 MB, Atlas M0 copy limit 512 MB).',
       'Check plan §4a: the M0 off-site copy, the bucket and db-03 run out first. Look for files or logs stored in MongoDB.'],

@@ -13,6 +13,7 @@ Shared steps live in [deploy/COMMON.md](../COMMON.md). This file only holds what
 > - **A1 capacity in Mumbai is scarce:** launch without a fault domain (or retry FD-2/FD-3 for app-02) every ~5–10 min from a detached Cloud Shell script; Cloud Shell sessions are recycled when idle, which kills the script.
 > - **Node 24 on both VMs since 2026-10-16** (Render runs 24; `engines.node` = `24.x` in Server and Web). After that rolling pass the roles were switched back the same day (67 s): **app-01 active** (`pip-app-01` 137.23.63.84), **app-02 standby** (`pip-app-02` 130.210.4.142); see O11 "Rolling maintenance pass".
 > - **Next after O12/O13 and Grafana (C5): O14, the nightly full-season lifecycle check.**
+> - **Database: self-hosted, not Atlas (owner decision 2026-10-23, built 2026-10-23/24).** A 3-member replica set `mallakhamb` on app-01 (primary), app-02 and a third Always Free VM **db-03** (`VM.Standard.E2.1.Micro`, FD-3, 10.0.0.70; root quota now allows exactly one micro). TLS + x.509 + auth, VCN-only, 6.8 LTS kernel on all three (MongoDB 8.0 refuses 6.19+). **Staging runs on it since 2026-10-24**; production moves at C7. Atlas M0 stays as the hourly off-site copy. Everything in §1.1 "The database stays on Atlas", the Flex cost line in §1.3 and C2 is superseded by [MONGODB-SELF-HOSTED-PLAN.md](MONGODB-SELF-HOSTED-PLAN.md).
 
 ---
 
@@ -50,6 +51,8 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
 
 The database stays on **Atlas**.
 
+> **Superseded 2026-10-23** ([MONGODB-SELF-HOSTED-PLAN.md](MONGODB-SELF-HOSTED-PLAN.md) §0): the data turned out to be ~3 MB, so a third data-bearing member fits on the Always Free AMD micro VM — three voting data members keep a write majority with any one lost — and the app's one transaction works on any replica set. Self-hosted, with Atlas M0 kept as the hourly off-site copy.
+
 ### 1.2 The rules that decide this plan
 
 | Rule | Effect | What this plan does |
@@ -67,13 +70,13 @@ The database stays on **Atlas**.
 | Item | ₹ / month |
 |---|---|
 | OCI (2 VMs, storage, IPs, Vault, Bastion, object storage, egress) | **0**, if usage stays within Always Free (enforced by O1.7, watched by O1.4) |
-| MongoDB Atlas Flex | ~700–2,700 (usage-based, capped) |
+| ~~MongoDB Atlas Flex~~ → self-hosted replica set (third member on the Always Free micro VM) + Atlas M0 off-site copy | **0** (was ~700–2,700) |
 | Grafana Cloud | 0 (existing free stack) |
 | Domain (GoDaddy renewal, yearly ÷ 12) | ~100–150 |
 | BigRock hosting | existing cost, kept for email (COMMON F13) |
-| **Total new spend** | **≈ ₹800–2,900 / month**, ≈ ₹10–35k / year including GST |
+| **Total new spend** | **≈ ₹100–150 / month** (the domain) since the database is self-hosted; was ≈ ₹800–2,900 / month with Flex |
 
-If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M10 + continuous backup: about $60+/month plus backup storage.
+If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M10 + continuous backup: about $60+/month plus backup storage. *(No longer needed: the self-hosted set loses nothing on a member loss and restores to any second from its oplog slices — MONGODB-SELF-HOSTED-PLAN.md §4.)*
 
 ---
 

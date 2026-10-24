@@ -96,7 +96,7 @@ Phones / laptops (India)
    ├── <APP_HOST>  ──▶ [PLATFORM: CloudFront+S3 on AWS | Caddy on the VM on OCI]   React build
    └── <API_HOST>  ──▶ Caddy (TLS, WebSockets) ──▶ Node 22, ONE process, systemd "mallakhamb"
                                                      │
-                       Atlas Flex (MongoDB) ◀────────┤  (same region as the server: Mumbai)
+                       MongoDB replica set ◀─────────┤  OCI: self-hosted on the VMs (oci/MONGODB-SELF-HOSTED-PLAN.md); AWS: Atlas Flex
                        Object storage backups ◀──────┤  nightly mongodump  [PLATFORM]
                        Secret store ─────────────────┤  env at deploy/boot [PLATFORM]
                                                      │
@@ -295,6 +295,8 @@ Every change here also works on Render. Ship it to Render production first (C1.9
 ---
 
 ## PHASE C2 — Database: Atlas Flex (Day 3, ~1.5 h)
+
+> **On OCI this phase is replaced (owner decision 2026-10-23):** a self-hosted 3-member replica set on the VMs — built, drilled and running staging since 2026-10-24. Users, network, alerts and backups: [oci/PRODUCTION-READINESS.md](oci/PRODUCTION-READINESS.md) §4; everything else: [oci/MONGODB-SELF-HOSTED-PLAN.md](oci/MONGODB-SELF-HOSTED-PLAN.md). The steps below still apply to the AWS plan.
 
 A **new** Flex cluster rather than an in-place upgrade: the old cluster stays untouched as the rollback copy.
 
