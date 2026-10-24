@@ -1685,8 +1685,8 @@ class AdminService extends UserService {
    * Get team scores with aggregation.
    * @deprecated Delegates to ScoringService (task 3.1). Prefer scoringService.
    */
-  async getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus) {
-    return this.scoring.getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus);
+  async getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus, teamId = null) {
+    return this.scoring.getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus, teamId);
   }
 
   /**

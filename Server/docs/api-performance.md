@@ -264,6 +264,31 @@ read of any part of the meet pays for all 2.87 MB of it.
 No endpoint in the list above except `/api/admin/teams` and `/api/admin/players`
 takes a limit at all. `/api/public/scores` is anonymous and unbounded.
 
+### D2. The scoring sheets downloaded the whole category — **FIXED 2026-10-25**
+
+The Scorer's sheet (`ScorerScoring.jsx`) and the admin's (`AdminScoring.jsx`)
+show ONE team and sent `teamId`, but `GET …/scores/team` ignored it and
+returned every team in the category with every row and every judge slip — the
+screens then picked their team out. At 100 teams that was 328 KB and ~20 ms of
+JSON per poll on its own. `teamId` is now applied in the repository pipeline
+(`findSubmittedRegistrations`), so the squad lookups, the score query and the
+response all shrink to one team; `scripts/perf/equivalence.js` checks the
+one-team answer equals that team's entry in the whole-category answer for
+every team. The judge screens (`JudgeTeamPlayers.jsx`, `useJudgePanelData.js`)
+now send it too, and the Scorer's load sends the competition type it was missing.
+
+| `GET /api/admin/scores/team` (local PC, 100 teams) | 1 client | 56 clients, zero think time |
+|---|---|---|
+| whole category (before) | 36 req/s, p95 36 ms | 78 req/s, **p95 645 ms** |
+| `?teamId=` (after) | 137 req/s, p95 12 ms | 351 req/s, **p95 168 ms** |
+
+The judge dashboard poll (`/teams/submitted`) does need every team and is
+unchanged (14 ms a request here, mostly the roster aggregation and its player
+lookup). A per-category roster cache would cut it further, but it adds a
+staleness window across every registration write path, so it waits until a
+realistic load test says it is needed — `scripts/perf/meetDay.js` (readiness
+6.7) is that test.
+
 ### E. Write-on-read — **FIXED**
 
 `getSubmittedTeams` (`admin.service.js:1158-1170`) repairs stale `finalScore`

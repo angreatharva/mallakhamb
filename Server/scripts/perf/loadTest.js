@@ -101,6 +101,7 @@ async function main() {
   if (!competition) throw new Error('No perf fixture — run seedScale.js first.');
   const competitionId = String(competition._id);
   const entered = (competition.registeredTeams || []).length;
+  const teamIds = (competition.registeredTeams || []).map((r) => String(r.team));
 
   /**
    * A separate signed-in client per worker.
@@ -142,6 +143,11 @@ async function main() {
     {
       name: 'GET /api/admin/scores/team (scorer poll)',
       run: (i) => admins[i].get('/api/admin/scores/team', { query: CATEGORY }),
+    },
+    {
+      // What the Scorer's and admin's sheets ask for since they send teamId.
+      name: 'GET /api/admin/scores/team?teamId (scorer sheet, one team)',
+      run: (i) => admins[i].get('/api/admin/scores/team', { query: { ...CATEGORY, teamId: teamIds[i % teamIds.length] } }),
     },
     {
       name: 'GET /api/public/scores (results page)',

@@ -163,6 +163,9 @@ const JudgeTeamPlayers = () => {
             gender: selectedGender,
             ageGroup: selectedAgeGroup,
             competitionType: selectedCompetitionType,
+            // Just this team: without it every poll downloaded every team in
+            // the category to pick one out below.
+            teamId,
           });
 
           // The feed returns every team in the category; take ours by id

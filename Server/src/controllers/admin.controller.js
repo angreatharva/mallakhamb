@@ -8,6 +8,7 @@
  * @module controllers/admin.controller
  */
 
+const mongoose = require('mongoose');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendLoginResponse } = require('../utils/security/login-response.util');
 const { isProductionLike } = require('../utils/security/cookie.util');
@@ -308,8 +309,11 @@ function createAdminController(container) {
     getTeamScores: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
       const competitionId = competitionIdFromRequest(req);
+      // `teamId` narrows to one team (the scoring sheets); a value that is not
+      // an id is ignored rather than turned into a query error.
+      const teamId = mongoose.Types.ObjectId.isValid(String(req.query.teamId || '')) ? String(req.query.teamId) : null;
       const scores = await adminService.getTeamScores(
-        competitionId, req.query.ageGroup, req.query.gender, req.query.competitionType, req.query.apparatus
+        competitionId, req.query.ageGroup, req.query.gender, req.query.competitionType, req.query.apparatus, teamId
       );
       res.json({ success: true, data: scores });
     }),

@@ -148,6 +148,38 @@ async function main() {
     }
   }
 
+  /*
+   * `getTeamScores(…, teamId)` — the scoring sheets ask for ONE team. Its answer
+   * must be exactly that team's entry in the whole-category answer, for every
+   * team in the category: same squad, same score rows, same metadata.
+   */
+  const scoring = server.container.resolve('scoringService');
+  const sheet = { gender: 'Male', ageGroup: 'Under14', competitionType: 'competition_1' };
+  const whole = await scoring.getTeamScores(competitionId, sheet.ageGroup, sheet.gender, sheet.competitionType);
+  let teamFailures = 0;
+  const wholeStarted = Date.now();
+  await scoring.getTeamScores(competitionId, sheet.ageGroup, sheet.gender, sheet.competitionType);
+  const wholeMs = Date.now() - wholeStarted;
+  let oneMs = 0;
+  for (const team of whole) {
+    const started = Date.now();
+    const one = await scoring.getTeamScores(
+      competitionId, sheet.ageGroup, sheet.gender, sheet.competitionType, undefined, String(team._id)
+    );
+    oneMs += Date.now() - started;
+    if (one.length !== 1 || JSON.stringify(one[0]) !== JSON.stringify(team)) {
+      teamFailures += 1;
+      if (teamFailures <= 3) process.stderr.write(`  DIFFERS  getTeamScores teamId=${team._id}: ${one.length} team(s) returned\n`);
+    }
+  }
+  if (teamFailures === 0) {
+    process.stderr.write(
+      `  same     getTeamScores(teamId) for each of ${whole.length} teams       `
+      + `whole category ${wholeMs}ms → one team ${(oneMs / Math.max(1, whole.length)).toFixed(1)}ms\n`
+    );
+  }
+  failures += teamFailures;
+
   process.stderr.write(`\n${failures === 0 ? 'Equivalent on every category.' : `${failures} categor(ies) DIFFER.`}\n`);
 
   await server.close();

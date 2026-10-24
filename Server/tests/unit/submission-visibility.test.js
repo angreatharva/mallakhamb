@@ -201,6 +201,19 @@ describe('scoringService.getTeamScores — scorer and admin scoring lists', () =
     const comp = { _id: 'comp-1', registeredTeams: [registration(ENTERED_TEAM, { isSubmitted: true, isActive: false, players: [{ id: 'p1', first: 'A', last: 'B' }] })] };
     expect(await buildService(comp).getTeamScores('comp-1', 'Under14', 'Male')).toEqual([]);
   });
+
+  it('asks the database for ONE team when the scoring sheet names it', async () => {
+    // The Scorer's and the admin's sheets show one team. They used to receive
+    // every team in the category and pick theirs out; `teamId` now narrows the
+    // fetch itself (scripts/perf/equivalence.js proves the answer is unchanged).
+    const service = buildService(competitionWithADraft());
+    await service.getTeamScores('comp-1', 'Under14', 'Male', 'competition_1', undefined, ENTERED_TEAM);
+    const [, filters] = service.competitionRepository.findSubmittedRegistrations.mock.calls[0];
+    expect(filters).toEqual({ gender: 'Male', ageGroup: 'Under14', teamId: ENTERED_TEAM });
+
+    await service.getTeamScores('comp-1', 'Under14', 'Male');
+    expect(service.competitionRepository.findSubmittedRegistrations.mock.calls[1][1]).toEqual({ gender: 'Male', ageGroup: 'Under14' });
+  });
 });
 
 describe('judgeService.getTeamPlayers — the roster behind /judge/team/:id', () => {

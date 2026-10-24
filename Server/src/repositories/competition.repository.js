@@ -568,7 +568,8 @@ class CompetitionRepository extends BaseRepository {
    * of the caller's, moving it here cannot change which teams survive.
    *
    * @param {string} competitionId
-   * @param {Object} [filters] - { gender, ageGroup }
+   * @param {Object} [filters] - { gender, ageGroup, teamId } — teamId narrows
+   *   to one team's registration (the scorer and admin sheets show one team)
    * @param {Object} projections - the coach/player field allow-lists
    * @returns {Promise<Object[]>}
    */
@@ -599,6 +600,11 @@ class CompetitionRepository extends BaseRepository {
          */
         { $match: { isSubmitted: true, isActive: { $ne: false } } },
       ];
+
+      // One team, when the caller shows one: everything below — the squad
+      // filter, the three lookups, the response — then scales with that team,
+      // not with every team entered in the category.
+      if (filters.teamId) pipeline.push({ $match: { team: convertToObjectId(filters.teamId) } });
 
       if (Object.keys(playerMatch).length) {
         // Narrow the squad to the category, then drop entries left with nobody
