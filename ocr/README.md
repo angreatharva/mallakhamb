@@ -47,6 +47,21 @@ It draws a filled page from the layout, tilts/shades/compresses it like a phone
 photo, reads it, and exits 1 if any planted name, date or tick reads back wrong.
 The deploy health check and the nightly run (O14) use the `--url` form.
 
+## Form photos for the e2e chain
+
+`Server/tests/fixtures/walk-in/desk-<n>-page-<p>.jpg` are eleven pages (five coaches) of the REAL
+printed form with invented players printed into the boxes, which the chain's
+`walkin` step sends through the whole desk (`Server/scripts/seedWalkIn.js`).
+They are rendered, not photographed, so they reproduce byte for byte:
+
+```bash
+ocr/.venv/Scripts/python -m pip install pymupdf      # dev machine only; not in requirements.txt
+npm --prefix Server run walkin:fixtures              # forms.json -> the three JPEGs
+```
+
+Re-render (and commit) after changing the form's geometry; a version mismatch
+fails the step and `tests/unit/scripts/seed-plan-coverage.test.js`.
+
 ## Environment
 
 | Variable | Default | |

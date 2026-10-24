@@ -44,6 +44,8 @@
     "db:sync": "node scripts/syncDatabase.js",
     "meet:status": "node scripts/meetStatus.js",
     "seed:scores": "node scripts/seedScores.js --all",
+    "seed:walkin": "node scripts/seedWalkIn.js",
+    "walkin:fixtures": "node scripts/walkInFixtures.js",
     "seed:scores:one": "node scripts/seedScores.js"
   },
   "keywords": [

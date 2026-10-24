@@ -445,7 +445,7 @@ What users notice:
 - Judge screens reconnect by themselves.
 - Anyone whose token was **revoked** before the failover could use it again until it expires, because the logout list is in memory (F17). Note it and move on; it's minor.
 
-## O14 — Nightly full-season lifecycle check (after O13 and Grafana C5)
+## O14 — Full-season lifecycle check, four times a day (after O13 and Grafana C5)
 
 **What:** every night, each VM runs the **complete roster** through the real API, against a **throw-away database**, then verifies and deletes it. It is a regression test of the real flows on the real infrastructure, and on the standby it proves the release there actually serves, not just that it is installed.
 **What it is not:** a way to defeat idle reclamation. Do **not** pad, loop or lengthen it to push CPU/memory over 20%. If the week's p95 crosses 20% on its own, that is a side effect of real work; if it does not, reclaim is handled by O11 alerting + restart/failover.
@@ -456,17 +456,24 @@ What users notice:
 |---|---|---|
 | prepare, superadmin | bootstrap (migrations, first super admin) | — |
 | admin | `POST /superadmin/admins` (organiser) | 1 |
-| competitions | 3 per level: district Mumbai/Pune/Nashik, state Nagpur/Kolhapur/Aurangabad, national Delhi/Bengaluru/Chennai, international Goa/Hyderabad/Kolkata | 12 meets |
-| coaches | one team each, entered into the 3 meets at its level | 12 coaches / 12 teams / 36 entries |
-| players | register + join team | 110 athletes |
-| judges | register | 16 judges |
-| squads | squad places per meet entry (gender rule enforced) | — |
-| pay | discount-code redemption — verifies, never fakes (`paymentStatus` is never written directly) | 36 entries |
-| panels | seat panels from `seed/panel-plan.json` | 120 panels |
-| scores | judges score, Sr. Judge submits, results published | 240 categories |
-| verify | `scripts/verifySeed.js` | pass / fail |
+| competitions | every level: district Mumbai/Pune/Nashik, state Nagpur/Kolhapur/Aurangabad, national Delhi/Bengaluru/Chennai, international Goa/Hyderabad/Kolkata, university Varanasi/Bhopal/Jaipur/Indore, DSO Thane/Satara/Ratnagiri/Latur | 20 meets |
+| coaches | one team each, entered into every meet at its level | 20 coaches / 20 teams / 68 entries |
+| players | register + join team; 217 with their own email, 7 by Player ID only (3 guardian email, 2 none, 2 registered by their coach) | 224 athletes |
+| judges | register | 51 judges |
+| squads | squad places per meet entry (gender rule enforced); generated teams of 12 field 10 per meet, rotating who | 650 places |
+| walkin | the walk-in desk, five coaches at five meets: 11 committed form photos → OCR sidecar → exact read-back → review → coach + team + Player IDs → discount payment. **Skipped** (not failed) when the API's `OCR_URL` sidecar does not answer | 5 coaches / 23 players |
+| pay | discount-code redemption — verifies, never fakes (`paymentStatus` is never written directly) | 68 entries |
+| panels | seat panels from `seed/panel-plan.json`; the five newest meets with a separate Time Keeper | 200 panels |
+| order | lots drawn for every category (teams + athletes), categories started, Sr. Judge re-sequences / Judge 1 reads but may not / Scorer restores | 400 orders, 3,009 checks |
+| scores | judges score (through `/public/save-score`, the judge screens' route), Sr. Judge submits, Scorer locks, results published | 400 categories, ~7,400 slips |
+| results | standings vs finals, public = admin, team championship recomputed (best 5 of 6 per apparatus), one lucky draw per meet recorded / cleared / re-recorded | 3,561 checks |
+| corrections | unlock → correct a time → lock → the public final moves by that deduction → restore, on a 3/4/5-judge panel; the admin screen's multi-apparatus save keeps every apparatus | 13 checks |
+| judge-screens | all 51 judges: offered exactly their meets, the plan's seat at each, the panel, a team's athletes, profile, 3 password round trips | 855 checks |
+| mail | every email read back from the capture (`EMAIL_CAPTURE`): Player ID mails, password reset by code for a coach / player / judge, no code for a no-email child, the guardian's Player ID reminder | 10 checks |
+| coverage | routes the run called vs routes the app mounts — report only ([E2E-COVERAGE.md](E2E-COVERAGE.md)) | 76 / 222 |
+| verify | `scripts/verifySeed.js` | pass / fail (36 checks with the desk, 32 without) |
 
-About 25–40 min end to end (most of it in `scores`).
+About 25–40 min end to end (most of it in `scores`). Grown by a quarter on 2026-10-24 — see *Roster growth* below the first-runs table.
 
 **Design**
 
@@ -509,6 +516,39 @@ About 25–40 min end to end (most of it in `scores`).
 | 5 | app-01 (active, serving) | 801b5fa | **PASSED** — 11/11 steps, 24/24 checks | 708 s |
 
 Checked after both: `BRMC_dev` record counts identical to the baseline taken before run 1; no `BRMC_dev_e2e` left; every e2e API start logged `provider: none`, 0 real sends (this flow sends no mail at all); port 5001 unreachable from outside on both IPs; the five `mallakhamb_e2e_*` metrics in Grafana. While run 5 worked beside the live API, `GET /api/health/ready` stayed 200 on all 18 probes but slowed (avg 0.53 s, peak 1.8 s, vs ~0.13 s idle): the one OCPU and the Atlas cluster are shared — fine at 03:00 IST, and the reason meet days skip. ~12 min end to end, not 25–40. Found on the way, not O14's: every stop of the API exits **7** (graceful shutdown logs after ending the logger) — separate fix. The *E2E failed / stale* alerts are in the OCI preset, so they go live with the rest at the cutover (C7).
+
+**Roster growth + walk-in stage (2026-10-24, branch `test/e2e-roster-growth-ocr`, not deployed)** — real coverage, not load: every addition is a flow the chain did not exercise or a level it never seeded.
+- **University level** added: 3 meets, 3 teams (AIUM-A/B/C), 30 generated athletes, 4 judges (Prashant Kulkarni, Hemant Nerurkar, Sachin Apte, Vivek Bapat). Panel plans for the three new meets were **appended** with `planPanels.js --add-missing` (seed 90981495, recorded under `additions`); the twelve existing plans are byte-identical, nothing was redrawn. Judges with no seat anywhere are seated first, so all 20 hold one.
+- **No-email accounts** in the university squads: self-registered with a guardian's email (a brother and sister share one), with no email, and registered by the coach (`POST /coaches/players` with the default player password). The players step signs each one in **by Player ID** and checks the ID (`firstname.lastname.ddmmyy`, no `.2`) and the stored email; verifySeed counts each kind against the roster.
+- **Walk-in stage** (`scripts/seedWalkIn.js`, before panels so the desk's players are judged and published with everyone else): `tests/fixtures/walk-in/desk-*-page-*.jpg` (11 pages, five coaches since the second growth), rendered from the real printed form (`npm --prefix Server run walkin:fixtures`, PyMuPDF on a dev machine; reproducible byte for byte, invented people only). Asks the API's own `GET /desk/ocr/status`: no reader → one `SKIPPED walk-in OCR stage: …` line, exit 78, reported `[skipped]`. On the VMs this means it runs on the **active** (sidecar bound to the live API, already inside its `MemoryMax=1G`) and skips on the standby, which still has the in-process self-test below. Nothing new is started, so peak memory does not move.
+- verifySeed: "every meet has the same number of teams" became "every meet has exactly its level's roster teams, plus its desk entries" (named, not counted); new checks: every account's Player ID, the four account kinds, and — when a desk form exists — paid, every row entered, in that meet's squad, coach-registered with no email.
+
+| Run (local, Windows PC, local mongod) | Code | Result | Time |
+|---|---|---|---|
+| baseline | master 2f97f49 | 11/11 steps, 24/24 checks; 3,606 slips, 696 results | 280 s |
+| grown, OCR up | branch | 12/12 steps (walkin 7 s, 7/7 rows exact), 34/34 checks; 4,620 slips, 896 results | 374 s |
+| grown, no sidecar, from empty | branch | walkin `[skipped]`, 30/30 checks | 414 s (jest running alongside) |
+
+×1.34 wall time for +25 % meets/panels/categories, +27 % athletes, +28 % slips, +29 % squad places → **expect ~16 min on the VMs** (709 s × 1.34 ≈ 950 s), inside the 20 min budget. Re-measure on the first night after deploying.
+
+**Four times a day, own MongoDB, skip checks (2026-10-24, same branch, not deployed)** — owner decisions: four runs a day in India time, VMs alternating, a throw-away MongoDB, mail disabled for the run only. Where this differs from the boxes above, this wins:
+- **Schedule:** one timer on both VMs, `OnCalendar=*-*-* 00,06,12,18:00:00 Asia/Kolkata`. The runner decides by role (`mallakhamb.service` active = the active VM): **active 00:00 and 18:00, standby 06:00 and 12:00**, so the two never run together and a failover moves the slots with it. Off-slot fires exit quietly and write no metrics. `TimeoutStartSec=1h`. Manual: `sudo mallakhamb-e2e --now` (still skips near a meet), `--now --force`.
+- **Skip checks** (`Server/scripts/e2eGuard.js`, the REAL database, read-only): a meet yesterday, today or tomorrow in IST; any walk-in desk form touched in the last hour; on the active VM, the live API above 1 request/s over 20 s (`/metrics`); plus the old `NO_E2E` flag and meet-backup timer. SGAM-TRIALS-1 (31 Oct) skips 30 Oct – 1 Nov by itself. A skip counts as a run for *E2E stale*; a guard that cannot answer is a **failure** (exit 11), so a broken guard cannot hide as "skipped" forever.
+- **Throw-away MongoDB:** `mallakhamb-e2e-mongod.service` — a standalone `mongod` on 127.0.0.1:27027, `--wiredTigerCacheSizeGB 0.25`, `MemoryMax=700M`, an empty `/var/lib/mallakhamb-e2e/db` every run (kept after a failed run for inspection, wiped by the next). Never the replica set: no writes to the real database, no oplog churn (point-in-time restore keeps its window), no grant needed at M8. This replaces the `<db>_e2e`-on-the-same-cluster design and the `--secret` option (`install-e2e.sh` removes `e2e.conf` and the old per-host time drop-in).
+- **Mail:** the run's own API sends nothing (`EMAIL_PROVIDER=none`, refused in production on any database not ending in `_e2e`) and keeps each message in the throw-away database (`EMAIL_CAPTURE=true`, refused with any real provider), so the `mail` step reads OTPs and Player IDs back. The production API's mail is untouched — it is a different process with its own environment.
+- **Coverage:** the e2e API gets its own random `METRICS_TOKEN` (never scraped) so the `coverage` step can count the routes it served; `/var/log/mallakhamb-e2e/coverage.json`.
+- **Alerts:** *E2E stale* now fires after 20 h (each VM's longest gap is 18 h); text updated. Re-apply with `apply-alerts.js` (owner, Grafana console) after deploying.
+- **Memory on a 4 GB VM during a run:** e2e API ~250 MB + throw-away mongod ≤ 700 MB + chain ~150 MB, beside the live API, the replica-set member and (active only) the OCR sidecar. Browser runs (next phase, [E2E-COVERAGE.md](E2E-COVERAGE.md)) go to the standby only.
+
+| Run (local PC, local mongod) | Code | Result | Time |
+|---|---|---|---|
+| baseline (two runs, morning and evening) | master | 24/24 checks; 3,606 slips | 280 s, 286 s |
+| run 4: 20 meets, 5 desks, mail, coverage | branch | 14/14 steps, 36/36 checks; 7,382 slips, 1,400 results; 51/222 routes | 975 s — the PC was busy (see run 5) |
+| run 5: the same code, from empty | branch | 14/14 steps, 36/36 checks | **415 s** |
+
+| run 7: + competition day (order, results, corrections, judge-screens) | branch | 18/18 steps, 36/36 checks + 7,437 step checks; 76/222 routes | **502 s** |
+
+With the competition-day steps: ×1.77 the baseline → **expect ~21 min per run on the VMs** (inside the 1 h timeout and the 6 h between slots; above the 20 min first aimed for). Before them: ×1.47 the baseline wall time for ×2.05 the scoring work → ~17–20 min (709 s × 1.47 ≈ 1,040 s). Local timings swing up to ×2 with whatever else the PC is doing (runs 4 and 5 are identical code), so measure the first two runs on each VM and correct this line.
 
 **Verify**
 - A manual run prints `verifySeed` OK, `<db>_e2e` is gone afterwards, the real DB's counts (`mallakhamb-counts`) are unchanged, no email was sent (Gmail "Sent" is empty for the run window).

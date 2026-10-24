@@ -52,3 +52,7 @@ PP-OCRv5 mobile English rec on ONNX Runtime, no detection model; CTC decode mask
 
 - The Coach model's email regex refuses some valid TLDs (`.test`) — use `example.com` in tests.
 - Stored names are HTML-escaped by the registration validators (`'` → `&#x27;`); the desk escapes the same way so duplicate checks match.
+
+## In the e2e chain (2026-10-24)
+
+`scripts/seedWalkIn.js` is the `walkin` step of `setup:api` / `setup` (before panels): the eleven photos (five coaches, five meets) in `tests/fixtures/walk-in/` (rendered from the real form by `npm run walkin:fixtures`, data in `forms.json`) go through `/desk` end to end; every field must read back exactly, the review picks the written group or the COP-rule minimum, then submit, discount payment and the slip's Player IDs are asserted. No reachable sidecar (`GET /desk/ocr/status`) → one SKIPPED line, exit 78, `[skipped]` in the chain. verifySeed's walk-in checks run only when a desk form exists.

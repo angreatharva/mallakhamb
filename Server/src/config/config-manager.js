@@ -58,6 +58,10 @@ class ConfigManager {
       },
       email: {
         provider: this.getString('EMAIL_PROVIDER', 'nodemailer'),
+        // Keep every suppressed message in the e2e_outbox collection (provider
+        // "none" only) so the lifecycle check can read the OTPs and Player IDs
+        // it triggered. Refused with any provider that really sends.
+        capture: this.getBoolean('EMAIL_CAPTURE', false),
         from: this.getString('EMAIL_USER', ''),
         nodemailer: {
           host: this.getString('EMAIL_HOST', 'smtp.gmail.com'),
@@ -260,7 +264,11 @@ class ConfigManager {
           errors.push('GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN and EMAIL_USER are required when using gmail-api provider');
         }
       }
-    } else if (this.config.email.provider === 'none') {
+    }
+    if (this.config.email.capture && this.config.email.provider !== 'none') {
+      errors.push('EMAIL_CAPTURE=true is only for EMAIL_PROVIDER=none (the lifecycle check); it would copy real mail into the database');
+    }
+    if (this.config.email.provider === 'none') {
       /*
        * "none" sends nothing, so OTPs and password resets would vanish. It is
        * for the nightly lifecycle check on a throw-away database only

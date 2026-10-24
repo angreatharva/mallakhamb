@@ -19,6 +19,15 @@ export const emailFor = ({ firstName, lastName }) =>
 /** @param {{firstName: string}} person */
 export const passwordFor = ({ firstName }) => `${firstName}@2026`;
 
+/**
+ * The default password a coach gives the players they register themselves
+ * (`PUT /coaches/player-default-password`). Every child the coach registers
+ * signs in with it until they change it. Derived like the rest, so the API
+ * chain can sign those children in without reading anything back.
+ * @param {{firstName: string}} coach
+ */
+export const playerDefaultPasswordFor = ({ firstName }) => `${firstName}Squad@2026`;
+
 /** @param {{firstName: string, lastName: string}} person */
 export const fullName = ({ firstName, lastName }) => `${firstName} ${lastName}`;
 

@@ -137,13 +137,14 @@
     ['mk-inodes', 'Inodes running out', fsRatio('node_filesystem_files_free', 'node_filesystem_files'), 'lt', 0.10, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.inodes,
       'Less than 10 % of inodes are free on the active server\'s root disk.',
       'Millions of small files, usually a temp or session directory. First look: sudo du -x --inodes / --max-depth=3 | sort -n | tail. Runbook: PLAN.md §8.'],
-    // The nightly full-season lifecycle check (deploy/oci/PLAN.md O14) runs on BOTH VMs.
+    // The full-season lifecycle check (deploy/oci/PLAN.md O14) runs four times a day (IST 00/06/12/18):
+    // 00 and 18 on whichever VM is active, 06 and 12 on the standby — so each VM's gap is at most 18 h.
     ['mk-e2e-failed', 'E2E failed', 'max by (instance) (mallakhamb_e2e_last_exit_code{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})', 'gt', 0, '0m', 'warning', 'mallakhamb-runtime', HOST_PANEL.e2eResult,
-      'The nightly full-season check failed on {{ $labels.instance }} (exit {{ $values.A.Value }}).',
+      'The full-season e2e check failed on {{ $labels.instance }} (exit {{ $values.A.Value }}).',
       'A real flow broke on that release (registration, squads, payment, panels, scoring or publishing), or the e2e database/Atlas user is wrong. First look, on that VM: journalctl -u mallakhamb-e2e -n 200 (the step report is at the end), then /var/log/mallakhamb-e2e. Fix before the next meet. Runbook: PLAN.md §8.'],
-    ['mk-e2e-stale', 'E2E stale', 'time() - max by (instance) (mallakhamb_e2e_last_run_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})', 'gt', 93600, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.e2ePass,
-      'The nightly e2e timer has not fired on {{ $labels.instance }} for more than 26 hours.',
-      'Meet days still count as a run (skipped), so this means the timer itself stopped: systemctl status mallakhamb-e2e.timer mallakhamb-e2e; a run longer than 2 h is killed (TimeoutStartSec). Runbook: PLAN.md §8.'],
+    ['mk-e2e-stale', 'E2E stale', 'time() - max by (instance) (mallakhamb_e2e_last_run_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})', 'gt', 72000, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.e2ePass,
+      'The e2e check has not run on {{ $labels.instance }} for more than 20 hours.',
+      'Each VM runs two of the four daily slots (its role decides which), and a skip — a meet today or tomorrow, a busy API, a desk in use, NO_E2E — still counts as a run. So this means the timer stopped, or the VM kept the wrong role for a day: systemctl status mallakhamb-e2e.timer mallakhamb-e2e; a run longer than 1 h is killed (TimeoutStartSec). Runbook: PLAN.md §8.'],
   );
   // The walk-in desk's OCR sidecar (deploy/oci/PLAN.md O15): bound to the API
   // unit, so it runs only on the active. Warning, not critical — the desk

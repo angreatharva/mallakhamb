@@ -38,7 +38,7 @@
  *
  * They are marked `bootstrap` in `--list` rather than counted as API steps, so
  * the plan does not claim more than it does. Everything after them — including
- * the ORGANISER account and the twelve meets — goes over the wire.
+ * the ORGANISER account and the twenty meets — goes over the wire.
  *
  * ABOUT TWENTY-FIVE MINUTES end to end, most of it in `scores`. The whole
  * chain is resumable: every step is independent and finishes only what is
@@ -84,9 +84,9 @@ const STEPS = [
     id: 'competitions',
     where: 'server',
     needsApi: true,
-    title: 'The twelve meets',
+    title: 'The twenty meets',
     command: ['node', 'scripts/seedApi.js', 'competitions'],
-    why: 'POST /superadmin/competitions, twelve times, from the same document '
+    why: 'POST /superadmin/competitions, twenty times (every level: three at district, state, national and international, four at university and DSO), from the same document '
       + 'builder createCompetitions.js uses (scripts/lib/competition-document.js) '
       + '— so the meets are identical whichever chain made them, down to the fee '
       + 'window. Assigns BOTH admin accounts, because access is read from the '
@@ -98,7 +98,7 @@ const STEPS = [
     needsApi: true,
     title: 'Coaches and teams',
     command: ['node', 'scripts/seedApi.js', 'coaches'],
-    why: 'POST /coaches/register then POST /coaches/team, as each of the 12 '
+    why: 'POST /coaches/register then POST /coaches/team, as each of the 20 '
       + 'coaches. Stops at the team — entering a meet costs an entry fee and is '
       + 'the `squads` step.',
   },
@@ -109,7 +109,9 @@ const STEPS = [
     title: 'Athletes and team membership',
     command: ['node', 'scripts/seedApi.js', 'players'],
     why: 'POST /players/register then POST /players/team/join, as each of the '
-      + '110 athletes. The team list is not scoped to a meet, which is what lets '
+      + '224 athletes — 217 with their own email, and seven who sign in by Player ID: '
+      + 'three on a guardian email, two with none, two registered by their coach '
+      + '(POST /coaches/players). The team list is not scoped to a meet, which is what lets '
       + 'this run before any team has entered one.',
   },
   {
@@ -118,7 +120,7 @@ const STEPS = [
     needsApi: true,
     title: 'Judge accounts',
     command: ['node', 'scripts/seedApi.js', 'judges'],
-    why: 'POST /judge/register, 16 times. An admin cannot create a judge login '
+    why: 'POST /judge/register, 51 times. An admin cannot create a judge login '
       + 'and a fresh judge holds no seat, which is why the route is public.',
   },
   {
@@ -129,9 +131,24 @@ const STEPS = [
     command: ['node', 'scripts/seedApi.js', 'squads'],
     why: 'POST /coaches/team/:id/register-competition then POST '
       + '/coaches/add-player per athlete, scoped to each meet by X-Competition-Id. '
-      + '36 entries, three per meet. This is what decides whether a judge sees '
+      + '68 entries, three or four per meet; generated squads field one athlete per category and rotate who, by meet. This is what decides whether a judge sees '
       + 'anybody: eligibility is the squad row, not team membership. Narrow it '
       + 'with LEVEL=state or PLACE=Pune.',
+  },
+  {
+    id: 'walkin',
+    where: 'server',
+    needsApi: true,
+    needsEnv: ['DISCOUNT_CODE_ENABLED', 'DISCOUNT_CODE'],
+    skipExitCode: 78,
+    title: 'Walk-in desk (paper form through OCR)',
+    command: ['node', 'scripts/seedWalkIn.js'],
+    why: 'The /desk flow as an organiser: eleven committed photos of the printed '
+      + 'form (tests/fixtures/walk-in) → the PP-OCRv5 sidecar → every field must '
+      + 'read back exactly → review → coach, team, Player IDs, entry → paid with the '
+      + 'discount code; five coaches at five meets, 23 children, 11 pages. Before panels and scores, so the '
+      + 'panels judge them. SKIPPED (not failed) when the API has no reachable '
+      + 'OCR sidecar.',
   },
   {
     id: 'panels',
@@ -140,7 +157,7 @@ const STEPS = [
     needsEnv: ['SEED_ADMIN_PASSWORD'],
     title: 'Judging panels',
     command: ['npm', 'run', 'seed:panels'],
-    why: 'POST /admin/judges/bulk as the organiser, for all 120 panels, to the '
+    why: 'POST /admin/judges/bulk as the organiser, for all 200 panels (the five newest meets with a separate Time Keeper), to the '
       + 'sizes fixed in scripts/seed/panel-plan.json. A panel missing any of '
       + 'Senior Judge, Judge 1, Judge 2 or Scorer is refused.',
   },
@@ -157,15 +174,84 @@ const STEPS = [
       + 'produce. Needs DISCOUNT_CODE_ENABLED=true in .env.',
   },
   {
+    id: 'order',
+    where: 'server',
+    needsApi: true,
+    title: 'Lots, running order and category start',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'order'],
+    why: 'Admin → Lots for every category of every meet (POST /admin/lots/draw), '
+      + 'checked as a proper order; every category started (a second start is '
+      + 'refused); the Senior Judge re-sequences, Judge 1 reads it and may not '
+      + 'change it, the Scorer restores it; a judge cannot open a meet without a seat.',
+  },
+  {
     id: 'scores',
     where: 'server',
     needsApi: true,
     title: 'Judging every meet',
     command: ['npm', 'run', 'seed:scores'],
-    why: 'POST /judge/scores/save as each seat, for all twelve meets — every '
+    why: 'Judge slips through POST /public/save-score — the route the judge screens use — and the Scorer through /judge/scores/save, for all twenty meets — every '
       + 'athlete, every apparatus, both competition types, each meet by its OWN '
       + 'panel sizes. Posts the slips wrong first and corrects them, the way a '
       + 'panel actually reaches a score. THE LONGEST STEP, about 35 minutes.',
+  },
+  {
+    id: 'results',
+    where: 'server',
+    needsApi: true,
+    title: 'Standings, team championship and lucky draws',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'results'],
+    why: 'Every category, type and apparatus: ranks follow the finals, shared places '
+      + 'are real unresolved ties, the public board shows the same finals, team '
+      + 'totals equal the best 5 of 6 per apparatus recomputed here (admin and '
+      + 'public). One lucky draw per meet recorded, cleared, recorded again.',
+  },
+  {
+    id: 'corrections',
+    where: 'server',
+    needsApi: true,
+    title: 'Score corrections at the admin desk',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'corrections'],
+    why: 'Unlock a sheet (it leaves the public board), correct a time, lock it '
+      + '(the published final moves by that deduction), put it back — on a 3-, a '
+      + '4- and a 5-judge panel. Plus the admin screen\'s save on a multi-'
+      + 'apparatus sheet: every result and every apparatus\' lock must survive it.',
+  },
+  {
+    id: 'judge-screens',
+    where: 'server',
+    needsApi: true,
+    title: 'Every judge\'s own screens',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'judges'],
+    why: 'All 51 judges: offered exactly the meets they are seated at; at each, '
+      + 'the plan\'s seat on every panel that has it; the meet, the panel and a '
+      + 'team\'s athletes; profile saved; three change their password and back.',
+  },
+  {
+    id: 'mail',
+    where: 'server',
+    needsApi: true,
+    skipExitCode: 78,
+    title: 'Email, read from the capture',
+    command: ['node', 'scripts/seedMail.js'],
+    why: 'Every email the season triggered, read back from e2e_outbox (the API '
+      + 'runs EMAIL_PROVIDER=none + EMAIL_CAPTURE=true: nothing is delivered). '
+      + 'Player ID mails to players and coaches, then password reset by emailed '
+      + 'code for a coach, a player and a judge, the no-email child who gets no '
+      + 'code, and the guardian reminded of every child under one address. '
+      + 'SKIPPED when the API is not capturing, so real reset mail is never sent.',
+  },
+  {
+    id: 'coverage',
+    where: 'server',
+    needsApi: true,
+    skipExitCode: 78,
+    title: 'Which routes this run exercised',
+    command: ['node', 'scripts/e2eCoverage.js'],
+    why: 'Report only: every route the app mounts (read off the live router) '
+      + 'against every route this run called (the request metrics of the API itself). '
+      + 'The difference is what the lifecycle check does not test yet. Needs '
+      + 'METRICS_TOKEN on the API and here; SKIPPED without it.',
   },
 ];
 
@@ -182,8 +268,10 @@ start({
     line('  the service layer, so every rule that guards those writes was applied.');
     line('');
     line('Where it leaves you — the same fixture `setup` produces:');
-    line('  12 meets · 12 coaches and teams · 110 athletes · 16 judges');
-    line('  36 entries, all paid · 120 panels seated · 240 categories published');
+    line('  20 meets (all six levels) · 20 coaches and teams · 224 athletes · 51 judges');
+    line('  68 entries, all paid · 200 panels seated · 400 categories published');
+    line('  + the walk-in desk: 5 coaches and teams, 23 players at 5 meets (when OCR is up)');
+    line('  + every email checked from the capture, and the routes this run hit (coverage)');
     line('');
     line('CHECK IT:');
     line('  npm --prefix Server run meet:status    # every meet, category by category');

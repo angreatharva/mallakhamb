@@ -19,7 +19,7 @@ service internals in [modules/auth.md](auth.md#email--srcservicesemail).
 | File | Role |
 |---|---|
 | `src/services/email/email.service.js` | Provider selection (`email.provider`: `nodemailer` default, `resend`, `gmail-api`, `none`), retry queue (3 tries), metrics, and `checkHealth()` |
-| `src/services/email/none.adapter.js` | **Sends nothing** (2026-10-16). For the OCI nightly lifecycle run (deploy/oci/PLAN.md O14), which registers 110 athletes, 16 judges and 12 coaches on a throw-away DB. Logs recipient + subject only (never the body, which can hold an OTP), counts suppressed messages, warns at construction. `ConfigManager` refuses it in production unless the DB name ends in `_e2e`. Test: `tests/unit/services/email/none-provider.test.js` |
+| `src/services/email/none.adapter.js` | **Sends nothing** (2026-10-16). For the OCI nightly lifecycle run (deploy/oci/PLAN.md O14), which registers 140 athletes, 20 judges and 15 coaches (plus the walk-in desk's coach and 7 players) on a throw-away DB. Logs recipient + subject only (never the body, which can hold an OTP), counts suppressed messages, warns at construction. `ConfigManager` refuses it in production unless the DB name ends in `_e2e`. Test: `tests/unit/services/email/none-provider.test.js` |
 | `src/services/email/email-provider.interface.js` | The interface every adapter implements (`sendEmail`, `verifyConfiguration`) |
 | `src/services/email/nodemailer.adapter.js` | SMTP. Connect/greeting timeouts 10 s, socket 20 s (the 2-minute default turned a blocked port into a 6-minute hang across retries) |
 | `src/services/email/resend.adapter.js` | Resend API. Needs a verified sending domain, which the project doesn't own yet |

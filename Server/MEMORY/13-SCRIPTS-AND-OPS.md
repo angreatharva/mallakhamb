@@ -22,7 +22,7 @@ entries" callout claiming broken migrate aliases and phantom scripts is
 | `setupAll.js` (and the chain it drives) | `setup`, `setup:api`, `setup:ui` | Can **drop the whole database** with `--drop`. |
 | `resetScores.js` | `reset:scores` | Deletes `Score` documents for a meet/category. Dry-run by default; `--commit` required. |
 | `createCompetitions.js --force` | `create-competitions` | Rewrites dates/config on existing seeded meets (keeps entries). |
-| `seatPanels.js` | `seed:panels` | Idempotent but **vacates** seats the frozen plan no longer wants, across up to 12 meets. |
+| `seatPanels.js` | `seed:panels` | Idempotent but **vacates** seats the frozen plan no longer wants, across up to 15 meets. |
 
 ## Bootstrapping / seeding
 
@@ -33,7 +33,7 @@ entries" callout claiming broken migrate aliases and phantom scripts is
 | `createCompetitions.js` | `create-competitions` | Creates/updates the 12 seeded meets from `seed/meets.json`; `--late` back-dates fee deadlines | Writes Competition+Admin docs |
 | `planPanels.js` | `seed:panels:plan` | Draws random panel sizes (3/4/5) + seats **once** per meet, writes `seed/panel-plan.json`; refuses to overwrite without `--force` | Local file only — see *Panel Plan* |
 | `seatPanel.js` | `seed:panels:one` | Seats ONE panel category via the real admin HTTP API (single-category repair tool) | Live HTTP + Judge docs |
-| `seatPanels.js` | `seed:panels` | Seats every panel from the frozen plan via the admin API | Live HTTP + Judge docs across up to 12 meets |
+| `seatPanels.js` | `seed:panels` | Seats every panel from the frozen plan via the admin API | Live HTTP + Judge docs across up to 15 meets |
 | `seedAccounts.js` | `seed` | Replays a capture straight into Mongo via the models (bypasses the service layer); dry-run by default | DB-direct when `--commit` |
 | `seedApi.js` | `seed:api` | The whole seed (admin/competitions/coaches/players/judges/squads) as real HTTP requests | Live HTTP, dozens of accounts/entries |
 | `seedScores.js` | `seed:scores`, `seed:scores:one` | Judges a whole meet (or all 12 with `--all`) over HTTP — posts slips, resolves tolerance mismatches, locks sheets — minutes instead of the ~7-hour Playwright equivalent | Live HTTP, hundreds of Score docs per meet |

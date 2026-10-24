@@ -1090,7 +1090,7 @@ groups:
           service: mallakhamb-api
           severity: warning
         annotations:
-          summary: 'The nightly full-season check failed on {{ $labels.instance }} (exit {{ $values.A.Value }}).'
+          summary: 'The full-season e2e check failed on {{ $labels.instance }} (exit {{ $values.A.Value }}).'
           description: >-
             A real flow broke on that release (registration, squads, payment, panels, scoring or publishing), or the e2e
             database/Atlas user is wrong. First look, on that VM: journalctl -u mallakhamb-e2e -n 200 (the step report
@@ -1143,10 +1143,12 @@ groups:
           service: mallakhamb-api
           severity: warning
         annotations:
-          summary: 'The nightly e2e timer has not fired on {{ $labels.instance }} for more than 26 hours.'
+          summary: 'The e2e check has not run on {{ $labels.instance }} for more than 20 hours.'
           description: >-
-            Meet days still count as a run (skipped), so this means the timer itself stopped: systemctl status
-            mallakhamb-e2e.timer mallakhamb-e2e; a run longer than 2 h is killed (TimeoutStartSec). Runbook: PLAN.md §8.
+            Each VM runs two of the four daily slots (its role decides which), and a skip — a meet today or tomorrow, a
+            busy API, a desk in use, NO_E2E — still counts as a run. So this means the timer stopped, or the VM kept the
+            wrong role for a day: systemctl status mallakhamb-e2e.timer mallakhamb-e2e; a run longer than 1 h is killed
+            (TimeoutStartSec). Runbook: PLAN.md §8.
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
           __dashboardUid__: mallakhamb-runtime
@@ -1182,7 +1184,7 @@ groups:
                 - evaluator:
                     type: gt
                     params:
-                      - 93600
+                      - 72000
               datasource:
                 type: __expr__
                 uid: __expr__

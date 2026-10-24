@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { apiGet, captureEntry, captureSquad, clearSession, watchConsole } from './support/browser.js';
 import { COACH_ROSTER, meetsForTeam } from './support/coach-roster.js';
 import { MEET_NAME, MEET_YEAR } from './support/meets.js';
-import { ROSTER } from './support/roster.js';
+import { EMAIL_ROSTER as ROSTER, squadAt } from './support/roster.js';
 import { coachSignIn, registerTeamForCompetition } from './support/coach-flows.js';
 import { addPlayerToSquad, saveTeam } from './support/squad-flows.js';
 
@@ -105,8 +105,6 @@ const meetsToBuild = (coach) => {
 test.describe.configure({ mode: 'parallel' });
 
 for (const coach of teamsToBuild()) {
-  const squad = ROSTER.filter((p) => p.teamName === coach.teamName);
-
   test.describe.serial(coach.teamName, () => {
   /*
    * One test per (team, meet).
@@ -122,6 +120,10 @@ for (const coach of teamsToBuild()) {
    */
   for (const meet of meetsToBuild(coach)) {
     const COMPETITION = { name: MEET_NAME, place: meet.place, year: MEET_YEAR };
+    // Who this team fields HERE: generated squads rotate one athlete per category
+    // by meet (support/roster.js squadAt), exactly as the API chain enters them.
+    const meetIndex = meetsForTeam(coach.teamName).findIndex((m) => m.place === meet.place);
+    const squad = squadAt(coach.teamName, meetIndex, ROSTER);
 
     test(`${coach.teamName}: enter ${meet.place} (${meet.level}) and build a squad of ${squad.length}`, async ({ page }) => {
     // Sixty athletes through a modal is a long run; the timeout is per squad.

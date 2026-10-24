@@ -36,7 +36,8 @@ import {
  *   TEAM=SGAM-C AGE_GROUP=Under10 npm --prefix Web run seed:players
  */
 
-const roster = selectedRoster();
+// Email accounts only: the no-email kinds are seeded over the API (support/roster.js EMAIL_ROSTER).
+const roster = selectedRoster({ emailOnly: true });
 
 test.describe('roster seeding', () => {
   for (const player of roster) {
