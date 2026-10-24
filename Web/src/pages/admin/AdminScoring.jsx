@@ -20,6 +20,7 @@ import CompetitionLockBanner from '@/components/competition/CompetitionLockBanne
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { apparatusFor, entryGender } from '@/utils/scoring/apparatus';
 import { panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
+import { sheetRows, rowFor, playerScoresFor } from '@/utils/scoring/adminSheet';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
 
 const AdminScoring = () => {
@@ -117,13 +118,14 @@ const AdminScoring = () => {
         if (!socket) return;
         const handleScoreUpdate = (data) => {
             if (isLocked) { toast(`Score update received but locked`, { icon: 'ℹ️' }); return; }
-            const playerExists = players.some(p => p.id === data.playerId);
-            if (!playerExists) return;
+            // The row is the athlete on THIS apparatus (utils/scoring/adminSheet).
+            const rowId = rowFor(players, data);
+            if (!rowId) return;
             const fieldMap = { 'Senior Judge': 'seniorJudge', 'Judge 1': 'judge1', 'Judge 2': 'judge2', 'Judge 3': 'judge3', 'Judge 4': 'judge4' };
             const fieldName = fieldMap[data.judgeType] || 'seniorJudge';
             
             setScores(prev => {
-                const player = prev[data.playerId] || {};
+                const player = prev[rowId] || {};
                 const difficulties = { ...(player.difficulties || {}) };
                 
                 // Store this judge's difficulty if it exists in the payload
@@ -133,7 +135,7 @@ const AdminScoring = () => {
                 
                 return { 
                     ...prev, 
-                    [data.playerId]: { 
+                    [rowId]: { 
                         ...player, 
                         [fieldName]: data.score.toString(),
                         difficulties
@@ -235,9 +237,13 @@ const AdminScoring = () => {
                 setCompetitionType(extractedType);
             }
             
-            const teamPlayers = selectedTeam.players
-                .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
-                .map(pe => ({ id: pe.player._id, name: `${pe.player.firstName} ${pe.player.lastName}`, gender: pe.player.gender, ageGroup: pe.ageGroup, teamId: selectedTeam._id, teamName: selectedTeam.name }));
+            /*
+             * One row per athlete PER APPARATUS, keyed `playerId|apparatus`.
+             * A row per athlete saved without the apparatus overwrote each
+             * athlete's Pole result with another apparatus' marks and left only
+             * Pole locked (utils/scoring/adminSheet).
+             */
+            const teamPlayers = sheetRows(selectedTeam, selectedGender.value, selectedAgeGroup.value, selectedCompetitionType?.value);
             setPlayers(teamPlayers);
             const initialScores = {};
             teamPlayers.forEach(p => { initialScores[p.id] = { time: '', seniorJudge: '', judge1: '', judge2: '', judge3: '', judge4: '', deduction: '', otherDeduction: '', difficulties: {} }; });
@@ -255,7 +261,10 @@ const AdminScoring = () => {
         try {
             logger.info('Loading existing scores for:', { teamId, gender, ageGroup, currentPlayers });
             
+            // This competition type only: without it Competition I and II rows
+            // were loaded onto the same inputs.
             const scoresParams = { teamId, gender, ageGroup };
+            if (selectedCompetitionType?.value) scoresParams.competitionType = selectedCompetitionType.value;
             // Add competition ID for superadmin
             if (routePrefix === '/superadmin' && currentCompetition?._id) {
                 scoresParams.competition = currentCompetition._id;
@@ -341,11 +350,8 @@ const AdminScoring = () => {
             const existingScores = { ...initialScores };
             
             teamData.scores.forEach(ps => {
-                // Try to match by playerId first, then by name
-                let targetId = currentPlayers.find(p => p.id === ps.playerId || p.id === ps.playerId?.toString())?.id;
-                if (!targetId) {
-                    targetId = currentPlayers.find(p => p.name === ps.playerName)?.id;
-                }
+                // Same athlete AND same apparatus — never just the athlete.
+                const targetId = rowFor(currentPlayers, ps);
                 
                 logger.info('Mapping player score:', { 
                     playerName: ps.playerName, 
@@ -515,7 +521,7 @@ const AdminScoring = () => {
             const scoringData = {
                 teamId: selectedTeam._id, teamName: selectedTeam.name, coachName: selectedTeam.coach?.name, coachEmail: selectedTeam.coach?.email,
                 gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionType, timeKeeper, scorer, remarks, isLocked: shouldLock,
-                playerScores: players.map(p => { const r = panelAverage(scores[p.id]); return { playerId: p.id, playerName: p.name, time: scores[p.id].time, judgeScores: { seniorJudge: parseFloat(scores[p.id].seniorJudge) || 0, judge1: parseFloat(scores[p.id].judge1) || 0, judge2: parseFloat(scores[p.id].judge2) || 0, judge3: parseFloat(scores[p.id].judge3) || 0, judge4: parseFloat(scores[p.id].judge4) || 0 }, executionAverage: r.executionAvg, baseScore: r.baseScore, baseScoreApplied: r.baseScoreApplied, toleranceUsed: r.tolerance, averageMarks: r.average, deduction: parseFloat(scores[p.id].deduction) || 0, otherDeduction: parseFloat(scores[p.id].otherDeduction) || 0, finalScore: parseFloat(calculateFinalScore(scores[p.id])) }; }),
+                playerScores: playerScoresFor(players, scores, panelAverage, calculateFinalScore),
                 // Judges hold accounts now: the panel record keeps the
                 // person's address, not the old slot-derived username.
                 judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, email: j.email }))
@@ -674,7 +680,7 @@ const AdminScoring = () => {
                         </div>
                         <div className="text-right flex-shrink-0">
                             <p className="text-xs text-fg-muted uppercase tracking-wide">Players</p>
-                            <p className="text-4xl font-black text-accent-fg">{players.length}</p>
+                            <p className="text-4xl font-black text-accent-fg">{new Set(players.map((p) => p.playerId)).size}</p>
                         </div>
                     </div>
                     <div className="mb-6 p-4 rounded-xl border bg-surface-sunken border-line">

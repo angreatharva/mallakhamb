@@ -466,7 +466,7 @@ What users notice:
 | order | lots drawn for every category (teams + athletes), categories started, Sr. Judge re-sequences / Judge 1 reads but may not / Scorer restores | 400 orders, 3,009 checks |
 | scores | judges score (through `/public/save-score`, the judge screens' route), Sr. Judge submits, Scorer locks, results published | 400 categories, ~7,400 slips |
 | results | standings vs finals, public = admin, team championship recomputed (best 5 of 6 per apparatus), one lucky draw per meet recorded / cleared / re-recorded | 3,561 checks |
-| corrections | unlock → correct a time → lock → the public final moves by that deduction → restore, on a 3/4/5-judge panel; the admin screen's multi-apparatus save (KNOWN defect, re-checked every run) | 12 checks |
+| corrections | unlock → correct a time → lock → the public final moves by that deduction → restore, on a 3/4/5-judge panel; the admin screen's multi-apparatus save keeps every apparatus | 13 checks |
 | judge-screens | all 51 judges: offered exactly their meets, the plan's seat at each, the panel, a team's athletes, profile, 3 password round trips | 855 checks |
 | mail | every email read back from the capture (`EMAIL_CAPTURE`): Player ID mails, password reset by code for a coach / player / judge, no code for a no-email child, the guardian's Player ID reminder | 10 checks |
 | coverage | routes the run called vs routes the app mounts — report only ([E2E-COVERAGE.md](E2E-COVERAGE.md)) | 76 / 222 |

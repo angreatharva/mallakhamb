@@ -214,8 +214,8 @@ const STEPS = [
     command: ['node', 'scripts/seedCompetitionDay.js', 'corrections'],
     why: 'Unlock a sheet (it leaves the public board), correct a time, lock it '
       + '(the published final moves by that deduction), put it back — on a 3-, a '
-      + '4- and a 5-judge panel. Plus the admin screen\'s own save on a multi-'
-      + 'apparatus sheet: a KNOWN defect, reported until it is fixed.',
+      + '4- and a 5-judge panel. Plus the admin screen\'s save on a multi-'
+      + 'apparatus sheet: every result and every apparatus\' lock must survive it.',
   },
   {
     id: 'judge-screens',

@@ -73,10 +73,9 @@ const DISPLAY = { competition_1: 'Competition I', competition_2: 'Competition II
  * check becomes an ordinary one. A known defect can never go quiet.
  */
 const KNOWN_DEFECTS = {
-  'admin-scoring-apparatus':
-    'Admin → Scoring saves one row per athlete with no apparatus: on a sheet with several apparatus the '
-    + 'save overwrites each athlete\'s Pole row with another apparatus\' marks and leaves only Pole locked '
-    + '(Web pages/admin/AdminScoring.jsx).',
+  // Empty: 'admin-scoring-apparatus' (Admin → Scoring corrupting multi-apparatus
+  // sheets) was fixed on 2026-10-24 — Web utils/scoring/adminSheet.js — and its
+  // check below is now an ordinary one.
 };
 const known = [];
 function knownDefect(id, reproduces, detail = '') {
@@ -469,9 +468,12 @@ async function stepCorrections() {
 }
 
 /**
- * The admin screen's own save, on a sheet with several apparatus — then put
- * right through the API with every row's apparatus. Known defect while the
- * screen posts athlete rows without the apparatus.
+ * The admin screen's save on a sheet with several apparatus, in the shape the
+ * screen posts since 2026-10-24 (Web utils/scoring/adminSheet.js
+ * playerScoresFor, pinned by adminSheet.test.js): one row per athlete ×
+ * apparatus, each carrying its apparatus. Every result and every apparatus'
+ * lock must survive it. (The screen used to post one row per athlete with no
+ * apparatus, which overwrote Pole and left only Pole locked.)
  */
 async function screenShapedSave(admin, pub) {
   for (const meet of await season()) {
@@ -490,23 +492,21 @@ async function screenShapedSave(admin, pub) {
       const sheetNow = async () => listOf(await admin.get('/api/admin/scores/team', { query: q }))
         .find((t) => String(t._id) === String(team._id));
 
-      // Exactly what pages/admin/AdminScoring.jsx posts: one row per athlete, no apparatus.
-      const perAthlete = new Map();
-      for (const r of snapshot) perAthlete.set(String(r.playerId), r);
+      // The screen's payload: every athlete × apparatus row, with its apparatus.
       await admin.put(`/api/admin/scores/${scoreId}/unlock`, {});
-      const screen = await admin.post('/api/admin/scores/save', adminPayload(team, cat, 'competition_1', [...perAthlete.values()].map((r) => ({
-        playerId: String(r.playerId), playerName: r.playerName, time: r.time, judgeScores: r.judgeScores,
+      const screen = await admin.post('/api/admin/scores/save', adminPayload(team, cat, 'competition_1', snapshot.map((r) => ({
+        playerId: String(r.playerId), playerName: r.playerName, apparatus: r.apparatus, time: r.time, judgeScores: r.judgeScores,
         executionAverage: r.executionAverage, baseScore: r.baseScore, baseScoreApplied: r.baseScoreApplied,
         toleranceUsed: r.toleranceUsed, averageMarks: r.averageMarks, deduction: r.deduction,
         otherDeduction: r.otherDeduction, finalScore: r.finalScore,
       })), team.scoreMetadata, true));
       const afterScreen = await sheetNow();
-      const intact = screen.ok && finals(afterScreen.scores) === finals(snapshot)
-        && same([...(afterScreen.scoreMetadata.lockedApparatus || [])].sort(), apparatusBefore);
-      knownDefect('admin-scoring-apparatus', !intact,
-        `${where}: locked ${JSON.stringify(afterScreen.scoreMetadata.lockedApparatus)} of ${JSON.stringify(apparatusBefore)}`);
+      expectThat(screen.ok && finals(afterScreen.scores) === finals(snapshot)
+        && same([...(afterScreen.scoreMetadata.lockedApparatus || [])].sort(), apparatusBefore),
+      `${where}: the admin screen's save keeps every apparatus`,
+      `${reasonOf(screen)} locked ${JSON.stringify(afterScreen.scoreMetadata.lockedApparatus)} of ${JSON.stringify(apparatusBefore)}`);
 
-      // Put it right: every row, with its apparatus, locked.
+      // And a full re-save of the stored rows restores the sheet exactly.
       await admin.put(`/api/admin/scores/${scoreId}/unlock`, {});
       const repaired = await admin.post('/api/admin/scores/save', adminPayload(team, cat, 'competition_1',
         snapshot.map((r) => ({ ...r, playerId: String(r.playerId) })), team.scoreMetadata, true));
