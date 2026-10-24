@@ -129,17 +129,17 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
 
 ## O1 — Account and guards (Day 1–2, ~1.5 h + capacity wait)
 
-- [ ] **O1.1 Sign up** at oracle.com/cloud/free with the **association's role mailbox** (not a personal one).
+- [x] **O1.1 Sign up** at oracle.com/cloud/free with the **association's role mailbox** (not a personal one). *(`mallakhambindia@gmail.com`; recorded 2026-10-24, readiness 1.4.)*
   - Phone and card verification are required, even for free.
   - **Home region: India West (Mumbai).** Check it twice; it's permanent.
-- [ ] **O1.2 Security:**
+- [x] **O1.2 Security:** *(2026-10-24, readiness 1.1: MFA enrolled, 0 API keys; no second admin — single developer, owner decision.)*
   - Identity & Security → Domains → Default → turn on **MFA** for administrators.
   - Add the **second admin** user, in the Administrators group, with MFA.
   - Never create API keys for the admin users.
 - [x] **O1.3 Upgrade to Pay As You Go:** Billing & Cost Management → *Upgrade and Manage Payment* → PAYG. *(DROPPED: owner decision, Always Free forever, never PAYG.)*
   - Use a **credit card with online/international use enabled**; some Indian cards fail verification.
   - **Verify:** the console banner no longer says "Free Tier".
-- [ ] **O1.4 Budget alarms:** Billing → *Budgets* → create `mallakhamb-guard`, target the root compartment, monthly amount ₹100.
+- [x] **O1.4 Budget alarms:** Billing → *Budgets* → create `mallakhamb-guard`, target the root compartment, monthly amount ₹100. *(2026-10-24: created in Cloud Shell as **SGD 1.50** — the tenancy's currency is SGD — with ACTUAL > 1 % and FORECAST > 100 % to `mallakhambindia@gmail.com`; readiness 1.2.)*
   - Alert rule 1: **actual spend > 1%** (≈ ₹1), email to the role mailbox and the owner.
   - Alert rule 2: **forecast > 100%**.
   - A budget is an **alarm, not a cap**. O1.7 is the cap.
@@ -209,7 +209,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   1. Set public IP to **No public IP** → Update.
   2. **Edit** again → **Reserved public IP** → `mallakhamb-ip` → Update.
 - [x] **O4.3** Record both IPs. Add **both** `/32`s to the **Atlas** access list for Flex (COMMON C2.3), and to the old cluster if its list isn't open.
-- [ ] **O4.4** After 48 h, check Cost Analysis is still ₹0. If a reserved IP is ever charged, release `mallakhamb-ip-standby` first; the production one is the one that matters.
+- [x] **O4.4** After 48 h, check Cost Analysis is still ₹0. *(2026-10-24: SGD 0.00 month to date, readiness 1.3.)* If a reserved IP is ever charged, release `mallakhamb-ip-standby` first; the production one is the one that matters.
 
 ## O5 — Access and host firewall (Day 2, ~30 min)
 

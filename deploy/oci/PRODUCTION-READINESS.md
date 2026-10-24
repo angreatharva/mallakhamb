@@ -27,10 +27,10 @@ Tick a box here **and** in the source section when it is done.
 
 ## 1. Account hygiene (quick, any day)
 
-- [ ] **1.1 MFA** for OCI administrators; add a **second admin** with MFA; no API keys for admins (O1.2).
-- [ ] **1.2 Budget alarm** `mallakhamb-guard` ₹100/month: actual > 1 %, forecast > 100 % (O1.4).
-- [ ] **1.3 Cost Analysis** still ₹0 (O4.4).
-- [ ] **1.4** Record whose mailbox owns the OCI account (O1.1 asked for the association's role mailbox).
+- [x] **1.1 MFA** (checked 2026-10-24): the only user in the tenancy is `mallakhambindia@gmail.com`, MFA status **ENROLLED**, **0 API keys, 0 auth tokens, 0 customer secret keys**. No second admin: there is one developer (owner decision 2026-10-24). With a single admin, keep the MFA recovery/backup codes somewhere safe outside this account — losing that one sign-in means losing the tenancy.
+- [x] **1.2 Budget alarm** (2026-10-24): `mallakhamb-guard`, **SGD 1.50/month** (the tenancy bills in **SGD**; ≈ ₹100), target the root compartment (whole tenancy), ACTIVE, two alert rules emailing `mallakhambindia@gmail.com`: `actual-over-1pct` (ACTUAL > 1 %, i.e. any real charge) and `forecast-over-100pct` (FORECAST > 100 %). The account is still in its Free Trial: when it ends, only Always Free resources keep running.
+- [x] **1.3 Cost** (2026-10-24, usage API, month to date for the whole tenancy): **SGD 0.00** — including db-03 (the Always Free micro) and everything built for the database. Re-check after any new resource; the budget above now does it automatically.
+- [x] **1.4 Account owner** (2026-10-24): **`mallakhambindia@gmail.com`**, the association's own mailbox, which is what O1.1 asked for; it is the organisation address used everywhere (owner decision 2026-10-24).
 
 ## 2. Loose ends on the servers
 
