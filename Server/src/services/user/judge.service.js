@@ -399,7 +399,11 @@ class JudgeService extends UserService {
         throw new NotFoundError('Team');
       }
 
-      const assignments = await this.getAssignments(judgeAccountId);
+      // Narrowed to the session's meet when there is one: a judge seated at
+      // several meets must be answered for the meet they are working, not for
+      // whichever assignment happens to come first (found by the lifecycle
+      // check's judges step, 2026-10-24).
+      const assignments = await this.getAssignments(judgeAccountId, category.competitionId || null);
 
       // A judge with no seat has no business reading a roster of minors.
       // Previously this fell out of a missing competition and was treated as

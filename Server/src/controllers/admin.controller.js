@@ -498,10 +498,15 @@ function createAdminController(container) {
     getTeamRankings: asyncHandler(async (req, res) => {
       // Handle both admin routes (with req.competitionId) and superadmin routes (with query params)
       const competitionId = competitionIdFromRequest(req);
+      // Per competition type, as the screen asks: without it Competition I and
+      // II were pooled, so every athlete counted twice and the totals doubled
+      // (found by the lifecycle check's results step, 2026-10-24). Not per
+      // apparatus — the team championship sums the apparatus, like the public board.
       const rankings = await adminService.getTeamRankings(
-        competitionId, 
-        req.query.ageGroup, 
-        req.query.gender
+        competitionId,
+        req.query.ageGroup,
+        req.query.gender,
+        req.query.competitionType
       );
       res.json({ success: true, data: rankings });
     }),

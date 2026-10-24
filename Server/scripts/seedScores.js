@@ -72,6 +72,15 @@ const CAPTURE_PATH = path.join(__dirname, 'seed', 'registrations.generated.json'
 /** Evaluation seats in slot order. The Scorer is not one of them. */
 const EVALUATION_SEATS = ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'];
 const CHIEF = 'Senior Judge';
+
+/*
+ * Where a judge's slip goes: the route the JUDGE screens post to
+ * (Web services/public/judge.api.js saveScore → POST /public/save-score,
+ * guarded by requireScoringAccess), not /judge/scores/save, which only the
+ * Scorer's screen uses. Same controller, different guard — so seeding through
+ * the other one left the busiest write on a meet day untested.
+ */
+const SLIP_PATH = '/public/save-score';
 const SCORER = 'Scorer';
 
 /** Execution marks: 3.80 difficulty + 1.60 combination + execution = total. */
@@ -561,7 +570,7 @@ async function main(extraArgv = []) {
         for (const seat of evaluators) {
           const unmet = seat === athletePlan.mismatchSeat ? [ITEM_UNMET] : [];
           const slip = buildSlip(type.slug, spot.apparatus, athletePlan.evaluatorExecution, unmet);
-          await call('/judge/scores/save', {
+          await call(SLIP_PATH, {
             method: 'POST', token: tokens[seat], competitionId,
             body: { ...base, ...slip },
           });
@@ -570,7 +579,7 @@ async function main(extraArgv = []) {
 
         // 2. The chief marks it too.
         const chiefSlip = buildSlip(type.slug, spot.apparatus, athletePlan.chiefExecution, []);
-        await call('/judge/scores/save', {
+        await call(SLIP_PATH, {
           method: 'POST', token: tokens[CHIEF], competitionId,
           body: { ...base, ...chiefSlip },
         });
@@ -581,7 +590,7 @@ async function main(extraArgv = []) {
         //    `judgeType` names whose slip he is correcting.
         for (const fix of athletePlan.fixes) {
           const corrected = buildSlip(type.slug, spot.apparatus, fix.execution, fix.unmet);
-          await call('/judge/scores/save', {
+          await call(SLIP_PATH, {
             method: 'POST', token: tokens[CHIEF], competitionId,
             body: { ...base, ...corrected, judgeType: fix.seat, overrideBySenior: true },
           });
@@ -590,7 +599,7 @@ async function main(extraArgv = []) {
 
         // 4. Final Submit — only the Senior Judge may, and it locks this
         //    athlete's result against further judge edits.
-        await call('/judge/scores/save', {
+        await call(SLIP_PATH, {
           method: 'POST', token: tokens[CHIEF], competitionId,
           body: { ...base, ...chiefSlip, isFinalSubmit: true },
         });
@@ -760,6 +769,9 @@ async function runScorer({ competitionId, panel, type, places, tokens }) {
      * That sheet is unlocked, so it still gets its pass.
      */
     if (team.scoreMetadata?.isLocked) continue;
+    // Locked per apparatus by an earlier pass (the Scorer's Save & Lock): same thing.
+    const lockedHere = new Set(team.scoreMetadata?.lockedApparatus || []);
+    if (teamPlaces.every((spot) => lockedHere.has(spot.apparatus))) continue;
 
     const playerScores = (team.scores || []).map((row, index) => {
       const seconds = Number(TIME_BANDS[index % TIME_BANDS.length]);

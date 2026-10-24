@@ -463,9 +463,13 @@ What users notice:
 | walkin | the walk-in desk, five coaches at five meets: 11 committed form photos → OCR sidecar → exact read-back → review → coach + team + Player IDs → discount payment. **Skipped** (not failed) when the API's `OCR_URL` sidecar does not answer | 5 coaches / 23 players |
 | pay | discount-code redemption — verifies, never fakes (`paymentStatus` is never written directly) | 68 entries |
 | panels | seat panels from `seed/panel-plan.json`; the five newest meets with a separate Time Keeper | 200 panels |
-| scores | judges score, Sr. Judge submits, results published | 400 categories, ~7,400 slips |
+| order | lots drawn for every category (teams + athletes), categories started, Sr. Judge re-sequences / Judge 1 reads but may not / Scorer restores | 400 orders, 3,009 checks |
+| scores | judges score (through `/public/save-score`, the judge screens' route), Sr. Judge submits, Scorer locks, results published | 400 categories, ~7,400 slips |
+| results | standings vs finals, public = admin, team championship recomputed (best 5 of 6 per apparatus), one lucky draw per meet recorded / cleared / re-recorded | 3,561 checks |
+| corrections | unlock → correct a time → lock → the public final moves by that deduction → restore, on a 3/4/5-judge panel; the admin screen's multi-apparatus save (KNOWN defect, re-checked every run) | 12 checks |
+| judge-screens | all 51 judges: offered exactly their meets, the plan's seat at each, the panel, a team's athletes, profile, 3 password round trips | 855 checks |
 | mail | every email read back from the capture (`EMAIL_CAPTURE`): Player ID mails, password reset by code for a coach / player / judge, no code for a no-email child, the guardian's Player ID reminder | 10 checks |
-| coverage | routes the run called vs routes the app mounts — report only ([E2E-COVERAGE.md](E2E-COVERAGE.md)) | 51 / 222 |
+| coverage | routes the run called vs routes the app mounts — report only ([E2E-COVERAGE.md](E2E-COVERAGE.md)) | 76 / 222 |
 | verify | `scripts/verifySeed.js` | pass / fail (36 checks with the desk, 32 without) |
 
 About 25–40 min end to end (most of it in `scores`). Grown by a quarter on 2026-10-24 — see *Roster growth* below the first-runs table.
@@ -541,7 +545,9 @@ Checked after both: `BRMC_dev` record counts identical to the baseline taken bef
 | run 4: 20 meets, 5 desks, mail, coverage | branch | 14/14 steps, 36/36 checks; 7,382 slips, 1,400 results; 51/222 routes | 975 s — the PC was busy (see run 5) |
 | run 5: the same code, from empty | branch | 14/14 steps, 36/36 checks | **415 s** |
 
-×1.47 the baseline wall time for ×2.05 the scoring work → **expect ~17–20 min per run on the VMs** (709 s × 1.47 ≈ 1,040 s). Local timings swing up to ×2 with whatever else the PC is doing (runs 4 and 5 are identical code), so measure the first two runs on each VM and correct this line.
+| run 7: + competition day (order, results, corrections, judge-screens) | branch | 18/18 steps, 36/36 checks + 7,437 step checks; 76/222 routes | **502 s** |
+
+With the competition-day steps: ×1.77 the baseline → **expect ~21 min per run on the VMs** (inside the 1 h timeout and the 6 h between slots; above the 20 min first aimed for). Before them: ×1.47 the baseline wall time for ×2.05 the scoring work → ~17–20 min (709 s × 1.47 ≈ 1,040 s). Local timings swing up to ×2 with whatever else the PC is doing (runs 4 and 5 are identical code), so measure the first two runs on each VM and correct this line.
 
 **Verify**
 - A manual run prints `verifySeed` OK, `<db>_e2e` is gone afterwards, the real DB's counts (`mallakhamb-counts`) are unchanged, no email was sent (Gmail "Sent" is empty for the run window).

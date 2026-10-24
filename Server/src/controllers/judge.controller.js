@@ -152,6 +152,10 @@ function createJudgeController(container) {
         // Without this the answer mixes both competition types; see the note in
         // judge.service.getTeamPlayers.
         competitionType: req.query.competitionType,
+        // The meet this session is on (PUT /judge/competition/:id/set). Without
+        // it a judge seated at several meets was checked against whichever meet
+        // came first and told "Team has not been submitted" for a team that was.
+        competitionId: req.user.currentCompetition || null,
       });
       res.json({ success: true, data: result });
     }),

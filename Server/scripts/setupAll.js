@@ -213,6 +213,17 @@ const STEPS = [
       + 'forged signature. Needs DISCOUNT_CODE_ENABLED=true in .env.',
   },
   {
+    id: 'order',
+    where: 'server',
+    needsApi: true,
+    title: 'Lots, running order and category start',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'order'],
+    why: 'Admin → Lots for every category of every meet (POST /admin/lots/draw), '
+      + 'checked as a proper order; every category started (a second start is '
+      + 'refused); the Senior Judge re-sequences, Judge 1 reads it and may not '
+      + 'change it, the Scorer restores it; a judge cannot open a meet without a seat.',
+  },
+  {
     id: 'scores',
     where: 'server',
     needsApi: true,
@@ -224,6 +235,38 @@ const STEPS = [
       + 'actually reaches a score, rather than writing the settled numbers. THE '
       + 'SECOND-LONGEST STEP, about 35 minutes. `npm --prefix Server run '
       + 'seed:scores:one -- --place=Delhi` does a single meet.',
+  },
+  {
+    id: 'results',
+    where: 'server',
+    needsApi: true,
+    title: 'Standings, team championship and lucky draws',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'results'],
+    why: 'Every category, type and apparatus: ranks follow the finals, shared places '
+      + 'are real unresolved ties, the public board shows the same finals, team '
+      + 'totals equal the best 5 of 6 per apparatus recomputed here (admin and '
+      + 'public). One lucky draw per meet recorded, cleared, recorded again.',
+  },
+  {
+    id: 'corrections',
+    where: 'server',
+    needsApi: true,
+    title: 'Score corrections at the admin desk',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'corrections'],
+    why: 'Unlock a sheet (it leaves the public board), correct a time, lock it '
+      + '(the published final moves by that deduction), put it back — on a 3-, a '
+      + '4- and a 5-judge panel. Plus the admin screen\'s own save on a multi-'
+      + 'apparatus sheet: a KNOWN defect, reported until it is fixed.',
+  },
+  {
+    id: 'judge-screens',
+    where: 'server',
+    needsApi: true,
+    title: 'Every judge\'s own screens',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'judges'],
+    why: 'All 51 judges: offered exactly the meets they are seated at; at each, '
+      + 'the plan\'s seat on every panel that has it; the meet, the panel and a '
+      + 'team\'s athletes; profile saved; three change their password and back.',
   },
   {
     id: 'mail',

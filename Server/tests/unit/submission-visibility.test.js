@@ -265,6 +265,30 @@ describe('judgeService.getTeamPlayers — the roster behind /judge/team/:id', ()
     const [query] = service.playerRepository.find.mock.calls[0];
     expect(query._id.$in).toEqual(['p-entered']);
   });
+
+  it('answers for the meet the session is on, not the first meet the judge sits at', async () => {
+    // A judge seated at two meets, working at the second: the team is entered
+    // THERE. Resolving the meet from every assignment picked the first one and
+    // refused the team as "not submitted" (lifecycle check, 2026-10-24).
+    const elsewhere = { ...seat, _id: 'seat-0', competition: 'comp-0' };
+    const findAssignments = jest.fn(async (query) => [elsewhere, seat]
+      .filter((a) => !query.competition || a.competition === query.competition));
+    const competitions = { 'comp-0': { _id: 'comp-0', registeredTeams: [] }, 'comp-1': competitionWithADraft() };
+    const service = new JudgeService({
+      judgeRepository: { find: findAssignments },
+      competitionRepository: { findById: jest.fn(async (id) => competitions[String(id)]) },
+      teamRepository: { findById: jest.fn(async (id) => ({ _id: id, name: 'Team', coach: {} })) },
+      playerRepository: { find: jest.fn(async () => []) },
+      scoreRepository: { find: jest.fn(async () => []) },
+      logger: noopLogger,
+    });
+
+    await expect(service.getTeamPlayers('j1', ENTERED_TEAM, { gender: 'Male', ageGroup: 'Under14' }))
+      .rejects.toThrow(AuthorizationError);
+    await expect(service.getTeamPlayers('j1', ENTERED_TEAM, { gender: 'Male', ageGroup: 'Under14', competitionId: 'comp-1' }))
+      .resolves.toBeDefined();
+    expect(findAssignments).toHaveBeenLastCalledWith(expect.objectContaining({ competition: 'comp-1' }));
+  });
 });
 
 describe('publicService.getPublicTeams', () => {
