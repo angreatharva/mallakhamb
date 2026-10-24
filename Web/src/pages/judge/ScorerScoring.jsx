@@ -153,7 +153,10 @@ const ScorerScoring = () => {
   // Define loadExistingScores first (needed by fetchScoringData)
   const loadExistingScores = useCallback(async (teamId, gender, ageGroup, initialScores, currentPlayers) => {
     try {
+      // This team, THIS competition type: without the type, Competition I and II
+      // rows of the same athlete were loaded onto the same inputs.
       const scoresParams = { teamId, gender, ageGroup };
+      if (selectedCompetitionType?.value) scoresParams.competitionType = selectedCompetitionType.value;
       const allResponse = await scorerAPI.getTeamScores(scoresParams);
 
       if (!allResponse?.data) {

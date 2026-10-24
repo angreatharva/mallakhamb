@@ -595,7 +595,7 @@ class ScoringService {
    * @param {string} apparatus - Apparatus
    * @returns {Promise<Array>} Teams with scores
    */
-  async getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus) {
+  async getTeamScores(competitionId, ageGroup, gender, competitionType, apparatus, teamId = null) {
     try {
       // Query the Competition model to get registered teams.
       // Same projection as getSubmittedTeams — without a `select` these
@@ -624,9 +624,15 @@ class ScoringService {
        * athlete's own on write (coach.service.addPlayerToAgeGroup), so the
        * server and the client agree on which field decides.
        */
+      /*
+       * `teamId` (optional): the Scorer's and the admin's scoring sheets show ONE
+       * team and used to download the whole category to pick it out — every
+       * team's every row with every judge slip, on each poll. Narrowed in the
+       * repository, so the score query and the response shrink with it.
+       */
       const filteredTeams = await this.competitionRepository.findSubmittedRegistrations(
         competitionId,
-        { gender, ageGroup },
+        { gender, ageGroup, ...(teamId ? { teamId } : {}) },
         {
           coachFields: toMongoProjection(SUBMITTED_TEAM_COACH_FIELDS),
           playerFields: toMongoProjection(SUBMITTED_TEAM_PLAYER_FIELDS),

@@ -337,6 +337,8 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
         ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
         competitionType: selectedCompetitionType,
         apparatus: selectedApparatus,
+        // Just this team, as below picks it: not every team in the category.
+        teamId: String(selectedTeam._id || selectedTeam.id),
       });
 
       const teams = res.data?.data || [];
