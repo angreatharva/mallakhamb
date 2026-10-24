@@ -209,6 +209,21 @@
       'The nightly e2e database still exists 6 hours after a passing run.',
       'The run drops it after a pass (a failed run keeps it for inspection). Cleanup broke: journalctl -u mallakhamb-e2e -n 50; it is excluded from backups but takes space.'],
   );
+  // OCI money (deploy/oci/PRODUCTION-READINESS.md 1.2). The tenancy is Always Free, so ANY charge is a
+  // mistake. mallakhamb-oci-cost reads the budget mallakhamb-guard (SGD 1.50, the tenancy bills in
+  // SGD) hourly on both app VMs; OCI's own budget alerts email the same addresses as a second path.
+  const CJ = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby"';
+  if (P.mongo) RULES.push(
+    ['mk-oci-cost-actual', 'OCI is charging money', `max(mallakhamb_oci_cost_actual{${CJ}})`, 'gt', 0, '0m', 'critical', 'mallakhamb-oci-resources', 1,
+      'OCI has charged {{ $values.A.Value }} SGD this month. Always Free should cost nothing.',
+      'Something paid exists or a free limit was crossed. Console → Billing & Cost Management → Cost Analysis, grouped by service, to find it; then delete or shrink it. The root quota mallakhamb-prod-quota-free-tier should make this impossible, so also check whether the quota changed. Runbook: deploy/oci/PRODUCTION-READINESS.md 1.2.'],
+    ['mk-oci-cost-forecast', 'OCI forecast over the budget', `max(mallakhamb_oci_cost_forecast{${CJ}}) / max(mallakhamb_oci_budget_amount{${CJ}})`, 'gt', 1, '0m', 'warning', 'mallakhamb-oci-resources', 1,
+      'OCI forecasts this month at {{ humanizePercentage $values.A.Value }} of the SGD 1.50 guard.',
+      'Something will be billed before the month ends. Cost Analysis → forecast, grouped by service. Runbook: deploy/oci/PRODUCTION-READINESS.md 1.2.'],
+    ['mk-oci-cost-stale', 'OCI cost data stale', `time() - max(mallakhamb_oci_cost_updated_timestamp_seconds{${CJ}})`, 'gt', 10800, '10m', 'warning', 'mallakhamb-oci-resources', 1,
+      'The OCI budget has not been read for more than 3 hours, so the cost alerts are blind.',
+      'On either app VM: sudo mallakhamb-oci-cost (prints the error); journalctl -u mallakhamb-oci-cost. Usually the policy mallakhamb-prod-pol-budget-read, or the budget mallakhamb-guard was renamed or deleted. OCI still emails its own budget alerts meanwhile.'],
+  );
     return { RULES };
   };
 
@@ -250,7 +265,7 @@
    */
   const STAGING_GROUP = 'mallakhamb-oci-staging';
   // Since M4 staging runs on the self-hosted replica set, so its rules are live here too.
-  const STAGING_PREFIXES = ['mk-e2e-', 'mk-mongo-', 'mk-oplog-', 'mk-pitr-', 'mk-offsite-'];
+  const STAGING_PREFIXES = ['mk-e2e-', 'mk-mongo-', 'mk-oplog-', 'mk-pitr-', 'mk-offsite-', 'mk-oci-cost-'];
   const stagingRules = () => spec('oci').RULES
     .filter(([uid]) => STAGING_PREFIXES.some((p) => uid.startsWith(p)))
     .map((r) => {

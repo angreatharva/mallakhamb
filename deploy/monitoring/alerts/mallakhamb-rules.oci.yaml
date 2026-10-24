@@ -2054,3 +2054,166 @@ groups:
                 type: __expr__
                 uid: __expr__
         isPaused: false
+      - uid: mk-oci-cost-actual
+        title: OCI is charging money
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: 'OCI has charged {{ $values.A.Value }} SGD this month. Always Free should cost nothing.'
+          description: >-
+            Something paid exists or a free limit was crossed. Console → Billing & Cost Management → Cost Analysis,
+            grouped by service, to find it; then delete or shrink it. The root quota mallakhamb-prod-quota-free-tier
+            should make this impossible, so also check whether the quota changed. Runbook:
+            deploy/oci/PRODUCTION-READINESS.md 1.2.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'max(mallakhamb_oci_cost_actual{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-oci-cost-forecast
+        title: OCI forecast over the budget
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'OCI forecasts this month at {{ humanizePercentage $values.A.Value }} of the SGD 1.50 guard.'
+          description: >-
+            Something will be billed before the month ends. Cost Analysis → forecast, grouped by service. Runbook:
+            deploy/oci/PRODUCTION-READINESS.md 1.2.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                max(mallakhamb_oci_cost_forecast{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"}) /
+                max(mallakhamb_oci_budget_amount{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-oci-cost-stale
+        title: OCI cost data stale
+        condition: C
+        for: 10m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'The OCI budget has not been read for more than 3 hours, so the cost alerts are blind.'
+          description: >-
+            On either app VM: sudo mallakhamb-oci-cost (prints the error); journalctl -u mallakhamb-oci-cost. Usually
+            the policy mallakhamb-prod-pol-budget-read, or the budget mallakhamb-guard was renamed or deleted. OCI still
+            emails its own budget alerts meanwhile.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                time() -
+                max(mallakhamb_oci_cost_updated_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 10800
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false

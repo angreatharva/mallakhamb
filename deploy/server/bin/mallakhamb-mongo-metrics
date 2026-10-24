@@ -26,7 +26,9 @@ if [ -f "$ENVF" ] && [ -d "$T" ]; then
     // state: 1 PRIMARY, 2 SECONDARY, 8 DOWN, 6 UNKNOWN, ... (as THIS member sees each member)
     g("mallakhamb_mongo_member_state", "replica-set state of each member as this member sees it", s.members.map(m => "mallakhamb_mongo_member_state{member=\"" + m.name.split(":")[0] + "\"} " + m.state));
     if (primary) g("mallakhamb_mongo_replication_lag_seconds", "how far each member is behind the primary",
-      s.members.filter(m => m.optimeDate).map(m => "mallakhamb_mongo_replication_lag_seconds{member=\"" + m.name.split(":")[0] + "\"} " + Math.max(0, (primary.optimeDate - m.optimeDate) / 1000)));
+      // Reachable data members only: an unreachable one reports its optime as the 1970 epoch, which
+      // read as "50 years behind". Down members show in mallakhamb_mongo_member_state instead (alert "not healthy").
+      s.members.filter(m => (m.state === 1 || m.state === 2) && m.health === 1 && m.optimeDate && m.optimeDate.getTime() > 0).map(m => "mallakhamb_mongo_replication_lag_seconds{member=\"" + m.name.split(":")[0] + "\"} " + Math.max(0, (primary.optimeDate - m.optimeDate) / 1000)));
     // Oplog headroom: the window only means something once the oplog is full; until then report a
     // large value, so a new replica set does not look as if it held too little history.
     const lo = db.getSiblingDB("local"), st = lo.oplog.rs.stats();

@@ -1,7 +1,7 @@
 {
   "uid": "mallakhamb-oci-resources",
   "title": "Mallakhamb OCI resources",
-  "description": "The VMs themselves (OCI A1, 1 OCPU / 6 GB per VM): CPU, memory, disk, network, the Always Free allowance and idle-reclaim risk, and what runs on them. Alloy, scrape_job mallakhamb-host (active) / mallakhamb-host-standby.",
+  "description": "The VMs themselves (OCI A1, 1 OCPU / 6 GB per VM, plus db-03, the Always Free micro VM that is the replica set's third member): CPU, memory, disk, network, the Always Free allowance, idle-reclaim risk, what OCI is charging, and what runs on them. Alloy, scrape_job mallakhamb-host (active) / mallakhamb-host-standby / mallakhamb-db.",
   "tags": [
     "mallakhamb",
     "host",
@@ -54,10 +54,10 @@
           "uid": "${datasource}"
         },
         "query": {
-          "query": "label_values(node_uname_info{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}, instance)",
+          "query": "label_values(node_uname_info{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\"}, instance)",
           "refId": "vms"
         },
-        "definition": "label_values(node_uname_info{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}, instance)",
+        "definition": "label_values(node_uname_info{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\"}, instance)",
         "refresh": 2,
         "sort": 1,
         "multi": true,
@@ -167,16 +167,16 @@
         "name": "free_ocpu",
         "label": "Always Free A1 OCPUs (whole tenancy)",
         "type": "constant",
-        "query": "4",
+        "query": "2",
         "hide": 2,
         "current": {
-          "text": "4",
-          "value": "4"
+          "text": "2",
+          "value": "2"
         },
         "options": [
           {
-            "text": "4",
-            "value": "4",
+            "text": "2",
+            "value": "2",
             "selected": true
           }
         ]
@@ -185,16 +185,34 @@
         "name": "free_mem",
         "label": "Always Free A1 memory, bytes (whole tenancy)",
         "type": "constant",
-        "query": "25769803776",
+        "query": "12884901888",
         "hide": 2,
         "current": {
-          "text": "25769803776",
-          "value": "25769803776"
+          "text": "12884901888",
+          "value": "12884901888"
         },
         "options": [
           {
-            "text": "25769803776",
-            "value": "25769803776",
+            "text": "12884901888",
+            "value": "12884901888",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "free_micro",
+        "label": "Always Free AMD micro VMs (VM.Standard.E2.1.Micro)",
+        "type": "constant",
+        "query": "2",
+        "hide": 2,
+        "current": {
+          "text": "2",
+          "value": "2"
+        },
+        "options": [
+          {
+            "text": "2",
+            "value": "2",
             "selected": true
           }
         ]
@@ -285,7 +303,7 @@
   ],
   "panels": [
     {
-      "id": 11,
+      "id": 12,
       "type": "row",
       "title": "At a glance",
       "collapsed": false,
@@ -298,7 +316,7 @@
       "panels": []
     },
     {
-      "id": 12,
+      "id": 13,
       "type": "table",
       "title": "VMs",
       "datasource": {
@@ -317,7 +335,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance, role, sha) (mallakhamb_release_info{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance, role, sha) (mallakhamb_release_info{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "",
           "instant": true,
           "range": false,
@@ -364,7 +382,7 @@
       ]
     },
     {
-      "id": 13,
+      "id": 14,
       "type": "stat",
       "title": "Reporting",
       "datasource": {
@@ -383,7 +401,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "(max by (instance) (node_time_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) > bool 0) or (max by (instance) (max_over_time(node_time_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}[1d])) * 0)",
+          "expr": "(max by (instance) (node_time_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) > bool 0) or (max by (instance) (max_over_time(node_time_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}[1d])) * 0)",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -441,7 +459,7 @@
       }
     },
     {
-      "id": 14,
+      "id": 15,
       "type": "stat",
       "title": "Uptime",
       "datasource": {
@@ -460,7 +478,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - max by (instance) (node_boot_time_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "time() - max by (instance) (node_boot_time_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -500,7 +518,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 16,
       "type": "stat",
       "title": "OCPUs",
       "datasource": {
@@ -519,7 +537,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count by (instance) (max by (instance, cpu) (node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mode=\"idle\"}))",
+          "expr": "count by (instance) (max by (instance, cpu) (node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mode=\"idle\"}))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -560,7 +578,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 17,
       "type": "stat",
       "title": "Memory",
       "datasource": {
@@ -579,7 +597,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -619,7 +637,7 @@
       }
     },
     {
-      "id": 17,
+      "id": 18,
       "type": "gauge",
       "title": "CPU busy %",
       "datasource": {
@@ -638,7 +656,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mode=\"idle\"}[5m])))",
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mode=\"idle\"}[5m])))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -691,7 +709,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 19,
       "type": "gauge",
       "title": "Memory used %",
       "datasource": {
@@ -710,7 +728,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * (1 - max by (instance) (node_memory_MemAvailable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) / max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}))",
+          "expr": "100 * (1 - max by (instance) (node_memory_MemAvailable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) / max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -763,7 +781,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 20,
       "type": "gauge",
       "title": "Root disk used %",
       "datasource": {
@@ -782,7 +800,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * (1 - max by (instance) (node_filesystem_avail_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mountpoint=\"/\"}) / max by (instance) (node_filesystem_size_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mountpoint=\"/\"}))",
+          "expr": "100 * (1 - max by (instance) (node_filesystem_avail_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mountpoint=\"/\"}) / max by (instance) (node_filesystem_size_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mountpoint=\"/\"}))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -850,14 +868,14 @@
     {
       "id": 2,
       "type": "gauge",
-      "title": "A1 OCPUs % of free (4)",
+      "title": "A1 OCPUs % of free (2)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 6,
-        "w": 6,
+        "w": 5,
         "x": 0,
         "y": 14
       },
@@ -872,7 +890,7 @@
           "refId": "A"
         }
       ],
-      "description": "Cores the VMs report, against the 4 A1 OCPUs Always Free allows. Two 1-OCPU VMs = 50 %. The root quota mallakhamb-prod-quota-free-tier stops a launch past the limit.",
+      "description": "Cores of the two A1 VMs against the 2 A1 OCPUs Always Free allows since 2026-06-15. Two 1-OCPU VMs = 100 %: that is the whole allowance, by design, so it stays green up to 100 %. The root quota mallakhamb-prod-quota-free-tier stops a launch past it.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -887,16 +905,8 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "orange",
-                "value": 80
-              },
-              {
                 "color": "red",
-                "value": 90
+                "value": 100.5
               }
             ]
           },
@@ -922,15 +932,15 @@
     {
       "id": 3,
       "type": "gauge",
-      "title": "A1 memory % of free (24 GB)",
+      "title": "A1 memory % of free (12 GB)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 6,
+        "w": 5,
+        "x": 5,
         "y": 14
       },
       "targets": [
@@ -944,7 +954,7 @@
           "refId": "A"
         }
       ],
-      "description": "MemTotal of every VM against the 24 GB Always Free allows. The kernel keeps some memory for itself, so two 6 GB VMs show a little under 50 %.",
+      "description": "MemTotal of the two A1 VMs against the 12 GB Always Free allows. The kernel keeps some memory for itself, so two 6 GB VMs show a little under 100 %. Green up to 100 %: using all of it is the plan.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -959,16 +969,8 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "orange",
-                "value": 80
-              },
-              {
                 "color": "red",
-                "value": 90
+                "value": 100.5
               }
             ]
           },
@@ -994,15 +996,15 @@
     {
       "id": 4,
       "type": "gauge",
-      "title": "Boot volumes % of free (200 GB)",
+      "title": "AMD micro VMs % of free (2)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 12,
+        "w": 5,
+        "x": 10,
         "y": 14
       },
       "targets": [
@@ -1011,12 +1013,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * sum(max by (instance) (node_filesystem_size_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",mountpoint=\"/\"})) / $free_block",
+          "expr": "100 * count(max by (instance) (node_uname_info{scrape_job=\"mallakhamb-db\"})) / $free_micro",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "description": "Root filesystem size of every VM (each sits on a 50 GB boot volume) against the 200 GB of block storage Always Free allows. Volume backups are a separate allowance (5).",
+      "description": "db-03 (VM.Standard.E2.1.Micro) against the 2 Always Free micro VMs. The root quota allows exactly 1 (standard-e2-micro-core-count = 1), so 50 % is the most this can read.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -1066,15 +1068,15 @@
     {
       "id": 5,
       "type": "gauge",
-      "title": "Outbound data % of free (10 TB / month)",
+      "title": "Boot volumes % of free (200 GB)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
       "gridPos": {
         "h": 6,
-        "w": 6,
-        "x": 18,
+        "w": 5,
+        "x": 15,
         "y": 14
       },
       "targets": [
@@ -1083,7 +1085,79 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * sum(max by (instance, device) (increase(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",device!=\"lo\"}[7d]))) * 30 / 7 / $free_egress",
+          "expr": "100 * sum(max by (instance) (node_filesystem_size_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",mountpoint=\"/\"})) / $free_block",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "description": "Root filesystem size of every VM (three 50 GB boot volumes) against the 200 GB of block storage Always Free allows. Volume backups are a separate allowance (5).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "type": "gauge",
+      "title": "Outbound data % of free (10 TB / month)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 14
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * sum(max by (instance, device) (increase(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",device!=\"lo\"}[7d]))) * 30 / 7 / $free_egress",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1136,7 +1210,7 @@
       }
     },
     {
-      "id": 6,
+      "id": 7,
       "type": "row",
       "title": "Idle reclaim: Oracle may reclaim an Always Free VM that is idle for 7 days",
       "collapsed": false,
@@ -1149,7 +1223,7 @@
       "panels": []
     },
     {
-      "id": 7,
+      "id": 8,
       "type": "stat",
       "title": "CPU p95 (7d)",
       "datasource": {
@@ -1168,7 +1242,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "quantile_over_time(0.95, (100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mode=\"idle\"}[5m]))))[7d:5m])",
+          "expr": "quantile_over_time(0.95, (100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mode=\"idle\"}[5m]))))[7d:5m])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1213,7 +1287,7 @@
       }
     },
     {
-      "id": 8,
+      "id": 9,
       "type": "stat",
       "title": "Memory p95 (7d)",
       "datasource": {
@@ -1232,7 +1306,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "quantile_over_time(0.95, (100 * (1 - max by (instance) (node_memory_MemAvailable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) / max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})))[7d:5m])",
+          "expr": "quantile_over_time(0.95, (100 * (1 - max by (instance) (node_memory_MemAvailable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) / max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})))[7d:5m])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1277,7 +1351,7 @@
       }
     },
     {
-      "id": 9,
+      "id": 10,
       "type": "stat",
       "title": "Network p95 (7d)",
       "datasource": {
@@ -1296,7 +1370,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "quantile_over_time(0.95, (100 * 8 * (sum by (instance) (max by (instance, device) (rate(node_network_receive_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m]))) + sum by (instance) (max by (instance, device) (rate(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m])))) / $nic_bps)[7d:5m])",
+          "expr": "quantile_over_time(0.95, (100 * 8 * (sum by (instance) (max by (instance, device) (rate(node_network_receive_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m]))) + sum by (instance) (max by (instance, device) (rate(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m])))) / $nic_bps)[7d:5m])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1341,7 +1415,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 11,
       "type": "text",
       "title": "Reading this row",
       "gridPos": {
@@ -1356,7 +1430,7 @@
       }
     },
     {
-      "id": 20,
+      "id": 21,
       "type": "row",
       "title": "CPU",
       "collapsed": false,
@@ -1369,7 +1443,7 @@
       "panels": []
     },
     {
-      "id": 21,
+      "id": 22,
       "type": "timeseries",
       "title": "CPU busy %",
       "datasource": {
@@ -1388,7 +1462,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mode=\"idle\"}[5m])))",
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mode=\"idle\"}[5m])))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1451,7 +1525,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 23,
       "type": "timeseries",
       "title": "CPU steal %",
       "datasource": {
@@ -1470,7 +1544,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mode=\"steal\"}[5m]))",
+          "expr": "100 * avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mode=\"steal\"}[5m]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1520,7 +1594,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 24,
       "type": "timeseries",
       "title": "CPU by mode: $instance",
       "datasource": {
@@ -1539,7 +1613,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * avg by (mode) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mode!=\"idle\"}[5m]))",
+          "expr": "100 * avg by (mode) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mode!=\"idle\"}[5m]))",
           "legendFormat": "{{mode}}",
           "refId": "A"
         }
@@ -1592,7 +1666,7 @@
       "maxPerRow": 2
     },
     {
-      "id": 24,
+      "id": 25,
       "type": "timeseries",
       "title": "Load vs cores",
       "datasource": {
@@ -1611,7 +1685,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_load1{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (node_load1{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "{{instance}} load 1m",
           "refId": "A"
         },
@@ -1620,7 +1694,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_load5{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (node_load5{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "{{instance}} load 5m",
           "refId": "B"
         },
@@ -1629,7 +1703,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "count by (instance) (max by (instance, cpu) (node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mode=\"idle\"}))",
+          "expr": "count by (instance) (max by (instance, cpu) (node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mode=\"idle\"}))",
           "legendFormat": "{{instance}} cores",
           "refId": "C"
         }
@@ -1678,7 +1752,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 26,
       "type": "timeseries",
       "title": "Pressure stall (PSI)",
       "datasource": {
@@ -1697,7 +1771,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (rate(node_pressure_cpu_waiting_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}[5m]))",
+          "expr": "max by (instance) (rate(node_pressure_cpu_waiting_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}[5m]))",
           "legendFormat": "{{instance}} cpu",
           "refId": "A"
         },
@@ -1706,7 +1780,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (rate(node_pressure_memory_waiting_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}[5m]))",
+          "expr": "max by (instance) (rate(node_pressure_memory_waiting_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}[5m]))",
           "legendFormat": "{{instance}} memory",
           "refId": "B"
         },
@@ -1715,7 +1789,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (rate(node_pressure_io_waiting_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}[5m]))",
+          "expr": "max by (instance) (rate(node_pressure_io_waiting_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}[5m]))",
           "legendFormat": "{{instance}} io",
           "refId": "C"
         }
@@ -1764,7 +1838,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 27,
       "type": "row",
       "title": "Memory",
       "collapsed": false,
@@ -1777,7 +1851,7 @@
       "panels": []
     },
     {
-      "id": 27,
+      "id": 28,
       "type": "timeseries",
       "title": "Memory: $instance",
       "datasource": {
@@ -1796,7 +1870,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) - max by (instance) (node_memory_MemFree_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) - max by (instance) (node_memory_Buffers_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) - max by (instance) (node_memory_Cached_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) - max by (instance) (node_memory_SReclaimable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) - max by (instance) (node_memory_MemFree_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) - max by (instance) (node_memory_Buffers_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) - max by (instance) (node_memory_Cached_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) - max by (instance) (node_memory_SReclaimable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "used by processes",
           "refId": "A"
         },
@@ -1805,7 +1879,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_memory_Buffers_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) + max by (instance) (node_memory_Cached_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) + max by (instance) (node_memory_SReclaimable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (node_memory_Buffers_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) + max by (instance) (node_memory_Cached_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) + max by (instance) (node_memory_SReclaimable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "cache (reclaimable)",
           "refId": "B"
         },
@@ -1814,7 +1888,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_memory_MemFree_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (node_memory_MemFree_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "free",
           "refId": "C"
         }
@@ -1866,7 +1940,7 @@
       "maxPerRow": 2
     },
     {
-      "id": 28,
+      "id": 29,
       "type": "timeseries",
       "title": "Swap used",
       "datasource": {
@@ -1885,7 +1959,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_memory_SwapTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) - max by (instance) (node_memory_SwapFree_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (node_memory_SwapTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) - max by (instance) (node_memory_SwapFree_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -1934,7 +2008,7 @@
       }
     },
     {
-      "id": 29,
+      "id": 30,
       "type": "timeseries",
       "title": "Major page faults/s",
       "datasource": {
@@ -1953,7 +2027,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (rate(node_vmstat_pgmajfault{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}[5m]))",
+          "expr": "max by (instance) (rate(node_vmstat_pgmajfault{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}[5m]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2002,7 +2076,7 @@
       }
     },
     {
-      "id": 30,
+      "id": 31,
       "type": "timeseries",
       "title": "OOM kills (1h)",
       "datasource": {
@@ -2021,7 +2095,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (increase(node_vmstat_oom_kill{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}[1h]))",
+          "expr": "max by (instance) (increase(node_vmstat_oom_kill{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}[1h]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2070,7 +2144,7 @@
       }
     },
     {
-      "id": 31,
+      "id": 32,
       "type": "row",
       "title": "Disk",
       "collapsed": false,
@@ -2083,7 +2157,7 @@
       "panels": []
     },
     {
-      "id": 32,
+      "id": 33,
       "type": "timeseries",
       "title": "Filesystem used %",
       "datasource": {
@@ -2102,7 +2176,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * (1 - max by (instance, mountpoint) (node_filesystem_avail_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",fstype!~\"tmpfs|ramfs|squashfs|overlay\"}) / max by (instance, mountpoint) (node_filesystem_size_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",fstype!~\"tmpfs|ramfs|squashfs|overlay\"}))",
+          "expr": "100 * (1 - max by (instance, mountpoint) (node_filesystem_avail_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",fstype!~\"tmpfs|ramfs|squashfs|overlay\"}) / max by (instance, mountpoint) (node_filesystem_size_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",fstype!~\"tmpfs|ramfs|squashfs|overlay\"}))",
           "legendFormat": "{{instance}} {{mountpoint}}",
           "refId": "A"
         }
@@ -2165,7 +2239,7 @@
       }
     },
     {
-      "id": 33,
+      "id": 34,
       "type": "timeseries",
       "title": "Root disk free",
       "datasource": {
@@ -2184,7 +2258,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (node_filesystem_avail_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",mountpoint=\"/\"})",
+          "expr": "max by (instance) (node_filesystem_avail_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",mountpoint=\"/\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2233,7 +2307,7 @@
       }
     },
     {
-      "id": 34,
+      "id": 35,
       "type": "timeseries",
       "title": "Disk throughput",
       "datasource": {
@@ -2252,7 +2326,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_read_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_read_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
           "legendFormat": "{{instance}} read",
           "refId": "A"
         },
@@ -2261,7 +2335,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_written_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_written_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
           "legendFormat": "{{instance}} write",
           "refId": "B"
         }
@@ -2310,7 +2384,7 @@
       }
     },
     {
-      "id": 35,
+      "id": 36,
       "type": "timeseries",
       "title": "Disk IOPS",
       "datasource": {
@@ -2329,7 +2403,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_reads_completed_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_reads_completed_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
           "legendFormat": "{{instance}} reads",
           "refId": "A"
         },
@@ -2338,7 +2412,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_writes_completed_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_disk_writes_completed_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m])))",
           "legendFormat": "{{instance}} writes",
           "refId": "B"
         }
@@ -2386,7 +2460,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 37,
       "type": "timeseries",
       "title": "Disk busy %",
       "datasource": {
@@ -2405,7 +2479,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "100 * max by (instance) (rate(node_disk_io_time_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m]))",
+          "expr": "100 * max by (instance) (rate(node_disk_io_time_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device=~\"sd.*|vd.*|nvme.*\"}[5m]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2455,7 +2529,7 @@
       }
     },
     {
-      "id": 37,
+      "id": 38,
       "type": "row",
       "title": "Network",
       "collapsed": false,
@@ -2468,7 +2542,7 @@
       "panels": []
     },
     {
-      "id": 38,
+      "id": 39,
       "type": "timeseries",
       "title": "Throughput",
       "datasource": {
@@ -2487,7 +2561,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "8 * sum by (instance) (max by (instance, device) (rate(node_network_receive_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
+          "expr": "8 * sum by (instance) (max by (instance, device) (rate(node_network_receive_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
           "legendFormat": "{{instance}} in",
           "refId": "A"
         },
@@ -2496,7 +2570,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "8 * sum by (instance) (max by (instance, device) (rate(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
+          "expr": "8 * sum by (instance) (max by (instance, device) (rate(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
           "legendFormat": "{{instance}} out",
           "refId": "B"
         }
@@ -2545,7 +2619,7 @@
       }
     },
     {
-      "id": 39,
+      "id": 40,
       "type": "timeseries",
       "title": "Errors and drops",
       "datasource": {
@@ -2564,7 +2638,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_receive_errs_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_receive_errs_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
           "legendFormat": "{{instance}} rx errors",
           "refId": "A"
         },
@@ -2573,7 +2647,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_transmit_errs_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_transmit_errs_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
           "legendFormat": "{{instance}} tx errors",
           "refId": "B"
         },
@@ -2582,7 +2656,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_receive_drop_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_receive_drop_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
           "legendFormat": "{{instance}} rx drops",
           "refId": "C"
         },
@@ -2591,7 +2665,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_transmit_drop_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
+          "expr": "sum by (instance) (max by (instance, device) (rate(node_network_transmit_drop_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[5m])))",
           "legendFormat": "{{instance}} tx drops",
           "refId": "D"
         }
@@ -2640,7 +2714,7 @@
       }
     },
     {
-      "id": 40,
+      "id": 41,
       "type": "timeseries",
       "title": "Data sent per day",
       "datasource": {
@@ -2659,7 +2733,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (instance) (max by (instance, device) (increase(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\",device!=\"lo\"}[1d])))",
+          "expr": "sum by (instance) (max by (instance, device) (increase(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",device!=\"lo\"}[1d])))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2708,7 +2782,7 @@
       }
     },
     {
-      "id": 41,
+      "id": 42,
       "type": "row",
       "title": "What runs on the VMs",
       "collapsed": false,
@@ -2721,7 +2795,7 @@
       "panels": []
     },
     {
-      "id": 42,
+      "id": 43,
       "type": "stat",
       "title": "API (active VM)",
       "datasource": {
@@ -2798,7 +2872,7 @@
       }
     },
     {
-      "id": 43,
+      "id": 44,
       "type": "timeseries",
       "title": "API memory vs the VM",
       "datasource": {
@@ -2884,7 +2958,7 @@
       }
     },
     {
-      "id": 44,
+      "id": 45,
       "type": "stat",
       "title": "OCR reader",
       "datasource": {
@@ -2961,7 +3035,7 @@
       }
     },
     {
-      "id": 45,
+      "id": 46,
       "type": "stat",
       "title": "Last backup age",
       "datasource": {
@@ -2980,7 +3054,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - max by (instance) (mallakhamb_backup_last_success_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "time() - max by (instance) (mallakhamb_backup_last_success_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -3028,7 +3102,7 @@
       }
     },
     {
-      "id": 46,
+      "id": 47,
       "type": "stat",
       "title": "Nightly e2e: last pass",
       "datasource": {
@@ -3047,7 +3121,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - max by (instance) (mallakhamb_e2e_last_success_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"}) > 0",
+          "expr": "time() - max by (instance) (mallakhamb_e2e_last_success_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"}) > 0",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -3095,7 +3169,7 @@
       }
     },
     {
-      "id": 47,
+      "id": 48,
       "type": "stat",
       "title": "Nightly e2e: last result",
       "datasource": {
@@ -3114,7 +3188,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "max by (instance) (mallakhamb_e2e_last_exit_code{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",instance=~\"$instance\"})",
+          "expr": "max by (instance) (mallakhamb_e2e_last_exit_code{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -3155,6 +3229,290 @@
               {
                 "color": "red",
                 "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 49,
+      "type": "row",
+      "title": "OCI cost: budget mallakhamb-guard (SGD, the tenancy currency; Always Free = 0)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 115
+      },
+      "panels": []
+    },
+    {
+      "id": 50,
+      "type": "stat",
+      "title": "Charged this month",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 116
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(mallakhamb_oci_cost_actual{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "description": "What OCI has charged so far this month. Anything above 0 means something paid exists: alert \"OCI is charging money\" (critical, emails the owner); OCI's own budget alert emails too.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "prefix:S$",
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 51,
+      "type": "stat",
+      "title": "Forecast for the month",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 116
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(mallakhamb_oci_cost_forecast{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "description": "OCI's forecast for the whole month. Alert \"OCI forecast over the budget\" above the SGD 1.50 guard.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "prefix:S$",
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.001
+              },
+              {
+                "color": "red",
+                "value": 1.5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 52,
+      "type": "gauge",
+      "title": "Forecast % of the guard",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 116
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * max(mallakhamb_oci_cost_forecast{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}) / max(mallakhamb_oci_budget_amount{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "description": "Forecast spend against the budget (SGD 1.50, about Rs 100). Bands at 70 / 80 / 90 %.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false,
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 53,
+      "type": "stat",
+      "title": "Cost data age",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 116
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "time() - max(mallakhamb_oci_cost_updated_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "description": "Since the budget was last read (hourly). Alert \"OCI cost data stale\" above 3 h, because then the cost alerts are blind. OCI updates the spend a few times a day.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 7200
+              },
+              {
+                "color": "red",
+                "value": 10800
               }
             ]
           },

@@ -1,0 +1,8 @@
+[Unit]
+Description=Mallakhamb OCI budget spend as Grafana gauges (both app VMs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mallakhamb-oci-cost

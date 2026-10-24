@@ -69,6 +69,8 @@ const base = (type, title, targets, gridPos, extra = {}) => ({
 
 const thresholds = (steps) => ({ mode: 'absolute', steps });
 const green = { color: 'green', value: null };
+// An allowance the plan fills on purpose (the two A1 VMs): only going past it is wrong.
+const FULL_BY_DESIGN = [green, { color: 'red', value: 100.5 }];
 const upMappings = [{ type: 'value', options: { 0: { text: 'DOWN', color: 'red' }, 1: { text: 'UP', color: 'green' } } }];
 const upSteps = [{ color: 'red', value: null }, { color: 'green', value: 1 }];
 
@@ -114,11 +116,11 @@ function table(title, targets, gridPos, { unit = 'short', valueName = 'Value', h
 }
 
 /** A "% of limit" gauge with the 70 / 80 / 90 bands. */
-function gauge(title, targets, gridPos, { description, ds = DS } = {}) {
+function gauge(title, targets, gridPos, { description, ds = DS, steps = PCT_STEPS } = {}) {
   return base('gauge', title, targets.map((x) => ({ ...x, datasource: ds })), gridPos, {
     datasource: ds,
     description,
-    fieldConfig: { defaults: { unit: 'percent', min: 0, max: 100, decimals: 0, thresholds: thresholds(PCT_STEPS), color: { mode: 'thresholds' } }, overrides: [] },
+    fieldConfig: { defaults: { unit: 'percent', min: 0, max: 100, decimals: 0, thresholds: thresholds(steps), color: { mode: 'thresholds' } }, overrides: [] },
     options: { reduceOptions: { calcs: ['lastNotNull'], fields: '', values: false }, showThresholdMarkers: true, showThresholdLabels: false, orientation: 'auto' },
   });
 }
@@ -489,7 +491,9 @@ const compDay = dashboard({
 const vmResources = () => {
   id = 0;
   const cloud = PLATFORM.startsWith('oci') ? 'OCI' : PLATFORM.toUpperCase();
-  const HI = `${HS},instance=~"$instance"`;
+  // Every VM: app-01/app-02 (host / host-standby) and db-03 (mallakhamb-db, the replica set's third member).
+  const VS = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db"';
+  const HI = `${VS},instance=~"$instance"`;
   const one = (m, by = '') => `max by (instance${by}) (${m})`;
   const cpuBusy = `100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{${HI},mode="idle"}[5m])))`;
   const memUsed = `100 * (1 - ${one(`node_memory_MemAvailable_bytes{${HI}}`)} / ${one(`node_memory_MemTotal_bytes{${HI}}`)})`;
@@ -504,8 +508,10 @@ const vmResources = () => {
 
   const free = PLATFORM.startsWith('oci')
     ? [
-      ['free_ocpu', '4', 'Always Free A1 OCPUs (whole tenancy)'],
-      ['free_mem', String(24 * GIB), 'Always Free A1 memory, bytes (whole tenancy)'],
+      // Halved from 4 OCPU / 24 GB on 2026-06-15 (deploy/oci/PLAN.md §1.1).
+      ['free_ocpu', '2', 'Always Free A1 OCPUs (whole tenancy)'],
+      ['free_mem', String(12 * GIB), 'Always Free A1 memory, bytes (whole tenancy)'],
+      ['free_micro', '2', 'Always Free AMD micro VMs (VM.Standard.E2.1.Micro)'],
       ['free_block', String(200 * 1000 ** 3), 'Always Free block + boot volume storage, bytes'],
       ['free_egress', String(10 * 1000 ** 4), 'Always Free outbound data per month, bytes'],
       ['nic_bps', String(1000 ** 3), 'Network bandwidth of a 1-OCPU A1 VM, bits/s'],
@@ -514,16 +520,21 @@ const vmResources = () => {
 
   const allowance = PLATFORM.startsWith('oci') ? [
     row('Always Free allowance: the whole tenancy, every VM counted (deploy/oci/PLAN.md)', 13),
-    gauge('A1 OCPUs % of free (4)', [t(`100 * sum(${cores(HS)}) / $free_ocpu`)], { h: 6, w: 6, x: 0, y: 14 }, {
-      description: 'Cores the VMs report, against the 4 A1 OCPUs Always Free allows. Two 1-OCPU VMs = 50 %. The root quota mallakhamb-prod-quota-free-tier stops a launch past the limit.',
+    gauge('A1 OCPUs % of free (2)', [t(`100 * sum(${cores(HS)}) / $free_ocpu`)], { h: 6, w: 5, x: 0, y: 14 }, {
+      description: 'Cores of the two A1 VMs against the 2 A1 OCPUs Always Free allows since 2026-06-15. Two 1-OCPU VMs = 100 %: that is the whole allowance, by design, so it stays green up to 100 %. The root quota mallakhamb-prod-quota-free-tier stops a launch past it.',
+      steps: FULL_BY_DESIGN,
     }),
-    gauge('A1 memory % of free (24 GB)', [t(`100 * sum(${one(`node_memory_MemTotal_bytes{${HS}}`)}) / $free_mem`)], { h: 6, w: 6, x: 6, y: 14 }, {
-      description: 'MemTotal of every VM against the 24 GB Always Free allows. The kernel keeps some memory for itself, so two 6 GB VMs show a little under 50 %.',
+    gauge('A1 memory % of free (12 GB)', [t(`100 * sum(${one(`node_memory_MemTotal_bytes{${HS}}`)}) / $free_mem`)], { h: 6, w: 5, x: 5, y: 14 }, {
+      description: 'MemTotal of the two A1 VMs against the 12 GB Always Free allows. The kernel keeps some memory for itself, so two 6 GB VMs show a little under 100 %. Green up to 100 %: using all of it is the plan.',
+      steps: FULL_BY_DESIGN,
     }),
-    gauge('Boot volumes % of free (200 GB)', [t(`100 * sum(${one(`node_filesystem_size_bytes{${HS},mountpoint="/"}`)}) / $free_block`)], { h: 6, w: 6, x: 12, y: 14 }, {
-      description: 'Root filesystem size of every VM (each sits on a 50 GB boot volume) against the 200 GB of block storage Always Free allows. Volume backups are a separate allowance (5).',
+    gauge('AMD micro VMs % of free (2)', [t('100 * count(max by (instance) (node_uname_info{scrape_job="mallakhamb-db"})) / $free_micro')], { h: 6, w: 5, x: 10, y: 14 }, {
+      description: 'db-03 (VM.Standard.E2.1.Micro) against the 2 Always Free micro VMs. The root quota allows exactly 1 (standard-e2-micro-core-count = 1), so 50 % is the most this can read.',
     }),
-    gauge('Outbound data % of free (10 TB / month)', [t(`100 * sum(${one(`increase(node_network_transmit_bytes_total{${HS},device!="lo"}[7d])`, ', device')}) * 30 / 7 / $free_egress`)], { h: 6, w: 6, x: 18, y: 14 }, {
+    gauge('Boot volumes % of free (200 GB)', [t(`100 * sum(${one(`node_filesystem_size_bytes{${VS},mountpoint="/"}`)}) / $free_block`)], { h: 6, w: 5, x: 15, y: 14 }, {
+      description: 'Root filesystem size of every VM (three 50 GB boot volumes) against the 200 GB of block storage Always Free allows. Volume backups are a separate allowance (5).',
+    }),
+    gauge('Outbound data % of free (10 TB / month)', [t(`100 * sum(${one(`increase(node_network_transmit_bytes_total{${VS},device!="lo"}[7d])`, ', device')}) * 30 / 7 / $free_egress`)], { h: 6, w: 4, x: 20, y: 14 }, {
       description: 'Bytes sent by every VM over the last 7 days, projected to 30 days, against the 10 TB a month Always Free includes.',
     }),
 
@@ -551,14 +562,14 @@ const vmResources = () => {
   return dashboard({
     uid: `mallakhamb-${PLATFORM.startsWith('oci') ? 'oci' : PLATFORM}-resources`,
     title: `Mallakhamb ${cloud} resources`,
-    description: `The VMs themselves (${P.plan}): CPU, memory, disk, network, ${PLATFORM.startsWith('oci') ? 'the Always Free allowance and idle-reclaim risk, ' : ''}and what runs on them. Alloy, scrape_job mallakhamb-host (active) / mallakhamb-host-standby.`,
+    description: `The VMs themselves (${P.plan}${PLATFORM === 'oci' ? ', plus db-03, the Always Free micro VM that is the replica set\'s third member' : ''}): CPU, memory, disk, network, ${PLATFORM.startsWith('oci') ? 'the Always Free allowance, idle-reclaim risk, what OCI is charging, ' : ''}and what runs on them. Alloy, scrape_job mallakhamb-host (active) / mallakhamb-host-standby / mallakhamb-db.`,
     tags: ['host', PLATFORM],
     stable: true,
     from: 'now-24h',
     variables: [{
       name: 'instance', label: 'VM', type: 'query', datasource: DS,
-      query: { query: `label_values(node_uname_info{${HS}}, instance)`, refId: 'vms' },
-      definition: `label_values(node_uname_info{${HS}}, instance)`,
+      query: { query: `label_values(node_uname_info{${VS}}, instance)`, refId: 'vms' },
+      definition: `label_values(node_uname_info{${VS}}, instance)`,
       refresh: 2, sort: 1, multi: true, includeAll: true, hide: 0,
       current: { text: ['All'], value: ['$__all'] }, options: [],
     }],
@@ -684,9 +695,117 @@ const vmResources = () => {
         mappings: [{ type: 'value', options: { 0: { text: 'PASS', color: 'green' } } }, { type: 'range', options: { from: 1, to: 255, result: { text: 'FAIL', color: 'red' } } }],
         description: 'FAIL → journalctl -u mallakhamb-e2e on that VM.',
       }),
+      ...(PLATFORM.startsWith('oci') ? costRow(y0 + 88) : []),
     ],
   });
 };
+// What OCI is charging (deploy/oci/PRODUCTION-READINESS.md 1.2): the budget mallakhamb-guard, read
+// hourly by mallakhamb-oci-cost on both app VMs. The tenancy bills in SGD. Alerts mk-oci-cost-*.
+const CJ = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby"';
+const sgd = { unit: 'prefix:S$', decimals: 2 };          // Grafana has no SGD currency unit
+const costRow = (y) => [
+  row('OCI cost: budget mallakhamb-guard (SGD, the tenancy currency; Always Free = 0)', y),
+  stat('Charged this month', [t(`max(mallakhamb_oci_cost_actual{${CJ}})`)], { h: 6, w: 6, x: 0, y: y + 1 }, {
+    ...sgd, steps: [green, { color: 'red', value: 0.001 }],
+    description: 'What OCI has charged so far this month. Anything above 0 means something paid exists: alert "OCI is charging money" (critical, emails the owner); OCI\'s own budget alert emails too.',
+  }),
+  stat('Forecast for the month', [t(`max(mallakhamb_oci_cost_forecast{${CJ}})`)], { h: 6, w: 6, x: 6, y: y + 1 }, {
+    ...sgd, steps: [green, { color: 'orange', value: 0.001 }, { color: 'red', value: 1.5 }],
+    description: 'OCI\'s forecast for the whole month. Alert "OCI forecast over the budget" above the SGD 1.50 guard.',
+  }),
+  gauge('Forecast % of the guard', [t(`100 * max(mallakhamb_oci_cost_forecast{${CJ}}) / max(mallakhamb_oci_budget_amount{${CJ}})`)], { h: 6, w: 6, x: 12, y: y + 1 }, {
+    description: 'Forecast spend against the budget (SGD 1.50, about Rs 100). Bands at 70 / 80 / 90 %.',
+  }),
+  stat('Cost data age', [t(`time() - max(mallakhamb_oci_cost_updated_timestamp_seconds{${CJ}})`)], { h: 6, w: 6, x: 18, y: y + 1 }, {
+    unit: 's', steps: [green, { color: 'orange', value: 7200 }, { color: 'red', value: 10800 }],
+    description: 'Since the budget was last read (hourly). Alert "OCI cost data stale" above 3 h, because then the cost alerts are blind. OCI updates the spend a few times a day.',
+  }),
+];
+
+// ------------------------------------------------------------------ MongoDB replica set (oci preset)
+// deploy/oci/MONGODB-SELF-HOSTED-PLAN.md: app-01 (primary), app-02, db-03 (hidden). Gauges from
+// mallakhamb-mongo-metrics on every member (Alloy textfile); backup ages from the jobs on the active.
+const mongoDash = () => {
+  id = 0;
+  const MJ = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db"';
+  const stateMap = [{ type: 'value', options: {
+    0: { text: 'STARTUP', color: 'orange' }, 1: { text: 'PRIMARY', color: 'green' }, 2: { text: 'SECONDARY', color: 'green' },
+    3: { text: 'RECOVERING', color: 'orange' }, 5: { text: 'STARTUP2', color: 'orange' }, 6: { text: 'UNKNOWN', color: 'red' },
+    7: { text: 'ARBITER', color: 'blue' }, 8: { text: 'DOWN', color: 'red' }, 9: { text: 'ROLLBACK', color: 'red' }, 10: { text: 'REMOVED', color: 'red' },
+  } }];
+  const age = (title, metric, sel, orange, red, x, description) => stat(title, [t(`time() - max(${metric}{${sel}})`)], { h: 5, w: 6, x, y: 31 }, {
+    unit: 's', steps: [green, { color: 'orange', value: orange }, { color: 'red', value: red }], description,
+  });
+  return dashboard({
+    uid: 'mallakhamb-mongo',
+    title: 'Mallakhamb MongoDB replica set',
+    description: 'The self-hosted replica set "mallakhamb" (app-01, app-02, db-03): members, replication, oplog, load, disks and every backup. deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §6',
+    tags: ['database', 'mongodb', PLATFORM],
+    stable: true,
+    from: 'now-24h',
+    panels: [
+      row('Replica set', 0),
+      stat('Primary', [t(`max(mallakhamb_mongo_primary_present{${MJ}})`)], { h: 5, w: 4, x: 0, y: 1 }, {
+        steps: upSteps, mappings: [{ type: 'value', options: { 0: { text: 'NONE', color: 'red' }, 1: { text: 'YES', color: 'green' } } }],
+        description: 'Some member sees a PRIMARY. NONE = nothing can be written (alert "MongoDB has no primary", critical).',
+      }),
+      stat('Members answering', [t(`count(mallakhamb_mongo_up{${MJ}} == 1) or vector(0)`)], { h: 5, w: 4, x: 4, y: 1 }, {
+        decimals: 0, steps: [{ color: 'red', value: null }, { color: 'orange', value: 2 }, { color: 'green', value: 3 }],
+        description: 'Members whose health check (TLS + the monitor login) answered. 3 of 3 normal; 2 still writes but the next loss stops it.',
+      }),
+      stat('Member state', [t(`max by (member) (mallakhamb_mongo_member_state{${MJ}})`, '{{member}}')], { h: 5, w: 8, x: 8, y: 1 }, {
+        mappings: stateMap, description: 'Each member as the set sees it. app-01 is PRIMARY normally (priority 2); db-03 is a hidden SECONDARY that never becomes primary.',
+      }),
+      stat('Max replication lag', [t(`max(mallakhamb_mongo_replication_lag_seconds{${MJ}})`)], { h: 5, w: 4, x: 16, y: 1 }, {
+        unit: 's', steps: [green, { color: 'orange', value: 10 }, { color: 'red', value: 30 }],
+        description: 'How far the furthest member is behind the primary. Alert above 30 s for 5 m. Up to ~10 s is normal: the primary writes a no-op every 10 s when idle.',
+      }),
+      stat('Rollback files', [t(`max(mallakhamb_mongo_rollback_files{${MJ}})`)], { h: 5, w: 4, x: 20, y: 1 }, {
+        decimals: 0, steps: [green, { color: 'red', value: 1 }],
+        description: 'Writes a failover undid (they had not reached a majority). Should stay 0: the app writes with w:"majority".',
+      }),
+
+      row('Replication', 6),
+      ts('Replication lag by member', [t(`max by (member) (mallakhamb_mongo_replication_lag_seconds{${MJ}})`, '{{member}}')], { h: 8, w: 12, x: 0, y: 7 }, { unit: 's', min: 0 }),
+      ts('Member state over time', [t(`max by (member) (mallakhamb_mongo_member_state{${MJ}})`, '{{member}}')], { h: 8, w: 12, x: 12, y: 7 }, {
+        min: 0, description: '1 PRIMARY, 2 SECONDARY, 8 DOWN, 3 RECOVERING. Elections show as a primary switching to 2 while another member shows 1.',
+      }),
+
+      row('Load and oplog', 15),
+      ts('Connections per member', [t(`max by (instance) (mallakhamb_mongo_connections_current{${MJ}})`, '{{instance}}')], { h: 8, w: 8, x: 0, y: 16 }, {
+        min: 0, description: 'Open client connections. The API pool is up to 100 per process; alert above 300.',
+      }),
+      ts('Application database size', [t(`max by (db) (mallakhamb_mongo_db_bytes{${MJ}})`, '{{db}}')], { h: 8, w: 8, x: 8, y: 16 }, {
+        unit: 'bytes', min: 0, description: 'Data + index bytes. Plan §4a alerts at 250 MB (Atlas M0 off-site copy limit 512 MB).',
+      }),
+      gauge('Oplog used %', [t(`100 * max(mallakhamb_mongo_oplog_used_ratio{${MJ}})`)], { h: 8, w: 4, x: 16, y: 16 }, {
+        description: 'Share of the 2 GB oplog in use. Once full, the oldest entries roll off and the window below starts to count.',
+      }),
+      stat('Oplog window', [t(`min(mallakhamb_mongo_oplog_window_seconds{${MJ}})`)], { h: 8, w: 4, x: 20, y: 16 }, {
+        unit: 's', steps: [{ color: 'red', value: null }, { color: 'orange', value: 86400 }, { color: 'green', value: 172800 }],
+        mappings: [{ type: 'range', options: { from: 100000000, to: 10000000000, result: { text: 'not full yet', color: 'green' } } }],
+        description: 'History the oplog holds once it is full (a member down longer than this needs a resync). Alert below 48 h.',
+      }),
+
+      row('Disks: every member holds a full copy', 24),
+      gauge('Root disk used %', [t(`100 * (1 - max by (instance) (node_filesystem_avail_bytes{${MJ},mountpoint="/"}) / max by (instance) (node_filesystem_size_bytes{${MJ},mountpoint="/"}))`, '{{instance}}')], { h: 6, w: 12, x: 0, y: 25 }, {
+        description: 'Alert "MongoDB member disk filling" above 80 % on any member. At 100 % that member\'s mongod stops (drilled: it recovers once space is freed).',
+      }),
+      ts('Root disk free', [t(`max by (instance) (node_filesystem_avail_bytes{${MJ},mountpoint="/"})`, '{{instance}}')], { h: 6, w: 12, x: 12, y: 25 }, { unit: 'bytes', min: 0 }),
+
+      row('Backups (all run on the active)', 30),
+      age('Nightly dump age', 'mallakhamb_backup_last_success_timestamp_seconds', 'scrape_job="mallakhamb-host"', 93600, 172800, 0,
+        'mallakhamb-backup, 20:30 UTC. Alert "Backup stale" above 26 h. Restore: mallakhamb-restore-drill.'),
+      age('Point-in-time base age', 'mallakhamb_pitr_base_last_success_timestamp_seconds', MJ, 93600, 172800, 6,
+        'The first oplog-slice run of each UTC day takes a whole-set mongodump --oplog. Alert above 26 h.'),
+      age('Oplog slice age', 'mallakhamb_oplog_slice_last_success_timestamp_seconds', MJ, 1800, 2400, 12,
+        'Every 15 minutes. Point-in-time restore (mallakhamb-pitr) reaches up to the last slice. Alert above 40 m.'),
+      age('Off-site copy age', 'mallakhamb_offsite_last_success_timestamp_seconds', MJ, 7200, 10800, 18,
+        'Hourly to Atlas <db>_offsite, checked after each copy: the way out if Oracle is lost. Alert above 3 h.'),
+    ],
+  });
+};
+
 // Per-VM breakdowns repeat once per selected VM.
 const withRepeats = (d) => {
   for (const pnl of d.panels) if (pnl.title.endsWith('$instance')) Object.assign(pnl, { repeat: 'instance', repeatDirection: 'h', maxPerRow: 2 });
@@ -700,6 +819,7 @@ const files = {
   'mallakhamb-competition-day.json': compDay,
 };
 if (P.host) files[`mallakhamb-${PLATFORM.startsWith('oci') ? 'oci' : PLATFORM}-resources.json`] = withRepeats(vmResources());
+if (PLATFORM === 'oci') files['mallakhamb-mongo.json'] = mongoDash();
 fs.mkdirSync(OUT, { recursive: true });
 for (const [name, d] of Object.entries(files)) {
   fs.writeFileSync(path.join(OUT, name), JSON.stringify(d, null, 2) + '\n');

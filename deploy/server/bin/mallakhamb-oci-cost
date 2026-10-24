@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# deploy/oci/PRODUCTION-READINESS.md 1.2 — the OCI budget "mallakhamb-guard" as Grafana gauges, every
+# hour on both app VMs (Grafana takes the max, so a failover loses nothing). Read with the VM's own
+# identity; the only permission it needs is policy mallakhamb-prod-pol-budget-read ("read
+# usage-budgets in tenancy"). Amounts are in the tenancy's billing currency (SGD).
+#
+# On any failure it writes nothing: the "updated" gauge then ages and alert mk-oci-cost-stale fires,
+# instead of the cost gauges silently reading 0.
+set -euo pipefail
+. /etc/mallakhamb/platform.sh
+TENANCY=$(curl -fsS -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v2/instance/ \
+  | python3 -c 'import sys, json; print(json.load(sys.stdin)["tenantId"])')
+J=$("$OCI" budgets budget budget list -c "$TENANCY" --all --target-type ALL \
+  --query "data[?\"display-name\"=='mallakhamb-guard'] | [0].{amount: amount, actual: \"actual-spend\", forecast: \"forecasted-spend\"}" --output json)
+read -r AMOUNT ACTUAL FORECAST < <(python3 -c '
+import sys, json
+d = json.loads(sys.argv[1] or "null")
+if not d or not d.get("amount"):
+    sys.exit("budget mallakhamb-guard not found")
+# OCI leaves actual/forecast empty until its first daily calculation: that is 0 spent.
+print(d["amount"], d.get("actual") or 0, d.get("forecast") or 0)' "$J")
+T=/var/lib/alloy/textfile
+{
+  printf '# HELP mallakhamb_oci_budget_amount Monthly OCI budget mallakhamb-guard, tenancy currency (SGD)\n# TYPE mallakhamb_oci_budget_amount gauge\nmallakhamb_oci_budget_amount %s\n' "$AMOUNT"
+  printf '# HELP mallakhamb_oci_cost_actual OCI spend this month so far, tenancy currency (SGD); Always Free = 0\n# TYPE mallakhamb_oci_cost_actual gauge\nmallakhamb_oci_cost_actual %s\n' "$ACTUAL"
+  printf '# HELP mallakhamb_oci_cost_forecast OCI forecast spend for this month, tenancy currency (SGD)\n# TYPE mallakhamb_oci_cost_forecast gauge\nmallakhamb_oci_cost_forecast %s\n' "$FORECAST"
+  printf '# HELP mallakhamb_oci_cost_updated_timestamp_seconds Unix time the budget was last read\n# TYPE mallakhamb_oci_cost_updated_timestamp_seconds gauge\nmallakhamb_oci_cost_updated_timestamp_seconds %s\n' "$(date +%s)"
+} > "$T/.oci_cost.tmp"
+chmod 0644 "$T/.oci_cost.tmp"                   # Alloy (user alloy) must read it
+mv -f "$T/.oci_cost.tmp" "$T/mallakhamb_oci_cost.prom"
+echo "oci cost: budget $AMOUNT, actual $ACTUAL, forecast $FORECAST (SGD)"

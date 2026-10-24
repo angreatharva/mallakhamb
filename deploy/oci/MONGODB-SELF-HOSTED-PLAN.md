@@ -152,6 +152,8 @@ Alloy's built-in `prometheus.exporter.mongodb` on each member → the existing G
 - any member's disk > 80 % (the host rules watch the active only)
 - any file in mongod's `rollback/` directory
 
+**Built (2026-10-24):** a textfile collector (`mallakhamb-mongo-metrics`), not the Alloy exporter, so no database password lives in Alloy; alerts as in §7b; dashboard **Mallakhamb MongoDB replica set** (uid `mallakhamb-mongo`). Lag is emitted only for members that are up and have an optime: a down member reports the 1970 epoch, which drew a 50-year spike during the fire drill.
+
 ## 7. How it gets built (phases, each reversible until cutover)
 
 | Step | What | Reversible? |
