@@ -6,8 +6,11 @@ production database is `BRMC` on a different cluster (`…njhirof.mongodb.net`, 
 Render's `/api/health`). The production dump (5.3), the rehearsal copy (6.1) and the cutover copy
 (M8 step 3) need production's own connection string, which only Render holds.
 
-**What you do:** copy Render's `MONGODB_URI` (Render → `mallakhamb-server` → Environment) and store
-it in the Vault from Cloud Shell. Nothing is echoed; the file is shredded.
+**What you do:** copy Render's `MONGODB_URI` (Render → `mallakhamb-server` → Environment; it is
+`mongodb+srv://angreatharva08_db_user:<pass>@mallakhamb-sg.njhirof.mongodb.net/BRMC`, the Singapore
+cluster) and store it in the Vault from Cloud Shell. Nothing is echoed; the file is shredded. The
+off-site secret's password (same user name, Mumbai cluster `kgjh7a6`) does **not** work there — the
+two clusters are in different Atlas projects (checked 2026-10-25: `bad auth`).
 
 ```bash
 read -rs -p "Paste Render's MONGODB_URI, then Enter: " U; echo
