@@ -11,18 +11,26 @@
  *
  * Skips when:
  *   - a meet is on TODAY or TOMORROW (India time), or ended yesterday — judges
- *     are seated, coaches pay late, and walk-ins arrive around a meet day;
+ *     are seated, coaches pay late, and walk-ins arrive around a meet day.
+ *     A meet whose dates span more than LONG_WINDOW_DAYS is a date window, not
+ *     a meet day (staging's SGAM-TRIALS-1 runs 26 Sep – 31 Dec, which would
+ *     skip every run for three months): it counts only while scores for it
+ *     were saved in the last SCORING_HOURS hours;
  *   - anyone touched a walk-in desk form in the last hour;
  *   - the live API is busy (more than E2E_BUSY_RPS requests a second, default
  *     1, over 20 s) — only asked when --live-api is given, i.e. on the VM that
  *     is serving; METRICS_TOKEN must be set for it to answer.
  *
- * It reads three things and writes nothing: competitions (dates), walk-in
- * drafts (updatedAt), and the API's own /metrics counter.
+ * It reads four things and writes nothing: competitions (dates), scores
+ * (updatedAt, long windows only), walk-in drafts (updatedAt), and the API's
+ * own /metrics counter.
  */
 const mongoose = require('mongoose');
 
 const SKIP = 10;
+const LONG_WINDOW_DAYS = 7;
+const SCORING_HOURS = 2;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const IST_MS = (5 * 60 + 30) * 60 * 1000;
 
 const arg = (name) => {
@@ -55,6 +63,18 @@ function meetsNearby(meets, now = new Date()) {
   });
 }
 
+/**
+ * Splits nearby meets into real meet days and long date windows (more than
+ * LONG_WINDOW_DAYS from first to last day). Pure, for the tests.
+ */
+function byLength(meets) {
+  const days = (m) => Math.round((new Date(m.endDate || m.startDate) - new Date(m.startDate)) / DAY_MS) + 1;
+  return {
+    short: meets.filter((m) => days(m) <= LONG_WINDOW_DAYS),
+    long: meets.filter((m) => days(m) > LONG_WINDOW_DAYS),
+  };
+}
+
 /** Total requests the API has answered, from its Prometheus histogram. */
 async function requestCount(api, token) {
   const res = await fetch(`${api.replace(/\/+$/, '')}/metrics`, {
@@ -80,13 +100,26 @@ async function main() {
   const meets = await db.collection('competitions')
     .find({ isDeleted: { $ne: true } }, { projection: { name: 1, place: 1, startDate: 1, endDate: 1 } })
     .toArray();
-  const near = meetsNearby(meets, now);
+  const { short, long } = byLength(meetsNearby(meets, now));
+  const scoring = [];
+  for (const m of long) {
+    const n = await db.collection('scores')
+      .countDocuments({ competition: m._id, updatedAt: { $gte: new Date(now.getTime() - SCORING_HOURS * 60 * 60 * 1000) } });
+    if (n > 0) scoring.push(m);
+  }
   const desk = await db.collection('walkinregistrations')
     .countDocuments({ updatedAt: { $gte: new Date(now.getTime() - 60 * 60 * 1000) } });
   await mongoose.disconnect();
 
-  if (near.length) {
-    skip(`meet day — ${near.map((m) => `${m.name} ${m.place} (${new Date(m.startDate).toISOString().slice(0, 10)})`).join(', ')} is on yesterday, today or tomorrow (IST)`);
+  const day = (d) => new Date(d).toISOString().slice(0, 10);
+  if (short.length) {
+    skip(`meet day — ${short.map((m) => `${m.name} ${m.place} (${day(m.startDate)})`).join(', ')} is on yesterday, today or tomorrow (IST)`);
+  }
+  if (scoring.length) {
+    skip(`scoring is on — ${scoring.map((m) => `${m.name} ${m.place}`).join(', ')} saved scores in the last ${SCORING_HOURS} h`);
+  }
+  if (long.length) {
+    console.log(`E2E GUARD: ${long.map((m) => `${m.name} ${m.place} (${day(m.startDate)} – ${day(m.endDate)})`).join(', ')} is a date window with no scoring in the last ${SCORING_HOURS} h — not a meet day`);
   }
   if (desk > 0) skip(`the walk-in desk was used in the last hour (${desk} form(s))`);
 
@@ -111,4 +144,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { meetsNearby, istMidnight };
+module.exports = { meetsNearby, istMidnight, byLength };
