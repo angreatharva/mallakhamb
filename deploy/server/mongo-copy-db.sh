@@ -3,13 +3,17 @@
 # database (MONGODB_URI in /etc/mallakhamb/app.env, i.e. Atlas) into replica set "mallakhamb",
 # then prove the copy: same collections, same document counts, same index definitions.
 #
-#   sudo bash mongo-copy-db.sh <vault-ocid> <source-db> <target-db> <staging|app> [--from-atlas]
+#   sudo bash mongo-copy-db.sh <vault-ocid> <source-db> <target-db> <staging|app> [--from-atlas [<secret-name>]]
 #
 #   <staging|app>  which replica-set user writes the copy (mallakhamb_staging or mallakhamb_app);
 #                  its password comes from Vault and is shredded afterwards.
-#   --from-atlas   read the source from Atlas through the off-site secret
-#                  (mallakhamb-prod-bom-secret-mongo-offsite-uri) instead of app.env — for the
-#                  cutover (M8), when app.env may already point at the replica set.
+#   --from-atlas   read the source from Atlas through a Vault secret instead of app.env — for the
+#                  cutover (M8), when app.env may already point at the replica set. The secret holds
+#                  one line NAME_URI='mongodb+srv://…'. Default: the off-site secret
+#                  (mallakhamb-prod-bom-secret-mongo-offsite-uri) — but that is the OLD staging
+#                  cluster (kgjh7a6), NOT production's (njhirof, Render's MONGODB_URI; found
+#                  2026-10-25). For production pass mallakhamb-prod-bom-secret-mongo-prod-source-uri,
+#                  which the owner stores from Cloud Shell. The source host is printed: check it.
 #
 # The target is dropped first (--drop) and rebuilt. URIs reach mongodump/mongorestore through
 # 0600 config files and mongosh through its environment — never a command line (ps shows those).
@@ -23,8 +27,8 @@ W="$(mktemp -d)"; trap 'find "$W" -type f -exec shred -u {} + 2>/dev/null; rm -r
 if [ "${5:-}" = --from-atlas ]; then
   . /etc/mallakhamb/platform.sh
   SRC_URI="$("$OCI" secrets secret-bundle get-secret-bundle-by-name --vault-id "$VAULT" \
-    --secret-name mallakhamb-prod-bom-secret-mongo-offsite-uri \
-    --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^OFFSITE_URI='\(.*\)'$/\1/p")"
+    --secret-name "${6:-mallakhamb-prod-bom-secret-mongo-offsite-uri}" \
+    --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^[A-Z_]*URI='\(.*\)'$/\1/p" | head -1)"
 else
   SRC_URI="$(sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
 fi
