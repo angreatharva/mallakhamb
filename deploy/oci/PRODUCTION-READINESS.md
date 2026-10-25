@@ -85,18 +85,20 @@ Oracle may stop an Always Free VM whose CPU p95, network **and** memory are all 
 ## 5. Protect the present (C0, minus the domain)
 
 - [ ] **5.1** Copy every Render env value (server + web) into a password manager (C0.5).
-- [ ] **5.2** Record Atlas tier, region, database name, access list (C0.6). *Recorded 2026-10-25 from the databases themselves (read-only, through the two Vault secrets on app-01); the **tier and the access list need the Atlas console** (signed out), so the box stays open for those two:*
+- [x] **5.2** Record Atlas tier, region, database name, access list (C0.6). *Recorded 2026-10-25: databases read-only through the two Vault secrets on app-01, tier and access list from the Atlas console (organisation **MallakhambIndia**):*
 
   | | Production (Render) | Off-site target (old staging) |
   |---|---|---|
   | Cluster host | `mallakhamb-sg.njhirof.mongodb.net` | `mallakhamb-competition.kgjh7a6.mongodb.net` |
-  | Region (owner) | Singapore | Mumbai |
-  | Atlas project | separate (the same user name has a different password) | separate |
+  | Atlas project / cluster | **`Mallakhamb-Production`** (`6abd37056a34473d34f74a90`) / **`Mallakhamb-SG`** | **`BRMC`** (`6975b472f6fb7877d5af5473`) / **`Mallakhamb-Competition`** |
+  | Region | AWS Singapore `ap-southeast-1` | AWS Mumbai `ap-south-1` |
+  | Tier | **FREE (M0)**, 512 MB, 6.61 MB used (1 %), auto-scaling off, 12 / 500 connections | **FREE (M0)**, 512 MB, 6.87 MB used (1 %), 7 / 500 connections |
+  | Backups | **inactive** (M0 has none — our own dumps + the OCI bucket are the backups) | inactive |
+  | IP access list | `0.0.0.0/0` (anywhere — needed: Render has no fixed outbound IP) + `152.58.0.228/32` ("Auto Setup") | `0.0.0.0/0` + `103.207.59.177/32` |
   | User | `angreatharva08_db_user` | `angreatharva08_db_user` |
   | MongoDB | 8.0.34, replica set `atlas-10jr3u-shard-0`, 3 members `ac-blx9uy3-shard-00-0{0,1,2}` | 8.0.34, `atlas-w3r2jk-shard-0`, `ac-cbseiwy-shard-00-0{0,1,2}` |
   | Databases | **`BRMC` 3.6 MB** (16 collections, 487 documents, 373 KB data), `BRMC_dev` 3.5 MB | `BRMC` 2.7 MB (old, 377 docs), `BRMC_dev` 2.5 MB, `BRMC_rehearsal_offsite` 2.5 MB (the hourly copy) |
   | Vault secret | `mallakhamb-prod-bom-secret-mongo-prod-source-uri` (2026-10-25) | `mallakhamb-prod-bom-secret-mongo-offsite-uri` |
-  | Tier, access list | *console* | *console* |
 
   Owner, 2026-10-25: everything on every cluster is test data; "BRMC" is production by name.
 - [x] **5.3** `mongodump` the live DB; store in two places (C0.7). *Done 2026-10-25: place 1 the OCI bucket, place 2 downloaded by the owner (details below).* *2026-10-25: tried from app-01 through the off-site secret — that secret is the OLD staging Atlas cluster (`kgjh7a6`), not production (`njhirof`, Render's `/api/health`). So the object `manual/2026-10-25T0714Z_production-BRMC_pre-cutover.archive.gz` in the backup bucket is **NOT production** despite its name (44 KB, 377 documents of an old `BRMC`; the retention lock refuses a rename or delete for 30 days). Next: the owner stores Render's `MONGODB_URI` as `mallakhamb-prod-bom-secret-mongo-prod-source-uri` ([scripts/05-prod-source-secret.md](scripts/05-prod-source-secret.md)); then the dump goes to the bucket (`manual/`) and the owner downloads one copy for the second place.* **2026-10-25 08:18 UTC, place 1 done:** owner stored the secret; production `BRMC` from `mallakhamb-sg.njhirof` (Singapore) dumped on app-01 → `manual/2026-10-25T0818Z_production-BRMC-singapore_pre-cutover.archive.gz` (60 KB, 487 documents, sha256 `fce3cddcc125e73a…`). **Place 2 (owner):** download it in Cloud Shell (`oci os object get --namespace bmfuwns4gjjr --bucket-name mallakhamb-prod-bom-bkt-backups --name <that name> --file brmc.archive.gz`, then Cloud Shell menu → Download) and keep it off OCI.
