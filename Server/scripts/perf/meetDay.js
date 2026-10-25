@@ -91,9 +91,13 @@ const listOf = (r) => {
 // ── measurements ────────────────────────────────────────────────────────────
 const stats = new Map();
 function record(endpoint, response) {
-  const row = stats.get(endpoint) || { ms: [], errors: 0, refused: 0, bytes: 0 };
+  const row = stats.get(endpoint) || { ms: [], errors: 0, refused: 0, unreached: 0, bytes: 0 };
+  // No answer at all (status 0) is the network or the tunnel, not the API: it
+  // is counted apart and kept out of the latencies, so a dropped connection
+  // reads as an incomplete run rather than as server errors.
+  if (response.status === 0) { row.unreached += 1; stats.set(endpoint, row); return; }
   row.ms.push(response.ms);
-  if (response.status === 0 || response.status >= 500) row.errors += 1;
+  if (response.status >= 500) row.errors += 1;
   else if (response.status >= 400) row.refused += 1;
   stats.set(endpoint, row);
 }
@@ -190,7 +194,8 @@ async function main() {
   const progress = setInterval(() => {
     const total = [...stats.values()].reduce((n, s) => n + s.ms.length, 0);
     const errors = [...stats.values()].reduce((n, s) => n + s.errors, 0);
-    process.stderr.write(`  ${new Date().toISOString().slice(11, 19)}  ${total} requests, ${errors} errors\n`);
+    const unreached = [...stats.values()].reduce((n, s) => n + s.unreached, 0);
+    process.stderr.write(`  ${new Date().toISOString().slice(11, 19)}  ${total} requests, ${errors} 5xx${unreached ? `, ${unreached} unanswered (network)` : ''}\n`);
   }, 60_000);
   const started = Date.now();
   await Promise.all([...seats.map(seatLoop), ...Array.from({ length: ARGS.spectators }, spectatorLoop)]);
@@ -207,19 +212,22 @@ async function main() {
     p99: Number(quantile(s.ms, 99).toFixed(1)),
     errors: s.errors,
     refused: s.refused,
+    unreached: s.unreached,
   }));
-  process.stderr.write(`\n${'endpoint'.padEnd(46)} ${'req'.padStart(6)} ${'req/s'.padStart(7)} ${'p50'.padStart(7)} ${'p95'.padStart(7)} ${'p99'.padStart(7)}  5xx  4xx\n`);
+  process.stderr.write(`\n${'endpoint'.padEnd(46)} ${'req'.padStart(6)} ${'req/s'.padStart(7)} ${'p50'.padStart(7)} ${'p95'.padStart(7)} ${'p99'.padStart(7)}  5xx  4xx  net\n`);
   for (const r of rows) {
     process.stderr.write(`${r.endpoint.padEnd(46)} ${String(r.requests).padStart(6)} ${String(r.perSecond).padStart(7)} `
-      + `${String(r.p50).padStart(7)} ${String(r.p95).padStart(7)} ${String(r.p99).padStart(7)}  ${String(r.errors).padStart(3)}  ${String(r.refused).padStart(3)}\n`);
+      + `${String(r.p50).padStart(7)} ${String(r.p95).padStart(7)} ${String(r.p99).padStart(7)}  ${String(r.errors).padStart(3)}  ${String(r.refused).padStart(3)}  ${String(r.unreached).padStart(3)}\n`);
   }
   const failing = rows.filter((r) => r.p95 >= 500 || r.errors > 0);
+  const unanswered = rows.reduce((n, r) => n + r.unreached, 0);
   process.stderr.write(`\nC6C request criteria (p95 < 500 ms, zero 5xx, every endpoint): ${failing.length ? `FAIL — ${failing.map((r) => r.endpoint).join('; ')}` : 'PASS'}\n`);
+  if (unanswered) process.stderr.write(`INCOMPLETE: ${unanswered} requests got no answer (network/tunnel) — check the target's own log for the same window before trusting the verdict.\n`);
   process.stderr.write('Host CPU < 70 %, Node CPU < 60 %, memory < 70 %: read them in Grafana for this window.\n');
   if (ARGS.json) process.stdout.write(JSON.stringify({ args: ARGS, seconds, rows }, null, 2));
 
   await server.close();
-  process.exit(failing.length ? 1 : 0);
+  process.exit(failing.length || unanswered ? 1 : 0);
 }
 
 main().catch((error) => {
