@@ -90,7 +90,7 @@ Oracle may stop an Always Free VM whose CPU p95, network **and** memory are all 
 - [ ] **5.4** Razorpay live: webhook URLs, events, recent delivery results, registered website URL (C0.8).
 - [ ] **5.5** Grafana: hosted scrape job name/URL/token location, synthetic ids 8476/8477, all rules Normal (C0.10).
 - [x] **5.6** Discount code replaced on Render and OCI (2026-10-19) (C0.9).
-- [ ] **5.7** `git tag move-ready-1 && git push --tags` (C1.10).
+- [x] **5.7** `git tag move-ready-1 && git push --tags` (C1.10). *2026-10-25: annotated tag `move-ready-1` on `77c0aa2` (Render and both VMs run it), pushed alone (`refs/tags/move-ready-1`). The same release's e2e run by hand on app-02 PASSED in 500 s: 17 steps ok, verify 32/32, every captured mail checked, 66/222 routes; walk-in skipped on the standby (its OCR sidecar runs on app-01 only, so walk-in is covered in the active's 00:00 / 18:00 slots).*
 
 ## 6. Rehearsal (C6 — the biggest block)
 
