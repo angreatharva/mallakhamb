@@ -85,10 +85,26 @@ Oracle may stop an Always Free VM whose CPU p95, network **and** memory are all 
 ## 5. Protect the present (C0, minus the domain)
 
 - [ ] **5.1** Copy every Render env value (server + web) into a password manager (C0.5).
-- [ ] **5.2** Record Atlas tier, region, database name, access list (C0.6).
+- [ ] **5.2** Record Atlas tier, region, database name, access list (C0.6). *Recorded 2026-10-25 from the databases themselves (read-only, through the two Vault secrets on app-01); the **tier and the access list need the Atlas console** (signed out), so the box stays open for those two:*
+
+  | | Production (Render) | Off-site target (old staging) |
+  |---|---|---|
+  | Cluster host | `mallakhamb-sg.njhirof.mongodb.net` | `mallakhamb-competition.kgjh7a6.mongodb.net` |
+  | Region (owner) | Singapore | Mumbai |
+  | Atlas project | separate (the same user name has a different password) | separate |
+  | User | `angreatharva08_db_user` | `angreatharva08_db_user` |
+  | MongoDB | 8.0.34, replica set `atlas-10jr3u-shard-0`, 3 members `ac-blx9uy3-shard-00-0{0,1,2}` | 8.0.34, `atlas-w3r2jk-shard-0`, `ac-cbseiwy-shard-00-0{0,1,2}` |
+  | Databases | **`BRMC` 3.6 MB** (16 collections, 487 documents, 373 KB data), `BRMC_dev` 3.5 MB | `BRMC` 2.7 MB (old, 377 docs), `BRMC_dev` 2.5 MB, `BRMC_rehearsal_offsite` 2.5 MB (the hourly copy) |
+  | Vault secret | `mallakhamb-prod-bom-secret-mongo-prod-source-uri` (2026-10-25) | `mallakhamb-prod-bom-secret-mongo-offsite-uri` |
+  | Tier, access list | *console* | *console* |
+
+  Owner, 2026-10-25: everything on every cluster is test data; "BRMC" is production by name.
 - [x] **5.3** `mongodump` the live DB; store in two places (C0.7). *Done 2026-10-25: place 1 the OCI bucket, place 2 downloaded by the owner (details below).* *2026-10-25: tried from app-01 through the off-site secret — that secret is the OLD staging Atlas cluster (`kgjh7a6`), not production (`njhirof`, Render's `/api/health`). So the object `manual/2026-10-25T0714Z_production-BRMC_pre-cutover.archive.gz` in the backup bucket is **NOT production** despite its name (44 KB, 377 documents of an old `BRMC`; the retention lock refuses a rename or delete for 30 days). Next: the owner stores Render's `MONGODB_URI` as `mallakhamb-prod-bom-secret-mongo-prod-source-uri` ([scripts/05-prod-source-secret.md](scripts/05-prod-source-secret.md)); then the dump goes to the bucket (`manual/`) and the owner downloads one copy for the second place.* **2026-10-25 08:18 UTC, place 1 done:** owner stored the secret; production `BRMC` from `mallakhamb-sg.njhirof` (Singapore) dumped on app-01 → `manual/2026-10-25T0818Z_production-BRMC-singapore_pre-cutover.archive.gz` (60 KB, 487 documents, sha256 `fce3cddcc125e73a…`). **Place 2 (owner):** download it in Cloud Shell (`oci os object get --namespace bmfuwns4gjjr --bucket-name mallakhamb-prod-bom-bkt-backups --name <that name> --file brmc.archive.gz`, then Cloud Shell menu → Download) and keep it off OCI.
 - [ ] **5.4** Razorpay live: webhook URLs, events, recent delivery results, registered website URL (C0.8).
-- [ ] **5.5** Grafana: hosted scrape job name/URL/token location, synthetic ids 8476/8477, all rules Normal (C0.10).
+- [x] **5.5** Grafana: hosted scrape job name/URL/token location, synthetic ids 8476/8477, all rules Normal (C0.10). *Checked live 2026-10-25 ~08:50 UTC (the record itself is `deploy/monitoring/PLAN.md` §3, still correct):*
+  - *Scrape jobs (Metrics Endpoint, `up` = 1): `mallakhamb-api` → `https://mallakhamb-server.onrender.com/metrics` (Render), `mallakhamb-api-staging` → the OCI staging API; token in Render's env / the OCI Vault env + the Grafana job only. Alloy jobs `mallakhamb-host` (active), `mallakhamb-host-standby`, `mallakhamb-db` all up. Only `prometheus.scrape.ocr` (127.0.0.1:8090) is down on app-02 and db-03 — expected, the OCR sidecar runs on app-01 only; no alert reads it.*
+  - *Synthetic checks: `api-ready` **8476** (120 s) and `web-home` **8477** (300 s), both enabled, 2 probes, 100 % uptime and reachability.*
+  - *Alert rules: **34/34 Normal** — `mallakhamb-api` 13, `mallakhamb-oci-staging` 21 (re-pasted by the owner 08:36 UTC, E2E stale = 72,000 s). The only firing rule in the stack is Grafana's own `asserts_up` (folder `frontend-observability-asserts`), not ours.*
 - [x] **5.6** Discount code replaced on Render and OCI (2026-10-19) (C0.9).
 - [x] **5.7** `git tag move-ready-1 && git push --tags` (C1.10). *2026-10-25: annotated tag `move-ready-1` on `77c0aa2` (Render and both VMs run it), pushed alone (`refs/tags/move-ready-1`). The same release's e2e run by hand on app-02 PASSED in 500 s: 17 steps ok, verify 32/32, every captured mail checked, 66/222 routes; walk-in skipped on the standby (its OCR sidecar runs on app-01 only, so walk-in is covered in the active's 00:00 / 18:00 slots).*
 
