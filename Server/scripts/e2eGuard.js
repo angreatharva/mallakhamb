@@ -75,13 +75,25 @@ function byLength(meets) {
   };
 }
 
-/** Total requests the API has answered, from its Prometheus histogram. */
+/**
+ * Total requests the API has answered, from its Prometheus histogram.
+ *
+ * The live API runs NODE_ENV=production and redirects any request without
+ * `X-Forwarded-Proto: https` to https:// (createApp.js). Caddy adds the header
+ * for public traffic; this call goes straight to the plain-HTTP port, so it adds
+ * it itself. Without it, fetch followed the 302 into a TLS handshake against a
+ * plain-HTTP socket and failed as "fetch failed", which turned every active-VM
+ * slot into exit 11 (2026-10-25). A redirect is now an error that names itself.
+ */
 async function requestCount(api, token) {
+  const headers = { 'X-Forwarded-Proto': 'https' };
+  if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${api.replace(/\/+$/, '')}/metrics`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers,
+    redirect: 'manual',
     signal: AbortSignal.timeout(5000),
   });
-  if (!res.ok) throw new Error(`/metrics answered ${res.status}`);
+  if (!res.ok) throw new Error(`/metrics answered ${res.status}${res.headers.get('location') ? ` → ${res.headers.get('location')}` : ''}`);
   const text = await res.text();
   let total = 0;
   for (const line of text.split('\n')) {
