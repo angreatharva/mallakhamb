@@ -158,11 +158,18 @@ Record the times here and in readiness 3.1.
 | Step | What exists | Check |
 |---|---|---|
 | A1 | `mallakhamb-oci-idle` + `.timer` (hourly :41) on app-01 and app-02; policy `mallakhamb-prod-pol-metrics-read` (*read metrics* + *inspect instances* in `mallakhamb-prod`); dashboard **OCI resources → Oracle's idle test** | first read: app-01 CPU 4.8 / mem 16.9 / net 0.006 %, app-02 4.4 / 14.7 / 0.006, db-03 7.8 / (57, not counted) / 0.013 → all three idle-eligible, on 6 GB history. **This closes readiness 3.2.** |
-| A3 | Notifications topic `mallakhamb-ops` (both addresses **ACTIVE**, confirmed by the owner 2026-10-24); Events rule `mallakhamb-vm-state` (instance action begin/end, terminate) | after confirming: the next stop or start emails both |
+| A3 | Notifications topic `mallakhamb-ops` (both addresses **ACTIVE**, confirmed by the owner 2026-10-24); Events rule `mallakhamb-vm-state` (instance action begin/end, terminate) — **narrowed 2026-10-26, see below** | after confirming: the next stop or start emails both |
 | A4 | `mk-host-missing-stg` (critical), `mk-standby-missing-stg`, `mk-vm-db-missing-stg` in `mallakhamb-oci-staging` (now 21 rules; Render 13 unchanged) | drill below |
 | B1 | Resource Scheduler `mallakhamb-autostart-07` and `-37` (CRON `7 * * * *` / `37 * * * *`, START all three VMs), policy `mallakhamb-prod-pol-autostart` (*use instances*, only those two schedules) | both runs SUCCEEDED |
 | D1 | app-01 and app-02 resized to **1 OCPU / 4 GB** (13:00–13:03 and 13:05–13:07 UTC; staging API down ~2 min for app-01); `cacheSizeGB` 1 → **0.75** on both, and the default in `install-mongo.sh` (old conf kept as `/etc/mongod.conf.bak-1g`) | after boot: app-01 880 MB of 3.9 GB (22.5 %), app-02 651 MB (16.7 %, rising as the cache warms); replica set 3/3 healthy, API ready 200 |
 
 **Drill (§5), db-03, 2026-10-24 UTC:** 13:17:10 soft stop → 13:18:15 STOPPED → 13:21:20 *MongoDB member not healthy* firing → 13:27:20 *members not all answering* → 13:32:20 *db-03 VM silent* (Prometheus marks the target gone after ~4 min, then the rule's 10 min) → **13:37:17 `mallakhamb-autostart-37` started it** → 13:38 RUNNING → 13:39–13:40 all three alerts resolved by themselves → 13:41 `rs.status()` 3/3 healthy, optimes equal. Stop to running: **20 min**. The Events email was not checked in the drill (subscriptions confirmed afterwards); the next real stop or start tests it.
+
+**A3 narrowed (2026-10-26).** The B1 schedules send START to all three VMs at :07 and :37. A START on a running VM does nothing, but it is still an instance action, so `mallakhamb-vm-state` emailed both addresses about **144 times a day**. `scripts/events-rule-narrow.sh` (Cloud Shell) changes it to:
+
+- `mallakhamb-vm-state`: `instanceaction.begin`/`.end` **only** where `instanceActionType` is stop, softstop, reset or softreset. Start no longer emails.
+- `mallakhamb-vm-terminate` (new): `terminateinstance.begin`/`.end`, with the same actions (topic `mallakhamb-ops`). Terminate events carry no `instanceActionType`, so one filtered rule would have silently dropped them.
+
+A VM coming back is seen in Grafana (the A4 alerts resolve by themselves). **Applied 2026-10-26 from Cloud Shell:** both rules ACTIVE and enabled; each one's single ONS action is the `mallakhamb-ops` topic (compared by topic id). The filter lists the action types in lower and upper case, because the event payload shows lower case. The next real stop is still the first test of the email path; whether an Oracle-initiated reclaim uses action type `stop` remains unverified, and A4 still covers it.
 
 **Watch:** the memory p95 now needs a few days at 4 GB to clear 20 % on the 7-day window (it needs > 5 % of the week's samples above 20 %, about 8.4 h, but the old 6 GB days stay in the window until 2026-10-31). app-02, the standby, runs no API, so it is the closer one; if its p95 stays under 20 % after 2026-10-31, it stays idle-eligible, and B1 is its safety net.
