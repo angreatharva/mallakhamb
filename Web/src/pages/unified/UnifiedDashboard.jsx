@@ -18,6 +18,7 @@ const AdminJudges = lazy(() => import('../admin/AdminJudges'));
 const AdminTransactions = lazy(() => import('../admin/AdminTransactions'));
 const AdminLots = lazy(() => import('../admin/AdminLots'));
 const WalkInDesk = lazy(() => import('../desk/WalkInDesk'));
+const AdminJudgeFairness = lazy(() => import('../admin/AdminJudgeFairness'));
 const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
@@ -229,6 +230,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'lots', label: 'Lots' },
     { id: 'scores', label: 'Scores' },
     { id: 'judges', label: 'Judges' },
+    { id: 'fairness', label: 'Fairness' },
     { id: 'transactions', label: 'Transactions' },
     // Competition-day registration from a paper form (pages/desk).
     { id: 'desk', label: 'Walk-in' },
@@ -238,6 +240,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'lots', label: 'Lots' },
     { id: 'scores', label: 'Scores' },
     { id: 'judges', label: 'Judges' },
+    { id: 'fairness', label: 'Fairness' },
     { id: 'transactions', label: 'Transactions' },
     { id: 'desk', label: 'Walk-in' },
   ];
@@ -565,6 +568,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <AdminTransactions />;
         case 'desk':
           return <WalkInDesk />;
+        case 'fairness':
+          return <AdminJudgeFairness isSuperAdmin competitionId={selectedCompetition || null} />;
         default:
           return null;
       }
@@ -584,6 +589,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <AdminTransactions />;
         case 'desk':
           return <WalkInDesk />;
+        case 'fairness':
+          return <AdminJudgeFairness competitionId={currentCompetition?._id ? String(currentCompetition._id) : null} />;
         default:
           return null;
       }

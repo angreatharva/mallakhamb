@@ -1,0 +1,89 @@
+/*
+ * Charts (components/charts). Imported once from components/ui/ui.css, before
+ * Tailwind's layers, like every primitive.
+ *
+ * Marks wear the viz tokens; every word on a chart wears the ink (fg) tokens —
+ * a series is identified by the swatch beside its label, never by tinting the
+ * label. Gridlines are recessive hairlines; the baseline is one step stronger.
+ */
+
+.viz { position: relative; color: var(--fg); }
+.viz svg { display: block; overflow: visible; }
+.viz-text { fill: var(--fg); font-family: var(--font-text); font-size: 12px; font-variant-numeric: tabular-nums; }
+.viz-text--muted { fill: var(--fg-muted); }
+.viz-text--strong { font-weight: 600; }
+.viz-grid { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
+.viz-axis { stroke: var(--line-strong); stroke-width: 1; shape-rendering: crispEdges; }
+.viz-crosshair { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.viz-hit { fill: transparent; cursor: crosshair; }
+.viz-hit:focus { outline: none; }
+.viz:focus-within .viz-focus-ring { stroke: var(--focus-ring); stroke-width: 2; }
+
+/* Lines wipe in (a growing clip rect); bars grow from their baseline. Off for reduced motion. */
+.viz-grow { transform-box: fill-box; transform-origin: left center; animation: viz-grow 700ms var(--ease-out) both; }
+.viz-grow-y { transform-box: fill-box; transform-origin: center bottom; animation: viz-grow-y 700ms var(--ease-out) both; }
+.viz-fade { animation: viz-fade 500ms var(--ease-out) both; }
+@keyframes viz-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes viz-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes viz-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .viz-grow, .viz-grow-y, .viz-fade { animation: none; }
+}
+
+/* Tooltip: an in-flow layer inside the chart, never a page overlay. */
+.viz-tip {
+  position: absolute; z-index: 5; pointer-events: none;
+  min-width: 140px; max-width: 260px; padding: 8px 10px;
+  background: rgb(var(--surface-overlay)); color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  border-radius: var(--radius-control);
+  font-size: 13px; line-height: 1.4;
+}
+.viz-tip__title { font-weight: 600; margin: 0 0 4px; }
+.viz-tip__row { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.viz-tip__row > span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-secondary); }
+
+/* Legend: square swatch + ink label. */
+.viz-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--fg-secondary); }
+.viz-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.viz-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.viz-swatch--line { width: 16px; height: 0; border-radius: 0; border-top-width: 2px; border-top-style: solid; }
+.viz-swatch--dashed { border-top-style: dashed; }
+.viz-swatch--dotted { border-top-style: dotted; }
+
+/* Chart card */
+.viz-card__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+.viz-card__title { margin: 0; }
+.viz-card__takeaway { margin: 4px 0 0; color: var(--fg-secondary); font-size: 14px; max-width: 62ch; }
+
+/* Bullet meter (HTML, so it reflows and its numbers are real text). */
+.viz-bullet { display: grid; gap: 6px; }
+.viz-bullet__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.viz-bullet__track { position: relative; height: 14px; background: rgb(var(--viz-mid)); border-radius: 2px; }
+.viz-bullet__fill { position: absolute; inset: 0 auto 0 0; border-radius: 2px; }
+.viz-bullet__tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--fg); }
+.viz-bullet__tick--best { background: var(--fg-muted); }
+.viz-bullet__notes { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--fg-muted); }
+
+/* Heatmap (HTML grid). Wide grids scroll inside their card, never the page. */
+.viz-heat-wrap { overflow-x: auto; max-width: 100%; min-width: 0; }
+.viz-heat { display: grid; gap: 2px; font-size: 12px; }
+.viz-heat__head { color: var(--fg-muted); font-weight: 600; padding: 6px 4px; text-align: center; align-self: end; }
+.viz-heat__row { color: var(--fg); padding: 6px 8px 6px 0; align-self: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viz-heat__cell {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 4px;
+  min-height: 40px; padding: 4px; border-radius: 2px; text-align: center;
+  font-variant-numeric: tabular-nums; border: 0; font: inherit; font-weight: 600; color: var(--fg);
+}
+button.viz-heat__cell { cursor: pointer; }
+button.viz-heat__cell:hover { box-shadow: inset 0 0 0 2px var(--line-strong); }
+.viz-heat__cell--empty {
+  color: var(--fg-muted);
+  background: repeating-linear-gradient(135deg, transparent 0 5px, var(--line) 5px 6px);
+}
+.viz-heat__cell--home { box-shadow: inset 0 0 0 2px var(--fg); }
+
+/* Lean rows (judge insights, fairness evidence). */
+.viz-lean { display: grid; grid-template-columns: minmax(96px, 30%) 1fr auto; align-items: center; gap: 8px 12px; }
+.viz-lean__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.viz-lean__value { font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; min-width: 5.5em; }

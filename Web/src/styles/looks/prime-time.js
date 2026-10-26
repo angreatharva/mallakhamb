@@ -124,6 +124,13 @@ export default defineLook({
       'medal-gold': '#F5A623',
       'medal-silver': '#C0C0C0',
       'medal-bronze': '#CD7F32',
+
+      'viz-1': '#3987E5',
+      'viz-2': '#D95926',
+      'viz-3': '#199E70',
+      'viz-down': '#3987E5',
+      'viz-up': '#E8663A',
+      'viz-mid': '#3A3029',
     },
 
     light: {
@@ -171,6 +178,13 @@ export default defineLook({
       'medal-gold': '#92400E',
       'medal-silver': '#475569',
       'medal-bronze': '#9A3412',
+
+      'viz-1': '#2A78D6',
+      'viz-2': '#E0602E',
+      'viz-3': '#15966A',
+      'viz-down': '#2A78D6',
+      'viz-up': '#C9441C',
+      'viz-mid': '#E6DED2',
     },
   },
 

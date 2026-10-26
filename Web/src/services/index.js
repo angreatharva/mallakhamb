@@ -8,3 +8,4 @@ export { accountAPI } from './auth/account.api.js';
 export { teamAPI } from './team/team.api.js';
 export { judgeAPI } from './public/judge.api.js';
 export { publicAPI } from './public/public.api.js';
+export { statsAPI } from './user/stats.api.js';

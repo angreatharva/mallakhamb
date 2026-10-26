@@ -284,6 +284,12 @@
   --medal-gold: 245 166 35;
   --medal-silver: 192 192 192;
   --medal-bronze: 205 127 50;
+  --viz-1: 57 135 229;
+  --viz-2: 217 89 38;
+  --viz-3: 25 158 112;
+  --viz-down: 57 135 229;
+  --viz-up: 232 102 58;
+  --viz-mid: 58 48 41;
   --scrollbar-track: rgb(var(--bg));
   --scrollbar-thumb: rgb(var(--ink) / 0.22);
   --scrollbar-thumb-hover: rgb(var(--ink) / 0.36);
@@ -351,6 +357,12 @@
   --medal-gold: 146 64 14;
   --medal-silver: 71 85 105;
   --medal-bronze: 154 52 18;
+  --viz-1: 42 120 214;
+  --viz-2: 224 96 46;
+  --viz-3: 21 150 106;
+  --viz-down: 42 120 214;
+  --viz-up: 201 68 28;
+  --viz-mid: 230 222 210;
   --scrollbar-track: rgb(var(--bg));
   --scrollbar-thumb: rgb(var(--ink) / 0.22);
   --scrollbar-thumb-hover: rgb(var(--ink) / 0.36);

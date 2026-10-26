@@ -109,6 +109,18 @@ export const APPEARANCE_TOKENS = {
   'medal-silver': { type: 'triplet', purpose: 'second place' },
   'medal-bronze': { type: 'triplet', purpose: 'third place' },
 
+  // Charts (components/charts). One categorical set — validated for colour
+  // blindness and contrast on the page surface in both appearances with the
+  // dataviz palette validator (2026-10-26) — and one diverging pair with a
+  // neutral midpoint. Slot 1/2/3 = Difficulty/Combination/Execution and
+  // Pole/Rope/Hanging; text never wears these, only marks do.
+  'viz-1': { type: 'triplet', purpose: 'chart series 1 (Difficulty, Pole)' },
+  'viz-2': { type: 'triplet', purpose: 'chart series 2 (Combination, Rope)' },
+  'viz-3': { type: 'triplet', purpose: 'chart series 3 (Execution, Hanging)' },
+  'viz-down': { type: 'triplet', purpose: 'diverging: below the panel / lower' },
+  'viz-up': { type: 'triplet', purpose: 'diverging: above the panel / higher' },
+  'viz-mid': { type: 'triplet', purpose: 'diverging midpoint and empty tracks' },
+
   'scrollbar-track': { type: 'color', purpose: 'scrollbar' },
   'scrollbar-thumb': { type: 'color', purpose: 'scrollbar' },
   'scrollbar-thumb-hover': { type: 'color', purpose: 'scrollbar' },

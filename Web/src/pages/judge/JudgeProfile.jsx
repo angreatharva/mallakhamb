@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Camera, Save, Scale } from 'lucide-react';
@@ -12,8 +12,11 @@ import { logger } from '@/infrastructure/logger';
 
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
 import {
-  Button, Field, Heading, Input, Panel, Select, Tag, TextLink,
+  Button, Field, Heading, Input, Panel, Select, TabPanel, Tabs, Tag, TextLink,
 } from '@/components/ui';
+
+// "Marking insights" (docs/stats-plan.md §5c), loaded only when opened.
+const JudgeStats = lazy(() => import('./JudgeStats'));
 
 const CERTIFICATION_LEVELS = [
   { value: 'National', label: 'National' },
@@ -66,6 +69,9 @@ const JudgeProfile = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const photoInputRef = useRef(null);
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'stats' ? 'stats' : 'profile';
+  const setTab = (next) => setParams(next === 'stats' ? { tab: 'stats' } : {});
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -180,7 +186,7 @@ const JudgeProfile = () => {
 
   return (
     <div className="min-h-dvh px-[var(--pad)] py-8 bg-bg text-fg">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className={`${tab === 'stats' ? 'max-w-6xl' : 'max-w-3xl'} mx-auto space-y-6`}>
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <TextLink as="button" type="button" className="ui-link--quiet" onClick={() => navigate('/judge/dashboard')}>
@@ -226,6 +232,24 @@ const JudgeProfile = () => {
           </div>
         </Panel>
 
+        <Tabs
+          label="Profile sections"
+          idBase="judge-profile"
+          value={tab}
+          onChange={setTab}
+          tabs={[{ id: 'profile', label: 'Profile' }, { id: 'stats', label: 'Marking insights' }]}
+        />
+
+        {tab === 'stats' && (
+          <TabPanel idBase="judge-profile" tabId="stats" className="outline-none">
+            <Suspense fallback={<p className="type-body-s text-fg-muted m-0">Loading insights…</p>}>
+              <JudgeStats />
+            </Suspense>
+          </TabPanel>
+        )}
+
+        {tab === 'profile' && (
+        <div role="tabpanel" id="judge-profile-panel-profile" aria-labelledby="judge-profile-tab-profile" className="space-y-6">
         {/* Account details */}
         <Panel>
           <SectionHeading hint="Your details, and the credentials organisers see when staffing a panel.">
@@ -295,6 +319,8 @@ const JudgeProfile = () => {
         <PasswordSection role="judge" idPrefix="judge-profile" />
         {profile && (
           <EmailSection user={profile} userType="judge" pending={pendingEmailChange} onChanged={load} idPrefix="judge-profile" />
+        )}
+        </div>
         )}
       </div>
     </div>

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -10,12 +10,18 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import { getRoleFromPath } from '@/utils/auth/roleFromPath';
 import { AppHeader } from '@/components/shell';
-import { Button, Field, Heading, Input, Panel, Select, Tag, TextLink } from '@/components/ui';
+import { Button, Field, Heading, Input, Panel, Select, TabPanel, Tabs, Tag, TextLink } from '@/components/ui';
 import { EmailSection, PasswordSection, SectionHeading } from './account/AccountSections';
 import { RELATIONS } from '@/pages/player/registration/playerRegistration';
 import PlayerDefaultPasswordSection from '@/pages/coach/PlayerDefaultPasswordSection';
 
 const ROLE_NAME = { player: 'Player', coach: 'Coach', admin: 'Admin', superadmin: 'Super Admin' };
+
+// The Stats tab (docs/stats-plan.md): players see their own record, coaches
+// their squad. Lazy, so the charts load only when the tab is opened.
+const PlayerStats = lazy(() => import('./stats/PlayerStats'));
+const CoachStats = lazy(() => import('./stats/CoachStats'));
+const STATS_FOR = { player: PlayerStats, coach: CoachStats };
 
 const PHONE_RULE = {
   validate: (value) => {
@@ -56,6 +62,13 @@ const AccountProfile = () => {
   const { logout, login } = useAuth();
   const { clearCompetitionContext } = useCompetition();
   const role = getRoleFromPath(location.pathname);
+  const [params, setParams] = useSearchParams();
+  const StatsView = STATS_FOR[role] || null;
+  const tab = StatsView && params.get('tab') === 'stats' ? 'stats' : 'profile';
+  const setTab = (next) => {
+    const nextParams = new URLSearchParams(next === 'stats' ? { tab: 'stats' } : {});
+    setParams(nextParams);
+  };
 
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +144,7 @@ const AccountProfile = () => {
     <>
       <AppHeader fixed role={role} homeTo={dashboard} onLogout={handleLogout} profileTo={`/${role}/profile`} />
       <main id="main-content" className="pt-16 bg-bg text-fg min-h-dvh">
-        <div className="max-w-3xl mx-auto px-[var(--pad)] py-8 space-y-6">
+        <div className={`${tab === 'stats' ? 'max-w-6xl' : 'max-w-3xl'} mx-auto px-[var(--pad)] py-8 space-y-6`}>
           <TextLink as={Link} to={dashboard} className="ui-link--quiet">
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             Dashboard
@@ -163,6 +176,26 @@ const AccountProfile = () => {
                 </div>
               </Panel>
 
+              {StatsView && (
+                <Tabs
+                  label="Account sections"
+                  idBase="account"
+                  value={tab}
+                  onChange={setTab}
+                  tabs={[{ id: 'profile', label: 'Profile' }, { id: 'stats', label: role === 'coach' ? 'Squad stats' : 'My stats' }]}
+                />
+              )}
+
+              {tab === 'stats' && StatsView && (
+                <TabPanel idBase="account" tabId="stats" className="outline-none">
+                  <Suspense fallback={<p className="type-body-s text-fg-muted m-0">Loading stats…</p>}>
+                    <StatsView />
+                  </Suspense>
+                </TabPanel>
+              )}
+
+              {tab === 'profile' && (
+              <div {...(StatsView ? { role: 'tabpanel', id: 'account-panel-profile', 'aria-labelledby': 'account-tab-profile' } : {})} className="space-y-6">
               <Panel id="details" className="scroll-mt-24" aria-labelledby="account-details-title">
                 <SectionHeading hint={identityLocked ? 'Your date of birth and gender are set by your team entry. Ask an organiser to correct them.' : null}>
                   <span id="account-details-title">My profile</span>
@@ -242,6 +275,8 @@ const AccountProfile = () => {
               <PasswordSection role={role} idPrefix="account" />
               {userType === 'coach' && <PlayerDefaultPasswordSection idPrefix="account" />}
               <EmailSection user={user} userType={userType} pending={account.pendingEmailChange} onChanged={load} idPrefix="account" />
+              </div>
+              )}
             </>
           )}
         </div>

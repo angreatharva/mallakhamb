@@ -1,6 +1,15 @@
 # Stats in the profile — Player, Coach, Judge (plan)
 
-Status: **PLAN ONLY — nothing built.** Drafted 2026-10-26 against master `28772d9`.
+Status: **BUILT** (all phases P0–P4) on 2026-10-27, branch `feature/profile-stats`. Drafted 2026-10-26 against master `28772d9`.
+
+Decisions taken (owner, 2026-10-26): judges see only their own insights, admins their own meets, the super admin everything; players see seats ("Judge 2"), never judge names; charts are hand-built SVG on the design tokens.
+
+Where it lives:
+- API: `GET /api/stats/player | coach | judge | judge-fairness` — `Server/src/services/stats/stats.service.js`, `routes/stats.routes.js`.
+- Shared rules: `utils/scoring/published-score.util.js` (published = finalized + locked; the public board uses it too), `utils/scoring/slip-breakdown.util.js` (server twin of the web's `averageSlipBreakdown`, held equal by `Web/src/utils/scoring/slipBreakdownSync.test.js`), `utils/stats/judge-lean.util.js` (the fairness maths).
+- Slip authorship: `Score.playerScores.judgeSlips.judgeAccountId` + `attribution`, stamped in `admin.controller.saveScores`; migration `013_judge_slip_authors` back-fills older slips as `inferred`. The public feed strips both.
+- Web: `components/charts/` (primitives), `pages/shared/stats/` (player + coach), `pages/judge/JudgeStats.jsx` (Profile → Marking insights), `pages/admin/AdminJudgeFairness.jsx` (dashboard → Fairness tab). Profile tabs are deep-linkable: `?tab=stats&meet=<id>&app=<apparatus>`.
+- Chart colours: look tokens `--viz-1..3`, `--viz-up/down/mid` (validated for colour blindness, light and dark).
 
 ## 1. What already exists (and what doesn't)
 
@@ -121,10 +130,10 @@ Primitives (in `Web/src/components/charts/`): `StatTile` + `Sparkline`, `LineCha
 
 | Endpoint | Who |
 |---|---|
-| `GET /api/players/me/stats?competition=all\|<id>&apparatus=` | player |
-| `GET /api/coaches/me/stats?competition=&team=` | coach |
-| `GET /api/judges/me/stats?competition=` | judge |
-| `GET /api/admin/stats/judge-integrity?competition=` | admin (scoped) / super-admin |
+| `GET /api/stats/player` (filtered in the browser) | player |
+| `GET /api/stats/coach` (filtered in the browser) | coach |
+| `GET /api/stats/judge?competition=` | judge |
+| `GET /api/stats/judge-fairness?competition=` | admin (own meets, required) / super-admin (any or all) |
 
 Responses are small pre-aggregated JSON (no raw slips to players/coaches), added to the OpenAPI spec and the perf harness.
 
