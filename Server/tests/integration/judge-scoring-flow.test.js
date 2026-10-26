@@ -309,4 +309,22 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect(performer.judgeScores.judge1).toBe(8.1);
     expect(performer.judgeScores.judge2).toBe(8.2);
   });
+  test('every slip records the judge account that wrote it', async () => {
+    expect((await post(tokenFor(j1), slip({ score: 8.1 }))).status).toBe(200);
+    expect((await post(tokenFor(senior), slip({ score: 8.2 }))).status).toBe(200);
+
+    // The Senior Judge correcting Judge 1's slip writes into Judge 1's seat;
+    // the mark is still Judge 1's, so it stays credited to that account.
+    const override = await post(tokenFor(senior), slip({ score: 8.0, judgeType: 'Judge 1', overrideBySenior: true }));
+    expect(override.status).toBe(200);
+
+    const doc = await Score.findOne({ teamId, competition: competitionId }).lean();
+    const byRole = Object.fromEntries(doc.playerScores[0].judgeSlips.map((s) => [s.judgeRole, s]));
+
+    expect(String(byRole.SR_JUDGE.judgeAccountId)).toBe(String(senior.account._id));
+    expect(byRole.SR_JUDGE.attribution).toBe('recorded');
+    expect(String(byRole.J1.judgeAccountId)).toBe(String(j1.account._id));
+    expect(byRole.J1.attribution).toBe('recorded');
+    expect(byRole.J1.total).toBe(8.0);
+  });
 });

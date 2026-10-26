@@ -26,6 +26,7 @@ const createPaymentRoutes = require('./payment.routes');
 const createPublicRoutes = require('./public.routes');
 const createDocsRoutes = require('./docs.routes');
 const createWalkInRoutes = require('./walk-in.routes');
+const createStatsRoutes = require('./stats.routes');
 
 // CSRF token endpoint
 const { csrfTokenHandler } = require('../middleware/csrf.middleware');
@@ -245,6 +246,14 @@ function loadRoutes(app, container, options = {}) {
   }
   apiRouter.use('/teams', createTeamRoutes(container));
   apiRouter.use('/scoring', createScoringRoutes(container));
+
+  // ============================================================
+  // STATS ROUTES (profile Stats tabs, admin Judge fairness board)
+  // ============================================================
+  if (userLimiter) {
+    apiRouter.use('/stats', userLimiter);
+  }
+  apiRouter.use('/stats', createStatsRoutes(container));
   apiRouter.use('/webhooks', createPaymentRoutes(container));
 
   // ============================================================

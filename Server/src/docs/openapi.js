@@ -2025,6 +2025,45 @@ function buildPaths() {
     responses: { 200: ok('Published scores', { type: 'array', items: ref('Score') }), ...VALIDATION_ERROR },
   }));
 
+  // ── Stats (profile Stats tabs, admin Judge fairness board) ──
+  const statsObject = { type: 'object', additionalProperties: true };
+  add('/api/stats/player', 'get', op({
+    tag: 'Stats', roles: 'player', operationId: 'statsPlayer',
+    summary: "The signed-in player's published performances",
+    description:
+      'Every performance the Senior Judge has Final Submitted and the Scorer has locked, '
+      + 'with the published Difficulty / Combination / Execution average, the board rank, '
+      + 'the category average and best, the combination checklist and the panel by seat. '
+      + 'Never names a judge.',
+    responses: { 200: ok('Player stats', statsObject) },
+  }));
+  add('/api/stats/coach', 'get', op({
+    tag: 'Stats', roles: 'coach', operationId: 'statsCoach',
+    summary: "Published performances of every athlete on the coach's teams",
+    description: "Per-athlete headline numbers, every performance, and each team's Team Championship place per meet.",
+    responses: { 200: ok('Coach stats', statsObject) },
+  }));
+  add('/api/stats/judge', 'get', op({
+    tag: 'Stats', roles: 'judge', operationId: 'statsJudge',
+    summary: "The signed-in judge's marking pattern",
+    description:
+      'Each published mark compared with the median of the other judges on that panel: '
+      + 'overall strictness, per section, per meet, and per team (lean = deviation on the team '
+      + 'minus deviation on every other team).',
+    parameters: [queryParam('competition', S.id, 'Limit to one competition', false)],
+    responses: { 200: ok('Judge stats', statsObject), ...VALIDATION_ERROR },
+  }));
+  add('/api/stats/judge-fairness', 'get', op({
+    tag: 'Stats', roles: 'admin, superadmin', operationId: 'statsJudgeFairness',
+    summary: 'Judge × team leans for a meet',
+    description:
+      'An admin must name one of their own competitions; a super admin may name any or none (all meets). '
+      + 'A lean is flagged only with at least 6 recorded performances, a size of at least 0.30 '
+      + 'and a 90% confidence interval that excludes zero.',
+    parameters: [queryParam('competition', S.id, 'Competition id (required for admins)', false)],
+    responses: { 200: ok('Judge fairness board', statsObject), ...VALIDATION_ERROR },
+  }));
+
   add('/api/public/team-championship', 'get', op({
     tag: 'Public', auth: false, operationId: 'publicTeamChampionship',
     summary: 'Team Championship standing for one category',
@@ -2584,6 +2623,7 @@ function buildOpenApiDocument({ serverUrl = 'http://localhost:5000' } = {}) {
       { name: 'Running order', description: 'Lot draw and sequencing' },
       { name: 'Payments', description: 'Razorpay orders, reconciliation and reporting' },
       { name: 'Public', description: 'Anonymous endpoints for the public site' },
+      { name: 'Stats', description: 'Profile Stats tabs and the Judge fairness board' },
       { name: 'Super admin', description: 'Platform-wide administration' },
       { name: 'Walk-in desk', description: 'Competition-day registration from a paper form' },
     ],

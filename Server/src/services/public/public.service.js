@@ -9,7 +9,7 @@
 const { ValidationError } = require('../../errors');
 // The slug→display map used to be a fourth private copy in this file. It lives
 // in config/cop-rules, which is also what GET /api/public/cop-rules serves.
-const { toCompetitionTypeDisplay, apparatusKey } = require('../../config/cop-rules');
+const { toCompetitionTypeDisplay } = require('../../config/cop-rules');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
 const { rankTeamChampionship } = require('../../utils/scoring/team-championship.util');
 const {
@@ -19,6 +19,7 @@ const {
   stripSlipBreakdowns,
 } = require('../../utils/data/user-projection.util');
 const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
+const { publishedScoreQuery, publishedPlayerScores } = require('../../utils/scoring/published-score.util');
 
 class PublicService {
   /**
@@ -107,10 +108,7 @@ class PublicService {
        * before the field existed the path is missing, and `$ne: []` would
        * count that as non-empty and publish an unlocked sheet.
        */
-      const query = {
-        competition: competitionId,
-        $or: [{ isLocked: true }, { 'lockedApparatus.0': { $exists: true } }],
-      };
+      const query = publishedScoreQuery({ competition: competitionId });
 
       /*
        * Scoping to one team is allowed.
@@ -147,26 +145,11 @@ class PublicService {
 
       const formattedScores = scores.map((score) => {
         const scoreObj = score.toObject ? score.toObject() : score;
-        // Gate 1 — the Senior Judge has Final Submitted this athlete. Applied
-        // per row, not per document: locking a sheet does not retroactively
-        // publish a performer the Senior Judge never signed off.
-        let playerScores = (scoreObj.playerScores || [])
-          .filter((ps) => ps.isFinalized === true)
+        // Gate 1 (the Senior Judge's Final Submit, per row) and Gate 2 (this
+        // apparatus locked, unless the admin froze the whole sheet) — one
+        // definition, shared with the profile stats (published-score.util).
+        let playerScores = publishedPlayerScores(scoreObj)
           .map((ps) => stripSlipBreakdowns(this.enrichPlayerScore(ps)));
-
-        /*
-         * Gate 2, per row. The document qualified because SOMETHING in it is
-         * locked; this is what decides which rows that was. Without it, the
-         * Scorer locking Pole would publish the Rope marks sitting unfinished
-         * in the same document — the disclosure the lock exists to prevent.
-         *
-         * A document the admin froze outright publishes in full, which is what
-         * `isLocked` has always meant.
-         */
-        if (!scoreObj.isLocked) {
-          const published = new Set((scoreObj.lockedApparatus || []).map(apparatusKey));
-          playerScores = playerScores.filter((ps) => published.has(apparatusKey(ps.apparatus)));
-        }
 
         // Filter by apparatus if specified
         if (filters.apparatus) {

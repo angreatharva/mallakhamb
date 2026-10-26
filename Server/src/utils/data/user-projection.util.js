@@ -270,6 +270,10 @@ function stripSensitiveFields(userObject) {
  * The slips themselves are kept: the public results page renders one column per
  * judge from them.
  *
+ * The slip's author (`judgeAccountId`, `attribution`) goes too. It exists for
+ * the admin Judge fairness board; on the anonymous results page it would tie
+ * every mark to a person, and athletes see seats ("Judge 2"), never judges.
+ *
  * @param {Object} playerScore
  * @returns {Object}
  */
@@ -279,7 +283,7 @@ function stripSlipBreakdowns(playerScore) {
 
   return {
     ...row,
-    judgeSlips: row.judgeSlips.map(({ breakdown, ...slip }) => slip),
+    judgeSlips: row.judgeSlips.map(({ breakdown, judgeAccountId, attribution, ...slip }) => slip),
   };
 }
 

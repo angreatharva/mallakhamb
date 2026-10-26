@@ -76,6 +76,10 @@
       "description": "Anonymous endpoints for the public site"
     },
     {
+      "name": "Stats",
+      "description": "Profile Stats tabs and the Judge fairness board"
+    },
+    {
       "name": "Super admin",
       "description": "Platform-wide administration"
     },
@@ -17459,6 +17463,342 @@
         },
         "description": "Two gates: the Scorer has LOCKED the sheet, and the Senior Judge has finalized that athlete. The second is applied per row — locking a sheet does not retroactively publish a performer nobody signed off.\n\n`competitionId` is **required**. It used to be optional, and omitting it returned every published score in the database — 19.5 MB on one 1000-team meet, with no bound across competitions.\n\nEach `judgeSlips[]` entry carries its section totals but **not** its `breakdown` (the A/B/C element counts and combination checklist). That exists so the judge who wrote a slip can re-open it for edit, and is 43% of a row.\n\n**Public** — no authentication required.",
         "security": []
+      }
+    },
+    "/api/stats/player": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "summary": "The signed-in player's published performances",
+        "operationId": "statsPlayer",
+        "responses": {
+          "200": {
+            "description": "Player stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, expired or logged-out token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated, but the principal lacks the required role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Every performance the Senior Judge has Final Submitted and the Scorer has locked, with the published Difficulty / Combination / Execution average, the board rank, the category average and best, the combination checklist and the panel by seat. Never names a judge.\n\n**Roles:** player",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ]
+      }
+    },
+    "/api/stats/coach": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "summary": "Published performances of every athlete on the coach's teams",
+        "operationId": "statsCoach",
+        "responses": {
+          "200": {
+            "description": "Coach stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, expired or logged-out token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated, but the principal lacks the required role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Per-athlete headline numbers, every performance, and each team's Team Championship place per meet.\n\n**Roles:** coach",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ]
+      }
+    },
+    "/api/stats/judge": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "summary": "The signed-in judge's marking pattern",
+        "operationId": "statsJudge",
+        "parameters": [
+          {
+            "name": "competition",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "objectid"
+            },
+            "description": "Limit to one competition"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Judge stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation — `error.details` names the field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, expired or logged-out token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated, but the principal lacks the required role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Each published mark compared with the median of the other judges on that panel: overall strictness, per section, per meet, and per team (lean = deviation on the team minus deviation on every other team).\n\n**Roles:** judge",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ]
+      }
+    },
+    "/api/stats/judge-fairness": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "summary": "Judge × team leans for a meet",
+        "operationId": "statsJudgeFairness",
+        "parameters": [
+          {
+            "name": "competition",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "objectid"
+            },
+            "description": "Competition id (required for admins)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Judge fairness board",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation — `error.details` names the field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, expired or logged-out token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated, but the principal lacks the required role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "An admin must name one of their own competitions; a super admin may name any or none (all meets). A lean is flagged only with at least 6 recorded performances, a size of at least 0.30 and a 90% confidence interval that excludes zero.\n\n**Roles:** admin, superadmin",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ]
       }
     },
     "/api/public/team-championship": {

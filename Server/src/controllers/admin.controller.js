@@ -18,6 +18,7 @@ const {
   buildJudgeSlipPlayerScore,
 } = require('../utils/scoring/judge-slip.util');
 const { resolveAssignment } = require('../utils/data/judge-assignment.util');
+const { buildSeatIndex, seatHolder } = require('../utils/stats/slip-attribution.util');
 const { competitionIdFromRequest } = require('../utils/data/request-context.util');
 
 /**
@@ -30,6 +31,27 @@ function createAdminController(container) {
   const tokenService = container.resolve('tokenService');
   const config = container.resolve('config');
   const logger = container.resolve('logger');
+
+  /**
+   * The JudgeAccount a single slip belongs to.
+   *
+   * A panel judge submitting their own slip is the author. A Senior Judge
+   * correcting a colleague, or an admin recording for the panel, writes into
+   * someone else's seat — the author is whoever holds that seat. Never fails
+   * the save: an unattributed slip is resolved from the seat later.
+   */
+  const slipAuthorFor = async ({ req, ownSlip, competitionId, gender, ageGroup, apparatus, judgeRole }) => {
+    if (ownSlip && req.user?._id) return req.user._id;
+    try {
+      const judgeRepository = container.resolve('judgeRepository');
+      if (!judgeRepository?.find) return null;
+      const seats = await judgeRepository.find({ competition: competitionId, gender, ageGroup });
+      return seatHolder(buildSeatIndex(seats), { competition: competitionId, gender, ageGroup, apparatus, judgeRole });
+    } catch (error) {
+      logger.warn('Could not resolve the author of a judge slip', { error: error.message });
+      return null;
+    }
+  };
   const isProduction = isProductionLike(config);
 
   return {
@@ -489,6 +511,26 @@ function createAdminController(container) {
         });
       }
       
+      // Stamp WHO wrote a single slip (the JudgeAccount, not just the seat), so
+      // a judge's marks stay theirs after the seat changes hands. See
+      // Score.judgeSlips.judgeAccountId.
+      if (isSingleSlipSubmission) {
+        const slip = scoreData.playerScores?.[0]?.judgeSlips?.[0];
+        const author = await slipAuthorFor({
+          req,
+          ownSlip: isPanelJudge && effectiveJudgeType === authJudgeType,
+          competitionId,
+          gender: scoreData.gender,
+          ageGroup: scoreData.ageGroup,
+          apparatus: req.body.apparatus,
+          judgeRole: slip?.judgeRole,
+        });
+        if (slip && author) {
+          slip.judgeAccountId = author;
+          slip.attribution = 'recorded';
+        }
+      }
+
       const result = await adminService.saveScores({ 
         ...scoreData, 
         competitionId 

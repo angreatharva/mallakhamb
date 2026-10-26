@@ -32,6 +32,7 @@ const CoachService = require('../services/user/coach.service');
 const CoachPlayerService = require('../services/user/coach-player.service');
 const AdminService = require('../services/user/admin.service');
 const PublicService = require('../services/public/public.service');
+const StatsService = require('../services/stats/stats.service');
 const SuperAdminService = require('../services/user/super-admin.service');
 const JudgeAccountService = require('../services/user/judge-account.service');
 const JudgePanelService = require('../services/user/judge-panel.service');
@@ -53,6 +54,7 @@ const HealthController = require('../controllers/health.controller');
 const createCoachController = require('../controllers/coach.controller');
 const createAdminController = require('../controllers/admin.controller');
 const createPublicController = require('../controllers/public.controller');
+const createStatsController = require('../controllers/stats.controller');
 const createAuthController = require('../controllers/auth.controller');
 const createAccountRequestController = require('../controllers/account-request.controller');
 const createCoachPlayerController = require('../controllers/coach-player.controller');
@@ -263,6 +265,16 @@ function bootstrap() {
     tieBreakDrawRepository: c.resolve('tieBreakDrawRepository'),
     logger: c.resolve('logger'),
   }), 'singleton');
+  // The profile Stats tabs and the admin Judge fairness board (read-only).
+  container.register('statsService', (c) => new StatsService({
+    scoreRepository: c.resolve('scoreRepository'),
+    competitionRepository: c.resolve('competitionRepository'),
+    teamRepository: c.resolve('teamRepository'),
+    judgeRepository: c.resolve('judgeRepository'),
+    judgeAccountRepository: c.resolve('judgeAccountRepository'),
+    publicService: c.resolve('publicService'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
   container.register('competitionService', (c) => new CompetitionService(
     c.resolve('competitionRepository'),
     c.resolve('cacheService'),
@@ -374,6 +386,7 @@ function bootstrap() {
   container.register('coachController', (c) => createCoachController(c), 'singleton');
   container.register('adminController', (c) => createAdminController(c), 'singleton');
   container.register('publicController', (c) => createPublicController(c), 'singleton');
+  container.register('statsController', (c) => createStatsController(c), 'singleton');
   container.register('authController', (c) => createAuthController(c), 'singleton');
   container.register('accountRequestController', (c) => createAccountRequestController(c), 'singleton');
   container.register('coachPlayerController', (c) => createCoachPlayerController(c), 'singleton');

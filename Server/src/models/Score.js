@@ -195,7 +195,19 @@ const playerScoreSchema = new mongoose.Schema({
     // selections rather than just the section totals.
     breakdown: { type: mongoose.Schema.Types.Mixed, default: null },
     submittedAt: { type: Date, default: null },
-    isChiefPrefilled: { type: Boolean, default: false }
+    isChiefPrefilled: { type: Boolean, default: false },
+    /**
+     * WHO wrote this slip — the JudgeAccount, not the seat.
+     *
+     * `judgeRole` names a seat ("J2"), and seats are re-assigned between meets,
+     * so the seat alone cannot say which person gave a mark once the panel
+     * changes. Stamped at submit time (admin.controller saveScores) as
+     * 'recorded'. Slips written before this existed were back-filled by
+     * migration 013 from the seat assignment of the day and marked 'inferred':
+     * the judge-fairness views show inferred marks but never FLAG on them.
+     */
+    judgeAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'JudgeAccount', default: null },
+    attribution: { type: String, enum: ['recorded', 'inferred', null], default: null }
   }],
   // Elements selected for the difficulty composition (v2 §2 ElementSelection).
   elementSelections: [{
@@ -383,5 +395,11 @@ scoreSchema.index({ competition: 1, isLocked: 1 });
  * and not in a fresh development database.
  */
 scoreSchema.index({ 'playerScores.playerId': 1 });
+
+/**
+ * "Every slip this judge wrote" — the judge's own Marking insights and the
+ * admin Judge fairness board (StatsService). Multikey over the slip array.
+ */
+scoreSchema.index({ 'playerScores.judgeSlips.judgeAccountId': 1 });
 
 module.exports = mongoose.model('Score', scoreSchema);
