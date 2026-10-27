@@ -30,9 +30,17 @@ const USAGE_DS = { type: 'prometheus', uid: '${usage_datasource}' };
 const GIB = 1024 * 1024 * 1024;
 // cpu: cores the Node process can use (one event loop = 1 core). mem: process RSS budget.
 // host: the server is a VM with Alloy (Host row). standby: a warm standby is part of the platform.
+// conn: the connection limit the API's pool is drawn against (db names it in titles and text).
 const PRESETS = {
   render: { cpu: '0.1', mem: 512 * 1024 * 1024, plan: 'Render free plan', atlas: 'M0', host: false, standby: false },
-  oci: { cpu: '1', mem: 3 * GIB, plan: 'OCI A1, 1 OCPU / 6 GB per VM', atlas: 'Flex', host: true, standby: true },
+  // 4 GB VMs since 2026-10-24 (IDLE-RECLAIM-PLAN.md D1). What else lives there: mongod (cache 0.75 GB,
+  // ~1 GB resident), the OCR sidecar (MemoryMax 1G), the e2e mongod (700M) during a run, Caddy, Alloy.
+  // That leaves the API about 1.5 GiB before the VM itself runs short.
+  oci: {
+    cpu: '1', mem: 1.5 * GIB, plan: 'OCI A1, 1 OCPU / 4 GB per VM', atlas: 'Flex', host: true, standby: true,
+    // The self-hosted replica set: mongod takes far more, so the line is the "MongoDB connections high" alert (300 per member).
+    conn: 300, db: 'MongoDB',
+  },
   'oci-single': { cpu: '1', mem: 4 * GIB, plan: 'OCI A1 single VM, 2 OCPU / 12 GB', atlas: 'Flex', host: true, standby: false },
   // The AWS standby is optional (deploy/aws/PLAN.md); set standby: true if it is built.
   aws: { cpu: '1', mem: 1.5 * GIB, plan: 'AWS t4g.small, 2 vCPU / 2 GiB', atlas: 'Flex', host: true, standby: false },
@@ -47,7 +55,7 @@ const LIMITS = [
   ['cpu_limit', P.cpu, P.host ? `CPU limit, cores (one Node event loop; ${P.plan})` : `CPU limit, cores (${P.plan})`],
   ['mem_limit', String(P.mem), P.host ? `Memory budget for the API process, bytes (${memText}; ${P.plan})` : `Memory limit, bytes (${P.plan}, ${memText})`],
   ['pool_max', '100', 'MongoDB pool max (DB_POOL_MAX)'],
-  ['atlas_conn_limit', '500', `Atlas ${P.atlas} connection cap`],
+  ['atlas_conn_limit', String(P.conn || 500), P.conn ? `${P.db} connections per member: the alert line` : `Atlas ${P.atlas} connection cap`],
   ['sm_included', '100000', 'Synthetic check executions included per month (free tier)'],
 ];
 
@@ -222,12 +230,14 @@ const DESC = {
     ? `Resident memory as a share of the API process budget (mem_limit, ${memText}; ${P.plan}). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert "Memory near limit" fires at 85 % for 10 m.`
     : 'Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert "Memory near limit" fires at ~81 % (435 MB) for 10 m.',
   pool: 'MongoDB connections checked out as a share of DB_POOL_MAX (pool_max). Near 100 % means requests queue (alert "DB pool waiting").',
-  atlas: `Connections this API holds open as a share of the Atlas ${P.atlas} cap (500). Other clients (scripts, Compass) count against the same cap.`,
+  atlas: P.conn
+    ? `Connections this API holds open as a share of ${P.conn}, the per-member line where the alert "MongoDB connections high" fires (the self-hosted replica set; mongod itself allows far more). Backups, the off-site copy and the metrics collector add a few more on the server side.`
+    : `Connections this API holds open as a share of the Atlas ${P.atlas} cap (500). Other clients (scripts, Compass) count against the same cap.`,
   series: 'Active series vs. the series included in the Grafana Cloud plan. Over 100 % is billed or dropped.',
   sm: 'Synthetic check executions per month at the current rate (last 15 m, projected to 30 days), for every check in the account, vs. the monthly allowance (sm_included). Planned for the two Mallakhamb checks: 60,480, about 60 %.',
 };
 const CAP_TITLES = {
-  cpu: 'CPU % of plan', mem: 'Memory % of plan', pool: 'DB pool in use %', atlas: 'Atlas connections %',
+  cpu: 'CPU % of plan', mem: 'Memory % of plan', pool: 'DB pool in use %', atlas: P.conn ? `${P.db} connections %` : 'Atlas connections %',
   series: 'Grafana series % of included', sm: 'Synthetic executions % of included',
 };
 const capacityRow = (y, which) => {
@@ -259,7 +269,8 @@ const overview = dashboard({
     }),
     stat('p95 latency (5m)', [t(p(0.95))], { h: 4, w: 4, x: 12, y: 0 }, {
       unit: 's', decimals: 3, steps: [green, { color: 'orange', value: 0.75 }, { color: 'red', value: 1.5 }],
-      description: 'Alert "Slow API" fires above 1.5 s for 10 m.',
+      mappings: [{ type: 'special', options: { match: 'nan', result: { text: 'no traffic', color: 'green' } } }],
+      description: 'Alert "Slow API" fires above 1.5 s for 10 m. "no traffic" = no request in the last 5 minutes.',
     }),
     stat('Restarts (24h)', [t(`changes(process_start_time_seconds{${S}}[24h])`)], { h: 4, w: 4, x: 16, y: 0 }, {
       steps: [green, { color: 'orange', value: 2 }, { color: 'red', value: 4 }],
@@ -288,6 +299,8 @@ const overview = dashboard({
 
     ...capacityRow(29, ['cpu', 'mem', 'pool', 'atlas', 'series', 'sm']),
 
+    // The two checks probe Render (synthetics/apply-checks.js); OCI staging has none, so its copy leaves them out.
+    ...(STAGING ? [] : [
     row('Outside-in: Synthetic Monitoring from Mumbai and Hyderabad (PLAN.md Phase 5)', 36),
     stat('API reachable (1h)', [t('100 * avg(avg_over_time(probe_success{job="api-ready"}[1h]))')], { h: 4, w: 6, x: 0, y: 37 }, {
       unit: 'percent', decimals: 2, steps: [{ color: 'red', value: null }, { color: 'orange', value: 99 }, { color: 'green', value: 99.9 }],
@@ -303,6 +316,7 @@ const overview = dashboard({
     ts('Check duration by probe', [t(`probe_duration_seconds{${SM}}`, '{{job}} / {{probe}}')], { h: 4, w: 12, x: 0, y: 41 }, {
       unit: 's', min: 0, description: `Full request time as a tablet in India would see it, with DNS, TLS and the ${P.host ? 'Caddy' : 'Render'} proxy included.`,
     }),
+    ]),
   ],
 });
 
@@ -324,9 +338,9 @@ const hostRow = (y) => [
     hide: ['Value', 'platform'], keep: ['instance'],
     description: 'Which commit each VM holds, and its role. Active and standby should show the same sha (alert "Standby behind the active").',
   }),
-  stat('Last backup age', [t(`time() - mallakhamb_backup_last_success_timestamp_seconds{${HS}}`, '{{instance}}')], { h: 6, w: 12, x: 12, y: y + 1 }, {
+  stat('Last backup age (active)', [t(`time() - max by (instance) (mallakhamb_backup_last_success_timestamp_seconds{scrape_job="mallakhamb-host"})`, '{{instance}}')], { h: 6, w: 12, x: 12, y: y + 1 }, {
     unit: 's', steps: [green, { color: 'orange', value: 93600 }, { color: 'red', value: 172800 }],
-    description: 'Time since mallakhamb-backup last succeeded. The nightly backup runs on the active; alert "Backup stale" fires above 26 h. A standby keeps the age it was cloned with.',
+    description: 'Time since mallakhamb-backup last succeeded on the active, the only VM that backs up (alert "Backup stale" above 26 h). The standby is left out: it keeps the age it was cloned with, which would read red for ever.',
   }),
   pctTs('Host CPU busy %', [t(hostPct.cpu, '{{instance}}')], { h: 8, w: 12, x: 0, y: y + 7 }, { description: 'All cores, every process on the VM. Dashed lines: 70 / 80 / 90 %.' }),
   pctTs('Host memory used %', [t(hostPct.mem, '{{instance}}')], { h: 8, w: 12, x: 12, y: y + 7 }, {
@@ -397,10 +411,12 @@ const database = dashboard({
   tags: ['database'],
   panels: [
     stat('Pool open', [t(`mongodb_driver_pool_size{${S}}`)], { h: 4, w: 4, x: 0, y: 0 }, {
-      description: 'minPoolSize is per replica-set member: DB_POOL_MIN=10 × 3 Atlas members = 30 at idle.',
+      description: P.conn
+        ? 'minPoolSize is per replica-set member the driver reads from: DB_POOL_MIN=10 × 2 (app-01, app-02; db-03 is hidden) = 20 at idle.'
+        : 'minPoolSize is per replica-set member: DB_POOL_MIN=10 × 3 Atlas members = 30 at idle.',
     }),
     gauge('DB pool in use %', [t(PCT.pool)], { h: 4, w: 5, x: 4, y: 0 }, { description: DESC.pool }),
-    gauge('Atlas connections %', [t(PCT.atlas)], { h: 4, w: 5, x: 9, y: 0 }, { description: DESC.atlas }),
+    gauge(CAP_TITLES.atlas, [t(PCT.atlas)], { h: 4, w: 5, x: 9, y: 0 }, { description: DESC.atlas }),
     stat('Waiting for a connection', [t(`mongodb_driver_pool_waitqueuesize{${S}}`)], { h: 4, w: 5, x: 14, y: 0 }, {
       steps: [green, { color: 'red', value: 1 }], description: 'Above 0 for 10 m fires "DB pool waiting".',
     }),
@@ -684,8 +700,8 @@ const vmResources = () => {
       stat('OCR reader', [t('max(mkwi_ocr_up{scrape_job="mallakhamb-host"}) or vector(0)')], { h: 6, w: 4, x: 12, y: y0 + 77 }, {
         steps: upSteps, mappings: upMappings, description: 'Walk-in desk sidecar, active VM only (deploy/oci/PLAN.md O15).',
       }),
-      stat('Last backup age', [t(`time() - ${one(`mallakhamb_backup_last_success_timestamp_seconds{${HI}}`)}`, '{{instance}}')], { h: 6, w: 8, x: 16, y: y0 + 77 }, {
-        unit: 's', steps: ageSteps, description: 'The nightly backup runs on the active; alert "Backup stale" above 26 h. A standby keeps the age it was cloned with.',
+      stat('Last backup age (active)', [t(`time() - ${one('mallakhamb_backup_last_success_timestamp_seconds{scrape_job="mallakhamb-host"}')}`, '{{instance}}')], { h: 6, w: 8, x: 16, y: y0 + 77 }, {
+        unit: 's', steps: ageSteps, description: 'The nightly backup runs on the active only; alert "Backup stale" above 26 h. The standby is left out: it keeps the age it was cloned with, which would read red for ever.',
       }),
       stat('Nightly e2e: last pass', [t(`time() - ${one(`mallakhamb_e2e_last_success_timestamp_seconds{${HI}}`)} > 0`, '{{instance}}')], { h: 5, w: 12, x: 0, y: y0 + 83 }, {
         unit: 's', steps: ageSteps, description: 'Time since the nightly lifecycle run (deploy/oci/PLAN.md O14) last passed on each VM.',

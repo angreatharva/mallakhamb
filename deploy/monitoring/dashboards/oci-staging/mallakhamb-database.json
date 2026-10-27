@@ -48,7 +48,7 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
         "query": "1",
         "hide": 2,
@@ -66,18 +66,18 @@
       },
       {
         "name": "mem_limit",
-        "label": "Memory budget for the API process, bytes (3 GiB; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "3221225472",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "3221225472",
-          "value": "3221225472"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "3221225472",
-            "value": "3221225472",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -102,18 +102,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas Flex connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -192,7 +192,7 @@
           "refId": "A"
         }
       ],
-      "description": "minPoolSize is per replica-set member: DB_POOL_MIN=10 × 3 Atlas members = 30 at idle.",
+      "description": "minPoolSize is per replica-set member the driver reads from: DB_POOL_MIN=10 × 2 (app-01, app-02; db-03 is hidden) = 20 at idle.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -301,7 +301,7 @@
     {
       "id": 3,
       "type": "gauge",
-      "title": "Atlas connections %",
+      "title": "MongoDB connections %",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -323,7 +323,7 @@
           "refId": "A"
         }
       ],
-      "description": "Connections this API holds open as a share of the Atlas Flex cap (500). Other clients (scripts, Compass) count against the same cap.",
+      "description": "Connections this API holds open as a share of 300, the per-member line where the alert \"MongoDB connections high\" fires (the self-hosted replica set; mongod itself allows far more). Backups, the off-site copy and the metrics collector add a few more on the server side.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",

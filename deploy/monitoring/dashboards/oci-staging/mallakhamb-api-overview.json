@@ -48,7 +48,7 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
         "query": "1",
         "hide": 2,
@@ -66,18 +66,18 @@
       },
       {
         "name": "mem_limit",
-        "label": "Memory budget for the API process, bytes (3 GiB; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "3221225472",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "3221225472",
-          "value": "3221225472"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "3221225472",
-            "value": "3221225472",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -102,18 +102,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas Flex connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -396,12 +396,23 @@
           "refId": "A"
         }
       ],
-      "description": "Alert \"Slow API\" fires above 1.5 s for 10 m.",
+      "description": "Alert \"Slow API\" fires above 1.5 s for 10 m. \"no traffic\" = no request in the last 5 minutes.",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
           "decimals": 3,
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "no traffic",
+                  "color": "green"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1175,7 +1186,7 @@
           "refId": "A"
         }
       ],
-      "description": "Resident memory as a share of the API process budget (mem_limit, 3 GiB; OCI A1, 1 OCPU / 6 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
+      "description": "Resident memory as a share of the API process budget (mem_limit, 1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -1297,7 +1308,7 @@
     {
       "id": 18,
       "type": "gauge",
-      "title": "Atlas connections %",
+      "title": "MongoDB connections %",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1319,7 +1330,7 @@
           "refId": "A"
         }
       ],
-      "description": "Connections this API holds open as a share of the Atlas Flex cap (500). Other clients (scripts, Compass) count against the same cap.",
+      "description": "Connections this API holds open as a share of 300, the per-member line where the alert \"MongoDB connections high\" fires (the self-hosted replica set; mongod itself allows far more). Backups, the off-site copy and the metrics collector add a few more on the server side.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -1508,291 +1519,6 @@
         "showThresholdMarkers": true,
         "showThresholdLabels": false,
         "orientation": "auto"
-      }
-    },
-    {
-      "id": 21,
-      "type": "row",
-      "title": "Outside-in: Synthetic Monitoring from Mumbai and Hyderabad (PLAN.md Phase 5)",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 36
-      },
-      "panels": []
-    },
-    {
-      "id": 22,
-      "type": "stat",
-      "title": "API reachable (1h)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 37
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "100 * avg(avg_over_time(probe_success{job=\"api-ready\"}[1h]))",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "description": "Share of api-ready checks (GET /api/health/ready) that passed in the last hour, across both probes.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "decimals": 2,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 99
-              },
-              {
-                "color": "green",
-                "value": 99.9
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "auto",
-        "justifyMode": "center"
-      }
-    },
-    {
-      "id": 23,
-      "type": "stat",
-      "title": "Web reachable (1h)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 37
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "100 * avg(avg_over_time(probe_success{job=\"web-home\"}[1h]))",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "description": "Share of web-home checks (GET the SPA) that passed in the last hour, across both probes.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "decimals": 2,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 99
-              },
-              {
-                "color": "green",
-                "value": 99.9
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "auto",
-        "justifyMode": "center"
-      }
-    },
-    {
-      "id": 24,
-      "type": "timeseries",
-      "title": "Check result by probe",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 37
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "probe_success{job=~\"api-ready|web-home\"}",
-          "legendFormat": "{{job}} / {{probe}}",
-          "refId": "A"
-        }
-      ],
-      "description": "1 = passed, 0 = failed. Alert \"Uptime check failing\" fires when both probes fail one check for 5 m.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 25,
-      "type": "timeseries",
-      "title": "Check duration by probe",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 0,
-        "y": 41
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "probe_duration_seconds{job=~\"api-ready|web-home\"}",
-          "legendFormat": "{{job}} / {{probe}}",
-          "refId": "A"
-        }
-      ],
-      "description": "Full request time as a tablet in India would see it, with DNS, TLS and the Caddy proxy included.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
       }
     }
   ]

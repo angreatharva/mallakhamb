@@ -1,7 +1,7 @@
 {
   "uid": "mallakhamb-runtime-staging",
   "title": "Mallakhamb Runtime (Node.js) (OCI staging)",
-  "description": "CPU, memory, event loop and GC of the API process (one core, 3 GiB budget; OCI A1, 1 OCPU / 6 GB per VM), then the VMs themselves (Host row). Swap for jvm_* panels after the Spring Boot port. PLAN.md §3.2",
+  "description": "CPU, memory, event loop and GC of the API process (one core, 1.5 GiB budget; OCI A1, 1 OCPU / 4 GB per VM), then the VMs themselves (Host row). Swap for jvm_* panels after the Spring Boot port. PLAN.md §3.2",
   "tags": [
     "mallakhamb",
     "runtime",
@@ -48,7 +48,7 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
         "query": "1",
         "hide": 2,
@@ -66,18 +66,18 @@
       },
       {
         "name": "mem_limit",
-        "label": "Memory budget for the API process, bytes (3 GiB; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "3221225472",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "3221225472",
-          "value": "3221225472"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "3221225472",
-            "value": "3221225472",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -102,18 +102,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas Flex connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -322,7 +322,7 @@
           "refId": "A"
         }
       ],
-      "description": "Resident memory as a share of the API process budget (mem_limit, 3 GiB; OCI A1, 1 OCPU / 6 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
+      "description": "Resident memory as a share of the API process budget (mem_limit, 1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -543,7 +543,7 @@
           "refId": "A"
         }
       ],
-      "description": "Resident memory as a share of the API process budget (mem_limit, 3 GiB; OCI A1, 1 OCPU / 6 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m. Dashed lines: 70 / 80 / 90 %.",
+      "description": "Resident memory as a share of the API process budget (mem_limit, 1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m. Dashed lines: 70 / 80 / 90 %.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -994,7 +994,7 @@
     {
       "id": 13,
       "type": "stat",
-      "title": "Last backup age",
+      "title": "Last backup age (active)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1011,12 +1011,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - mallakhamb_backup_last_success_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}",
+          "expr": "time() - max by (instance) (mallakhamb_backup_last_success_timestamp_seconds{scrape_job=\"mallakhamb-host\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
-      "description": "Time since mallakhamb-backup last succeeded. The nightly backup runs on the active; alert \"Backup stale\" fires above 26 h. A standby keeps the age it was cloned with.",
+      "description": "Time since mallakhamb-backup last succeeded on the active, the only VM that backs up (alert \"Backup stale\" above 26 h). The standby is left out: it keeps the age it was cloned with, which would read red for ever.",
       "fieldConfig": {
         "defaults": {
           "unit": "s",

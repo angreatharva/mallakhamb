@@ -1,7 +1,7 @@
 {
   "uid": "mallakhamb-oci-resources",
   "title": "Mallakhamb OCI resources",
-  "description": "The VMs themselves (OCI A1, 1 OCPU / 6 GB per VM, plus db-03, the Always Free micro VM that is the replica set's third member): CPU, memory, disk, network, the Always Free allowance, idle-reclaim risk, what OCI is charging, and what runs on them. Alloy, scrape_job mallakhamb-host (active) / mallakhamb-host-standby / mallakhamb-db.",
+  "description": "The VMs themselves (OCI A1, 1 OCPU / 4 GB per VM, plus db-03, the Always Free micro VM that is the replica set's third member): CPU, memory, disk, network, the Always Free allowance, idle-reclaim risk, what OCI is charging, and what runs on them. Alloy, scrape_job mallakhamb-host (active) / mallakhamb-host-standby / mallakhamb-db.",
   "tags": [
     "mallakhamb",
     "host",
@@ -75,7 +75,7 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
         "query": "1",
         "hide": 2,
@@ -93,18 +93,18 @@
       },
       {
         "name": "mem_limit",
-        "label": "Memory budget for the API process, bytes (3 GiB; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "3221225472",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "3221225472",
-          "value": "3221225472"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "3221225472",
-            "value": "3221225472",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -129,18 +129,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas Flex connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -3037,7 +3037,7 @@
     {
       "id": 46,
       "type": "stat",
-      "title": "Last backup age",
+      "title": "Last backup age (active)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3054,12 +3054,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "time() - max by (instance) (mallakhamb_backup_last_success_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\"})",
+          "expr": "time() - max by (instance) (mallakhamb_backup_last_success_timestamp_seconds{scrape_job=\"mallakhamb-host\"})",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
-      "description": "The nightly backup runs on the active; alert \"Backup stale\" above 26 h. A standby keeps the age it was cloned with.",
+      "description": "The nightly backup runs on the active only; alert \"Backup stale\" above 26 h. The standby is left out: it keeps the age it was cloned with, which would read red for ever.",
       "fieldConfig": {
         "defaults": {
           "unit": "s",

@@ -39,7 +39,8 @@
   const GIB = 1024 * 1024 * 1024;
   const PRESETS = {
     render: { cpu: 0.1, mem: 512 * 1024 * 1024, host: false, standby: false },
-    oci: { cpu: 1, mem: 3 * GIB, host: true, standby: true, mongo: true, failover: 'deploy/oci/PLAN.md O13' },
+    // 4 GB VMs since 2026-10-24; mongod, the OCR sidecar and the e2e mongod share them (build-dashboards.js).
+    oci: { cpu: 1, mem: 1.5 * GIB, host: true, standby: true, mongo: true, failover: 'deploy/oci/PLAN.md O13' },
     'oci-single': { cpu: 1, mem: 4 * GIB, host: true, standby: false, failover: 'rebuild from the golden backup, deploy/oci/PLAN.md §5' },
     aws: { cpu: 1, mem: 1.5 * GIB, host: true, standby: false, failover: 'deploy/aws/PLAN.md' },
   };

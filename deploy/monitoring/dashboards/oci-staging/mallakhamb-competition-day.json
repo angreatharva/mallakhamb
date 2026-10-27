@@ -48,7 +48,7 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
         "query": "1",
         "hide": 2,
@@ -66,18 +66,18 @@
       },
       {
         "name": "mem_limit",
-        "label": "Memory budget for the API process, bytes (3 GiB; OCI A1, 1 OCPU / 6 GB per VM)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "3221225472",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "3221225472",
-          "value": "3221225472"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "3221225472",
-            "value": "3221225472",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -102,18 +102,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas Flex connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -1449,7 +1449,7 @@
           "refId": "A"
         }
       ],
-      "description": "Resident memory as a share of the API process budget (mem_limit, 3 GiB; OCI A1, 1 OCPU / 6 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
+      "description": "Resident memory as a share of the API process budget (mem_limit, 1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
