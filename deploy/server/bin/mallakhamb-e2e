@@ -15,7 +15,8 @@
 #   3. start mallakhamb-e2e-mongod (127.0.0.1:27027, its own empty data directory — NOT the replica set,
 #      so the run never touches the real database or its oplog) and mallakhamb-e2e-api
 #      (127.0.0.1:5001, never in Caddy) → setup:api --yes (verifySeed is its last step) → stop both
-#   4. write the result to the Alloy textfile (Grafana: "E2E failed", "E2E stale")
+#      — and, before the API stops, scripts/e2eLatency.js reads its request histogram (report only)
+#   4. write the result to the Alloy textfile (Grafana: "E2E failed", "E2E stale", "Nightly e2e: request latency")
 #
 #   sudo mallakhamb-e2e            # as the timer does (slot + skip checks)
 #   sudo mallakhamb-e2e --now      # by hand: ignore the slot, still honour the skip checks
@@ -41,6 +42,7 @@ PRELOAD=/usr/local/lib/mallakhamb/e2e-forwarded-https.cjs
 API=http://127.0.0.1:5001
 E2E_DB_DIR=/var/lib/mallakhamb-e2e/db
 E2E_URI='mongodb://127.0.0.1:27027/mallakhamb_e2e'
+LAT_JSON=/var/log/mallakhamb-e2e/latency.json
 START=$(date +%s)
 
 # 1a. My slot? The active VM (the one running mallakhamb.service) takes 00 and 18 IST, the standby 06 and 12.
@@ -52,6 +54,23 @@ if [ -z "$NOW" ] && [[ " $MINE " != *" $HOUR "* ]]; then
 fi
 
 prev() { sed -n "s/^$1 \([0-9.]*\)$/\1/p" "$PROM" 2>/dev/null | head -1; }
+latency_metrics() {   # $1 1 if skipped: a skip keeps the last run's numbers; a run without a report publishes none
+  if [ "$1" = 1 ]; then
+    grep -E '^(# (HELP|TYPE) )?mallakhamb_e2e_(latency_seconds|requests)[ {]' "$PROM" 2>/dev/null
+    return 0
+  fi
+  [ -s "$LAT_JSON" ] || return 0
+  node -e '
+    const r = require(process.argv[1]);
+    if (!r.requests) process.exit(0);
+    console.log("# HELP mallakhamb_e2e_latency_seconds Request latency of the e2e API over the last run (whole-run histogram quantile)");
+    console.log("# TYPE mallakhamb_e2e_latency_seconds gauge");
+    for (const [q, v] of Object.entries(r.quantiles || {})) if (v !== null) console.log(`mallakhamb_e2e_latency_seconds{quantile="${q}"} ${v}`);
+    console.log("# HELP mallakhamb_e2e_requests Requests the e2e API served over the last run");
+    console.log("# TYPE mallakhamb_e2e_requests gauge");
+    console.log(`mallakhamb_e2e_requests ${r.requests}`);
+  ' "$LAT_JSON" 2>/dev/null || true
+}
 write_metrics() {   # $1 exit code, $2 1 if skipped
   local ok_ts; ok_ts=$(prev mallakhamb_e2e_last_success_timestamp_seconds); ok_ts=${ok_ts:-0}
   [ "$1" = 0 ] && [ "$2" = 0 ] && ok_ts=$(date +%s)
@@ -72,6 +91,7 @@ write_metrics() {   # $1 exit code, $2 1 if skipped
     echo "# HELP mallakhamb_e2e_skipped 1 if the last slot was skipped (meet near, desk in use, API busy, NO_E2E)"
     echo "# TYPE mallakhamb_e2e_skipped gauge"
     echo "mallakhamb_e2e_skipped $2"
+    latency_metrics "$2"
   } > "$PROM.tmp" && chown root:alloy "$PROM.tmp" && chmod 0644 "$PROM.tmp" && mv "$PROM.tmp" "$PROM"
 }
 stop_all() {
@@ -96,6 +116,7 @@ as_app() {   # run in the release as the unprivileged user, with only the given 
     bash -c "cd '$REL' && set -a && . '$envfile' && set +a && exec \"\$@\"" _ "$@"
 }
 install -d -m 0750 -o mallakhamb -g mallakhamb /var/log/mallakhamb-e2e /run/mallakhamb-e2e
+rm -f "$LAT_JSON"   # a run that stops early must not publish the previous run's latency
 
 # 1b. Stay off competitions and off real users.
 if [ -z "$FORCE" ]; then
@@ -125,9 +146,11 @@ OVERRIDES=(
   "DISCOUNT_CODE_ENABLED='true'"
   "DISCOUNT_CODE='E2E$(rnd 8 | tr a-f A-F)'"
   "JWT_SECRET='$(rnd 32)'"
-  # The e2e API's own metrics, for the coverage step (which routes this run called); never scraped.
+  # The e2e API's own metrics, for the coverage step (which routes this run called) and the latency
+  # step (how fast it answered); never scraped.
   "METRICS_TOKEN='$(rnd 24)'"
   "E2E_COVERAGE_OUT='/var/log/mallakhamb-e2e/coverage.json'"
+  "E2E_LATENCY_OUT='$LAT_JSON'"
   "KEEP_ALIVE='false'"
   "ENABLE_DEBUG_ROUTES='false'"
   "LOG_DIR='/var/log/mallakhamb-e2e'"
@@ -164,6 +187,8 @@ curl -fsS -H 'X-Forwarded-Proto: https' "$API/api/health/live" >/dev/null || die
 
 as_app "$ENV_FILE" node scripts/setupApi.js --yes
 rc=$?
+# The API's request histogram, read while it still runs (pass or fail). Report only: never changes rc.
+as_app "$ENV_FILE" node scripts/e2eLatency.js || echo "E2E: request latency not measured (exit $?)"
 if [ "$rc" = 0 ]; then
   systemctl stop mallakhamb-e2e-api mallakhamb-e2e-mongod 2>/dev/null || true
   rm -rf "$E2E_DB_DIR"

@@ -3111,7 +3111,7 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 110
       },
@@ -3178,8 +3178,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
         "y": 110
       },
       "targets": [
@@ -3254,6 +3254,92 @@
     },
     {
       "id": 49,
+      "type": "stat",
+      "title": "Nightly e2e: request latency",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 110
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (instance) (mallakhamb_e2e_latency_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",quantile=\"0.5\"})",
+          "legendFormat": "{{instance}} p50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (instance) (mallakhamb_e2e_latency_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",quantile=\"0.95\"})",
+          "legendFormat": "{{instance}} p95",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (instance) (mallakhamb_e2e_latency_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db\",instance=~\"$instance\",quantile=\"0.99\"})",
+          "legendFormat": "{{instance}} p99",
+          "refId": "C"
+        }
+      ],
+      "description": "p50 / p95 / p99 of every request the e2e API served in the last run on each VM (scripts/e2eLatency.js over the whole-run histogram; the count is mallakhamb_e2e_requests). The run keeps the 1-OCPU VM at 100 % CPU, so this is latency under load, not what a tablet sees; bcrypt logins (~0.5 s) set the p99. Slowest routes: /var/log/mallakhamb-e2e/latency.json on that VM.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 50,
       "type": "row",
       "title": "OCI cost: budget mallakhamb-guard (SGD, the tenancy currency; Always Free = 0)",
       "collapsed": false,
@@ -3266,7 +3352,7 @@
       "panels": []
     },
     {
-      "id": 50,
+      "id": 51,
       "type": "stat",
       "title": "Charged this month",
       "datasource": {
@@ -3330,7 +3416,7 @@
       }
     },
     {
-      "id": 51,
+      "id": 52,
       "type": "stat",
       "title": "Forecast for the month",
       "datasource": {
@@ -3398,7 +3484,7 @@
       }
     },
     {
-      "id": 52,
+      "id": 53,
       "type": "gauge",
       "title": "Forecast % of the guard",
       "datasource": {
@@ -3470,7 +3556,7 @@
       }
     },
     {
-      "id": 53,
+      "id": 54,
       "type": "stat",
       "title": "Cost data age",
       "datasource": {
@@ -3537,7 +3623,7 @@
       }
     },
     {
-      "id": 54,
+      "id": 55,
       "type": "row",
       "title": "Oracle's idle test: its own agent metrics, 7-day p95 (an Always Free VM may be stopped when every measure is under 20 %)",
       "collapsed": false,
@@ -3550,7 +3636,7 @@
       "panels": []
     },
     {
-      "id": 55,
+      "id": 56,
       "type": "stat",
       "title": "May Oracle stop it?",
       "datasource": {
@@ -3627,7 +3713,7 @@
       }
     },
     {
-      "id": 56,
+      "id": 57,
       "type": "stat",
       "title": "Memory p95 (counts for A1)",
       "datasource": {
@@ -3691,7 +3777,7 @@
       }
     },
     {
-      "id": 57,
+      "id": 58,
       "type": "stat",
       "title": "CPU p95",
       "datasource": {
@@ -3755,7 +3841,7 @@
       }
     },
     {
-      "id": 58,
+      "id": 59,
       "type": "stat",
       "title": "Oracle data age",
       "datasource": {

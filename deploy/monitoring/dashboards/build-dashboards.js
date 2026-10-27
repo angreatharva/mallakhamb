@@ -703,13 +703,17 @@ const vmResources = () => {
       stat('Last backup age (active)', [t(`time() - ${one('mallakhamb_backup_last_success_timestamp_seconds{scrape_job="mallakhamb-host"}')}`, '{{instance}}')], { h: 6, w: 8, x: 16, y: y0 + 77 }, {
         unit: 's', steps: ageSteps, description: 'The nightly backup runs on the active only; alert "Backup stale" above 26 h. The standby is left out: it keeps the age it was cloned with, which would read red for ever.',
       }),
-      stat('Nightly e2e: last pass', [t(`time() - ${one(`mallakhamb_e2e_last_success_timestamp_seconds{${HI}}`)} > 0`, '{{instance}}')], { h: 5, w: 12, x: 0, y: y0 + 83 }, {
+      stat('Nightly e2e: last pass', [t(`time() - ${one(`mallakhamb_e2e_last_success_timestamp_seconds{${HI}}`)} > 0`, '{{instance}}')], { h: 5, w: 8, x: 0, y: y0 + 83 }, {
         unit: 's', steps: ageSteps, description: 'Time since the nightly lifecycle run (deploy/oci/PLAN.md O14) last passed on each VM.',
       }),
-      stat('Nightly e2e: last result', [t(one(`mallakhamb_e2e_last_exit_code{${HI}}`), '{{instance}}')], { h: 5, w: 12, x: 12, y: y0 + 83 }, {
+      stat('Nightly e2e: last result', [t(one(`mallakhamb_e2e_last_exit_code{${HI}}`), '{{instance}}')], { h: 5, w: 8, x: 8, y: y0 + 83 }, {
         steps: [green, { color: 'red', value: 1 }],
         mappings: [{ type: 'value', options: { 0: { text: 'PASS', color: 'green' } } }, { type: 'range', options: { from: 1, to: 255, result: { text: 'FAIL', color: 'red' } } }],
         description: 'FAIL → journalctl -u mallakhamb-e2e on that VM.',
+      }),
+      stat('Nightly e2e: request latency', ['0.5', '0.95', '0.99'].map((q) => t(one(`mallakhamb_e2e_latency_seconds{${HI},quantile="${q}"}`), `{{instance}} p${Number(q) * 100}`)), { h: 5, w: 8, x: 16, y: y0 + 83 }, {
+        unit: 's', decimals: 3, steps: [green, { color: 'orange', value: 1 }, { color: 'red', value: 2 }],
+        description: 'p50 / p95 / p99 of every request the e2e API served in the last run on each VM (scripts/e2eLatency.js over the whole-run histogram; the count is mallakhamb_e2e_requests). The run keeps the 1-OCPU VM at 100 % CPU, so this is latency under load, not what a tablet sees; bcrypt logins (~0.5 s) set the p99. Slowest routes: /var/log/mallakhamb-e2e/latency.json on that VM.',
       }),
       ...(PLATFORM.startsWith('oci') ? costRow(y0 + 88) : []),
       ...(PLATFORM.startsWith('oci') ? oracleIdleRow(y0 + 95) : []),
