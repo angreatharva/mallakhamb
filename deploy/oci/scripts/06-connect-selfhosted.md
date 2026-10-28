@@ -19,7 +19,7 @@ TLS checking passes; no `tlsAllowInvalid…` flag is needed.
 |---|---|---|
 | `root_breakglass` | everything (root) — break-glass only; password `MONGO_ROOT_PASSWORD` | all |
 | `mallakhamb_app` | readWrite (+ dbAdmin on `_restoretest`) | `mallakhambcompetition_prod` — the sslip staging API now, production after the cutover ([MONGODB-DB-LAYOUT-PLAN.md](../MONGODB-DB-LAYOUT-PLAN.md)); `mallakhambcompetition_prod_restoretest` |
-| `mallakhamb_staging` | readWrite + dbAdmin | `mallakhambcompetition_dev` (laptop work), `_dev_restoretest`, `BRMC_perf`, `BRMC_rehearsal` (until dropped) |
+| `mallakhamb_staging` | readWrite + dbAdmin | `mallakhambcompetition_dev` only (laptop work) |
 | `mallakhamb_backup` | backup + read `local` | dumps / oplog |
 | `mallakhamb_monitor` | clusterMonitor + read `local` | metrics |
 
@@ -53,7 +53,8 @@ ssh -N -i $K -L 27018:127.0.0.1:27017 \
   -o ProxyCommand="ssh -i $K -W %h:%p $S@host.bastion.ap-mumbai-1.oci.oraclecloud.com" ubuntu@10.0.0.50
 ```
 
-3. Compass or `mongosh` with the laptop string above.
+3. Compass or `mongosh` with the laptop string above. Compass also lists, greyed out, databases the user may
+   use but that hold no data yet (e.g. `mallakhambcompetition_prod_restoretest`, which the restore drill needs).
 
 If app-02 is PRIMARY (after a failover), tunnel to `10.0.0.245` instead, or writes are refused
 (`not primary`). `rs.status()` shows which member is primary.

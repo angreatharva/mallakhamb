@@ -26,7 +26,7 @@ mongosh --quiet --tls --tlsCAFile /etc/mongodb/tls/ca.pem "mongodb://app-01.db,a
   check("app reads the replica-set config", false, () => app.getSiblingDB("admin").runCommand({ replSetGetConfig: 1 }).config.members.length);
   const st = as("mallakhamb_staging", process.env.MONGO_STAGING_PASSWORD);
   check("staging writes " + D, true, () => { const c = st.getSiblingDB(D).m3_check; c.insertOne({}); c.drop(); });
-  check("staging writes + drops " + D + "_restoretest", true, () => { const d = st.getSiblingDB(D + "_restoretest"); d.m3_check.insertOne({}); d.dropDatabase(); });
+  check("staging writes BRMC_rehearsal (dropped 2026-10-28)", false, () => st.getSiblingDB("BRMC_rehearsal").m3_check.insertOne({}));
   check("staging reads " + P + " (production)", false, () => st.getSiblingDB(P).m3_check.findOne());
   check("staging writes BRMC_e2e (e2e left the set)", false, () => st.getSiblingDB("BRMC_e2e").m3_check.insertOne({}));
   const bk = as("mallakhamb_backup", process.env.MONGO_BACKUP_PASSWORD);

@@ -51,11 +51,11 @@ done
   // MONGODB-DB-LAYOUT-PLAN.md: the API (staging now, production after the cutover) runs on
   // mallakhambcompetition_prod as mallakhamb_app. mallakhamb-restore-drill derives <db>_restoretest
   // from the app URI, signs in as the same user and drops it afterwards (dbAdmin). e2e has its own
-  // throw-away mongod, so no *_e2e grant. BRMC_rehearsal stays until it is dropped (rollback target).
+  // throw-away mongod, so no *_e2e grant. The staging user keeps only the dev sandbox (2026-10-28 cleanup:
+  // BRMC_rehearsal dropped, BRMC_perf and _dev_restoretest unused).
   const rw = d => [{ role: "readWrite", db: d }, { role: "dbAdmin", db: d }];
   const app = [{ role: "readWrite", db: "mallakhambcompetition_prod" }, ...rw("mallakhambcompetition_prod_restoretest")];
-  const staging = ["mallakhambcompetition_dev", "mallakhambcompetition_dev_restoretest", "BRMC_perf",
-                   "BRMC_rehearsal", "BRMC_rehearsal_restoretest"].flatMap(rw);
+  const staging = rw("mallakhambcompetition_dev");
   const users = {
     mallakhamb_app:     { pwd: process.env.MONGO_APP_PASSWORD,     roles: app },
     mallakhamb_backup:  { pwd: process.env.MONGO_BACKUP_PASSWORD,  roles: [{ role: "backup", db: "admin" }, { role: "read", db: "local" }] },

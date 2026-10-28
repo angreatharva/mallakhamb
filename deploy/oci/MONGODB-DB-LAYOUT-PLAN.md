@@ -25,7 +25,7 @@ Steps:
 
 1. **Grants** ([mongo-rs-init.sh](../server/mongo-rs-init.sh), then [mongo-auth-check.sh](../server/mongo-auth-check.sh) must pass):
    - `mallakhamb_app`: readWrite `mallakhambcompetition_prod`; readWrite + dbAdmin `mallakhambcompetition_prod_restoretest` (the restore drill drops it).
-   - `mallakhamb_staging`: readWrite + dbAdmin `mallakhambcompetition_dev`, `_dev_restoretest`, `BRMC_perf`, and `BRMC_rehearsal` (+ `_restoretest`) until that database is dropped (it is the rollback target).
+   - `mallakhamb_staging`: readWrite + dbAdmin `mallakhambcompetition_dev` only (trimmed 2026-10-28 when `BRMC_rehearsal` was dropped).
    - Gone: `BRMC` (app), `BRMC_e2e`, `BRMC_rehearsal_e2e`, `BRMC_restoretest` (staging) — e2e no longer uses the set.
 2. **Copy** `BRMC_rehearsal` → `mallakhambcompetition_prod` inside the set:
    `sudo bash deploy/server/mongo-copy-db.sh <vault> BRMC_rehearsal mallakhambcompetition_prod app --from-set` — must print **IDENTICAL**.
@@ -86,5 +86,5 @@ Data loss ≤ 1 h (the off-site interval); recovery 15–30 min, mostly DNS.
 | Stage 1.4 backups | ✅ 03:21 UTC — nightly dump `daily/2026-10-28T0321Z` (43 KB); off-site → Atlas `mallakhambcompetition_prod_offsite`; restore drill into `_prod_restoretest`: every collection matches, 9 s, dropped |
 | Stage 1.5 rehearsal | ✅ 03:24 UTC — Singapore `BRMC` (`njhirof`) → `_prod_restoretest`: **IDENTICAL**, 16 collections, 455 documents, 19 s; startup `--check` connected to the copy: 13/13 migrations, 51 indexes correct, 0 to create, 0 conflicts, Ready; dropped. Trap: the override env file must be readable by `mallakhamb`, else dotenv silently falls back to `app.env` (the live database) — guard the database name before running the check |
 | Deploy | ✅ 03:28 UTC — both VMs on master `e7452c7` (app-02 STANDBY UPDATED, app-01 DEPLOYED, OCR self-test passed) |
-| Stage 1.6 drop `BRMC_rehearsal` | not before 2026-11-04 |
+| Stage 1.6 drop `BRMC_rehearsal` | ✅ 2026-10-28 (owner chose to clean up early) — dropped (355 docs; last backup `daily/2026-10-27T2030Z`, retention-locked); `mallakhamb_staging` trimmed to `mallakhambcompetition_dev` only (`BRMC_perf`, `_dev_restoretest`, `BRMC_rehearsal*` grants gone); auth check 15/15. Rollback to api-env v8 is no longer possible — restore that backup first if ever needed |
 | Stage 2 | waits on the domain and live credentials |
