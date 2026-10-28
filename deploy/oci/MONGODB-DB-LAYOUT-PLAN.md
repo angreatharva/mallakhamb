@@ -80,10 +80,11 @@ Data loss ≤ 1 h (the off-site interval); recovery 15–30 min, mostly DNS.
 
 | Step | State |
 |---|---|
-| Stage 1.1 grants | |
-| Stage 1.2 copy | |
-| Stage 1.3 switch | |
-| Stage 1.4 backups | |
-| Stage 1.5 rehearsal | |
+| Stage 1.1 grants | ✅ 2026-10-28 03:18 UTC — `mongo-rs-init.sh` re-applied on app-01 (set healthy, app-01 PRIMARY); `mongo-auth-check.sh` **15/15 PASS** |
+| Stage 1.2 copy | ✅ 03:19 UTC — `--from-set` `BRMC_rehearsal` → `mallakhambcompetition_prod`: **IDENTICAL**, 16 collections, 355 documents, indexes equal, 11 s |
+| Stage 1.3 switch | ✅ 03:20 UTC — Vault `api-env` **v8 → v9** (undo `ROLLBACK_TO=8`); app-01 ready in 3 s on `mallakhambcompetition_prod` as `mallakhamb_app`, 13/13 migrations, 51 indexes correct, 0 conflicts; app-02 re-rendered; public `/competitions` and `/cop-rules` byte-identical |
+| Stage 1.4 backups | ✅ 03:21 UTC — nightly dump `daily/2026-10-28T0321Z` (43 KB); off-site → Atlas `mallakhambcompetition_prod_offsite`; restore drill into `_prod_restoretest`: every collection matches, 9 s, dropped |
+| Stage 1.5 rehearsal | ✅ 03:24 UTC — Singapore `BRMC` (`njhirof`) → `_prod_restoretest`: **IDENTICAL**, 16 collections, 455 documents, 19 s; startup `--check` connected to the copy: 13/13 migrations, 51 indexes correct, 0 to create, 0 conflicts, Ready; dropped. Trap: the override env file must be readable by `mallakhamb`, else dotenv silently falls back to `app.env` (the live database) — guard the database name before running the check |
+| Deploy | ✅ 03:28 UTC — both VMs on master `e7452c7` (app-02 STANDBY UPDATED, app-01 DEPLOYED, OCR self-test passed) |
 | Stage 1.6 drop `BRMC_rehearsal` | not before 2026-11-04 |
 | Stage 2 | waits on the domain and live credentials |
