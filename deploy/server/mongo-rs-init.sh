@@ -48,12 +48,16 @@ done
 "${MSH[@]}" --eval '
   const admin = db.getSiblingDB("admin");
   admin.auth("root_breakglass", process.env.MONGO_ROOT_PASSWORD);
-  // Staging runs on BRMC_rehearsal; mallakhamb-e2e and -restore-drill derive <db>_e2e and
-  // <db>_restoretest from the app URI and sign in as the same user, so those are granted too.
-  const staging = ["BRMC_rehearsal", "BRMC_rehearsal_e2e", "BRMC_rehearsal_restoretest", "BRMC_perf", "BRMC_restoretest", "BRMC_e2e"]
-    .flatMap(d => [{ role: "readWrite", db: d }, { role: "dbAdmin", db: d }]);   // dbAdmin: e2e/seed drop their own DB
+  // MONGODB-DB-LAYOUT-PLAN.md: the API (staging now, production after the cutover) runs on
+  // mallakhambcompetition_prod as mallakhamb_app. mallakhamb-restore-drill derives <db>_restoretest
+  // from the app URI, signs in as the same user and drops it afterwards (dbAdmin). e2e has its own
+  // throw-away mongod, so no *_e2e grant. BRMC_rehearsal stays until it is dropped (rollback target).
+  const rw = d => [{ role: "readWrite", db: d }, { role: "dbAdmin", db: d }];
+  const app = [{ role: "readWrite", db: "mallakhambcompetition_prod" }, ...rw("mallakhambcompetition_prod_restoretest")];
+  const staging = ["mallakhambcompetition_dev", "mallakhambcompetition_dev_restoretest", "BRMC_perf",
+                   "BRMC_rehearsal", "BRMC_rehearsal_restoretest"].flatMap(rw);
   const users = {
-    mallakhamb_app:     { pwd: process.env.MONGO_APP_PASSWORD,     roles: [{ role: "readWrite", db: "BRMC" }] },
+    mallakhamb_app:     { pwd: process.env.MONGO_APP_PASSWORD,     roles: app },
     mallakhamb_backup:  { pwd: process.env.MONGO_BACKUP_PASSWORD,  roles: [{ role: "backup", db: "admin" }, { role: "read", db: "local" }] },
     mallakhamb_staging: { pwd: process.env.MONGO_STAGING_PASSWORD, roles: staging },
     mallakhamb_monitor: { pwd: process.env.MONGO_MONITOR_PASSWORD, roles: [{ role: "clusterMonitor", db: "admin" }, { role: "read", db: "local" }] },

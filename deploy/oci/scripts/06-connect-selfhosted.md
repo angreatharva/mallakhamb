@@ -18,8 +18,8 @@ TLS checking passes; no `tlsAllowInvalid…` flag is needed.
 | User | Can do | Databases |
 |---|---|---|
 | `root_breakglass` | everything (root) — break-glass only; password `MONGO_ROOT_PASSWORD` | all |
-| `mallakhamb_app` | readWrite | `BRMC` (production after the cutover; empty until then) |
-| `mallakhamb_staging` | readWrite (+ dbAdmin on the throw-away ones) | `BRMC_rehearsal` (staging), `BRMC_perf`, `*_e2e`, `*_restoretest` |
+| `mallakhamb_app` | readWrite (+ dbAdmin on `_restoretest`) | `mallakhambcompetition_prod` — the sslip staging API now, production after the cutover ([MONGODB-DB-LAYOUT-PLAN.md](../MONGODB-DB-LAYOUT-PLAN.md)); `mallakhambcompetition_prod_restoretest` |
+| `mallakhamb_staging` | readWrite + dbAdmin | `mallakhambcompetition_dev` (laptop work), `_dev_restoretest`, `BRMC_perf`, `BRMC_rehearsal` (until dropped) |
 | `mallakhamb_backup` | backup + read `local` | dumps / oplog |
 | `mallakhamb_monitor` | clusterMonitor + read `local` | metrics |
 

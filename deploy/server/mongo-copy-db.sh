@@ -3,7 +3,7 @@
 # database (MONGODB_URI in /etc/mallakhamb/app.env, i.e. Atlas) into replica set "mallakhamb",
 # then prove the copy: same collections, same document counts, same index definitions.
 #
-#   sudo bash mongo-copy-db.sh <vault-ocid> <source-db> <target-db> <staging|app> [--from-atlas [<secret-name>]]
+#   sudo bash mongo-copy-db.sh <vault-ocid> <source-db> <target-db> <staging|app> [--from-atlas [<secret-name>] | --from-set]
 #
 #   <staging|app>  which replica-set user writes the copy (mallakhamb_staging or mallakhamb_app);
 #                  its password comes from Vault and is shredded afterwards.
@@ -14,6 +14,8 @@
 #                  cluster (kgjh7a6), NOT production's (njhirof, Render's MONGODB_URI; found
 #                  2026-10-25). For production pass mallakhamb-prod-bom-secret-mongo-prod-source-uri,
 #                  which the owner stores from Cloud Shell. The source host is printed: check it.
+#   --from-set     the source is another database on the replica set itself, read as mallakhamb_backup
+#                  (MONGODB-DB-LAYOUT-PLAN.md: BRMC_rehearsal -> mallakhambcompetition_prod).
 #
 # The target is dropped first (--drop) and rebuilt. URIs reach mongodump/mongorestore through
 # 0600 config files and mongosh through its environment — never a command line (ps shows those).
@@ -29,18 +31,28 @@ if [ "${5:-}" = --from-atlas ]; then
   SRC_URI="$("$OCI" secrets secret-bundle get-secret-bundle-by-name --vault-id "$VAULT" \
     --secret-name "${6:-mallakhamb-prod-bom-secret-mongo-offsite-uri}" \
     --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^[A-Z_]*URI='\(.*\)'$/\1/p" | head -1)"
+elif [ "${5:-}" = --from-set ]; then
+  SRC_URI=""   # built below, once the backup password is fetched
 else
   SRC_URI="$(sed -n "s/^MONGODB_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
 fi
-[ -n "$SRC_URI" ] || { echo "no source URI" >&2; exit 1; }
-[[ "$SRC_URI" != *"replicaSet=mallakhamb"* ]] || { echo "app.env already points at the replica set; nothing to copy from" >&2; exit 1; }
 [ -f "$CA" ] || { echo "$CA missing: run mongo-tls-fetch <vault> install <member> first" >&2; exit 1; }
+[ "$SRC_DB" != "$DST_DB" ] || { echo "source and target are the same database" >&2; exit 1; }
 
 mongo-tls-fetch "$VAULT" users 2>/dev/null
 PW="$(sed -n "s/^MONGO_${WHO^^}_PASSWORD='\(.*\)'$/\1/p" /root/mongo-users.env)"
+BPW="$(sed -n "s/^MONGO_BACKUP_PASSWORD='\(.*\)'$/\1/p" /root/mongo-users.env)"
 shred -u /root/mongo-users.env
 [ -n "$PW" ] || { echo "no password for $WHO in Vault" >&2; exit 1; }
-DST_URI="mongodb://mallakhamb_${WHO}:${PW}@app-01.db:27017,app-02.db:27017,db-03.db:27017/${DST_DB}?replicaSet=mallakhamb&authSource=admin&tls=true&tlsCAFile=${CA}"
+SET="app-01.db:27017,app-02.db:27017,db-03.db:27017"
+SETQ="replicaSet=mallakhamb&authSource=admin&tls=true&tlsCAFile=${CA}"
+DST_URI="mongodb://mallakhamb_${WHO}:${PW}@${SET}/${DST_DB}?${SETQ}"
+if [ "${5:-}" = --from-set ]; then
+  [ -n "$BPW" ] || { echo "no backup password in Vault" >&2; exit 1; }
+  SRC_URI="mongodb://mallakhamb_backup:${BPW}@${SET}/${SRC_DB}?${SETQ}&readPreference=secondaryPreferred"
+fi
+[ -n "$SRC_URI" ] || { echo "no source URI" >&2; exit 1; }
+[ "${5:-}" = --from-set ] || [[ "$SRC_URI" != *"replicaSet=mallakhamb"* ]] || { echo "app.env already points at the replica set; use --from-atlas or --from-set" >&2; exit 1; }
 
 # The source URI's own database path decides what mongodump reads; replace it with SRC_DB.
 [[ "$SRC_URI" =~ ^(mongodb(\+srv)?://[^/]+/)([^?]*)(\?.*)?$ ]] || { echo "cannot parse MONGODB_URI" >&2; exit 1; }

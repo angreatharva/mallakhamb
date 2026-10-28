@@ -3,7 +3,8 @@
 # Run in OCI Cloud Shell. Rewrites ONLY MONGODB_URI and BACKUP_URI in the env secret
 # (mallakhamb-prod-bom-secret-api-env) as a new version; every other line is kept byte for byte.
 #
-#   bash mongo-m4-staging-env.sh                    # switch to BRMC_rehearsal on the replica set
+#   bash mongo-m4-staging-env.sh                    # switch to mallakhambcompetition_prod as mallakhamb_app
+#   DB=BRMC_rehearsal WHO=staging bash mongo-m4-staging-env.sh   # the M4 layout (2026-10-24)
 #   ROLLBACK_TO=<version> bash mongo-m4-staging-env.sh   # make that older version's content current again
 #
 # Then on the VMs: app-01 `sudo systemctl restart mallakhamb` (ExecStartPre re-renders the env),
@@ -12,7 +13,11 @@ set -euo pipefail
 umask 077
 W="$(mktemp -d)"; trap 'find "$W" -type f -exec shred -u {} + 2>/dev/null; rm -rf "$W"' EXIT
 P=mallakhamb-prod-bom
-DB=BRMC_rehearsal
+# MONGODB-DB-LAYOUT-PLAN.md (2026-10-28): the sslip API runs on mallakhambcompetition_prod as
+# mallakhamb_app, so the cutover changes the data and keys, never this URI.
+DB=${DB:-mallakhambcompetition_prod}
+WHO=${WHO:-app}
+case "$WHO" in app|staging) ;; *) echo "WHO must be app or staging" >&2; exit 2 ;; esac
 HOSTS=app-01.db:27017,app-02.db:27017,db-03.db:27017
 Q="replicaSet=mallakhamb&authSource=admin&tls=true&tlsCAFile=/etc/mallakhamb/mongo-ca.pem"
 
@@ -31,14 +36,14 @@ if [ -n "${ROLLBACK_TO:-}" ]; then
   echo "rolling back: content of version $ROLLBACK_TO becomes current"
 else
   bundle "$(sid mongo-users)" > "$W/users.env"
-  SPW=$(sed -n "s/^MONGO_STAGING_PASSWORD='\(.*\)'$/\1/p" "$W/users.env")
+  SPW=$(sed -n "s/^MONGO_${WHO^^}_PASSWORD='\(.*\)'$/\1/p" "$W/users.env")
   BPW=$(sed -n "s/^MONGO_BACKUP_PASSWORD='\(.*\)'$/\1/p" "$W/users.env")
   [ -n "$SPW" ] && [ -n "$BPW" ] || { echo "passwords missing in the users secret" >&2; exit 1; }
   for k in MONGODB_URI BACKUP_URI; do
     [ "$(grep -c "^$k=" "$W/cur.env")" = 1 ] || { echo "$k is not exactly once in the env - stopping" >&2; exit 1; }
   done
   # awk + ENVIRON: the URIs contain & and ?, which sed would mangle.
-  NEWM="MONGODB_URI='mongodb://mallakhamb_staging:$SPW@$HOSTS/$DB?$Q'" \
+  NEWM="MONGODB_URI='mongodb://mallakhamb_$WHO:$SPW@$HOSTS/$DB?$Q'" \
   NEWB="BACKUP_URI='mongodb://mallakhamb_backup:$BPW@$HOSTS/$DB?$Q'" \
   awk '/^MONGODB_URI=/ {print ENVIRON["NEWM"]; next} /^BACKUP_URI=/ {print ENVIRON["NEWB"]; next} {print}' \
     "$W/cur.env" > "$W/new.env"
