@@ -2,6 +2,23 @@ const { body, query } = require('express-validator');
 const { objectId, password, phone, enumValue, date } = require('./common.validator');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
+const { checkAgeGroup, groupLabel } = require('../utils/data/age-eligibility.util');
+
+/**
+ * A player's own age group: theirs or a higher one (COP), measured on
+ * 31 December of this year — there is no competition to take the cut-off from.
+ * Judged only when the request also carries the date of birth and gender.
+ */
+function ownAgeGroupAllowed(value, { req }) {
+  const { dateOfBirth, gender } = req.body || {};
+  if (!value || !dateOfBirth || !gender) return true;
+  const result = checkAgeGroup({ dateOfBirth, gender, ageGroup: value, cutoffYear: new Date().getUTCFullYear() });
+  if (!result.ok) {
+    throw new Error(`Age ${result.age} on 31 Dec ${result.cutoffYear} is too old for ${groupLabel(value)}`
+      + (result.eligible.length ? `; choose ${groupLabel(result.eligible[0])} or higher` : ''));
+  }
+  return true;
+}
 
 const EMAIL_TYPES = ['self', 'guardian', 'none'];
 
@@ -134,7 +151,9 @@ const createPlayer = () => {
       .optional()
       .trim()
       .isIn(AGE_GROUPS)
-      .withMessage('Invalid age group'),
+      .withMessage('Invalid age group')
+      .bail()
+      .custom(ownAgeGroupAllowed),
     body('team')
       .optional()
       .custom((value) => {
@@ -197,7 +216,9 @@ const updatePlayer = () => {
       .optional()
       .trim()
       .isIn(AGE_GROUPS)
-      .withMessage('Invalid age group'),
+      .withMessage('Invalid age group')
+      .bail()
+      .custom(ownAgeGroupAllowed),
     body('team')
       .optional()
       .custom((value) => {

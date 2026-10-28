@@ -2,7 +2,7 @@
 
 Product decisions settled with the owner on 2026-10-28.
 
-**Status:** step 1 built on `feature/team-per-level` (2026-10-28, not committed yet). Steps 2–4 not started.
+**Status:** step 1 committed (`f8773b0`) and step 2 built on `feature/team-per-level` (2026-10-29). Steps 3–4 not started.
 
 ## Rules
 

@@ -12,6 +12,7 @@ import CompetitionLockBanner from '@/components/competition/CompetitionLockBanne
 import CompetitionSelector from '@/components/competition/CompetitionSelector';
 import { apparatusFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { countedScoresFor } from '@/utils/scoring/teamSize';
+import { ageCutoffYear, ageOnCutoff, eligibleAgeGroups } from '@/utils/competition/ageEligibility';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import PerformancePanel from '@/components/performance/PerformancePanel';
@@ -154,12 +155,16 @@ const CoachDashboard = () => {
   };
 
   const genders = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }];
-  const ageGroupLimits = {
-    'Under10': { minAge: 0, maxAge: 9 }, 'Under12': { minAge: 0, maxAge: 11 },
-    'Under14': { minAge: 0, maxAge: 13 }, 'Under16': { minAge: 0, maxAge: 15 },
-    'Under18': { minAge: 0, maxAge: 17 }, 'Above16': { minAge: 16, maxAge: 100 },
-    'Above18': { minAge: 18, maxAge: 100 },
-  };
+
+  /*
+   * The COP age rule (1.8.3.2–1.8.3.5), the same one the server enforces:
+   * age = cut-off year − birth year, on 31 December; "Under N" includes N; a
+   * player may enter their own group or any higher one. The screen used its
+   * own birthday-based limits, one year off ("Under 12" stopped at 11) and
+   * refusing girls who play up into "Above 16".
+   */
+  const cutoffYear = ageCutoffYear(currentCompetition) ?? new Date().getUTCFullYear();
+  const allowedGroups = (dob, gender) => eligibleAgeGroups(ageOnCutoff(dob, cutoffYear), gender);
 
   const competitionAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
   const maleAgeGroupValues = useAgeGroupValues('Male');
@@ -206,44 +211,20 @@ const CoachDashboard = () => {
     ));
   };
 
-  const calculateAge = (dob) => {
-    const today = new Date(), birth = new Date(dob);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    return age;
+  /** Age on 31 December of the meet's cut-off year (COP), not today's age. */
+  const calculateAge = (dob) => ageOnCutoff(dob, cutoffYear);
+
+  /** The meet's groups this player may enter: their own and every higher one, youngest first. */
+  const getAvailableAgeGroups = (gender, playerAge) => {
+    const allowed = eligibleAgeGroups(playerAge, gender);
+    return competitionAgeGroups
+      .filter((ag) => allowed.includes(ag.value))
+      .sort((a, b) => allowed.indexOf(a.value) - allowed.indexOf(b.value));
   };
 
-  const getAvailableAgeGroups = (gender, playerAge) => {
-    // Add age limits to each age group
-    const ageGroups = competitionAgeGroups.map(ag => ({ ...ag, ...ageGroupLimits[ag.value] }));
-    
-    // Filter age groups where the player is eligible
-    // A player can play in ANY category where they meet the age requirement
-    const eligibleGroups = ageGroups.filter(ag => {
-      if (ag.value.startsWith('Under')) {
-        // For "Under" categories, player age must be <= maxAge
-        return playerAge <= ag.maxAge;
-      } else if (ag.value.startsWith('Above')) {
-        // For "Above" categories, player can play regardless of age
-        // (they can play up in higher age categories)
-        return true;
-      }
-      return false;
-    });
-    
-    // Sort the eligible groups: Under categories first (by maxAge), then Above categories (by minAge)
-    return eligibleGroups.sort((a, b) => {
-      if (a.value.startsWith('Under') && b.value.startsWith('Under')) {
-        return a.maxAge - b.maxAge;
-      }
-      if (a.value.startsWith('Above') && b.value.startsWith('Above')) {
-        return a.minAge - b.minAge;
-      }
-      // Under categories come before Above categories
-      return a.value.startsWith('Under') ? -1 : 1;
-    });
-  };
+  /** The server's reason, wherever the error handler put it. */
+  const serverMessage = (error, fallback) =>
+    error?.response?.data?.error?.message || error?.response?.data?.message || fallback;
 
   const fetchTeamDashboard = async () => {
     try {
@@ -310,8 +291,8 @@ const CoachDashboard = () => {
         return toast.error(`This competition allows at most ${team.maxTeamSize} players per age group — ${selectedAgeGroup.label} is full`);
       }
     }
-    if (selectedAgeGroup.value.startsWith('Under') && age > selectedAgeGroup.maxAge) {
-      return toast.error(`Player is ${age} years old and cannot play in ${selectedAgeGroup.label} (max: ${selectedAgeGroup.maxAge})`);
+    if (!eligibleAgeGroups(age, selectedGender.value).includes(selectedAgeGroup.value)) {
+      return toast.error(`Player is ${age} on 31 Dec ${cutoffYear} and too old for ${selectedAgeGroup.label}`);
     }
     try {
       await coachAPI.addPlayerToAgeGroup({ 
@@ -323,7 +304,7 @@ const CoachDashboard = () => {
       toast.success('Player added to age group successfully!');
       handleCloseModal();
       fetchTeamDashboard();
-    } catch (error) { toast.error(error.response?.data?.message || 'Failed to add player'); }
+    } catch (error) { toast.error(serverMessage(error, 'Failed to add player')); }
   };
 
   const handleCloseModal = () => {
@@ -388,19 +369,10 @@ const CoachDashboard = () => {
         return;
       }
 
-      const playerAge = calculateAge(data.dateOfBirth);
-      const limits = ageGroupLimits[targetAgeGroup];
-
-      if (targetAgeGroup.startsWith('Under') && limits && playerAge > limits.maxAge) {
+      // Their own group or any higher one (COP). Playing up is always allowed.
+      if (!allowedGroups(data.dateOfBirth, targetGender).includes(targetAgeGroup)) {
         toast.error(
-          `${data.firstName} is ${playerAge} yrs old and cannot play in ${getAgeGroupDisplay(targetAgeGroup)} (max age: ${limits.maxAge})`
-        );
-        return;
-      }
-
-      if (targetAgeGroup.startsWith('Above') && limits && playerAge < limits.minAge) {
-        toast.error(
-          `${data.firstName} is ${playerAge} yrs old and cannot play in ${getAgeGroupDisplay(targetAgeGroup)} (min age: ${limits.minAge})`
+          `${data.firstName} is ${calculateAge(data.dateOfBirth)} on 31 Dec ${cutoffYear} and too old for ${getAgeGroupDisplay(targetAgeGroup)}`
         );
         return;
       }
@@ -417,7 +389,7 @@ const CoachDashboard = () => {
       toast.success(`${data.firstName} moved to ${getAgeGroupDisplay(targetAgeGroup)}!`, { id: 'move-player' });
       fetchTeamDashboard();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to move player', { id: 'move-player' });
+      toast.error(serverMessage(err, 'Failed to move player'), { id: 'move-player' });
     }
   };
 
@@ -527,9 +499,15 @@ const CoachDashboard = () => {
                 {!team?.isSubmitted && (
                   <GripVertical className="w-3.5 h-3.5 mr-1.5 text-fg-muted flex-shrink-0" aria-hidden="true" />
                 )}
-                <span className="text-fg type-body-s truncate">
-                  {player.player.firstName} {player.player.lastName}
-                  {apparatusLabel(player.apparatus) ? <span className="ml-2 type-caption text-fg-muted">({apparatusLabel(player.apparatus)})</span> : null}
+                <span className="grid min-w-0">
+                  <span className="text-fg type-body-s truncate">
+                    {player.player.firstName} {player.player.lastName}
+                    {apparatusLabel(player.apparatus) ? <span className="ml-2 type-caption text-fg-muted">({apparatusLabel(player.apparatus)})</span> : null}
+                  </span>
+                  {/* Entered before the age rule was enforced: kept, shown in red until moved. */}
+                  {player.ageIssue && (
+                    <span className="ui-field__error type-caption" role="note" data-testid="squad-age-issue">{player.ageIssue.message}</span>
+                  )}
                 </span>
               </div>
               <IconButton
@@ -800,7 +778,7 @@ const CoachDashboard = () => {
                   placeholder="Select age group"
                 />
                 <p className="text-fg-muted type-caption m-0">
-                  Player age: {selectedPlayerData.age} yrs. Showing eligible categories.
+                  Age {selectedPlayerData.age} on 31 Dec {cutoffYear} (COP). Showing their own group and every higher one.
                 </p>
               </div>
               <div className="grid gap-2">

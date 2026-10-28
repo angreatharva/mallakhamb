@@ -15,6 +15,7 @@ const {
   AuthorizationError
 } = require('../../errors');
 const { pageMeta } = require('../../utils/data/pagination.util');
+const { assertAgeGroup } = require('../../utils/data/age-eligibility.util');
 
 class RegistrationService {
   /**
@@ -274,13 +275,16 @@ class RegistrationService {
 
       // A player's team is final at each level: only a player this team holds
       // (or may still take) at the meet's level is entered.
-      await this.playerTeamService?.ensureForEntry({
+      const entered = await this.playerTeamService?.ensureForEntry({
         player: playerId,
         teamId,
         level: competition.level,
         actor: actor || { type: 'system' },
         via: 'squad-entry',
       });
+
+      // The COP age rule: their own age group or any higher one.
+      if (entered?.player) assertAgeGroup({ player: entered.player, gender, ageGroup, competition });
 
       // Check if player is already in registration
       const existingPlayer = registration.players.find(

@@ -10,6 +10,7 @@ import { logger } from '@/infrastructure/logger';
 import { useAgeGroups } from '../../hooks/useAgeGroups';
 import { getCompetitionPlayerFeeRupees } from '@/utils/scoring/competitionFee';
 import { offeredApparatus } from '@/utils/scoring/apparatus';
+import { ageCutoffYear, ageOnCutoff, eligibleAgeGroups } from '@/utils/competition/ageEligibility';
 import { DarkBtn } from '@/components/admin/AdminKit';
 import { PasswordRequirements, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength';
 
@@ -64,58 +65,27 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
   const [selectedApparatus, setSelectedApparatus] = useState({});
   const [loadingTeams, setLoadingTeams] = useState(false);
   
-  // Age group limits for validation
-  const ageGroupLimits = {
-    'Under10': { minAge: 0, maxAge: 9 }, 'Under12': { minAge: 0, maxAge: 11 },
-    'Under14': { minAge: 0, maxAge: 13 }, 'Under16': { minAge: 0, maxAge: 15 },
-    'Under18': { minAge: 0, maxAge: 17 }, 'Above16': { minAge: 16, maxAge: 100 },
-    'Above18': { minAge: 18, maxAge: 100 },
-  };
-  
   // Get age groups based on selected gender
   const competitionAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
-  
-  // Calculate age from date of birth
-  const calculateAge = (dob) => {
-    if (!dob) return null;
-    const today = new Date();
-    const birthDate = new Date(dob);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-  
-  // Get available age groups based on player's age
+
+  /*
+   * The COP age rule, as the server enforces it: age on 31 December of the
+   * meet's cut-off year; "Under N" includes N; their own group or any higher.
+   * The form used birthday-based limits one year off ("Under 12" stopped at 11).
+   */
+  const competitionDoc = competitions.find((c) => c._id === selectedCompetition?.value) || null;
+  const cutoffYear = ageCutoffYear(competitionDoc) ?? new Date().getUTCFullYear();
+  const calculateAge = (dob) => (dob ? ageOnCutoff(dob, cutoffYear) : null);
+
+  // The meet's groups this player may enter, youngest first.
   const getAvailableAgeGroups = (gender, playerAge) => {
-    if (!playerAge || !competitionAgeGroups.length) return [];
-    
-    // Add age limits to each age group
-    const ageGroups = competitionAgeGroups.map(ag => ({ ...ag, ...ageGroupLimits[ag.value] }));
-    
-    // Filter age groups where the player is eligible
-    const eligibleGroups = ageGroups.filter(ag => {
-      if (ag.value.startsWith('Under')) {
-        return playerAge <= ag.maxAge;
-      } else if (ag.value.startsWith('Above')) {
-        return true;
-      }
-      return false;
-    });
-    
-    return eligibleGroups.sort((a, b) => {
-      if (a.value.startsWith('Under') && b.value.startsWith('Under')) {
-        return a.maxAge - b.maxAge;
-      }
-      if (a.value.startsWith('Above') && b.value.startsWith('Above')) {
-        return a.minAge - b.minAge;
-      }
-      return a.value.startsWith('Under') ? -1 : 1;
-    });
+    if (playerAge === null || !competitionAgeGroups.length) return [];
+    const allowed = eligibleAgeGroups(playerAge, gender);
+    return competitionAgeGroups
+      .filter((ag) => allowed.includes(ag.value))
+      .sort((x, y) => allowed.indexOf(x.value) - allowed.indexOf(y.value));
   };
-  
+
   // Watch date of birth to calculate age and reset age group
   const dateOfBirth = watch('dateOfBirth', '');
   const playerAge = calculateAge(dateOfBirth);
@@ -220,18 +190,10 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
       return;
     }
     
-    // Validate age group eligibility
-    if (playerAge !== null && selectedAgeGroup) {
-      const ageGroup = ageGroupLimits[selectedAgeGroup.value];
-      if (ageGroup) {
-        // For "Under" categories, player must be at or below the max age
-        if (selectedAgeGroup.value.startsWith('Under') && playerAge > ageGroup.maxAge) {
-          toast.error(`Player is ${playerAge} years old and cannot play in ${selectedAgeGroup.label} (max age: ${ageGroup.maxAge})`);
-          return;
-        }
-        // For "Above" categories, players can always play up (no minimum age restriction for playing up)
-        // This allows younger players to compete in higher age categories
-      }
+    // Their own age group or a higher one (COP); the server checks it again.
+    if (playerAge !== null && selectedGender && !eligibleAgeGroups(playerAge, selectedGender.value).includes(selectedAgeGroup.value)) {
+      toast.error(`Player is ${playerAge} on 31 Dec ${cutoffYear} and too old for ${selectedAgeGroup.label}`);
+      return;
     }
     
     // Validate team selection
@@ -452,7 +414,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           )}
           {selectedGender && dateOfBirth && playerAge !== null && (
             <p className="text-xs mt-1 text-fg-muted">
-              Player age: {playerAge} years. Showing eligible categories.
+              Age {playerAge} on 31 Dec {cutoffYear} (COP). Showing their own group and every higher one.
             </p>
           )}
         </div>

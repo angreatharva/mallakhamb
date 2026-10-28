@@ -628,7 +628,7 @@ class WalkInService {
           else if (!row.ageGroup) add('ageGroup', 'error', 'Choose an age group');
           else if (!offeredGroups(gender).includes(row.ageGroup)) add('ageGroup', 'error', 'This competition does not run that age group');
           else if (!eligible.includes(row.ageGroup)) add('ageGroup', 'error', `Too old for ${groupLabel(row.ageGroup)} — choose ${groupLabel(eligible[0])} or higher`);
-          else if (row.ageGroup !== lowest) add('ageGroup', 'info', 'Playing up — COP: cannot return to a lower age group later.');
+          else if (row.ageGroup !== lowest) add('ageGroup', 'info', `Playing up — their own group is ${groupLabel(lowest)}.`);
         }
 
         const offered = gender ? offeredApp(gender) : [];

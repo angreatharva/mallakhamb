@@ -42,6 +42,19 @@ and the suggestion at a level not chosen yet.
 - Migration 014 locks a level only where ONE team ever entered the player;
   two → `PlayerTeamConflict` for the Super Admin (page = plan step 3).
 
+## The COP age rule at every entry (2026-10-29)
+
+`utils/data/age-eligibility.util.js` — `checkAgeGroup` / `assertAgeGroup`
+over `config/cop-rules` (age on 31 Dec of `ageCutoffYear`, "Under N" includes
+N, own group or any higher). Asserted in `coachService.addPlayerToAgeGroup`,
+`registrationService.addPlayerToRegistration`, Super Admin `addPlayer` and
+`createPlayerPaymentOrder` (before money moves), and the player validators
+(own choice, 31 Dec of this year). 400 `AGE_GROUP_NOT_ALLOWED` with
+`eligible`. Old entries that break it are kept; the coach dashboard gets
+`players[].ageIssue` and shows it in red. The Web coach dashboard and Super
+Admin Add Player form use `utils/competition/ageEligibility.js` (their old
+birthday-based limits were a year off).
+
 ## Purpose
 
 `TeamService` (standalone — does **not** extend `UserService`, unlike every

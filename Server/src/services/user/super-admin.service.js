@@ -5,6 +5,7 @@ const { EMAIL_TYPES } = require('../../models/Player');
 const { calculatePlayerAdditionAmount, resolveFeeWindow } = require('../../config/payment.config');
 const { applyApparatusByGender } = require('../../utils/data/competition-apparatus.util');
 const { hasRoomInSquad, isValidTeamSize, TEAM_SIZES } = require('../../utils/scoring/team-championship.util');
+const { assertAgeGroup } = require('../../utils/data/age-eligibility.util');
 
 const TEAM_SIZE_MESSAGE = `Max team size must be ${TEAM_SIZES.join(' or ')} players per age group`;
 const {
@@ -775,6 +776,9 @@ class SuperAdminService {
         );
       }
 
+      // The age rule too, before money moves — `addPlayer` checks it again.
+      assertAgeGroup({ player: playerData, gender: playerData.gender, ageGroup: playerData.ageGroup, competition });
+
       /*
        * Calculate payment amount using centralized config with
        * competition-specific player fee, plus any late fee in force.
@@ -1047,6 +1051,9 @@ class SuperAdminService {
         + `and ${teamWithCoach?.name || 'this team'}'s ${gender} ${ageGroup} is full`
       );
     }
+
+    // The COP age rule: the age group must be theirs or a higher one.
+    assertAgeGroup({ player: { firstName, lastName, dateOfBirth }, gender, ageGroup, competition });
 
     // The same three choices as self-registration. Only a player's own
     // address must be unique; a guardian's may be shared by siblings.

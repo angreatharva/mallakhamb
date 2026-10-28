@@ -10,6 +10,22 @@
 const UserService = require('./user.service');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../../errors');
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
+const { assertAgeGroup, checkAgeGroup, groupLabel } = require('../../utils/data/age-eligibility.util');
+
+/** "Too old for Under 12 (13 on 31 Dec 2026) — move to Under 14 or higher", or null. */
+function ageIssueOf(player, entry, competition) {
+  const result = checkAgeGroup({ dateOfBirth: player.dateOfBirth, gender: entry.gender, ageGroup: entry.ageGroup, competition });
+  if (result.ok) return null;
+  const offered = (competition.ageGroups || []).filter((g) => g.gender === entry.gender).map((g) => g.ageGroup);
+  const choices = offered.length ? result.eligible.filter((g) => offered.includes(g)) : result.eligible;
+  return {
+    age: result.age,
+    cutoffYear: result.cutoffYear,
+    eligible: choices,
+    message: `Too old for ${groupLabel(entry.ageGroup)} (${result.age} on 31 Dec ${result.cutoffYear})`
+      + (choices.length ? ` — move to ${groupLabel(choices[0])}${choices.length > 1 ? ' or higher' : ''}` : ''),
+  };
+}
 // One shape on the way in, whatever the two clients post — see the module header.
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
 const { offeredApparatus, hasGenderApparatus } = require('../../utils/data/competition-apparatus.util');
@@ -376,7 +392,10 @@ class CoachService extends UserService {
             },
             ageGroup: playerEntry.ageGroup,
             gender: playerEntry.gender,
-            apparatus: playerEntry.apparatus
+            apparatus: playerEntry.apparatus,
+            // An entry made before the COP age rule was enforced everywhere is
+            // kept, not removed — shown in red so someone moves it up.
+            ageIssue: ageIssueOf(player, playerEntry, competition),
           });
         }
       } catch (error) {
@@ -545,6 +564,9 @@ class CoachService extends UserService {
           'gender'
         );
       }
+
+      // The COP age rule: their own age group or any higher one (31 Dec cut-off).
+      assertAgeGroup({ player, gender, ageGroup, competition });
 
       /*
        * A player's team is final at each level. The team entering them must
