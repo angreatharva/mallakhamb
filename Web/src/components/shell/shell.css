@@ -35,6 +35,8 @@
 }
 .shell-account { display: flex; align-items: center; gap: 8px; }
 .shell-header__nav { display: none; margin-left: auto; }
+/* "Walk-in" broke at its hyphen into two lines. */
+.shell-header--nav-xxl .shell-header__nav a { white-space: nowrap; }
 .shell-header__account { display: none; align-items: center; gap: 8px; margin-left: auto; }
 .shell-header__nav + .shell-header__account { margin-left: 8px; }
 .shell-header--fixed { position: fixed; left: 0; right: 0; }
@@ -58,6 +60,17 @@
 @media (min-width: 1024px) and (max-width: 1279px) {
   .shell-header--nav-xl .shell-header__nav { display: none; }
   .shell-header--nav-xl .shell-header__menu { display: inline-flex; }
+}
+/* The longest row (Super Admin, ten tabs) needs more than the 1280px bar:
+   it joins the bar from 1440, which also widens, and the brand never shrinks
+   under it (the role ident used to slide beneath the first tab). */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .shell-header--nav-xxl .shell-header__nav { display: none; }
+  .shell-header--nav-xxl .shell-header__menu { display: inline-flex; }
+}
+@media (min-width: 1440px) {
+  .shell-header--nav-xxl .shell-header__bar { max-width: 90rem; }
+  .shell-header--nav-xxl .shell-header__brand { flex-shrink: 0; }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   .shell-header__menu { margin-left: 8px; }

@@ -463,3 +463,70 @@ describe('walk-in desk: a child who already has a Player ID', () => {
     expect(view.blocking).toBeGreaterThan(0);
   });
 });
+
+describe('paper form for a coach (their own team, their own drafts)', () => {
+  const Team = require('../../src/models/Team');
+
+  async function coachSetup() {
+    const { service } = build();
+    // No fee window needed: a coach pays later from the dashboard.
+    const competition = await meet({ registrationOpenDate: day(`${thisYear + 1}-01-01`) });
+    const admin = superAdmin();
+    const coach = await service.createCoach(admin, {
+      firstName: 'Ravi', lastName: 'Kale', email: `ravi${Math.random()}@example.com`, phone: '9123456780',
+      password: 'CoachPass1', playerDefaultPassword: 'Shivaji2026',
+    });
+    await service.ensureTeam(admin, coach._id, { name: 'Shivaji Club' });
+    const actor = { id: coach._id, userType: 'coach', user: { _id: coach._id } };
+    return { service, competition, coach, actor };
+  }
+
+  const row = (overrides = {}) => ({
+    firstName: 'AARAV', lastName: 'PATIL', dateOfBirth: `${thisYear - 11}-03-14`, gender: 'Male', ageGroup: 'Under12',
+    apparatus: ['Pole Mallakhamb'], ...overrides,
+  });
+
+  test('opens, fills and submits the coach\'s own form; nobody else\'s, and no payment here', async () => {
+    const { service, competition, actor } = await coachSetup();
+    expect(await service.currentDraft(actor, competition._id)).toBeNull();
+    const draft = await service.openDraft(actor, { competitionId: competition._id, coachId: new mongoose.Types.ObjectId() });
+    expect(String(draft.coach._id)).toBe(String(actor.id));
+    expect((await service.currentDraft(actor, competition._id))._id).toEqual(draft._id);
+
+    const stranger = { id: new mongoose.Types.ObjectId(), userType: 'coach', user: {} };
+    await expect(service.view(stranger, draft._id)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.saveRows(stranger, draft._id, { rows: [] })).rejects.toMatchObject({ statusCode: 404 });
+
+    await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [row()] });
+    const submitted = await service.submit(actor, draft._id);
+    expect(submitted.status).toBe('submitted');
+    const player = await Player.findOne({ firstName: 'Aarav' }).lean();
+    expect(player.levelTeams).toEqual([expect.objectContaining({ level: 'state', setByType: 'coach' })]);
+    await expect(service.createPaymentOrder(actor, draft._id)).rejects.toThrow(/Pay Fees/);
+
+    // Paying from the dashboard closes the form.
+    await Competition.updateOne({ _id: competition._id }, { $set: { 'registeredTeams.0.isSubmitted': true } });
+    expect((await service.view(actor, draft._id)).status).toBe('paid');
+  });
+
+  test('a coach never sees guesses about other teams\' children, and cannot register a second ID over a held child', async () => {
+    const { service, competition, actor } = await coachSetup();
+    const otherCoach = await Coach.create({ firstName: 'Other', lastName: 'Coach', email: `oc${Math.random()}@example.com`, phone: '9000000002', password: 'CoachPass1' });
+    const otherTeam = await Team.create({ name: 'Holding Club', coach: otherCoach._id });
+    await Player.create({
+      firstName: 'Aarav', lastName: 'Patil', gender: 'Male', team: otherTeam._id, levelTeams: [{ level: 'state', team: otherTeam._id }],
+      dateOfBirth: new Date(`${thisYear - 11}-03-14T00:00:00Z`), emailType: 'self', email: `held${Math.random()}@example.com`, phone: '9000000001', password: 'PlayerPass1',
+    });
+    const draft = await service.openDraft(actor, { competitionId: competition._id });
+
+    // A close guess (one letter off) about another team's child: not shown.
+    const misread = await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [row({ firstName: 'AARAU' })] });
+    expect(misread.rows[0].matches).toEqual([]);
+
+    // The exact child another team holds at this level: shown, refused, even as "a different child".
+    const exact = await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [{ ...row(), _id: misread.rows[0]._id, matchChoice: 'new' }] });
+    expect(exact.blocking).toBeGreaterThan(0);
+    expect(exact.rows[0].issues.map((i) => i.message).join(' ')).toMatch(/registered with Holding Club for State\. If this is a different child, ask the competition admin/);
+    await expect(service.submit(actor, draft._id)).rejects.toMatchObject({ details: expect.objectContaining({ reason: 'ROWS_INVALID' }) });
+  });
+});

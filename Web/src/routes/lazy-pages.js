@@ -8,6 +8,7 @@ export const CoachLogin = lazy(() => import('@/pages/coach/CoachLogin'));
 export const CoachCreateTeam = lazy(() => import('@/pages/coach/CoachCreateTeam'));
 export const CoachDashboard = lazy(() => import('@/pages/coach/CoachDashboard'));
 export const CoachPayment = lazy(() => import('@/pages/coach/CoachPayment'));
+export const CoachPaperForm = lazy(() => import('@/pages/coach/CoachPaperForm'));
 export const AdminLogin = lazy(() => import('@/pages/admin/AdminLogin'));
 export const AdminRegister = lazy(() => import('@/pages/admin/AdminRegister'));
 export const SuperAdminLogin = lazy(() => import('@/pages/superadmin/SuperAdminLogin'));

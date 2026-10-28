@@ -25,6 +25,7 @@ const { createCompetitionLockGuard } = require('../middleware/competition-lock.m
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const accountValidators = require('../validators/account.validator');
 const playerValidators = require('../validators/player.validator');
+const walkInValidators = require('../validators/walk-in.validator');
 const { password: passwordRule } = require('../validators/common.validator');
 const { createUserRateLimitMiddleware } = require('../middleware/security.middleware');
 
@@ -403,6 +404,34 @@ function createCoachRoutes(container) {
     handleValidationErrors,
     coachPlayers.registerPlayer
   );
+
+  /*
+   * Paper form (OCR) for the coach's own team — the walk-in desk's flow for
+   * the competition in the coach's session (docs/team-per-level-plan.md
+   * step 4). The service keeps a coach to their own drafts and their own
+   * team's children; there is no payment here — the coach uses Pay Fees.
+   */
+  const walkIn = (name) => (req, res, next) => container.resolve('walkInController')[name](req, res, next);
+  const paperForm = [authMiddleware, coachAuth, validateCompetitionContext];
+  const paperWrite = [...paperForm, requireUnlockedCompetition()];
+  const deskRules = (chains) => [...chains, handleValidationErrors];
+  router.get('/paper-form/form', authMiddleware, coachAuth, walkIn('formPdf'));
+  router.get('/paper-form/ocr/status', authMiddleware, coachAuth, walkIn('ocrStatus'));
+  router.get('/paper-form/draft', ...paperForm, walkIn('coachCurrentDraft'));
+  router.post('/paper-form/draft', ...paperWrite, walkIn('coachOpenDraft'));
+  router.get('/paper-form/draft/:draftId', ...paperForm, deskRules(walkInValidators.draftId()), walkIn('getDraft'));
+  router.delete('/paper-form/draft/:draftId', ...paperWrite, deskRules(walkInValidators.draftId()), walkIn('cancelDraft'));
+  router.post(
+    '/paper-form/draft/:draftId/scan',
+    ...paperWrite,
+    userRateLimit,
+    express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '8mb' }),
+    deskRules(walkInValidators.scan()),
+    walkIn('scan')
+  );
+  router.put('/paper-form/draft/:draftId/rows', ...paperWrite, deskRules(walkInValidators.saveRows()), walkIn('saveRows'));
+  router.post('/paper-form/draft/:draftId/submit', ...paperWrite, deskRules(walkInValidators.draftId()), walkIn('submit'));
+  router.get('/paper-form/draft/:draftId/slip', ...paperForm, deskRules(walkInValidators.draftId()), walkIn('slip'));
 
   return router;
 }

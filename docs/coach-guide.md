@@ -130,6 +130,18 @@ The dashboard (`/coach/dashboard`) is where you place every athlete in an age gr
 - An athlete too old for an age group cannot be placed in it.
 - Girls are not offered Hanging Mallakhamb.
 
+## Scan a paper form (many players at once)
+
+On the team dashboard, **Scan Paper Form** registers a whole filled form in one go, for the competition chosen in the menu bar. It is open until your squad is submitted.
+
+1. **Print blank form** and fill it in English CAPITALS, one box per digit for the date of birth.
+2. **Start a form**, then **Take photo** (or **Choose photo**) for each page: flat, well lit, all four corner squares in view. Without the form reader you can **Add a player** by hand.
+3. Check every player. The age is the age on 31 December of the competition's year; the age group list starts at the player's own group and you may choose a higher one. Rows in red must be fixed.
+4. **Register**: each player gets a Player ID on your team and a place in your squad. The slip lists the Player IDs; players sign in with them and your default player password.
+5. Pay as usual with **Pay Fees** on the dashboard.
+
+A player's team is final at each level (District, State, National, …). If a child on your form is already registered with another team at this competition's level, the row says so and cannot be registered — if it is a different child with the same name and date of birth, ask the competition admin.
+
 ## Pay fees and submit the team
 
 Paying (or applying a valid discount code) is what submits the team; after that the squad is locked.

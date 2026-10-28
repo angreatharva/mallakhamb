@@ -16,6 +16,7 @@ import {
   CoachCreateTeam,
   CoachDashboard,
   CoachPayment,
+  CoachPaperForm,
   AdminLogin,
   AdminRegister,
   SuperAdminLogin,
@@ -180,6 +181,7 @@ export default function AppRoutes({ location }) {
           <Route path="select-competition" element={<CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />} />
           <Route path="dashboard" element={<CoachDashboard />} />
           <Route path="payment" element={<CoachPayment />} />
+          <Route path="paper-form" element={<CoachPaperForm />} />
           <Route path="profile" element={<AccountProfile />} />
         </Route>
 

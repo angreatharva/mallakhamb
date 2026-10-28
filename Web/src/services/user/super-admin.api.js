@@ -41,6 +41,16 @@ export const superAdminAPI = {
   getAllTeams: (params) => api.get('/superadmin/teams', { params }),
   getTeamDetails: (teamId, params) => api.get(`/superadmin/teams/${teamId}`, { params }),
   addPlayerToTeam: (data) => api.post('/superadmin/players/add', data),
+  // A player's team at each level: find, correct, conflicts, history.
+  playerTeams: {
+    search: (q) => api.get('/superadmin/player-teams/players', { params: { q } }),
+    detail: (playerId) => api.get(`/superadmin/player-teams/players/${playerId}`),
+    correct: (playerId, data) => api.post(`/superadmin/player-teams/players/${playerId}/correct`, data),
+    removeEntries: (playerId, data) => api.post(`/superadmin/player-teams/players/${playerId}/remove-entries`, data),
+    conflicts: () => api.get('/superadmin/player-teams/conflicts'),
+    resolveConflict: (conflictId, data) => api.post(`/superadmin/player-teams/conflicts/${conflictId}/resolve`, data),
+    history: (params) => api.get('/superadmin/player-teams/history', { params }),
+  },
   createPlayerPaymentOrder: (data) => api.post('/superadmin/players/payment/create', data),
   verifyPlayerPaymentAndAdd: (data) => {
     return api.post('/superadmin/players/payment/verify', data);

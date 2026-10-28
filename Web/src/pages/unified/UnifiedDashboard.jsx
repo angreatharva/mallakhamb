@@ -20,6 +20,7 @@ const AdminLots = lazy(() => import('../admin/AdminLots'));
 const WalkInDesk = lazy(() => import('../desk/WalkInDesk'));
 const AdminJudgeFairness = lazy(() => import('../admin/AdminJudgeFairness'));
 const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
+const SuperAdminPlayerTeams = lazy(() => import('../superadmin/SuperAdminPlayerTeams'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
@@ -232,6 +233,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'judges', label: 'Judges' },
     { id: 'fairness', label: 'Fairness' },
     { id: 'transactions', label: 'Transactions' },
+    // A player's team at each level: correct, conflicts, history.
+    { id: 'player-teams', label: 'Players' },
     // Competition-day registration from a paper form (pages/desk).
     { id: 'desk', label: 'Walk-in' },
   ] : [
@@ -570,6 +573,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <WalkInDesk />;
         case 'fairness':
           return <AdminJudgeFairness isSuperAdmin competitionId={selectedCompetition || null} />;
+        case 'player-teams':
+          return <SuperAdminPlayerTeams />;
         default:
           return null;
       }
@@ -642,7 +647,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         role={isSuperAdmin ? 'superadmin' : 'admin'}
         nav={navItems}
         navLabel={`${isSuperAdmin ? 'Super admin' : 'Admin'} navigation`}
-        navFrom="xl"
+        navFrom={isSuperAdmin ? 'xxl' : 'xl'}
         compactBrand
         homeTo={`${routePrefix}/dashboard`}
         extra={!isSuperAdmin ? <CompetitionSelector userType={storagePrefix} /> : null}

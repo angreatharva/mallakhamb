@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Trophy, UserPlus, Search, Trash2, Check, CheckCircle, Save, GripVertical } from 'lucide-react';
+import { Trophy, UserPlus, Search, Trash2, Check, CheckCircle, Save, GripVertical, ScanLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coachAPI } from '@/services/api';
@@ -567,6 +567,11 @@ const CoachDashboard = () => {
               {/* An account, not a squad place: open even after the squad is submitted. */}
               <Button variant="line" icon={UserPlus} onClick={() => setShowRegisterPlayer(true)}>
                 Register Player
+              </Button>
+              {/* A filled paper form, photographed: Player IDs + squad places in one go. */}
+              <Button variant="line" icon={ScanLine} onClick={() => navigate('/coach/paper-form')} disabled={team?.isSubmitted}
+                title={team?.isSubmitted ? 'Your squad is submitted' : 'Register players from a photographed paper form'}>
+                Scan Paper Form
               </Button>
               <Button
                 icon={team?.isSubmitted ? CheckCircle : Trophy}

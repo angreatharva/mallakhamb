@@ -5,6 +5,7 @@ const { handleValidationErrors } = require('../middleware/validation.middleware'
 const accountValidators = require('../validators/account.validator');
 const performanceOrderValidator = require('../validators/performance-order.validator');
 const tieBreakDrawValidator = require('../validators/tie-break-draw.validator');
+const playerTeamValidator = require('../validators/player-team-admin.validator');
 
 function createSuperAdminRoutes(container) {
   const router = express.Router();
@@ -65,6 +66,18 @@ function createSuperAdminRoutes(container) {
   router.put('/lots/players', performanceOrderValidator.setPlayerOrder(), handleValidationErrors, performanceOrderController.setPlayerOrder);
 
   // Lucky draw (COP 1.12.4). Same handlers as /api/admin; competitionId is sent explicitly.
+  // "Player teams": a player's team at each level — look, correct, audit
+  // (docs/team-per-level-plan.md step 3).
+  const playerTeams = container.resolve('playerTeamAdminController');
+  const v = (chains) => [...chains, handleValidationErrors];
+  router.get('/player-teams/players', v(playerTeamValidator.search()), playerTeams.search);
+  router.get('/player-teams/players/:playerId', v(playerTeamValidator.player()), playerTeams.detail);
+  router.post('/player-teams/players/:playerId/correct', v(playerTeamValidator.correct()), playerTeams.correct);
+  router.post('/player-teams/players/:playerId/remove-entries', v(playerTeamValidator.removeEntries()), playerTeams.removeEntries);
+  router.get('/player-teams/conflicts', playerTeams.listConflicts);
+  router.post('/player-teams/conflicts/:conflictId/resolve', v(playerTeamValidator.resolveConflict()), playerTeams.resolveConflict);
+  router.get('/player-teams/history', v(playerTeamValidator.history()), playerTeams.history);
+
   const tieBreakDrawController = container.resolve('tieBreakDrawController');
   router.post('/tie-break/draws', tieBreakDrawValidator.recordDraw(), handleValidationErrors, tieBreakDrawController.recordDraw);
   router.delete('/tie-break/draws', tieBreakDrawValidator.clearDraw(), handleValidationErrors, tieBreakDrawController.clearDraw);

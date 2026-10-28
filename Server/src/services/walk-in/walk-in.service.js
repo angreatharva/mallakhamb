@@ -123,8 +123,21 @@ class WalkInService {
 
   // ── Access ────────────────────────────────────────────────────────────────
 
+  /**
+   * A coach using the paper form for their own team (step 4 of
+   * docs/team-per-level-plan.md), not an Admin at the desk. A coach acts only
+   * on their own drafts, sees only their own team's children (and an exact
+   * match they may take at a new level), and can never register "a different
+   * child" over a child another team holds at this level.
+   * @private
+   */
+  _isCoach(actor) {
+    return actor?.userType === 'coach';
+  }
+
   /** The desk's actor as the player-team rule records it. @private */
   _teamActor(actor) {
+    if (this._isCoach(actor)) return { id: actor.id, type: 'coach' };
     return { id: actor.id, type: isSuperAdmin(actor.user, actor.userType) ? 'superadmin' : 'admin' };
   }
 
@@ -133,7 +146,9 @@ class WalkInService {
    * @private
    */
   async _meetFor(actor, competitionId, { write = true } = {}) {
-    if (!mayActOnCompetition(actor.user, actor.userType, competitionId)) {
+    // A coach's meet comes from their own session (the route checks it); the
+    // admin scope below is for Admins.
+    if (!this._isCoach(actor) && !mayActOnCompetition(actor.user, actor.userType, competitionId)) {
       throw new AuthorizationError('You are not assigned to this competition.');
     }
     const competition = await this.competitionRepository.findById(competitionId);
@@ -148,6 +163,8 @@ class WalkInService {
   async _draftFor(actor, draftId, { write = true } = {}) {
     const draft = await this.drafts.findById(draftId);
     if (!draft) throw new NotFoundError('Walk-in registration');
+    // A coach never learns that someone else's draft exists.
+    if (this._isCoach(actor) && !sameId(draft.coach, actor.id)) throw new NotFoundError('Walk-in registration');
     const competition = await this._meetFor(actor, draft.competition, { write });
     if (write && ['paid', 'cancelled'].includes(draft.status)) {
       throw new BusinessRuleError(`This registration is already ${draft.status}.`);
@@ -303,8 +320,11 @@ class WalkInService {
    * to the desk resumes instead of starting over.
    */
   async openDraft(actor, { competitionId, coachId }) {
+    if (this._isCoach(actor)) coachId = actor.id;
     const competition = await this._meetFor(actor, competitionId);
-    if (!resolveFeeWindow(competition).canPay) {
+    // The desk takes money on the spot, so it needs the fee window open; a
+    // coach pays later from their dashboard, exactly as with Add Player.
+    if (!this._isCoach(actor) && !resolveFeeWindow(competition).canPay) {
       throw new BusinessRuleError('This competition is not taking entries right now.');
     }
     const coach = await this.coachRepository.findById(coachId);
@@ -314,7 +334,9 @@ class WalkInService {
 
     const registration = (competition.registeredTeams || []).find((rt) => sameId(rt.coach, coachId));
     if (registration?.isSubmitted) {
-      throw new ConflictError('This coach\'s team is already submitted and paid for this competition. Add further players from Super Admin → Add Player.');
+      throw new ConflictError(this._isCoach(actor)
+        ? 'Your squad for this competition is already submitted. Register Player still creates Player IDs; contact the competition office to add them to the squad.'
+        : 'This coach\'s team is already submitted and paid for this competition. Add further players from Super Admin → Add Player.');
     }
     if (!registration) {
       await this.coachService.registerTeamForCompetition(team._id, competitionId, coachId);
@@ -336,11 +358,30 @@ class WalkInService {
     return this.view(actor, draft._id);
   }
 
+  /**
+   * The coach's own unfinished form for this meet, or null — the paper-form
+   * page asks this on load, so a visit never opens a draft by itself.
+   */
+  async currentDraft(actor, competitionId) {
+    await this._meetFor(actor, competitionId, { write: false });
+    const [open] = await this.drafts.find(
+      { competition: competitionId, coach: actor.id, status: { $in: ['draft', 'submitted'] } },
+      { sort: { updatedAt: -1 }, limit: 1 }
+    );
+    return open ? this.view(actor, open._id) : null;
+  }
+
   /** Every unfinished draft at a meet, newest first — the desk's resume list. */
   async listDrafts(actor, competitionId) {
-    await this._meetFor(actor, competitionId, { write: false });
+    const competition = await this._meetFor(actor, competitionId, { write: false });
+    const paidCoaches = new Set((competition.registeredTeams || []).filter((rt) => rt.isSubmitted).map((rt) => idOf(rt.coach)));
+    // A form the coach paid for from their own dashboard is done, not "awaiting payment".
+    await this.drafts.model.updateMany(
+      { competition: competitionId, status: 'submitted', coach: { $in: [...paidCoaches] } },
+      { $set: { status: 'paid', paidAt: new Date() } }
+    );
     const drafts = await this.drafts.find(
-      { competition: competitionId, status: { $in: ['draft', 'submitted'] } },
+      { competition: competitionId, status: { $in: ['draft', 'submitted'] }, ...(this._isCoach(actor) ? { coach: actor.id } : {}) },
       { sort: { updatedAt: -1 }, populate: [{ path: 'coach', select: 'firstName lastName email' }, { path: 'team', select: 'name' }] }
     );
     return (drafts || []).map((d) => ({
@@ -514,9 +555,15 @@ class WalkInService {
       ],
     });
     if (!draft) throw new NotFoundError('Walk-in registration');
+    if (this._isCoach(actor) && !sameId(draft.coach?._id ?? draft.coach, actor.id)) throw new NotFoundError('Walk-in registration');
     const competition = await this._meetFor(actor, draft.competition, { write: false });
-    const checked = await this._check(draft, competition);
+    const checked = await this._check(draft, competition, { coach: this._isCoach(actor) });
     const registration = (competition.registeredTeams || []).find((rt) => sameId(rt.coach, draft.coach));
+    if (draft.status === 'submitted' && registration?.isSubmitted) {
+      // Paid from the coach's own dashboard (Pay Fees): the form is finished.
+      await this.drafts.updateById(draft._id, { status: 'paid', paidAt: new Date() });
+      draft.status = 'paid';
+    }
     const window = resolveFeeWindow(competition);
 
     return {
@@ -567,7 +614,7 @@ class WalkInService {
    * Every rule a row must pass, in one place, used by `view` and `submit`.
    * @private
    */
-  async _check(draft, competition) {
+  async _check(draft, competition, { coach = false } = {}) {
     const cutoffYear = ageCutoffYear(competition);
     const types = competition.competitionTypes?.length ? competition.competitionTypes : ['competition_1'];
     const configured = (competition.ageGroups || []).map((g) => `${g.gender}:${g.ageGroup}`);
@@ -652,8 +699,16 @@ class WalkInService {
 
         // Does this child already have a Player ID? Never give them a second one.
         matches = firstName && lastName ? await this._matchesFor(row, draft, competition, teamPlayers) : [];
+        // A coach sees their own team's children, and an exact match (same
+        // name AND date of birth) they may take at a level where the child has
+        // no team. Guesses about other teams' children are never shown.
+        if (coach) matches = matches.filter((m) => m.sameTeam || m.kind === 'exact');
         link = this._resolveMatch(row, matches);
         const level = levelLabel(competition.level);
+        const heldExact = matches.find((m) => m.kind === 'exact' && m.heldElsewhere);
+        if (coach && heldExact && link.state !== 'linked') {
+          add('match', 'error', `${heldExact.name} (${heldExact.loginId}) is registered with ${heldExact.heldAt.name} for ${level}. If this is a different child, ask the competition admin to register them.`);
+        }
         if (link.state === 'linked') {
           const m = link.match;
           if (m.heldElsewhere) add('match', 'error', `${m.name} (${m.loginId}) is registered with ${m.heldAt.name} for ${level}. A player's team is final for each level — choose “a different child” only if this is someone else.`);
@@ -818,7 +873,7 @@ class WalkInService {
     if (draft.status === 'submitted') return this.view(actor, draftId);
     if (!draft.rows.length) throw new ValidationError('There are no players on this form');
 
-    const checked = await this._check(draft, competition);
+    const checked = await this._check(draft, competition, { coach: this._isCoach(actor) });
     if (checked.needsConsent && !draft.guardianConsent) {
       throw new BusinessRuleError('Confirm that a parent or guardian agreed for every player under 18', { reason: 'GUARDIAN_CONSENT' });
     }
@@ -915,6 +970,7 @@ class WalkInService {
 
   /** @private */
   async _payable(actor, draftId) {
+    if (this._isCoach(actor)) throw new BusinessRuleError('Pay from your dashboard (Pay Fees).');
     const { draft } = await this._draftFor(actor, draftId);
     if (draft.status !== 'submitted') throw new BusinessRuleError('Submit the form before taking payment.');
     return { draft, coachId: idOf(draft.coach), competitionId: idOf(draft.competition) };
@@ -982,7 +1038,7 @@ class WalkInService {
     try {
       await this.auditLogRepository?.logAction?.({
         adminId: actor.id,
-        adminType: isSuperAdmin(actor.user, actor.userType) ? 'superadmin' : 'admin',
+        adminType: this._isCoach(actor) ? 'coach' : (isSuperAdmin(actor.user, actor.userType) ? 'superadmin' : 'admin'),
         action,
         resource,
         resourceId: String(resourceId),

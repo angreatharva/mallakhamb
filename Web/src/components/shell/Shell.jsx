@@ -117,7 +117,7 @@ export const AppHeader = ({
   // account menu appears wherever the header has someone to sign out.
   const profileTo = profileToProp || (role && onLogout ? `/${role}/profile` : null);
   return (
-    <header className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl')}>
+    <header className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl', navFrom === 'xxl' && 'shell-header--nav-xxl')}>
       <div className="shell-header__bar">
         <div className="shell-header__brand">
           <Wordmark to={homeTo} compact={compactBrand} />
@@ -149,7 +149,7 @@ AppHeader.propTypes = {
   extra: PropTypes.node,
   fixed: PropTypes.bool,
   /** Where the tabs join the bar: `xl` for a long row (the admin dashboards' six or seven). */
-  navFrom: PropTypes.oneOf(['lg', 'xl']),
+  navFrom: PropTypes.oneOf(['lg', 'xl', 'xxl']),
   /** The mark alone (named for screen readers), to leave the bar to the tabs. */
   compactBrand: PropTypes.bool,
 };

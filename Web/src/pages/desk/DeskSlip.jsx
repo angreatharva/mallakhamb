@@ -22,15 +22,15 @@ export const slipText = (slip, loginUrl) => [
 ].join('\n');
 
 /** Step 8: Player IDs for the coach, to print or save. */
-const DeskSlip = ({ draftId, onDone }) => {
+const DeskSlip = ({ draftId, onDone, api = deskAPI, who = 'admin', doneLabel = 'Next coach' }) => {
   const [slip, setSlip] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    deskAPI.slip(draftId)
+    api.slip(draftId)
       .then((res) => setSlip(res.data?.data))
       .catch((err) => setError(errorText(err, 'Could not load the slip')));
-  }, [draftId]);
+  }, [draftId, api]);
 
   if (error) return <Notice tone="danger" title="Slip unavailable">{error}</Notice>;
   if (!slip) return <Spinner label="Loading the slip" />;
@@ -39,7 +39,9 @@ const DeskSlip = ({ draftId, onDone }) => {
   return (
     <Panel className="grid gap-5 p-5 desk-slip">
       <Notice tone="success" title="Registration complete">
-        Hand the coach this slip. Each player signs in with their Player ID and the coach’s default player password.
+        {who === 'coach'
+          ? 'Your players are registered and in your squad. Each signs in with their Player ID and your default player password. Pay the fees from your dashboard (Pay Fees).'
+          : 'Hand the coach this slip. Each player signs in with their Player ID and the coach’s default player password.'}
       </Notice>
       <Heading level={3} step="display-s">{slip.team?.name}</Heading>
       <SpecList items={[
@@ -64,12 +66,18 @@ const DeskSlip = ({ draftId, onDone }) => {
           onClick={() => saveBlob(new Blob([slipText(slip, loginUrl)], { type: 'text/plain' }), `walk-in-${(slip.team?.name || 'team').replace(/[^A-Za-z0-9]+/g, '-')}.txt`)}>
           Save as text
         </Button>
-        <Button variant="line" onClick={onDone}>Next coach</Button>
+        <Button variant="line" onClick={onDone}>{doneLabel}</Button>
       </div>
     </Panel>
   );
 };
 
-DeskSlip.propTypes = { draftId: PropTypes.string.isRequired, onDone: PropTypes.func.isRequired };
+DeskSlip.propTypes = {
+  draftId: PropTypes.string.isRequired,
+  onDone: PropTypes.func.isRequired,
+  api: PropTypes.object,
+  who: PropTypes.oneOf(['admin', 'coach']),
+  doneLabel: PropTypes.string,
+};
 
 export default DeskSlip;

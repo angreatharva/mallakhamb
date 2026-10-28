@@ -33,7 +33,7 @@ const editable = (row) => ({
  * red on screen is what the server would refuse. Row photos (`crops`) live in
  * this component only: they are never stored, and a reload drops them.
  */
-const DeskFormStep = ({ draft, ocr, onDraft }) => {
+const DeskFormStep = ({ draft, ocr, onDraft, api = deskAPI, who = 'admin' }) => {
   const [rows, setRows] = useState(draft.rows);
   const [consent, setConsent] = useState(Boolean(draft.guardianConsent));
   const [dirty, setDirty] = useState(false);
@@ -60,7 +60,7 @@ const DeskFormStep = ({ draft, ocr, onDraft }) => {
     clearTimeout(timer.current);
     setSaving(true);
     try {
-      const res = await deskAPI.saveRows(draft._id, {
+      const res = await api.saveRows(draft._id, {
         rows: latest.current.rows.map(editable),
         guardianConsent: latest.current.consent,
       });
@@ -73,7 +73,7 @@ const DeskFormStep = ({ draft, ocr, onDraft }) => {
     } finally {
       setSaving(false);
     }
-  }, [draft._id, onDraft]);
+  }, [draft._id, onDraft, api]);
 
   const touch = (nextRows, nextConsent = consent) => {
     setRows(nextRows);
@@ -93,7 +93,7 @@ const DeskFormStep = ({ draft, ocr, onDraft }) => {
     try {
       if (dirty && !(await save())) return;
       const blob = await shrinkPhoto(file);
-      const res = await deskAPI.scan(draft._id, blob, pageHint || undefined);
+      const res = await api.scan(draft._id, blob, pageHint || undefined);
       const data = res.data?.data;
       setCrops((prev) => ({ ...prev, ...(data?.crops || {}) }));
       onDraft(data.draft);
@@ -119,13 +119,13 @@ const DeskFormStep = ({ draft, ocr, onDraft }) => {
     if (dirty && !(await save())) return;
     setSubmitting(true);
     try {
-      const res = await deskAPI.submit(draft._id);
+      const res = await api.submit(draft._id);
       onDraft(res.data?.data);
       toast.success('Players registered and entered');
     } catch (error) {
       toast.error(errorText(error, 'Could not submit — nothing is lost; fix the rows in red and submit again'));
       // Partial progress (players already created) is in the draft: reload it.
-      try { onDraft((await deskAPI.getDraft(draft._id)).data?.data); } catch { /* keep what we have */ }
+      try { onDraft((await api.getDraft(draft._id)).data?.data); } catch { /* keep what we have */ }
     } finally {
       setSubmitting(false);
     }
@@ -211,7 +211,7 @@ const DeskFormStep = ({ draft, ocr, onDraft }) => {
 
         {needsConsent && (
           <CheckBox id="desk-consent" checked={consent} onChange={(on) => touch(rows, on)}>
-            The coach confirms each under-18 player&apos;s parent or guardian agreed to this registration.
+            {who === 'coach' ? 'I confirm' : 'The coach confirms'} each under-18 player&apos;s parent or guardian agreed to this registration.
           </CheckBox>
         )}
 
@@ -241,6 +241,9 @@ DeskFormStep.propTypes = {
   draft: PropTypes.object.isRequired,
   ocr: PropTypes.object,
   onDraft: PropTypes.func.isRequired,
+  /** deskAPI (Admin desk) or paperFormAPI (a coach's own form): same methods. */
+  api: PropTypes.object,
+  who: PropTypes.oneOf(['admin', 'coach']),
 };
 
 export default DeskFormStep;

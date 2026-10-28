@@ -2,7 +2,7 @@
 
 Product decisions settled with the owner on 2026-10-28.
 
-**Status:** step 1 committed (`f8773b0`) and step 2 built on `feature/team-per-level` (2026-10-29). Steps 3–4 not started.
+**Status:** all four steps built on `feature/team-per-level` (2026-10-29): 1 `f8773b0`, 2 `6aa0d0c`, 3 + 4 in the next commit. Parked points below are still open.
 
 ## Rules
 

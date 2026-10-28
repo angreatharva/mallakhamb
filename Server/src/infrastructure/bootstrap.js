@@ -31,6 +31,9 @@ const PlayerService = require('../services/user/player.service');
 const CoachService = require('../services/user/coach.service');
 const CoachPlayerService = require('../services/user/coach-player.service');
 const PlayerTeamService = require('../services/team/player-team.service');
+const PlayerTeamAdminService = require('../services/team/player-team-admin.service');
+const PlayerTeamConflictRepository = require('../repositories/player-team-conflict.repository');
+const createPlayerTeamAdminController = require('../controllers/player-team-admin.controller');
 const AdminService = require('../services/user/admin.service');
 const PublicService = require('../services/public/public.service');
 const StatsService = require('../services/stats/stats.service');
@@ -128,6 +131,7 @@ function bootstrap() {
   container.register('scoreRepository', (c) => new ScoreRepository(c.resolve('logger')), 'singleton');
   container.register('transactionRepository', (c) => new TransactionRepository(c.resolve('logger')), 'singleton');
   container.register('auditLogRepository', (c) => new AuditLogRepository(c.resolve('logger')), 'singleton');
+  container.register('playerTeamConflictRepository', (c) => new PlayerTeamConflictRepository(c.resolve('logger')), 'singleton');
   container.register('performanceOrderRepository', (c) => new PerformanceOrderRepository(c.resolve('logger')), 'singleton');
   container.register('tieBreakDrawRepository', (c) => new TieBreakDrawRepository(c.resolve('logger')), 'singleton');
   container.register('walkInRegistrationRepository', (c) => new WalkInRegistrationRepository(c.resolve('logger')), 'singleton');
@@ -418,6 +422,15 @@ function bootstrap() {
   container.register('paymentController', (c) => createPaymentController(c), 'singleton');
   container.register('performanceOrderController', (c) => createPerformanceOrderController(c), 'singleton');
   container.register('tieBreakDrawController', (c) => createTieBreakDrawController(c), 'singleton');
+  container.register('playerTeamAdminService', (c) => new PlayerTeamAdminService({
+    playerRepository: c.resolve('playerRepository'),
+    teamRepository: c.resolve('teamRepository'),
+    competitionRepository: c.resolve('competitionRepository'),
+    auditLogRepository: c.resolve('auditLogRepository'),
+    playerTeamConflictRepository: c.resolve('playerTeamConflictRepository'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+  container.register('playerTeamAdminController', (c) => createPlayerTeamAdminController(c), 'singleton');
   container.register('walkInController', (c) => createWalkInController(c), 'singleton');
 
   container.register('cacheWarmer', (c) => new CacheWarmer(

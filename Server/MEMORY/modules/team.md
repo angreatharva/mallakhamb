@@ -42,6 +42,18 @@ and the suggestion at a level not chosen yet.
 - Migration 014 locks a level only where ONE team ever entered the player;
   two → `PlayerTeamConflict` for the Super Admin (page = plan step 3).
 
+## Super Admin "Player teams" (2026-10-29)
+
+`services/team/player-team-admin.service.js` behind `/api/superadmin/player-teams/*`
+(search, detail, correct, remove-entries, conflicts, resolve, history).
+`correct` needs a reason, refuses while the player is entered for the old team
+in an OPEN meet at that level (`ENTERED_FOR_OLD_TEAM`; locked meets are
+history), replaces via `PlayerRepository.replaceTeamAtLevel` (guarded on the
+old team), moves `Player.team` when it pointed at the old team, closes open
+conflicts. History reads AuditLog actions PLAYER_TEAM_* and WALK_IN_PLAYER_LINKED /
+WALK_IN_DIFFERENT_CHILD. Web tab id `player-teams`, label "Players"; the Super
+Admin header now uses `navFrom="xxl"` (tabs in the bar only from 1440px).
+
 ## The COP age rule at every entry (2026-10-29)
 
 `utils/data/age-eligibility.util.js` — `checkAgeGroup` / `assertAgeGroup`

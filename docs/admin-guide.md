@@ -114,6 +114,17 @@ Every registered coach with Name, Email, Phone, Status, and **Deactivate** (or *
 
 This path is never blocked by the fee window (a late fee still applies), and it respects the team-size limit. The coach discount code does not apply here.
 
+## Super Admin: Players (team at each level)
+
+A player's team is **final at each competition level**: one team for District, one for State, and so on. Coaches, the walk-in desk and admins can never move a player another team holds at a level. The **Players** tab is the one place a Super Admin corrects a mistake.
+
+- **Find a player**: search by name, Player ID or email. You see the team at every level (how and when it was set), every squad entry, and entries that break the COP age rule (in red).
+- **Correct** (or **Set team**): choose the team and give a reason. If the player is still entered for the current team in an open competition at that level, use **Remove from those squads** first (fees already paid are not refunded there).
+- **Conflicts**: players found on two teams at one level when this rule was introduced. Choose **Keep with …** for each.
+- **History**: every team set, correction, squad removal, conflict and walk-in "different child", filterable by level.
+
+On screens narrower than 1440 px the Super Admin tabs are in the menu (☰).
+
 ## Teams tab
 
 **Teams** lists every team entered in one gender and age group, with its athletes.
