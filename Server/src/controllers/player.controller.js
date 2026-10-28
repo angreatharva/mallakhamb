@@ -60,9 +60,18 @@ function createPlayerController(container) {
 
     /** @route POST /api/player/team/join */
     joinTeam: asyncHandler(async (req, res) => {
-      const { teamId, competitionId } = req.body;
-      const result = await playerService.joinTeam(req.user._id, teamId, competitionId);
+      const { teamId, competitionId, level } = req.body;
+      const result = await playerService.joinTeam(req.user._id, teamId, competitionId, { level });
       res.json({ success: true, data: result, message: 'Successfully joined team.' });
+    }),
+
+    /**
+     * The player's team at one level — final, or a suggestion.
+     * @route GET /api/players/team/level?level=district
+     */
+    getTeamAtLevel: asyncHandler(async (req, res) => {
+      const data = await playerService.getTeamAtLevel(req.user._id, req.query.level);
+      res.json({ success: true, data });
     }),
 
     /**

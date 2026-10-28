@@ -679,11 +679,23 @@ class AuthenticationService {
         // empty until the coach placed them in an age group. Players are not
         // scoped by meet (utils/security/competition-access.util), so this
         // list is a menu, not a permission.
-        if (!user.team) return [];
+        //
+        // A player has a team per level (Player.levelTeams): at a level they
+        // chose, only that team's meets; at any other level, their old team's.
+        const locks = user.levelTeams || [];
+        if (!user.team && locks.length === 0) return [];
+        const or = locks.map((entry) => ({
+          level: entry.level,
+          registeredTeams: { $elemMatch: { team: entry.team, isActive: true } },
+        }));
+        if (user.team) {
+          or.push({
+            level: { $nin: locks.map((entry) => entry.level) },
+            registeredTeams: { $elemMatch: { team: user.team, isActive: true } },
+          });
+        }
 
-        const competitions = await this.competitionRepository.find({
-          registeredTeams: { $elemMatch: { team: user.team, isActive: true } },
-        });
+        const competitions = await this.competitionRepository.find({ $or: or });
         return competitions || [];
       }
 

@@ -133,13 +133,18 @@ const DeskReviewRow = ({ index, row, crop = null, competition, onChange, onRemov
         <fieldset className="grid gap-2 m-0 p-3 border border-line rounded-lg min-w-0" data-testid="desk-row-matches">
           <legend className="ui-field__label type-tag px-1">This child may already have a Player ID</legend>
           {matches.map((m) => (
-            <label key={m._id} className="ui-check" data-checked={picked === String(m._id) || undefined}>
-              <input type="radio" className="sr-only" name={id('match')} value={String(m._id)}
+            // A child another team holds at this meet's level cannot be used:
+            // a team is final per level. Only "a different child" remains.
+            <label key={m._id} className="ui-check" data-checked={picked === String(m._id) || undefined}
+              aria-disabled={m.heldElsewhere || undefined}>
+              <input type="radio" className="sr-only" name={id('match')} value={String(m._id)} disabled={m.heldElsewhere}
                 checked={picked === String(m._id)} onChange={() => choose(String(m._id))} />
               <span className="ui-check__box" aria-hidden="true">{picked === String(m._id) && <Check className="w-3 h-3" />}</span>
-              <span className="type-body-s">
-                <strong>Use {m.name}</strong> · <code>{m.loginId}</code> · born {m.dateOfBirth}
-                {' · '}{m.sameTeam ? 'already on this team' : m.team ? `on ${m.team}` : 'no team yet'}
+              <span className={`type-body-s${m.heldElsewhere ? ' text-fg-muted' : ''}`}>
+                <strong>{m.heldElsewhere ? m.name : `Use ${m.name}`}</strong> · <code>{m.loginId}</code> · born {m.dateOfBirth}
+                {' · '}{m.heldElsewhere
+                  ? `registered with ${m.heldAt?.name} for this level — cannot be used`
+                  : m.sameTeam ? 'already on this team' : m.team ? `on ${m.team}` : 'no team yet'}
                 {m.kind === 'close' ? ' · spelling or date differs slightly' : ''}
                 {m.enteredHere ? ' · already entered in this competition' : ''}
               </span>

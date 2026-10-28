@@ -122,6 +122,17 @@
       "cwd": "Server",
       "port": 5000,
       "//": "The API on a throwaway LOCAL database seeded with four meets of published scores, for checking the profile Stats tabs and the Judge fairness board."
+    },
+    {
+      "name": "api-team-check",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.MONGODB_URI='mongodb://127.0.0.1:27017/mallakhamb_team_check';process.env.EMAIL_PROVIDER='none';process.env.NODE_ENV='development';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "Throwaway local DB for the team-per-level browser check (seeded outside the repo)."
     }
   ]
 }

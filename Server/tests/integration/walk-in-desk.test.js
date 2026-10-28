@@ -15,6 +15,8 @@ const TeamRepository = require('../../src/repositories/team.repository');
 const PlayerRepository = require('../../src/repositories/player.repository');
 const TransactionRepository = require('../../src/repositories/transaction.repository');
 const AuditLogRepository = require('../../src/repositories/audit-log.repository');
+const PlayerTeamService = require('../../src/services/team/player-team.service');
+const AuditLog = require('../../src/models/AuditLog');
 const Competition = require('../../src/models/Competition');
 const Coach = require('../../src/models/Coach');
 const Player = require('../../src/models/Player');
@@ -83,7 +85,13 @@ function build({ ocrClient = null } = {}) {
     auditLogRepository: new AuditLogRepository(noopLogger),
     ocrClient, config, logger: noopLogger,
   });
-  return { service, coachService };
+  // The one writer of a player's team per level, as bootstrap wires it.
+  const notices = { notifyLevelTeamSet: jest.fn() };
+  const playerTeamService = new PlayerTeamService({
+    playerRepository, teamRepository, auditLogRepository: new AuditLogRepository(noopLogger), otpService: notices, logger: noopLogger,
+  });
+  for (const s of [service, coachService, coachPlayerService]) s.playerTeamService = playerTeamService;
+  return { service, coachService, notices };
 }
 
 const superAdmin = () => ({ id: new mongoose.Types.ObjectId(), userType: 'superadmin', user: { role: 'superadmin' } });
@@ -317,16 +325,16 @@ describe('walk-in desk: a child who already has a Player ID', () => {
 
   /** A meet, an open draft, and the coach/team behind it. */
   async function setup() {
-    const { service } = build();
+    const { service, notices } = build();
     const competition = await meet();
     const actor = superAdmin();
     const draft = await deskUpTo(service, actor, competition);
-    return { service, competition, actor, draft };
+    return { service, competition, actor, draft, notices };
   }
 
-  async function existingPlayer({ firstName = 'Aarav', lastName = 'Patil', age = 11, team = null, gender = 'Male' } = {}) {
+  async function existingPlayer({ firstName = 'Aarav', lastName = 'Patil', age = 11, team = null, gender = 'Male', levelTeams = [] } = {}) {
     return Player.create({
-      firstName, lastName, gender, team,
+      firstName, lastName, gender, team, levelTeams,
       dateOfBirth: new Date(`${y(age)}-03-14T00:00:00Z`),
       emailType: 'self', email: `${firstName}.${lastName}.${Math.random()}@example.com`.toLowerCase(),
       phone: '9000000001', password: 'PlayerPass1',
@@ -374,11 +382,12 @@ describe('walk-in desk: a child who already has a Player ID', () => {
     expect((await service.slip(actor, draft._id)).players[0].name).toBe('Aarav Patil');
   });
 
-  test('a child on another coach\'s team is never moved without the admin choosing', async () => {
-    const { service, actor, draft } = await setup();
+  test('a child with another team at another level is never moved: linked only at this level, with notices', async () => {
+    const { service, actor, draft, competition, notices } = await setup();
     const otherCoach = await Coach.create({ firstName: 'Other', lastName: 'Coach', email: 'other.coach@example.com', phone: '9000000002', password: 'CoachPass1' });
     const otherTeam = await Team.create({ name: 'Other Club', coach: otherCoach._id });
-    const child = await existingPlayer({ team: otherTeam._id });
+    const elsewhere = competition.level === 'district' ? 'state' : 'district';
+    const child = await existingPlayer({ team: otherTeam._id, levelTeams: [{ level: elsewhere, team: otherTeam._id }] });
 
     const view = await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [aaravRow()] });
     expect(view.rows[0].linkedPlayer).toBeNull();
@@ -392,14 +401,50 @@ describe('walk-in desk: a child who already has a Player ID', () => {
     expect(asNew.blocking).toBe(0);
     expect(asNew.rows[0].issues).toEqual(expect.arrayContaining([expect.objectContaining({ level: 'warning' })]));
 
-    // Linking moves them, with the move spelled out.
+    // Linking takes them for THIS level only; they stay with Other Club elsewhere.
     const linked = await service.saveRows(actor, draft._id, {
       guardianConsent: true, rows: [{ ...aaravRow(), _id: view.rows[0]._id, matchChoice: 'existing', matchPlayer: String(child._id) }],
     });
-    expect(linked.rows[0].issues.map((i) => i.message).join(' ')).toMatch(/moves from Other Club/);
+    expect(linked.rows[0].issues.map((i) => i.message).join(' ')).toMatch(/stay with Other Club/);
     await service.submit(actor, draft._id);
     expect(await Player.countDocuments({})).toBe(1);
-    expect(String((await Player.findById(child._id).lean()).team)).toBe(String(draft.team._id));
+    const after = await Player.findById(child._id).lean();
+    expect(String(after.team)).toBe(String(otherTeam._id));
+    const byLevel = Object.fromEntries(after.levelTeams.map((e) => [e.level, String(e.team)]));
+    expect(byLevel).toEqual({ [elsewhere]: String(otherTeam._id), [competition.level]: String(draft.team._id) });
+    // The player and the other coach are told.
+    expect(notices.notifyLevelTeamSet).toHaveBeenCalledWith(expect.objectContaining({
+      teamName: 'Shivaji Club',
+      others: [expect.objectContaining({ teamName: 'Other Club' })],
+    }));
+  });
+
+  test('a child another team holds at THIS level cannot be linked; "a different child" is audited', async () => {
+    const { service, actor, draft, competition } = await setup();
+    const otherCoach = await Coach.create({ firstName: 'Held', lastName: 'Coach', email: 'held.coach@example.com', phone: '9000000004', password: 'CoachPass1' });
+    const otherTeam = await Team.create({ name: 'Holding Club', coach: otherCoach._id });
+    const child = await existingPlayer({ team: otherTeam._id, levelTeams: [{ level: competition.level, team: otherTeam._id }] });
+
+    const view = await service.saveRows(actor, draft._id, { guardianConsent: true, rows: [aaravRow()] });
+    expect(view.rows[0].linkedPlayer).toBeNull();
+    expect(view.rows[0].matches[0]).toMatchObject({ kind: 'exact', heldElsewhere: true, heldAt: expect.objectContaining({ name: 'Holding Club' }) });
+
+    // Choosing the held child is refused, in words.
+    const forced = await service.saveRows(actor, draft._id, {
+      guardianConsent: true, rows: [{ ...aaravRow(), _id: view.rows[0]._id, matchChoice: 'existing', matchPlayer: String(child._id) }],
+    });
+    expect(forced.blocking).toBeGreaterThan(0);
+    expect(forced.rows[0].issues.map((i) => i.message).join(' ')).toMatch(/registered with Holding Club .* final for each level/);
+
+    // A real namesake: the admin registers a different child, on record.
+    await service.saveRows(actor, draft._id, {
+      guardianConsent: true, rows: [{ ...aaravRow(), _id: view.rows[0]._id, matchChoice: 'new' }],
+    });
+    await service.submit(actor, draft._id);
+    expect(await Player.countDocuments({})).toBe(2);
+    const held = await Player.findById(child._id).lean();
+    expect(held.levelTeams).toEqual([expect.objectContaining({ level: competition.level, team: otherTeam._id })]);
+    expect(await AuditLog.countDocuments({ action: 'WALK_IN_DIFFERENT_CHILD' })).toBe(1);
   });
 
   test('a child already entered in this meet by another team cannot be linked', async () => {

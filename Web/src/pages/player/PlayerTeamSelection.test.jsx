@@ -16,12 +16,12 @@ import PlayerTeamSelection from './PlayerTeamSelection';
 
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/services/api', () => ({
-  playerAPI: { getTeams: vi.fn(), updateTeam: vi.fn() },
+  playerAPI: { getTeams: vi.fn(), updateTeam: vi.fn(), getTeamAtLevel: vi.fn() },
 }));
-const h = vi.hoisted(() => ({ navigate: vi.fn(), login: vi.fn(), fetchAssigned: vi.fn(() => Promise.resolve()) }));
+const h = vi.hoisted(() => ({ navigate: vi.fn(), login: vi.fn(), fetchAssigned: vi.fn(() => Promise.resolve()), level: null }));
 vi.mock('react-router-dom', async (importOriginal) => ({ ...(await importOriginal()), useNavigate: () => h.navigate }));
 vi.mock('@/contexts/CompetitionContext', () => ({
-  useCompetition: () => ({ currentCompetition: null, fetchAssignedCompetitions: h.fetchAssigned }),
+  useCompetition: () => ({ currentCompetition: null, fetchAssignedCompetitions: h.fetchAssigned, selectedLevel: h.level }),
 }));
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { _id: 'p1', firstName: 'Aarav' }, login: h.login }),
@@ -91,5 +91,41 @@ describe('PlayerTeamSelection join errors', () => {
     await vi.advanceTimersByTimeAsync(600);
     expect(h.navigate).toHaveBeenCalledWith('/player/dashboard?competitionId=c1', { replace: true });
     vi.useRealTimers();
+  });
+});
+
+describe('PlayerTeamSelection — a team is final per level', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    h.level = 'district';
+    playerAPI.getTeams.mockResolvedValue({ data: { data: [{ _id: 't1', name: 'IMSA-C' }, { _id: 't2', name: 'SGAM' }] } });
+  });
+
+  it('a level that already has a team: shown read-only, Continue goes on to the meet', async () => {
+    playerAPI.getTeamAtLevel.mockResolvedValue({ data: { data: { level: 'district', final: true, team: { _id: 't2', name: 'SGAM', coach: { name: 'Ravi Kale' } }, suggested: null } } });
+
+    renderPage('/player/select-team');
+    expect(await screen.findByText('Your District Team')).toBeInTheDocument();
+    expect(screen.getByText('SGAM')).toBeInTheDocument();
+    expect(screen.queryByText('IMSA-C')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Continue'));
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/player/select-competition', { replace: true }));
+    expect(h.login).toHaveBeenCalledWith(expect.objectContaining({ levelTeams: [{ level: 'district', team: 't2' }] }), null, 'player');
+    expect(playerAPI.updateTeam).not.toHaveBeenCalled();
+  });
+
+  it('a level with no team yet: says the choice is final, suggests the old team, and sends the level', async () => {
+    playerAPI.getTeamAtLevel.mockResolvedValue({ data: { data: { level: 'district', final: false, team: null, suggested: { _id: 't2', name: 'SGAM' } } } });
+    const levelTeams = [{ level: 'district', team: 't2' }];
+    playerAPI.updateTeam.mockResolvedValue({ data: { data: { player: { team: 't2', levelTeams } } } });
+
+    renderPage('/player/select-team');
+    expect(await screen.findByText('Final for District')).toBeInTheDocument();
+    expect(await screen.findByText('Your team · Join')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('SGAM'));
+    await waitFor(() => expect(playerAPI.updateTeam).toHaveBeenCalledWith({ teamId: 't2', level: 'district' }));
+    await waitFor(() => expect(h.login).toHaveBeenCalledWith(expect.objectContaining({ levelTeams }), null, 'player'));
   });
 });

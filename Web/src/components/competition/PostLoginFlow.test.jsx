@@ -97,10 +97,18 @@ describe('Level chooser — where a player goes next', () => {
     expect(h.navigate).toHaveBeenCalledWith('/player/select-team');
   });
 
-  it('already on a team: straight to the competition', async () => {
-    h.user = { _id: 'u1', team: { _id: 'team-1' } };
+  it('already has a team AT this level: straight to the competition', async () => {
+    h.user = { _id: 'u1', team: { _id: 'team-1' }, levelTeams: [{ level: 'district', team: 'team-1' }] };
     await pickDistrictAndContinue();
     expect(h.navigate).toHaveBeenCalledWith('/player/select-competition');
+  });
+
+  // A team is final per level: a team at another level (or the old single
+  // team) does not count here — the player chooses this level's team.
+  it('a team at another level only: the team step comes next', async () => {
+    h.user = { _id: 'u1', team: { _id: 'team-1' }, levelTeams: [{ level: 'state', team: 'team-1' }] };
+    await pickDistrictAndContinue();
+    expect(h.navigate).toHaveBeenCalledWith('/player/select-team');
   });
 });
 
@@ -138,7 +146,7 @@ describe('Competition chooser — one competition goes straight through', () => 
   });
 
   it('player with a team: even one meet is shown as a choice, never skipped', async () => {
-    h.user = { _id: 'u1', team: 'team-1' };
+    h.user = { _id: 'u1', team: 'team-1', levelTeams: [{ level: 'district', team: 'team-1' }] };
     h.ctx.assignedCompetitions = [meet('c1', 'district', 'Nagpur Open')];
     render(<CompetitionSelectionScreen userType="player" />);
     expect(await screen.findByText('Nagpur Open')).toBeInTheDocument();

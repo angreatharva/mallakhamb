@@ -33,7 +33,10 @@ function createCoachPlayerController(container) {
 
     /** @route POST /api/coaches/players */
     registerPlayer: asyncHandler(async (req, res) => {
-      const data = await service().registerPlayer(req.user._id, req.body);
+      // The meet the coach is working in, so the player is this team's at its
+      // level from the start (the token's meet wins, as everywhere else).
+      const competitionId = req.user?.currentCompetition || req.headers['x-competition-id'] || null;
+      const data = await service().registerPlayer(req.user._id, req.body, { competitionId });
       res.status(201).json({
         success: true,
         data,

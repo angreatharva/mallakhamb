@@ -30,3 +30,10 @@ Render applies pending migrations at start (`MIGRATE_ON_START=true`, see [15-DEP
 change (012's partial unique email) can't be reconciled by the index manager
 — it reports a conflict and keeps the old one — so such a change needs a
 migration that drops the old index explicitly.
+
+**014 — player teams per level (2026-10-28).** Reads every squad entry
+(`registeredTeams[].players[]`) and sets `Player.levelTeams[level]` where only
+ONE team ever entered the player at that level; two or more → a
+`PlayerTeamConflict` (nothing guessed). Only fills levels with no team, so
+re-runs are harmless; `down` pulls entries with `via: 'migration-014'` and the
+unresolved conflicts. See [team.md](team.md).

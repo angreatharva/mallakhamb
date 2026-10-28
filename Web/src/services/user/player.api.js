@@ -6,6 +6,8 @@ export const playerAPI = {
   getProfile: () => api.get('/players/profile'),
   getTeam: () => api.get('/players/team'),
   updateTeam: (data) => api.post('/players/team/join', data),
+  /** The player's team at a level: `{ team, final, suggested }`. */
+  getTeamAtLevel: (level) => api.get('/players/team/level', { params: { level } }),
   /**
    * Teams a player can join.
    *

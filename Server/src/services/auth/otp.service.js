@@ -262,6 +262,59 @@ class OTPService {
   }
 
   /**
+   * A team took a player at a level where they had no team yet (they keep
+   * their team at every other level). Told to the player — their own or
+   * guardian address — and to the coach of each team they have at another
+   * level, so nobody learns of it on competition day. Never carries a password.
+   *
+   * @param {Object} args
+   * @param {{_id: *, firstName: string, lastName: string, loginId: string, email?: string}} args.player
+   * @param {string} args.teamName   the team that now holds the level
+   * @param {string} args.levelName  'District', 'State', …
+   * @param {Array<{coachId: *, teamName: string, levelName: string}>} args.others
+   * @returns {Promise<void>}
+   */
+  async notifyLevelTeamSet({ player, teamName, levelName, others = [] }) {
+    try {
+      const name = [player?.firstName, player?.lastName].filter(Boolean).join(' ');
+      const line = `${name} (Player ID ${player?.loginId || '—'}) is now registered with ${teamName} for ${levelName} competitions.`;
+      const finalNote = `A team is final for each level. Their teams at other levels do not change.`;
+      const sends = [];
+
+      if (player?.email) {
+        const recipient = { _id: String(player._id), email: player.email };
+        sends.push(this._sendInBackground('Level team set', recipient, 'player', (address) =>
+          this.emailService.sendNotification(address, {
+            userName: player.firstName || 'there',
+            title: `${levelName} team: ${teamName}`,
+            message: [line, '', finalNote, '', 'If this is a mistake, please contact the competition office.'].join('\n'),
+          })
+        ));
+      }
+
+      const seen = new Set();
+      for (const other of others) {
+        const key = String(other.coachId || '');
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        const coach = await this.coachRepository?.findById?.(other.coachId);
+        if (!coach?.email) continue;
+        const recipient = { _id: String(coach._id), email: coach.email };
+        sends.push(this._sendInBackground('Level team set (other coach)', recipient, 'coach', (address) =>
+          this.emailService.sendNotification(address, {
+            userName: coach.firstName || 'Coach',
+            title: `${name}: ${levelName} team set`,
+            message: [line, '', `They stay with your team, ${other.teamName}, for ${other.levelName}.`, finalNote].join('\n'),
+          })
+        ));
+      }
+      await Promise.all(sends);
+    } catch (error) {
+      this.logger.error('Could not send the level-team notice', { playerId: player?._id, error: error.message });
+    }
+  }
+
+  /**
    * Run an email send without letting it reject. Returns the settled promise
    * so tests can await the attempt; production callers ignore it.
    * @private

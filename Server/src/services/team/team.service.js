@@ -14,6 +14,7 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const { sanitizeTeamData } = require('../../utils/validation/sanitization.util');
+const { rosterFilter } = require('../../utils/data/player-team.util');
 const {
   SUBMITTED_TEAM_COACH_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELDS,
@@ -300,7 +301,7 @@ class TeamService {
 
       // Get players for this team (players reference teams, not the other way around)
       const players = await this.playerRepository.find(
-        { team: teamId },
+        rosterFilter(teamId),
         { select: SUBMITTED_TEAM_PLAYER_FIELDS }
       );
 
@@ -415,6 +416,9 @@ class TeamService {
         );
       }
 
+      // Nor held by another team at any level: a roster add never moves anyone.
+      await this.playerTeamService?.assertRosterAdd(player, teamId);
+
       // Check if player is already on this team
       if (player.team && player.team.toString() === teamId.toString()) {
         this.logger.info('Player already on this team', { playerId, teamId });
@@ -500,6 +504,12 @@ class TeamService {
           playerTeam: player.team
         });
         throw new BusinessRuleError('Player is not on this team');
+      }
+
+      // A team the player is final with at some level stays theirs: only the
+      // Super Admin corrects that.
+      if (this.playerTeamService?.holdsAnyLevel(player, teamId)) {
+        throw new BusinessRuleError("This player's team is final for a level they are registered at. Only the Super Admin can change it.");
       }
 
       // Remove player from team

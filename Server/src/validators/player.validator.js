@@ -1,6 +1,7 @@
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 const { objectId, password, phone, enumValue, date } = require('./common.validator');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 
 const EMAIL_TYPES = ['self', 'guardian', 'none'];
 
@@ -281,9 +282,20 @@ const joinTeam = () => {
           }
         }
         return true;
-      })
+      }),
+    // The level the player chose (Level → Team → Competition): the team is
+    // theirs, finally, at this level.
+    body('level')
+      .optional({ values: 'falsy' })
+      .isIn(COMPETITION_LEVELS)
+      .withMessage(`Level must be ${LEVELS_SENTENCE}`)
   ];
 };
+
+/** GET /api/players/team/level — one of the competition levels. */
+const teamAtLevel = () => [
+  query('level').isIn(COMPETITION_LEVELS).withMessage(`Level must be ${LEVELS_SENTENCE}`),
+];
 
 /**
  * A coach registering a player with no email (POST /api/coaches/players).
@@ -313,5 +325,6 @@ module.exports = {
   getPlayerById,
   deletePlayer,
   assignTeam,
-  joinTeam
+  joinTeam,
+  teamAtLevel
 };

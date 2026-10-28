@@ -11,6 +11,7 @@ const UserService = require('./user.service');
 const { NotFoundError, ValidationError, ConflictError } = require('../../errors');
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 const { emailTypeOf } = require('../../utils/data/player-login-id.util');
+const { teamAtLevel } = require('../../utils/data/player-team.util');
 
 class PlayerService extends UserService {
   /**
@@ -95,12 +96,41 @@ class PlayerService extends UserService {
     return profile;
   }
 
+  /**
+   * The player's team for this meet: their team at the meet's level, else
+   * (a level not chosen yet) their old single team.
+   */
   async getPlayerTeam(playerId, competitionId) {
     const player = await this.repository.findById(playerId, { populate: 'team' });
     if (!player) {
       throw new NotFoundError('Player');
     }
+    const level = competitionId && this.competitionRepository
+      ? (await this.competitionRepository.findById(competitionId, { select: 'level' }))?.level
+      : null;
+    const atLevel = level ? teamAtLevel(player, level) : null;
+    if (atLevel && atLevel !== String(player.team?._id || player.team || '')) {
+      return { competitionId, team: await this.teamRepository.findById(atLevel) };
+    }
     return { competitionId, team: player.team || null };
+  }
+
+  /**
+   * The player's team at one level, for the Level → Team step: final when
+   * set, otherwise their old team as a suggestion.
+   * @returns {Promise<{level: string, team: Object|null, final: boolean, suggested: Object|null}>}
+   */
+  async getTeamAtLevel(playerId, level) {
+    const player = await this.repository.findById(playerId);
+    if (!player) throw new NotFoundError('Player');
+    const card = async (id) => {
+      if (!id) return null;
+      const team = await this.teamRepository.findById(id, { populate: { path: 'coach', select: 'firstName lastName' } });
+      return team ? { _id: team._id, name: team.name, coach: team.coach ? { name: [team.coach.firstName, team.coach.lastName].filter(Boolean).join(' ') } : null } : null;
+    };
+    const held = teamAtLevel(player, level);
+    if (held) return { level, team: await card(held), final: true, suggested: null };
+    return { level, team: null, final: false, suggested: await card(player.team) };
   }
 
   async getAvailableTeams() {
@@ -121,7 +151,7 @@ class PlayerService extends UserService {
    * @param {string} competitionId - Competition ID (optional for now)
    * @returns {Promise<Object>} Result with token and team info
    */
-  async joinTeam(playerId, teamId, competitionId = null) {
+  async joinTeam(playerId, teamId, competitionId = null, { level = null } = {}) {
     try {
       // Check if player exists
       const player = await this.repository.findById(playerId);
@@ -137,8 +167,25 @@ class PlayerService extends UserService {
         throw new NotFoundError('Team');
       }
 
-      // Update player's team
-      const updatedPlayer = await this.repository.updateById(playerId, { team: teamId });
+      /*
+       * A player's team is final at each level. With a level (the player chose
+       * it on the level step, or the meet names one) the team becomes theirs
+       * there — refused if another team already is. Without one, joining is
+       * only allowed while the player is on no team at all: it never moves them.
+       */
+      let joinLevel = level;
+      if (!joinLevel && competitionId && this.competitionRepository) {
+        joinLevel = (await this.competitionRepository.findById(competitionId, { select: 'level' }))?.level || null;
+      }
+      let updatedPlayer;
+      if (joinLevel && this.playerTeamService) {
+        ({ player: updatedPlayer } = await this.playerTeamService.setTeamAtLevel({
+          player, teamId, level: joinLevel, actor: { id: playerId, type: 'player' }, via: 'join-team',
+        }));
+      } else {
+        await this.playerTeamService?.assertRosterAdd(player, teamId);
+        updatedPlayer = await this.repository.updateById(playerId, { team: teamId });
+      }
       if (!updatedPlayer) {
         throw new Error('Failed to update player team');
       }
@@ -190,7 +237,8 @@ class PlayerService extends UserService {
           firstName: updatedPlayer.firstName,
           lastName: updatedPlayer.lastName,
           email: updatedPlayer.email,
-          team: teamId
+          team: updatedPlayer.team || teamId,
+          levelTeams: updatedPlayer.levelTeams || []
         }
       };
     } catch (error) {

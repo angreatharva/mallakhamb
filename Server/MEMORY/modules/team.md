@@ -2,6 +2,8 @@
 doc: modules/team
 covers:
   - src/services/team/**
+  - src/utils/data/player-team.util.js
+  - src/models/PlayerTeamConflict.js
   - src/controllers/team.controller.js
   - src/routes/team.routes.js
 read_when: "changing team CRUD, roster membership, or the /api/teams surface"
@@ -9,6 +11,36 @@ depends_on: [03-DOMAIN-MODEL, 05-API-SURFACE]
 verified_against_commit: 06891b5
 last_verified: 2026-10-18
 ---
+
+## A player's team is final per level (2026-10-28)
+
+Owner rule, full spec in `docs/team-per-level-plan.md`. `Player.levelTeams`
+= `[{ level, team, setAt, setBy, setByType, via }]`, at most one per
+competition level. `Player.team` stays: the first team the player ever had,
+and the suggestion at a level not chosen yet.
+
+- **One writer:** `services/team/player-team.service.js`
+  (`playerTeamService`, handed to 8 services by `withPlayerTeams` in
+  bootstrap; a service built without it — most unit tests — skips the rule).
+  `setTeamAtLevel` is a conditional `$push` (`PlayerRepository.setTeamAtLevel`)
+  so two teams racing for one child cannot both win; another team → 409
+  `TEAM_FINAL_AT_LEVEL`. When a non-player sets a NEW level it emails the
+  player/guardian and the other-level coaches (`otpService.notifyLevelTeamSet`)
+  and audits `PLAYER_TEAM_SET`.
+- **`ensureForEntry`** guards every squad entry (`coachService.addPlayerToAgeGroup`,
+  `registrationService.addPlayerToRegistration` — which now also checks the
+  coach owns the team): held by this team → ok; another team → 409; free and on
+  the roster → set; not on the roster → `NOT_ON_TEAM` unless `claim` (desk).
+- **Never a move:** roster add (`TeamService.addPlayer`, admin assign, join
+  without a level) → `assertRosterAdd` refuses a player any other team has;
+  `TeamService.removePlayer` refuses while the team holds a level.
+- **Rosters read both fields:** `rosterFilter` / `rosterAtLevelFilter`
+  (`PlayerRepository.findByTeam`, coach search per meet level, judge and admin
+  team views, super-admin grouping, walk-in). Player meets
+  (`getAssignedCompetitions`) = per level, that level's team.
+- Player: `POST /players/team/join` takes `level`; `GET /players/team/level`.
+- Migration 014 locks a level only where ONE team ever entered the player;
+  two → `PlayerTeamConflict` for the Super Admin (page = plan step 3).
 
 ## Purpose
 

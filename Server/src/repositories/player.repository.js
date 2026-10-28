@@ -11,6 +11,7 @@ const BaseRepository = require('./base.repository');
 const Player = require('../models/Player');
 const { pageMeta } = require('../utils/data/pagination.util');
 const { OWN_EMAIL_CLAUSE, normalizeLoginId } = require('../utils/data/player-login-id.util');
+const { rosterFilter } = require('../utils/data/player-team.util');
 
 /** Attempts at a fresh Player ID when a concurrent registration took ours. */
 const LOGIN_ID_RETRIES = 5;
@@ -123,7 +124,8 @@ class PlayerRepository extends BaseRepository {
    */
   async findByTeam(teamId) {
     try {
-      return await this.find({ team: teamId, isActive: true });
+      // Everyone on the roster: the old single team, or theirs at any level.
+      return await this.find({ ...rosterFilter(teamId), isActive: true });
     } catch (error) {
       this.logger.error('PlayerRepository.findByTeam error', { teamId, error: error.message });
       throw error;
@@ -166,6 +168,44 @@ class PlayerRepository extends BaseRepository {
       });
       throw error;
     }
+  }
+
+  /**
+   * Make `entry.team` the player's team at `entry.level` — only if the player
+   * has no team at that level yet. One conditional update, so when two teams
+   * claim the same child at once exactly one wins.
+   *
+   * The old single `team` is filled too when the player has none, so screens
+   * that read one team see their first.
+   *
+   * @param {string} playerId
+   * @param {{level: string, team: *, setAt?: Date, setBy?: *, setByType?: string, via?: string}} entry
+   * @returns {Promise<boolean>} true when this call set it; false when the
+   *   level already had a team (the caller re-reads to see whose)
+   */
+  async setTeamAtLevel(playerId, entry) {
+    const result = await this.model.updateOne(
+      { _id: playerId, 'levelTeams.level': { $ne: entry.level } },
+      { $push: { levelTeams: { setAt: new Date(), ...entry } } }
+    );
+    if (result.modifiedCount > 0) {
+      await this.model.updateOne({ _id: playerId, team: null }, { $set: { team: entry.team } });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Super Admin correction: replace the team at a level that already has one.
+   * Guarded on the team being corrected, so two corrections cannot cross.
+   * @returns {Promise<boolean>} false when the level no longer holds `fromTeam`
+   */
+  async replaceTeamAtLevel(playerId, level, fromTeam, entry) {
+    const result = await this.model.updateOne(
+      { _id: playerId, levelTeams: { $elemMatch: { level, team: fromTeam } } },
+      { $set: { 'levelTeams.$': { setAt: new Date(), ...entry, level } } }
+    );
+    return result.modifiedCount > 0;
   }
 
   /**

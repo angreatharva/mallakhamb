@@ -90,12 +90,12 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
   const [scopedError, setScopedError] = useState(null);
 
   /**
-   * Does this player already belong to a squad?
+   * Does this player already have a team at the chosen level?
    *
    * `team` comes back as either an id string or a populated object depending on
    * the endpoint, which is why this is not a plain truthiness check.
    */
-  const playerHasTeam = hasTeam(user);
+  const playerHasTeam = hasTeam(user, selectedLevel);
 
   /*
    * Send anyone who arrives without a level back to the chooser.

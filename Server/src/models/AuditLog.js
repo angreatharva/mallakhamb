@@ -8,7 +8,7 @@ const auditLogSchema = new mongoose.Schema({
   },
   adminType: {
     type: String,
-    enum: ['admin', 'superadmin', 'coach'], // coach: approving a no-email player's reset or email
+    enum: ['admin', 'superadmin', 'coach', 'player'], // coach: approving a no-email player's reset or email; player: choosing their team at a level
     required: true
   },
   action: {

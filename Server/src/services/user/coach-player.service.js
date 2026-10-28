@@ -21,6 +21,7 @@ const bcrypt = require('bcryptjs');
 const { ValidationError, AuthenticationError, ConflictError, NotFoundError } = require('../../errors');
 const { encrypt, decrypt } = require('../../utils/security/data-encryption.util');
 const { COACH_RELATION } = require('../../utils/data/player-login-id.util');
+const { teamAtLevel, levelLabel } = require('../../utils/data/player-team.util');
 
 
 /** Matches a stored (already HTML-escaped) name exactly, ignoring case. */
@@ -37,8 +38,9 @@ class CoachPlayerService {
    * @param {ConfigManager} deps.config
    * @param {Logger} deps.logger
    */
-  constructor({ coachRepository, playerRepository, teamRepository, auditLogRepository = null, otpService = null, config, logger }) {
+  constructor({ coachRepository, playerRepository, teamRepository, competitionRepository = null, auditLogRepository = null, otpService = null, config, logger }) {
     this.coachRepository = coachRepository;
+    this.competitionRepository = competitionRepository;
     this.playerRepository = playerRepository;
     this.teamRepository = teamRepository;
     this.auditLogRepository = auditLogRepository;
@@ -98,12 +100,27 @@ class CoachPlayerService {
    * quietly give it a `.2` Player ID, so the coach is shown the match (409)
    * and has to send `confirmDuplicate: true` to go ahead anyway.
    *
+   * A player's team is final at each level (docs/team-per-level-plan.md). With
+   * a competition in hand, the new player is this team's at its level from the
+   * start. A COACH may not register "a different child" over an exact match
+   * another team holds at that level — that would hand the same child a second
+   * Player ID; the Admin at the walk-in desk may, for a real namesake.
+   *
    * @param {string} coachId
    * @param {Object} input - validated body (validators/player.validator coachRegisterPlayer)
+   * @param {Object} [options]
+   * @param {string} [options.competitionId] the meet the coach is working in
+   * @param {string} [options.level] its level, when the caller already knows it
+   * @param {{id: *, type: string}} [options.actor] the coach by default
    * @returns {Promise<{player: Object, team: {_id: *, name: string}}>}
    */
-  async registerPlayer(coachId, input) {
+  async registerPlayer(coachId, input, options = {}) {
     const { firstName, lastName, dateOfBirth, gender, guardianConsent, confirmDuplicate } = input;
+    const actor = options.actor || { id: coachId, type: 'coach' };
+    let level = options.level || null;
+    if (!level && options.competitionId && this.competitionRepository) {
+      level = (await this.competitionRepository.findById(options.competitionId, { select: 'level' }))?.level || null;
+    }
 
     const [team] = await this.teamRepository.find({ coach: coachId, isActive: true }, { sort: { createdAt: -1 }, limit: 1 });
     if (!team) throw new ValidationError('Create your team before registering players');
@@ -119,12 +136,21 @@ class CoachPlayerService {
       throw new ValidationError('Set your default player password on your profile first');
     }
 
-    if (!(confirmDuplicate === true || confirmDuplicate === 'true')) {
-      const matches = await this._findSamePerson(firstName, lastName, dateOfBirth);
-      if (matches.length > 0) {
+    const confirmed = confirmDuplicate === true || confirmDuplicate === 'true';
+    if (!confirmed || (actor.type === 'coach' && level)) {
+      const matches = await this._findSamePerson(firstName, lastName, dateOfBirth, level);
+      if (confirmed) {
+        const taken = matches.find((m) => m.heldAtLevel && String(m.heldAtLevel._id) !== String(team._id));
+        if (taken) {
+          throw new ConflictError(
+            `${taken.name} is registered with ${taken.heldAtLevel.name} for ${levelLabel(level)}. A player's team is final for each level — if this is a different child, ask the competition admin to register them.`,
+            { reason: 'TEAM_FINAL_AT_LEVEL', level, team: taken.heldAtLevel }
+          );
+        }
+      } else if (matches.length > 0) {
         throw new ConflictError('A player with this name and date of birth is already registered', {
           reason: 'POSSIBLE_DUPLICATE',
-          matches,
+          matches: matches.map(({ heldAtLevel, ...m }) => m),
         });
       }
     }
@@ -142,6 +168,11 @@ class CoachPlayerService {
       team: team._id,
       password,
     });
+
+    // This team's at the meet's level from the start.
+    if (level) {
+      await this.playerTeamService?.setTeamAtLevel({ player, teamId: team._id, level, actor, via: options.via || 'register-player' });
+    }
 
     await this._audit(coachId, 'COACH_REGISTERED_PLAYER', 'player', String(player._id), {
       loginId: player.loginId,
@@ -178,7 +209,7 @@ class CoachPlayerService {
   }
 
   /** @private */
-  async _findSamePerson(firstName, lastName, dateOfBirth) {
+  async _findSamePerson(firstName, lastName, dateOfBirth, level = null) {
     const day = new Date(dateOfBirth);
     day.setUTCHours(0, 0, 0, 0);
     const next = new Date(day.getTime() + 24 * 60 * 60 * 1000);
@@ -190,11 +221,18 @@ class CoachPlayerService {
       },
       { limit: 5, populate: { path: 'team', select: 'name' } }
     );
-    return (found || []).map((p) => ({
-      loginId: p.loginId,
-      name: [p.firstName, p.lastName].filter(Boolean).join(' '),
-      team: p.team?.name || null,
-    }));
+    const held = level ? [...new Set((found || []).map((p) => teamAtLevel(p, level)).filter(Boolean))] : [];
+    const heldTeams = held.length ? await this.teamRepository.find({ _id: { $in: held } }, { select: 'name' }) : [];
+    const heldName = new Map((heldTeams || []).map((t) => [String(t._id), t.name]));
+    return (found || []).map((p) => {
+      const atLevel = level ? teamAtLevel(p, level) : null;
+      return {
+        loginId: p.loginId,
+        name: [p.firstName, p.lastName].filter(Boolean).join(' '),
+        team: p.team?.name || null,
+        heldAtLevel: atLevel ? { _id: atLevel, name: heldName.get(atLevel) || 'another team' } : null,
+      };
+    });
   }
 
   /** @private */

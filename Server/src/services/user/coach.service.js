@@ -15,6 +15,7 @@ const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
 const { offeredApparatus, hasGenderApparatus } = require('../../utils/data/competition-apparatus.util');
 const { hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
 const { idStr } = require('../../utils/data/objectid.util');
+const { rosterAtLevelFilter } = require('../../utils/data/player-team.util');
 const {
   calculateTeamPaymentAmount,
   resolveFeeWindow,
@@ -456,9 +457,14 @@ class CoachService extends UserService {
     
     // Matched literally: a typed `.` in a Player ID is a dot, not "any character".
     const pattern = String(query ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // This team's roster at the meet's level: players it holds there, and its
+    // roster players with no team at the level yet — never another team's.
+    const competition = competitionId && this.competitionRepository
+      ? await this.competitionRepository.findById(competitionId, { select: 'level' })
+      : null;
     const filters = {
       isActive: true,
-      team: teamId, // Only show players assigned to this coach's team
+      ...rosterAtLevelFilter(teamId, competition?.level),
       $or: [
         { firstName: { $regex: pattern, $options: 'i' } },
         { lastName: { $regex: pattern, $options: 'i' } },
@@ -476,7 +482,14 @@ class CoachService extends UserService {
     return this.playerRepository.find(filters, { limit: 20, sort: { createdAt: -1 } });
   }
 
-  async addPlayerToAgeGroup(coachId, competitionId, payload) {
+  /**
+   * @param {Object} [options]
+   * @param {{id: *, type: string}} [options.actor] who is entering the player —
+   *   the coach by default; the walk-in desk passes the Admin at the desk
+   * @param {boolean} [options.claim] the desk matched this child by name and
+   *   birth date and chose to reuse their Player ID (see PlayerTeamService)
+   */
+  async addPlayerToAgeGroup(coachId, competitionId, payload, options = {}) {
     const { playerId, ageGroup, gender, apparatus } = payload;
     
     // Get coach's teams
@@ -532,6 +545,21 @@ class CoachService extends UserService {
           'gender'
         );
       }
+
+      /*
+       * A player's team is final at each level. The team entering them must
+       * hold them at this meet's level, or the level must still be free and
+       * the player on the team's roster — then this entry sets it. Another
+       * team's player is refused (services/team/player-team.service).
+       */
+      await this.playerTeamService?.ensureForEntry({
+        player,
+        teamId: registeredTeam.team,
+        level: competition.level,
+        actor: options.actor || { id: coachId, type: 'coach' },
+        via: options.via || 'squad-entry',
+        claim: Boolean(options.claim),
+      });
     }
 
     /*

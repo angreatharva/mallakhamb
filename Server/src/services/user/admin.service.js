@@ -12,6 +12,7 @@ const { NotFoundError, ValidationError, AuthorizationError, BusinessRuleError } 
 const EventTypes = require('../../socket/events/event-types');
 const { toCompetitionTypeSlug, toCompetitionTypeDisplay, validateSlipBreakdown } = require('../../config/cop-rules');
 const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
+const { rosterFilter } = require('../../utils/data/player-team.util');
 
 /**
  * Field projections for the credential-bearing documents this service returns
@@ -892,7 +893,7 @@ class AdminService extends UserService {
       }
 
       // Get players for this team (players reference teams, not the other way around)
-      let players = await this.playerRepository.find({ team: teamId });
+      let players = await this.playerRepository.find(rosterFilter(teamId));
 
       // If competition filter is provided, we need to get age groups from competition's registeredTeams
       if (filters.competition) {
@@ -1497,6 +1498,10 @@ class AdminService extends UserService {
         throw new BusinessRuleError('Player gender does not match team gender');
       }
 
+      // Never a move: a player already with another team (at any level, or as
+      // their team) stays there. Levels are set when they are entered.
+      await this.playerTeamService?.assertRosterAdd(player, teamId);
+
       const updatedPlayer = await this.playerRepository.updateById(playerId, {
         team: teamId,
         assignedBy: adminId,
@@ -1507,7 +1512,7 @@ class AdminService extends UserService {
 
       return updatedPlayer;
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof BusinessRuleError) {
+      if (error instanceof NotFoundError || error instanceof BusinessRuleError || error?.statusCode === 409) {
         throw error;
       }
       this.logger.error('Assign player to team error', { 

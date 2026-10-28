@@ -30,6 +30,7 @@ const AuthorizationService = require('../services/auth/authorization.service');
 const PlayerService = require('../services/user/player.service');
 const CoachService = require('../services/user/coach.service');
 const CoachPlayerService = require('../services/user/coach-player.service');
+const PlayerTeamService = require('../services/team/player-team.service');
 const AdminService = require('../services/user/admin.service');
 const PublicService = require('../services/public/public.service');
 const StatsService = require('../services/stats/stats.service');
@@ -80,6 +81,17 @@ const RequestCoalescingMiddleware = require('../middleware/request-coalescing.mi
 const RedisClient = require('./redis-client');
 const TokenInvalidationService = require('../services/auth/token-invalidation.service');
 const { setTokenInvalidationService } = require('../utils/security/token-invalidation.util');
+
+
+/**
+ * Hands a service the one writer of a player's team per level. Set after
+ * construction so the services' signatures (and every test that builds them
+ * by hand) stay as they were; a service built without it skips the rule.
+ */
+function withPlayerTeams(c, service) {
+  service.playerTeamService = c.resolve('playerTeamService');
+  return service;
+}
 
 function bootstrap() {
   configManager.load();
@@ -181,15 +193,24 @@ function bootstrap() {
   ), 'singleton');
   container.register('paymentService', (c) => new PaymentService(c.resolve('config'), c.resolve('logger'), c.resolve('transactionRepository'), c.resolve('competitionRepository'), c.resolve('metrics')), 'singleton');
 
-  container.register('playerService', (c) => new PlayerService(
+  // A player's team at each level — final; every join/registration/entry path
+  // goes through it (docs/team-per-level-plan.md).
+  container.register('playerTeamService', (c) => new PlayerTeamService({
+    playerRepository: c.resolve('playerRepository'),
+    teamRepository: c.resolve('teamRepository'),
+    auditLogRepository: c.resolve('auditLogRepository'),
+    otpService: c.resolve('otpService'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+  container.register('playerService', (c) => withPlayerTeams(c, new PlayerService(
     c.resolve('playerRepository'),
     c.resolve('teamRepository'),
     c.resolve('logger'),
     c.resolve('cacheService'),
     c.resolve('authenticationService'),
     c.resolve('competitionRepository')
-  ), 'singleton');
-  container.register('coachService', (c) => new CoachService(
+  )), 'singleton');
+  container.register('coachService', (c) => withPlayerTeams(c, new CoachService(
     c.resolve('coachRepository'),
     c.resolve('teamRepository'),
     c.resolve('logger'),
@@ -199,18 +220,19 @@ function bootstrap() {
     c.resolve('playerRepository'),
     c.resolve('config'),
     c.resolve('transactionRepository')
-  ), 'singleton');
-  container.register('coachPlayerService', (c) => new CoachPlayerService({
+  )), 'singleton');
+  container.register('coachPlayerService', (c) => withPlayerTeams(c, new CoachPlayerService({
     coachRepository: c.resolve('coachRepository'),
+    competitionRepository: c.resolve('competitionRepository'),
     playerRepository: c.resolve('playerRepository'),
     teamRepository: c.resolve('teamRepository'),
     auditLogRepository: c.resolve('auditLogRepository'),
     otpService: c.resolve('otpService'),
     config: c.resolve('config'),
     logger: c.resolve('logger'),
-  }), 'singleton');
+  })), 'singleton');
   container.register('ocrClient', (c) => new OcrClient({ config: c.resolve('config'), logger: c.resolve('logger') }), 'singleton');
-  container.register('walkInService', (c) => new WalkInService({
+  container.register('walkInService', (c) => withPlayerTeams(c, new WalkInService({
     walkInRegistrationRepository: c.resolve('walkInRegistrationRepository'),
     competitionRepository: c.resolve('competitionRepository'),
     coachRepository: c.resolve('coachRepository'),
@@ -224,7 +246,7 @@ function bootstrap() {
     ocrClient: c.resolve('ocrClient'),
     config: c.resolve('config'),
     logger: c.resolve('logger'),
-  }), 'singleton');
+  })), 'singleton');
   container.register('calculationService', (c) => new CalculationService(c.resolve('logger')), 'singleton');
   // Seating judges on panels. Registered before adminService because that one
   // delegates to it; resolve this directly for anything new.
@@ -235,7 +257,7 @@ function bootstrap() {
     logger: c.resolve('logger'),
   }), 'singleton');
 
-  container.register('adminService', (c) => new AdminService({
+  container.register('adminService', (c) => withPlayerTeams(c, new AdminService({
     adminRepository: c.resolve('adminRepository'),
     playerRepository: c.resolve('playerRepository'),
     coachRepository: c.resolve('coachRepository'),
@@ -257,7 +279,7 @@ function bootstrap() {
     authenticationService: c.resolve('authenticationService'),
     // Read only by getSystemHealth, which used to hardcode 'healthy'.
     emailService: c.resolve('emailService'),
-  }), 'singleton');
+  })), 'singleton');
   container.register('publicService', (c) => new PublicService({
     competitionRepository: c.resolve('competitionRepository'),
     scoreRepository: c.resolve('scoreRepository'),
@@ -292,7 +314,7 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('logger')
   ), 'singleton');
-  container.register('superAdminService', (c) => new SuperAdminService({
+  container.register('superAdminService', (c) => withPlayerTeams(c, new SuperAdminService({
     authenticationService: c.resolve('authenticationService'),
     adminRepository: c.resolve('adminRepository'),
     coachRepository: c.resolve('coachRepository'),
@@ -304,7 +326,7 @@ function bootstrap() {
     playerRepository: c.resolve('playerRepository'),
     logger: c.resolve('logger'),
     config: c.resolve('config'),
-  }), 'singleton');
+  })), 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({
@@ -328,20 +350,20 @@ function bootstrap() {
     tokenService: c.resolve('tokenService'),
     logger: c.resolve('logger'),
   }), 'singleton');
-  container.register('registrationService', (c) => new RegistrationService(
+  container.register('registrationService', (c) => withPlayerTeams(c, new RegistrationService(
     c.resolve('competitionRepository'),
     c.resolve('teamRepository'),
     c.resolve('cacheService'),
     c.resolve('logger')
-  ), 'singleton');
-  container.register('teamService', (c) => new TeamService(
+  )), 'singleton');
+  container.register('teamService', (c) => withPlayerTeams(c, new TeamService(
     c.resolve('teamRepository'),
     c.resolve('playerRepository'),
     c.resolve('competitionRepository'),
     c.resolve('cacheService'),
     null,
     c.resolve('logger')
-  ), 'singleton');
+  )), 'singleton');
   // Depends on adminService for `getSubmittedTeams`, which is the single
   // definition of "which teams are in this category" — the same one the judge
   // dashboard renders. Registered after it, and the dependency is one-way

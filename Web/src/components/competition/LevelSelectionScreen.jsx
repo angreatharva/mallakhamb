@@ -165,7 +165,7 @@ const LevelSelectionScreen = ({ userType }) => {
     logger.log('[Level Selection] Level chosen', { userType, level: pendingLevel });
     // A player picks their team before the meet: Level → Team → Competition.
     // The meets offered are then the ones that team is entered in.
-    if (userType === 'player' && !playerHasTeam(user)) {
+    if (userType === 'player' && !playerHasTeam(user, pendingLevel)) {
       navigate('/player/select-team');
       return;
     }

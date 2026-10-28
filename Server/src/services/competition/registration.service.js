@@ -11,7 +11,8 @@ const {
   ValidationError, 
   ConflictError, 
   NotFoundError,
-  BusinessRuleError 
+  BusinessRuleError,
+  AuthorizationError
 } = require('../../errors');
 const { pageMeta } = require('../../utils/data/pagination.util');
 
@@ -240,7 +241,7 @@ class RegistrationService {
    * @throws {NotFoundError} If competition or registration not found
    * @throws {BusinessRuleError} If validation fails
    */
-  async addPlayerToRegistration(competitionId, teamId, playerId, ageGroup, gender) {
+  async addPlayerToRegistration(competitionId, teamId, playerId, ageGroup, gender, actor = null) {
     try {
       // Validate competition exists
       const competition = await this.competitionRepository.findById(competitionId);
@@ -265,6 +266,21 @@ class RegistrationService {
       if (registration.isSubmitted) {
         throw new BusinessRuleError('Cannot modify submitted registration');
       }
+
+      // A coach edits only their own team's squad.
+      if (actor?.type === 'coach' && String(registration.coach) !== String(actor.id)) {
+        throw new AuthorizationError("You can only change your own team's squad");
+      }
+
+      // A player's team is final at each level: only a player this team holds
+      // (or may still take) at the meet's level is entered.
+      await this.playerTeamService?.ensureForEntry({
+        player: playerId,
+        teamId,
+        level: competition.level,
+        actor: actor || { type: 'system' },
+        via: 'squad-entry',
+      });
 
       // Check if player is already in registration
       const existingPlayer = registration.players.find(
@@ -313,7 +329,8 @@ class RegistrationService {
     } catch (error) {
       if (error instanceof NotFoundError || 
           error instanceof ConflictError || 
-          error instanceof BusinessRuleError) {
+          error instanceof BusinessRuleError ||
+          error instanceof AuthorizationError) {
         throw error;
       }
       this.logger.error('Add player to registration error', {

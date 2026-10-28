@@ -161,7 +161,8 @@ function createCompetitionController(container) {
     addPlayerToTeam: asyncHandler(async (req, res) => {
       const { playerId, ageGroup, gender } = req.body;
       const registration = await registrationService.addPlayerToRegistration(
-        req.params.competitionId, req.params.teamId, playerId, ageGroup, gender
+        req.params.competitionId, req.params.teamId, playerId, ageGroup, gender,
+        { id: req.user._id, type: req.userType || 'coach' }
       );
       res.json({ success: true, data: registration, message: 'Player added to team successfully' });
     }),

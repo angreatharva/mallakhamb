@@ -6,23 +6,33 @@ import { playerAPI } from '@/services/api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/infrastructure/logger';
-import { EmptyState, Input, RunningOrder, RunningOrderItem, Tag } from '@/components/ui';
+import { Button, EmptyState, Input, Notice, Panel, RunningOrder, RunningOrderItem, Tag } from '@/components/ui';
+import { levelLabel } from '@/utils/competition/levels';
 import { PageHeader } from '@/components/shell';
 
 /**
- * PlayerTeamSelection - Screen for players to select their team
- * Shown only when player doesn't have a team assigned
+ * PlayerTeamSelection — the Team step of Level → Team → Competition.
+ *
+ * A player's team is FINAL at each competition level (Player.levelTeams;
+ * docs/team-per-level-plan.md). At a level where they already have one, the
+ * team is shown read-only. Otherwise they choose, and the choice is final for
+ * that level; their old team, if any, is offered first.
  */
 const PlayerTeamSelection = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentCompetition, fetchAssignedCompetitions } = useCompetition();
+  const { currentCompetition, fetchAssignedCompetitions, selectedLevel } = useCompetition();
   const { user, login } = useAuth();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [joining, setJoining] = useState(false);
+  // { team, final, suggested } at the chosen level; null before it loads or
+  // when no level was chosen (older links).
+  const [atLevel, setAtLevel] = useState(null);
+  const level = selectedLevel || null;
+  const levelName = level ? levelLabel(level) : '';
 
   /*
    * The meet, if one is already chosen.
@@ -44,6 +54,34 @@ const PlayerTeamSelection = () => {
     fetchTeams();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competitionId]);
+
+  useEffect(() => {
+    if (!level) { setAtLevel(null); return; }
+    playerAPI.getTeamAtLevel(level)
+      .then((res) => setAtLevel(res.data?.data || null))
+      .catch((error) => logger.warn('Could not load the team at this level', { message: error?.message }));
+  }, [level]);
+
+  /** Where the player goes once the team step is done. */
+  const nextPath = () => (competitionId
+    ? `/player/dashboard?competitionId=${competitionId}`
+    : '/player/select-competition');
+
+  /** Remember the level's team on the stored user, so the choosers skip this step. */
+  const rememberLevelTeam = (teamId, levelTeams) => {
+    if (!user) return;
+    const known = levelTeams || [
+      ...(user.levelTeams || []).filter((entry) => entry.level !== level),
+      ...(level ? [{ level, team: teamId }] : []),
+    ];
+    login({ ...user, team: user.team || teamId, levelTeams: known }, null, 'player');
+  };
+
+  const continueWithFinal = async () => {
+    rememberLevelTeam(String(atLevel.team._id));
+    await fetchAssignedCompetitions?.();
+    navigate(nextPath(), { replace: true });
+  };
 
   const fetchTeams = async () => {
     setLoading(true);
@@ -67,20 +105,18 @@ const PlayerTeamSelection = () => {
     try {
       // The meet goes with the join: it is optional server-side, but sending it
       // is what lets the roster entry be attributed to the right competition.
-      await playerAPI.updateTeam({ teamId: team._id, ...(competitionId && { competitionId }) });
+      const res = await playerAPI.updateTeam({ teamId: team._id, ...(competitionId && { competitionId }), ...(level && { level }) });
       toast.success(`Successfully joined ${team.name}!`);
       logger.info('Player joined team', { teamId: team._id, teamName: team.name });
 
       // The choosers read the team off the stored user, and the meets offered
       // next are the ones this team is entered in — refresh both now.
-      if (user) login({ ...user, team: team._id }, null, 'player');
+      rememberLevelTeam(team._id, res.data?.data?.player?.levelTeams);
       await fetchAssignedCompetitions?.();
 
       // Level → Team → Competition. A player who already chose a meet (an
       // older link, or the dashboard sending them here) goes straight back.
-      const next = competitionId
-        ? `/player/dashboard?competitionId=${competitionId}`
-        : '/player/select-competition';
+      const next = nextPath();
       setTimeout(() => {
         navigate(next, { replace: true });
       }, 500);
@@ -88,13 +124,23 @@ const PlayerTeamSelection = () => {
       logger.error('Failed to join team:', error);
       // A 423 (meet locked by its end date) carries its reason under data.error,
       // which data.message misses; the api-client lifts it onto the error.
-      toast.error(error.competitionLockedMessage || error.response?.data?.message || 'Failed to join team');
+      toast.error(error.competitionLockedMessage || error.response?.data?.error?.message || error.response?.data?.message || 'Failed to join team');
+      // Someone set this level's team meanwhile: show it.
+      if (level && error.response?.status === 409) {
+        playerAPI.getTeamAtLevel(level).then((r) => setAtLevel(r.data?.data || null)).catch(() => {});
+      }
       setSelectedTeam(null);
       setJoining(false);
     }
   };
 
-  const filteredTeams = teams.filter((team) => {
+  // The player's old team first, marked, as the suggestion.
+  const suggestedId = atLevel?.suggested?._id ? String(atLevel.suggested._id) : null;
+  const ordered = suggestedId
+    ? [...teams].sort((a, b) => Number(String(b._id) === suggestedId) - Number(String(a._id) === suggestedId))
+    : teams;
+
+  const filteredTeams = ordered.filter((team) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -115,14 +161,43 @@ const PlayerTeamSelection = () => {
     );
   }
 
+  if (atLevel?.final && atLevel.team) {
+    return (
+      <div className="min-h-dvh bg-bg text-fg">
+        <div className="max-w-4xl mx-auto px-[var(--pad)] pb-12">
+          <PageHeader eyebrow="Player" title={`Your ${levelName} Team`} />
+          <Panel className="grid gap-4 p-5" data-testid="player-final-team">
+            <div className="grid gap-1">
+              <Tag tone="ident" className="justify-self-start">{levelName} · final</Tag>
+              <p className="type-display-m m-0">{atLevel.team.name}</p>
+              {atLevel.team.coach?.name && <p className="type-body-s text-fg-muted m-0">Coach: {atLevel.team.coach.name}</p>}
+            </div>
+            <p className="type-body-s text-fg-muted m-0">
+              A player&apos;s team is final for each level. Only the competition office can change it.
+            </p>
+            <Button className="justify-self-start" onClick={continueWithFinal}>Continue</Button>
+          </Panel>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <div className="max-w-4xl mx-auto px-[var(--pad)] pb-12">
         <PageHeader
           eyebrow="Player"
-          title="Select Your Team"
-          lede="Choose the team you want to join to start competing"
+          title={level ? `Choose Your ${levelName} Team` : 'Select Your Team'}
+          lede={level
+            ? `Pick the team you will compete for at ${levelName} level.`
+            : 'Choose the team you want to join to start competing'}
         />
+
+        {level && (
+          <Notice tone="warning" className="mb-6" title={`Final for ${levelName}`}>
+            Once you join, this is your team for every {levelName} competition. Your teams at other levels stay as they are.
+          </Notice>
+        )}
 
         {/* Search */}
         <div className="relative mb-6">
@@ -162,6 +237,8 @@ const PlayerTeamSelection = () => {
                   ) : null}
                   aside={isJoining ? (
                     <Tag tone="accent"><span className="ui-spinner" aria-hidden="true" />Joining...</Tag>
+                  ) : String(team._id) === suggestedId ? (
+                    <Tag tone="ident">Your team · Join</Tag>
                   ) : (
                     <Tag>Join</Tag>
                   )}

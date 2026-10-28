@@ -103,6 +103,12 @@ function createPlayerRoutes(container) {
    * @access  Authenticated players
    * @note    Body contains teamId and competitionId
    */
+  /**
+   * GET /api/players/team/level?level= — the player's team at a level: final
+   * once chosen, otherwise their old team as a suggestion.
+   */
+  router.get('/team/level', authMiddleware, playerAuth, playerValidators.teamAtLevel(), handleValidationErrors, playerController.getTeamAtLevel);
+
   router.post(
     '/team/join',
     authMiddleware,

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { COMPETITION_LEVELS } = require('../config/competition-levels');
 const bcrypt = require('bcryptjs');
 const { baseLoginId, nextFreeLoginId, siblingsPattern } = require('../utils/data/player-login-id.util');
 
@@ -132,6 +133,27 @@ const playerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',
     default: null
+  },
+  /**
+   * The player's team at each competition level — FINAL once set. A player is
+   * SGAM's at District and Maharashtra's at State, and neither ever changes
+   * except by a Super Admin correction. At most one entry per level; written
+   * only through services/team/player-team.service (a conditional update, so
+   * two teams racing for the same child cannot both win).
+   *
+   * `team` above is kept for the screens that read one team: the first team the
+   * player ever had, and the roster suggestion at a level not yet chosen.
+   */
+  levelTeams: {
+    type: [new mongoose.Schema({
+      level: { type: String, enum: COMPETITION_LEVELS, required: true },
+      team: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', required: true },
+      setAt: { type: Date, default: Date.now },
+      setBy: { type: mongoose.Schema.Types.ObjectId, default: null },
+      setByType: { type: String, enum: ['player', 'coach', 'admin', 'superadmin', 'system'], default: 'system' },
+      via: { type: String, default: null },
+    }, { _id: false })],
+    default: [],
   },
   ageGroup: {
     type: String,
@@ -269,6 +291,9 @@ playerSchema.methods.getAge = function() {
  * everywhere.
  */
 playerSchema.index({ team: 1 });
+
+/** "Who is this team's at any level" — rosters read both `team` and this. */
+playerSchema.index({ 'levelTeams.team': 1 });
 
 /**
  * One account per Player ID. Partial so the accounts from before the field

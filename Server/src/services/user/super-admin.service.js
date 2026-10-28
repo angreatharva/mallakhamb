@@ -378,15 +378,22 @@ class SuperAdminService {
       return grouped;
     }
 
-    const players = await this.playerRepository.find({ team: { $in: teamIds } });
+    // On a team's roster: their old single team, or theirs at any level.
+    const players = await this.playerRepository.find({
+      $or: [{ team: { $in: teamIds } }, { 'levelTeams.team': { $in: teamIds } }],
+    });
+    const wanted = new Set(teamIds.map(String));
 
     for (const player of players) {
-      const key = String(player.team);
-      const bucket = grouped.get(key);
-      if (bucket) {
-        bucket.push(player);
-      } else {
-        grouped.set(key, [player]);
+      const keys = new Set([player.team, ...(player.levelTeams || []).map((e) => e.team)]
+        .filter(Boolean).map(String).filter((key) => wanted.has(key)));
+      for (const key of keys) {
+        const bucket = grouped.get(key);
+        if (bucket) {
+          bucket.push(player);
+        } else {
+          grouped.set(key, [player]);
+        }
       }
     }
 
@@ -1074,6 +1081,18 @@ class SuperAdminService {
         gender,
         ageGroup, // Add age group to player document
         team: canonicalTeamId,
+        // A new player, so no team holds them anywhere: this team's at the
+        // meet's level from the start (Player.levelTeams — final per level).
+        ...(competition.level ? {
+          levelTeams: [{
+            level: competition.level,
+            team: canonicalTeamId,
+            setAt: new Date(),
+            setBy: superAdminId || null,
+            setByType: 'superadmin',
+            via: 'superadmin-add-player',
+          }],
+        } : {}),
         password
       };
 

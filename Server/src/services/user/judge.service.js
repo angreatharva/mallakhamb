@@ -15,6 +15,7 @@
 
 const UserService = require('./user.service');
 const { noopMetrics } = require('../../infrastructure/prometheus/registry');
+const { rosterFilter } = require('../../utils/data/player-team.util');
 const {
   NotFoundError,
   AuthenticationError,
@@ -500,7 +501,7 @@ class JudgeService extends UserService {
       const players = registeredIds.size === 0
         ? []
         : await this.playerRepository.find(
-          { _id: { $in: [...registeredIds] }, team: teamId },
+          { _id: { $in: [...registeredIds] }, ...rosterFilter(teamId) },
           { select: SUBMITTED_TEAM_PLAYER_FIELDS }
         );
 
