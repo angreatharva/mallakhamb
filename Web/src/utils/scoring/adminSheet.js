@@ -16,6 +16,7 @@
  */
 
 import { apparatusFor, entryGender } from './apparatus';
+import { ageMatches } from '@/hooks/useAgeGroups';
 
 /** What the server assumes for a row without one — kept identical on purpose. */
 export const DEFAULT_APPARATUS = 'Pole Mallakhamb';
@@ -39,7 +40,7 @@ export const apparatusLabel = (apparatus) => String(apparatus || DEFAULT_APPARAT
 export function sheetRows(team, gender, ageGroup, competitionType) {
   const rows = [];
   for (const entry of team?.players || []) {
-    if (!entry?.player || entryGender(entry) !== gender || entry.ageGroup !== ageGroup) continue;
+    if (!entry?.player || entryGender(entry) !== gender || !ageMatches(entry.ageGroup, ageGroup)) continue;
     const athleteName = `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim();
     const registered = apparatusFor(entry, competitionType);
     // An entry that names no apparatus at all is Pole, as on the server; one

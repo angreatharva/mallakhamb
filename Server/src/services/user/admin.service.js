@@ -13,6 +13,7 @@ const EventTypes = require('../../socket/events/event-types');
 const { toCompetitionTypeSlug, toCompetitionTypeDisplay, validateSlipBreakdown } = require('../../config/cop-rules');
 const { calculateIndividualScore } = require('../../utils/scoring/calculation.util');
 const { rosterFilter } = require('../../utils/data/player-team.util');
+const { ageMatches, entryInCompetition, categoryAgeGroups, ALL_AGES } = require('../../utils/data/category.util');
 
 /**
  * Field projections for the credential-bearing documents this service returns
@@ -1046,7 +1047,7 @@ class AdminService extends UserService {
           // Check if any player in the team matches the filters
           return regTeam.players.some(playerEntry => {
             const matchesGender = !filters.gender || playerEntry.gender === filters.gender;
-            const matchesAgeGroup = !filters.ageGroup || playerEntry.ageGroup === filters.ageGroup;
+            const matchesAgeGroup = ageMatches(playerEntry.ageGroup, filters.ageGroup);
             
             let matchesApparatus = true;
             // One reading of the three-shaped Mixed field, shared with the fee
@@ -1203,7 +1204,10 @@ class AdminService extends UserService {
          */
         players: regTeam.players.filter(playerEntry => {
           if (filters.gender && playerEntry.gender !== filters.gender) return false;
-          if (filters.ageGroup && playerEntry.ageGroup !== filters.ageGroup) return false;
+          if (!ageMatches(playerEntry.ageGroup, filters.ageGroup)) return false;
+          // A final (Competition II / III) shows only its qualifiers — the
+          // engine wrote them into the entry. Competition I is everyone.
+          if (!entryInCompetition(playerEntry, filters.competitionType)) return false;
           return true;
         }).map(playerEntry => {
           // Handle both Mongoose documents and plain objects
@@ -1737,10 +1741,10 @@ class AdminService extends UserService {
         throw new NotFoundError('Competition');
       }
 
-      // Check if this age group exists in the competition
-      const ageGroupExists = competition.ageGroups?.some(
-        ag => ag.gender === gender && ag.ageGroup === ageGroup
-      );
+      // Check if this age group exists in the competition (Competition II also
+      // runs one "All ages" final per gender).
+      const ageGroupExists = categoryAgeGroups(competition, gender).includes(ageGroup)
+        && (ageGroup !== ALL_AGES || competitionType === 'competition_2');
 
       if (!ageGroupExists) {
         throw new NotFoundError(`Age group ${gender} ${ageGroup} not found in competition`);

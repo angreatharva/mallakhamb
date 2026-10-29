@@ -31,6 +31,9 @@ const PlayerService = require('../services/user/player.service');
 const CoachService = require('../services/user/coach.service');
 const CoachPlayerService = require('../services/user/coach-player.service');
 const PlayerTeamService = require('../services/team/player-team.service');
+const QualificationService = require('../services/scoring/qualification.service');
+const QualificationRepository = require('../repositories/qualification.repository');
+const createQualificationController = require('../controllers/qualification.controller');
 const PlayerTeamAdminService = require('../services/team/player-team-admin.service');
 const PlayerTeamConflictRepository = require('../repositories/player-team-conflict.repository');
 const createPlayerTeamAdminController = require('../controllers/player-team-admin.controller');
@@ -96,6 +99,17 @@ function withPlayerTeams(c, service) {
   return service;
 }
 
+/**
+ * Scores and draws trigger the finals' recompute; resolved on first use so
+ * the qualification service (which reads scores) is not a constructor cycle.
+ */
+function withQualification(c, service) {
+  Object.defineProperty(service, 'qualificationService', {
+    get: () => c.resolve('qualificationService'), configurable: true,
+  });
+  return service;
+}
+
 function bootstrap() {
   configManager.load();
   container.register('config', () => configManager, 'singleton');
@@ -131,6 +145,7 @@ function bootstrap() {
   container.register('scoreRepository', (c) => new ScoreRepository(c.resolve('logger')), 'singleton');
   container.register('transactionRepository', (c) => new TransactionRepository(c.resolve('logger')), 'singleton');
   container.register('auditLogRepository', (c) => new AuditLogRepository(c.resolve('logger')), 'singleton');
+  container.register('qualificationRepository', (c) => new QualificationRepository(c.resolve('logger')), 'singleton');
   container.register('playerTeamConflictRepository', (c) => new PlayerTeamConflictRepository(c.resolve('logger')), 'singleton');
   container.register('performanceOrderRepository', (c) => new PerformanceOrderRepository(c.resolve('logger')), 'singleton');
   container.register('tieBreakDrawRepository', (c) => new TieBreakDrawRepository(c.resolve('logger')), 'singleton');
@@ -384,7 +399,17 @@ function bootstrap() {
     socketManager: null,
     logger: c.resolve('logger'),
   }), 'singleton');
-  container.register('scoringService', (c) => new ScoringService(
+  // Competition I → II / III, automatically (docs/qualification-plan.md).
+  container.register('qualificationService', (c) => new QualificationService({
+    qualificationRepository: c.resolve('qualificationRepository'),
+    competitionRepository: c.resolve('competitionRepository'),
+    scoreRepository: c.resolve('scoreRepository'),
+    tieBreakDrawRepository: c.resolve('tieBreakDrawRepository'),
+    teamRepository: c.resolve('teamRepository'),
+    otpService: c.resolve('otpService'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+  container.register('scoringService', (c) => withQualification(c, new ScoringService(
     c.resolve('scoreRepository'),
     c.resolve('competitionRepository'),
     c.resolve('playerRepository'),
@@ -398,13 +423,13 @@ function bootstrap() {
     c.resolve('teamRepository'),
     c.resolve('metrics'),
     c.resolve('tieBreakDrawRepository')
-  ), 'singleton');
+  )), 'singleton');
   // Validates a draw against the standing scoringService ranks; one-way.
-  container.register('tieBreakDrawService', (c) => new TieBreakDrawService({
+  container.register('tieBreakDrawService', (c) => withQualification(c, new TieBreakDrawService({
     tieBreakDrawRepository: c.resolve('tieBreakDrawRepository'),
     scoringService: c.resolve('scoringService'),
     logger: c.resolve('logger'),
-  }), 'singleton');
+  })), 'singleton');
 
   container.register('competitionController', (c) => createCompetitionController(c), 'singleton');
   container.register('teamController', (c) => createTeamController(c), 'singleton');
@@ -422,6 +447,7 @@ function bootstrap() {
   container.register('paymentController', (c) => createPaymentController(c), 'singleton');
   container.register('performanceOrderController', (c) => createPerformanceOrderController(c), 'singleton');
   container.register('tieBreakDrawController', (c) => createTieBreakDrawController(c), 'singleton');
+  container.register('qualificationController', (c) => createQualificationController(c), 'singleton');
   container.register('playerTeamAdminService', (c) => new PlayerTeamAdminService({
     playerRepository: c.resolve('playerRepository'),
     teamRepository: c.resolve('teamRepository'),

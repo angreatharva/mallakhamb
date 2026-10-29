@@ -191,7 +191,31 @@ function planForPlace(plan, place) {
 const sizeFor = (planOrMeet, gender, ageGroup) =>
   planOrMeet.panels.find((p) => p.gender === gender && p.ageGroup === ageGroup)?.size ?? null;
 
+/**
+ * The panels a competition type is judged by in one meet.
+ *
+ * Competition I (and III) is per age group — the plan's own panels. Competition
+ * II is ONE "All ages" final per gender since automatic finals
+ * (docs/qualification-plan.md): its panel takes the people of the meet's seats
+ * and the size of that gender's Under 14 panel (else its first), so the frozen
+ * plan file needs no new draw.
+ *
+ * @param {{panels: Array}} meetPlan
+ * @param {string} competitionType - slug
+ * @returns {Array<{gender: string, ageGroup: string, size: number}>}
+ */
+function panelsForType(meetPlan, competitionType) {
+  if (competitionType !== 'competition_2') return meetPlan.panels;
+  const genders = [...new Set(meetPlan.panels.map((p) => p.gender))];
+  return genders.map((gender) => {
+    const own = meetPlan.panels.filter((p) => p.gender === gender);
+    const like = own.find((p) => p.ageGroup === 'Under14') || own[0];
+    return { gender, ageGroup: 'AllAges', size: like.size };
+  });
+}
+
 module.exports = {
+  panelsForType,
   PLAN_PATH,
   SIZES,
   EVALUATION_SEATS,

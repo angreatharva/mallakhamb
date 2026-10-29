@@ -30,6 +30,7 @@
 const { NotFoundError, ValidationError, BusinessRuleError } = require('../../errors');
 const { MINIMUM_PANEL_SEATS } = require('../../utils/data/judge-assignment.util');
 const { maySeatTogether } = require('../../config/judge-seats');
+const { categoryAgeGroups, ALL_AGES } = require('../../utils/data/category.util');
 /*
  * Positive whitelists, applied HERE rather than in the controller: `getJudges`
  * is reached by the admin router, the judge router and the public one, so
@@ -568,8 +569,13 @@ class JudgePanelService {
       // Build summary array grouped by gender and age group
       const summaryMap = new Map();
 
-      // Initialize with all age groups from competition
-      competition.ageGroups?.forEach(ag => {
+      // Initialize with all age groups from competition, plus Competition II's
+      // "All ages" final per gender.
+      const categories = [...(competition.ageGroups || [])];
+      for (const gender of [...new Set(categories.map((ag) => ag.gender))]) {
+        if (categoryAgeGroups(competition, gender).includes(ALL_AGES)) categories.push({ gender, ageGroup: ALL_AGES });
+      }
+      categories.forEach(ag => {
         const key = `${ag.gender}_${ag.ageGroup}`;
         summaryMap.set(key, {
           gender: ag.gender,

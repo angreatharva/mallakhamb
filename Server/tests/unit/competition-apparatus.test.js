@@ -135,6 +135,17 @@ describe('addPlayerToAgeGroup — apparatus per gender and the squad cap', () =>
     await service.addPlayerToAgeGroup(COACH_ID, COMPETITION_ID, {
       playerId: PLAYER_ID, ageGroup: 'Under14', gender: 'Female', apparatus: [POLE, ROPE],
     });
+    // Competition III is the qualification engine's to fill, not the coach's
+    // (docs/qualification-plan.md): only Competition I is entered here.
+    expect(updates[0].apparatus).toEqual({ competition_1: [POLE] });
+  });
+
+  it('a meet scored before automatic finals (legacyFinals) still takes the coach Competition III choice', async () => {
+    const competition = { ...meet(), legacyFinals: true };
+    const { service, updates } = buildService({ competition, team: { _id: TEAM_ID, name: 'SGAM-A', maxTeamSize: 6 } });
+    await service.addPlayerToAgeGroup(COACH_ID, COMPETITION_ID, {
+      playerId: PLAYER_ID, ageGroup: 'Under14', gender: 'Female', apparatus: [POLE, ROPE],
+    });
     expect(updates[0].apparatus).toEqual({ competition_1: [POLE], competition_3: [ROPE] });
   });
 

@@ -10,6 +10,7 @@
 const BaseRepository = require('./base.repository');
 const Competition = require('../models/Competition');
 const { convertToObjectId } = require('../utils/data/objectid.util');
+const { ALL_AGES } = require('../config/cop-rules');
 
 /**
  * Prefix an unprefixed field map onto the matched registration, for use with
@@ -579,7 +580,8 @@ class CompetitionRepository extends BaseRepository {
 
       const playerMatch = {};
       if (filters.gender) playerMatch['players.gender'] = filters.gender;
-      if (filters.ageGroup) playerMatch['players.ageGroup'] = filters.ageGroup;
+      // Competition II's "All ages" final holds every age group's qualifiers.
+      if (filters.ageGroup && filters.ageGroup !== ALL_AGES) playerMatch['players.ageGroup'] = filters.ageGroup;
 
       const pipeline = [
         { $match: { _id: convertToObjectId(competitionId), isDeleted: { $ne: true } } },
@@ -618,7 +620,7 @@ class CompetitionRepository extends BaseRepository {
                 cond: {
                   $and: [
                     ...(filters.gender ? [{ $eq: ['$$p.gender', filters.gender] }] : []),
-                    ...(filters.ageGroup ? [{ $eq: ['$$p.ageGroup', filters.ageGroup] }] : []),
+                    ...(filters.ageGroup && filters.ageGroup !== ALL_AGES ? [{ $eq: ['$$p.ageGroup', filters.ageGroup] }] : []),
                   ],
                 },
               },

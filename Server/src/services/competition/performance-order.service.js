@@ -19,6 +19,7 @@ const { NotFoundError, ValidationError, AuthorizationError } = require('../../er
 const { fullName } = require('../../utils/data/user-projection.util');
 const { scoringRoomIds } = require('../../utils/data/scoring-room.util');
 const { idStr } = require('../../utils/data/objectid.util');
+const { ageMatches, entryInCompetition } = require('../../utils/data/category.util');
 // The route guard reads the same list from the same place — see the note on
 // SEQUENCE_JUDGE_TYPES there. This file used to declare its own copy.
 const { SEQUENCE_JUDGE_TYPES } = require('../../utils/data/judge-assignment.util');
@@ -210,7 +211,8 @@ class PerformanceOrderService {
       // Only athletes in this category perform in it. Apparatus is deliberately
       // NOT filtered here: one order serves every apparatus view (see model).
       const players = (team.players || [])
-        .filter((entry) => entry.player && entry.gender === identity.gender && entry.ageGroup === identity.ageGroup)
+        .filter((entry) => entry.player && entry.gender === identity.gender && ageMatches(entry.ageGroup, identity.ageGroup)
+          && entryInCompetition(entry, identity.competitionType))
         .map((entry) => {
           const playerId = idStr(entry.player._id);
           const stored = playerOrder?.get(playerId);

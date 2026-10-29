@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { useAgeGroups } from '../../hooks/useAgeGroups';
+import { useAgeGroups, withAllAges, typesForAgeGroup } from '../../hooks/useAgeGroups';
 import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import Dropdown from '@/components/auth/Dropdown';
@@ -379,7 +379,7 @@ const Judges = () => {
       label: t === 'competition_1' ? 'Competition I - Team Championship' : t === 'competition_2' ? 'Competition II - All Round Individual' : 'Competition III - Apparatus Championship'
     }));
   };
-  const competitionTypeOptions = getCompetitionTypeOptions();
+  const competitionTypeOptions = typesForAgeGroup(getCompetitionTypeOptions(), selectedAgeGroup, competitionForAgeGroups);
   const apparatusOptions = getApparatusOptions();
 
   useEffect(() => {
@@ -787,7 +787,7 @@ const Judges = () => {
                     Age Group <span className="text-danger-fg">*</span>
                   </label>
                   <Dropdown
-                    options={availableAgeGroups}
+                    options={withAllAges(availableAgeGroups, competitionForAgeGroups)}
                     value={selectedAgeGroup}
                     onChange={handleAgeGroupChange}
                     placeholder={hasGender ? 'Select age group' : 'Select gender first'}

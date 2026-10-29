@@ -433,6 +433,10 @@ function createCoachRoutes(container) {
   router.post('/paper-form/draft/:draftId/submit', ...paperWrite, deskRules(walkInValidators.draftId()), walkIn('submit'));
   router.get('/paper-form/draft/:draftId/slip', ...paperForm, deskRules(walkInValidators.draftId()), walkIn('slip'));
 
+  // The coach's players who qualified for Competition II / III in this meet.
+  router.get('/finals', authMiddleware, coachAuth, validateCompetitionContext,
+    (req, res, next) => container.resolve('qualificationController').forCoach(req, res, next));
+
   return router;
 }
 

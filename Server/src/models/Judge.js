@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { JUDGE_SEAT_TYPES, MAX_SEAT_NO } = require('../config/judge-seats');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 // Required for its side effect: registering the JudgeAccount schema. Every
 // panel query populates `judgeAccount`, and a populate against an unregistered
 // model throws MissingSchemaError at request time rather than at startup.
@@ -46,7 +46,7 @@ const judgeSchema = new mongoose.Schema({
   },
   ageGroup: {
     type: String,
-    enum: AGE_GROUPS,
+    enum: CATEGORY_AGE_GROUPS,
     required: [true, 'Age group is required']
   },
   /**

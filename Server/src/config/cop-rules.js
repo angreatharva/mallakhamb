@@ -42,6 +42,17 @@ const AGE_GROUPS = Object.freeze([
   'Under10', 'Under12', 'Under14', 'Under16', 'Under18', 'Above16', 'Above18',
 ]);
 
+/**
+ * Competition II (All Round Individual) is ONE final per gender with the top
+ * two of every age group in it (owner, 2026-10-29; docs/qualification-plan.md).
+ * Its category's age group is this value. Only a CATEGORY carries it — scores,
+ * panels, running order, tie-break draws — never a player or a squad entry.
+ */
+const ALL_AGES = 'AllAges';
+
+/** Every age group a category (not a player) may be keyed on. */
+const CATEGORY_AGE_GROUPS = Object.freeze([...AGE_GROUPS, ALL_AGES]);
+
 /** The two sexes a category is split by. */
 const GENDERS = Object.freeze(['Male', 'Female']);
 
@@ -521,6 +532,8 @@ function getCopRulesData() {
 module.exports = {
   COP_EDITION,
   AGE_GROUPS,
+  ALL_AGES,
+  CATEGORY_AGE_GROUPS,
   GENDERS,
   AGE_GROUPS_BY_GENDER,
   AGE_GROUP_RANGES,

@@ -48,6 +48,18 @@ export const createAdminAPI = (basePath = '/admin') => ({
   saveScores: (data) => api.post(`${basePath}/scores/save`, data),
   unlockScores: (scoreId) => api.put(`${basePath}/scores/${scoreId}/unlock`),
   getTransactions: (params) => api.get(`${basePath}/transactions`, { params }),
+  /**
+   * Finals: who moved from Competition I into Competition II / III. The engine
+   * fills them; these read the lists and record a withdrawal or a Competition II
+   * draw. `competitionId` is required under /superadmin (no meet in context).
+   */
+  finals: {
+    list: (competitionId) => api.get(`${basePath}/finals`, { params: { competitionId } }),
+    recompute: (competitionId) => api.post(`${basePath}/finals/recompute`, { competitionId }),
+    withdraw: (finalId, data) => api.post(`${basePath}/finals/${finalId}/withdraw`, data),
+    reinstate: (finalId, data) => api.post(`${basePath}/finals/${finalId}/reinstate`, data),
+    draw: (finalId, data) => api.post(`${basePath}/finals/${finalId}/draw`, data),
+  },
 });
 
 export const adminAPI = createAdminAPI('/admin');

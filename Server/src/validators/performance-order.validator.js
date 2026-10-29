@@ -1,6 +1,6 @@
 const { body, query } = require('express-validator');
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 // Both encodings are accepted on the wire; the service normalizes to the slug
 // before anything is stored, so a client that sends the Score model's display
 // form cannot open a second document for the same panel.
@@ -20,7 +20,7 @@ const category = (location) => {
     field('gender').trim().notEmpty().withMessage('gender is required')
       .isIn(GENDERS).withMessage('gender must be Male or Female'),
     field('ageGroup').trim().notEmpty().withMessage('ageGroup is required')
-      .isIn(AGE_GROUPS).withMessage('Invalid age group'),
+      .isIn(CATEGORY_AGE_GROUPS).withMessage('Invalid age group'),
     field('competitionType').trim().notEmpty().withMessage('competitionType is required')
       .isIn(COMPETITION_TYPES).withMessage('Invalid competition type'),
   ];

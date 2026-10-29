@@ -16,6 +16,7 @@
  */
 
 const express = require('express');
+const { query } = require('express-validator');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/auth.middleware');
 const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
@@ -53,6 +54,14 @@ function createPublicRoutes(container) {
    * @access  Public
    */
   router.get('/competitions', publicController.getPublicCompetitions);
+
+  /**
+   * @route   GET /api/public/finals?competitionId=
+   * @desc    Who qualified for each Competition II / III final
+   * @access  Public
+   */
+  router.get('/finals', query('competitionId').isMongoId().withMessage('A valid competitionId is required'), handleValidationErrors,
+    (req, res, next) => container.resolve('qualificationController').forPublic(req, res, next));
 
   /**
    * @route   GET /api/public/cop-rules

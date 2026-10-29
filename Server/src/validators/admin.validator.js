@@ -8,7 +8,7 @@ const {
   string, 
   array 
 } = require('./common.validator');
-const { AGE_GROUPS, GENDERS, APPARATUS } = require('../config/cop-rules');
+const { AGE_GROUPS, CATEGORY_AGE_GROUPS, GENDERS, APPARATUS } = require('../config/cop-rules');
 const { JUDGE_SEAT_TYPES, MAX_SEAT_NO } = require('../config/judge-seats');
 
 /**
@@ -213,7 +213,7 @@ const saveJudges = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('competitionTypes')
       .isArray({ min: 1 })
@@ -259,7 +259,7 @@ const createSingleJudge = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('judgeNo')
       .isInt({ min: 1, max: MAX_SEAT_NO })
@@ -386,7 +386,7 @@ const unlockScores = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };
@@ -400,7 +400,7 @@ const lockScores = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };
@@ -414,7 +414,7 @@ const getTeamScores = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };
@@ -428,7 +428,7 @@ const getIndividualScores = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };
@@ -442,7 +442,7 @@ const getTeamRankings = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };
@@ -456,7 +456,7 @@ const getIndividualRankings = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };
@@ -470,7 +470,7 @@ const recalculateScores = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };
@@ -492,7 +492,7 @@ const startAgeGroup = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group'),
     body('competitionType')
       .trim()
@@ -512,7 +512,7 @@ const endAgeGroup = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .isIn(CATEGORY_AGE_GROUPS)
       .withMessage('Invalid age group')
   ];
 };

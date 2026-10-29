@@ -25,8 +25,25 @@ export const ageGroupMapping = {
   'Under16': { value: 'Under16', label: 'Under 16' },
   'Under18': { value: 'Under18', label: 'Under 18' },
   'Above16': { value: 'Above16', label: 'Above 16' },
-  'Above18': { value: 'Above18', label: 'Above 18' }
+  'Above18': { value: 'Above18', label: 'Above 18' },
+  // Competition II's one final per gender, with every age group's top two.
+  // A CATEGORY, never a player's own age group (docs/qualification-plan.md).
+  'AllAges': { value: 'AllAges', label: 'All ages' }
 };
+
+/** Competition II's "All ages" category (Server cop-rules ALL_AGES). */
+export const ALL_AGES = 'AllAges';
+
+/**
+ * Does an entry's own age group belong to a category's? "All ages" holds every
+ * age group's finalists.
+ *
+ * @param {string} entryAgeGroup
+ * @param {string} categoryAgeGroup
+ * @returns {boolean}
+ */
+export const ageMatches = (entryAgeGroup, categoryAgeGroup) =>
+  !categoryAgeGroup || categoryAgeGroup === ALL_AGES || entryAgeGroup === categoryAgeGroup;
 
 /**
  * Every bracket either gender competes in, in age order.
@@ -35,7 +52,7 @@ export const ageGroupMapping = {
  * grid, which offers all seven and disables the pairings that do not exist. A
  * picker for one gender must use `getAgeGroupsForGender` instead.
  */
-export const ALL_AGE_GROUPS = Object.keys(ageGroupMapping);
+export const ALL_AGE_GROUPS = Object.keys(ageGroupMapping).filter((group) => group !== 'AllAges');
 
 /**
  * @param {string} ageGroup - stored value, e.g. 'Under14'
@@ -94,6 +111,26 @@ export const getFilteredAgeGroups = (competition, gender) => {
     .filter((ag) => ag.gender === gender && allowed.includes(ag.ageGroup))
     .map((ag) => toOption(ag.ageGroup))
     .sort((a, b) => allowed.indexOf(a.value) - allowed.indexOf(b.value));
+};
+
+/** Does this meet run Competition II's one "All ages" final per gender? */
+export const runsAllAges = (competition) =>
+  (competition?.competitionTypes || []).includes('competition_2') && !competition?.legacyFinals;
+
+/** A category picker's age groups, plus "All ages" when the meet runs Competition II. */
+export const withAllAges = (options, competition) =>
+  (runsAllAges(competition) ? [...(options || []), ageGroupMapping.AllAges] : options || []);
+
+/**
+ * The competition types a category of this age group can be: "All ages" is
+ * Competition II only, and (on a meet with automatic finals) Competition II is
+ * "All ages" only. Options may be `{value}` objects or plain slugs.
+ */
+export const typesForAgeGroup = (typeOptions, ageGroup, competition) => {
+  const value = ageGroup?.value ?? ageGroup;
+  if (!runsAllAges(competition) || !value) return typeOptions || [];
+  const slug = (o) => o?.value ?? o;
+  return (typeOptions || []).filter((o) => (value === ALL_AGES ? slug(o) === 'competition_2' : slug(o) !== 'competition_2'));
 };
 
 /**

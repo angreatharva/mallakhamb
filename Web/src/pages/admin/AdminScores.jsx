@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { useAgeGroups } from '../../hooks/useAgeGroups';
+import { useAgeGroups, withAllAges, typesForAgeGroup } from '../../hooks/useAgeGroups';
 import { ResponsiveTeamTable } from '../../components/responsive/ResponsiveTable';
 import { ResponsiveTeamRankings } from '../../components/responsive/ResponsiveRankings';
 import { logger } from '@/infrastructure/logger';
@@ -112,14 +112,14 @@ const Scores = () => {
     selectedGender?.value || 'Male',
     isSuperAdmin ? activeCompetition : null
   );
-  const ageGroupOptions = selectedGender ? ageGroupsForGender : [];
+  const ageGroupOptions = selectedGender ? withAllAges(ageGroupsForGender, activeCompetition) : [];
 
-  const competitionTypeOptions = activeCompetition?.competitionTypes?.length
+  const competitionTypeOptions = typesForAgeGroup(activeCompetition?.competitionTypes?.length
     ? activeCompetition.competitionTypes.map((type) => ({
         value: type,
         label: COMPETITION_TYPE_LABELS[type] || type,
       }))
-    : DEFAULT_COMPETITION_TYPES;
+    : DEFAULT_COMPETITION_TYPES, selectedAgeGroup, activeCompetition);
 
   // Only what the chosen gender competes on in this type.
   const apparatusOptions = selectedCompetitionType && selectedGender && activeCompetition

@@ -11,6 +11,8 @@ export const coachAPI = {
   selectCompetition: (data) => api.post('/coaches/select-competition', data),
   registerTeamForCompetition: (teamId, competitionId) => api.post(`/coaches/team/${teamId}/register-competition`, { competitionId }),
   getDashboard: () => api.get('/coaches/dashboard'),
+  /** This coach's players who qualified for Competition II / III in the meet in context. */
+  getFinals: () => api.get('/coaches/finals'),
   // Resets and email additions from players on this coach's teams who have no email.
   accountRequests: {
     list: () => api.get('/coaches/account-requests'),

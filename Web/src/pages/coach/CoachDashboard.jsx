@@ -16,6 +16,7 @@ import { ageCutoffYear, ageOnCutoff, eligibleAgeGroups } from '@/utils/competiti
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 import PerformancePanel from '@/components/performance/PerformancePanel';
+import QualifiedFinals from '@/components/finals/QualifiedFinals';
 import AccountRequestsPanel from '@/components/account/AccountRequestsPanel';
 import RegisterPlayerDialog from '@/pages/coach/RegisterPlayerDialog';
 import {
@@ -625,6 +626,11 @@ const CoachDashboard = () => {
           </Panel>
         </div>
 
+        {/* Competition II / III: this coach's players the engine moved into a final. */}
+        {currentCompetition && (
+          <QualifiedFinals who="coach" load={coachAPI.getFinals} reloadKey={currentCompetition._id} />
+        )}
+
         {/* Team Performance Section */}
         {team?._id && currentCompetition && (
           <PerformancePanel
@@ -790,6 +796,11 @@ const CoachDashboard = () => {
                 <p className="ui-field__label type-tag m-0">
                   Apparatus <span className="ui-field__required" aria-hidden="true">*</span>
                 </p>
+                {!currentCompetition?.legacyFinals && (currentCompetition?.competitionTypes || []).some((t) => t !== 'competition_1') && (
+                  <p className="text-fg-muted type-caption m-0">
+                    For Competition I. Competition II and III finalists are chosen automatically from Competition I&apos;s results.
+                  </p>
+                )}
                 {/*
                   * Checkboxes rather than the shared Dropdown: an athlete
                   * can be entered for more than one apparatus and is

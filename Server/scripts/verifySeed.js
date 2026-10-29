@@ -30,7 +30,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const mongoose = require('mongoose');
 const { allMeets, LEVELS } = require('./lib/meets');
 const { allJudges } = require('./lib/judges');
-const { readPlan, planForPlace, seatsFor } = require('./lib/panel-plan');
+const { readPlan, planForPlace, seatsFor, panelsForType } = require('./lib/panel-plan');
 const { apparatusKey } = require('../src/config/cop-rules');
 const { baseLoginId } = require('../src/utils/data/player-login-id.util');
 const roster = require('./lib/roster');
@@ -251,7 +251,9 @@ async function verify() {
       continue;
     }
 
-    for (const panel of meetPlan.panels) {
+    // Competition II is one "All ages" panel per gender (automatic finals).
+    const panelsHere = [...new Set(plan.competitionTypes.flatMap((type) => panelsForType(meetPlan, type)))];
+    for (const panel of panelsHere) {
       const want = seatsFor(panel.size);
       const seated = assignments.filter((a) =>
         String(a.competition) === String(competition._id)
@@ -322,7 +324,9 @@ async function verify() {
     }
   }
 
-  const expectedCategories = competitions.length * plan.panels.length * plan.competitionTypes.length;
+  // Per type: Competition I per age group, Competition II one "All ages" final per gender.
+  const expectedCategories = competitions.length
+    * plan.competitionTypes.reduce((sum, type) => sum + panelsForType(plan, type).length, 0);
   check('scores', `every category judged — ${expectedCategories} expected`,
     expectedCategories > 0 && byCategory.size === expectedCategories,
     orphaned.length

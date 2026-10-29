@@ -1,6 +1,6 @@
 const { body } = require('express-validator');
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 
 // Both encodings are accepted on the wire; the service stores the slug.
 const COMPETITION_TYPES = [
@@ -14,7 +14,7 @@ const standing = () => [
   body('gender').trim().notEmpty().withMessage('gender is required')
     .isIn(GENDERS).withMessage('gender must be Male or Female'),
   body('ageGroup').trim().notEmpty().withMessage('ageGroup is required')
-    .isIn(AGE_GROUPS).withMessage('Invalid age group'),
+    .isIn(CATEGORY_AGE_GROUPS).withMessage('Invalid age group'),
   body('competitionType').trim().notEmpty().withMessage('competitionType is required')
     .isIn(COMPETITION_TYPES).withMessage('Invalid competition type'),
   body('apparatus').trim().notEmpty().withMessage('apparatus is required')

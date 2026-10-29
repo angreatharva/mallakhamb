@@ -125,6 +125,19 @@ A player's team is **final at each competition level**: one team for District, o
 
 On screens narrower than 1440 px the Super Admin tabs are in the menu (☰).
 
+## Finals tab (Competition II and III)
+
+Finalists move from Competition I **automatically**, the moment the Senior Judge and Scorer save and lock Competition I. You never pick them.
+
+- **Competition II (All Round Individual):** one final per gender with **all age groups together**: the **top 2 of each age group**, ranked on the sum of their Competition I scores on every apparatus.
+- **Competition III (Apparatus Championship):** per age group and apparatus, the **top 10** on that apparatus, **at most 2 from one team**. A team's third player is passed over and the next player gets the place; the card says who was passed over.
+- A final shows **Waiting for Competition I** (and which team has not locked yet) until it can be filled.
+- **Tie for the last place:** for III, record the lucky draw on the Competition I standing in the Scores tab. For II, tap the tied players on the final's card in the drawn order.
+- **Withdraw** a qualifier (before the final's first score): the next in rank takes the place and the coach is emailed. **Reinstate** undoes it.
+- If a Competition I score is corrected after a final has started, the list stays as it is and the card warns you.
+- Seat the panels in the **Judges** tab: Competition II uses the age group **All ages**; Competition III uses each age group. Draw the running order in the **Lots** tab once the final is filled.
+- Meets scored before this feature keep their old Competition II/III entries.
+
 ## Teams tab
 
 **Teams** lists every team entered in one gender and age group, with its athletes.

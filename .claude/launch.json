@@ -144,6 +144,17 @@
       "cwd": "Server",
       "port": 5001,
       "//": "The nightly e2e chain's API, locally: throw-away mallakhamb_local_e2e, no mail, discount on, rate limit off. Run setupApi.js against :5001 with the same env."
+    },
+    {
+      "name": "api-e2e-browse",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.MONGODB_URI='mongodb://127.0.0.1:27017/mallakhamb_local_e2e';process.env.EMAIL_PROVIDER='none';process.env.NODE_ENV='development';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "Port 5000 on the local e2e chain database (mallakhamb_local_e2e), to look at a fully seeded season in the browser."
     }
   ]
 }

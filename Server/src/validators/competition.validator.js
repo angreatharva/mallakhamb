@@ -1,6 +1,6 @@
 const { body, param } = require('express-validator');
 const { objectId, dateRange, enumValue, string, number, array } = require('./common.validator');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUPS, CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 
 /**
@@ -351,7 +351,7 @@ const startAgeGroup = () => {
   return [
     objectId('competitionId', 'param'),
     enumValue('gender', GENDERS),
-    enumValue('ageGroup', AGE_GROUPS),
+    enumValue('ageGroup', CATEGORY_AGE_GROUPS),
     body('competitionType')
       .trim()
       .notEmpty()

@@ -4,6 +4,7 @@ const { objectId, enumValue, number } = require('./common.validator');
 const {
   isApparatusAllowedForGender,
   AGE_GROUPS,
+  CATEGORY_AGE_GROUPS,
   GENDERS,
   COMPETITION_TYPE_DISPLAYS,
   POINT_CEILINGS,
@@ -164,7 +165,7 @@ const submitScore = () => {
         return true;
       }),
     enumValue('gender', GENDERS),
-    enumValue('ageGroup', AGE_GROUPS),
+    enumValue('ageGroup', CATEGORY_AGE_GROUPS),
     body('competitionType')
       .trim()
       .notEmpty()

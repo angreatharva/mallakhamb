@@ -28,6 +28,7 @@ import { alpha } from '../../styles/tokens';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import { ageMatches } from '@/hooks/useAgeGroups';
 
 const ScorerScoring = () => {
   const location = useLocation();
@@ -271,7 +272,7 @@ const ScorerScoring = () => {
        */
       const teamApparatus = seatApparatus || soleApparatus(
         (selectedTeam.players || [])
-          .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
+          .filter(pe => entryGender(pe) === selectedGender.value && ageMatches(pe.ageGroup, selectedAgeGroup.value))
           .flatMap(pe => apparatusFor(pe, selectedCompetitionType?.value).map(a => ({ apparatus: a })))
       );
 

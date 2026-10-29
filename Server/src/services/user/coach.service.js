@@ -625,6 +625,23 @@ class CoachService extends UserService {
     let entryApparatus = toCanonicalApparatus(apparatus, competition.competitionTypes);
 
     /*
+     * Competition II / III are not the coach's to choose any more: the
+     * qualification engine writes them from Competition I's results
+     * (docs/qualification-plan.md). Whatever the client sent for them is
+     * dropped, and what the engine already decided is kept — moving a player
+     * between age groups must not take them out of a final. Meets scored
+     * before the engine (`legacyFinals`) keep the old behaviour.
+     */
+    if (!competition.legacyFinals) {
+      const previous = registeredTeam.players.find((p) => p.player && p.player.toString() === playerId.toString());
+      const engine = toCanonicalApparatus(previous?.apparatus, competition.competitionTypes);
+      delete entryApparatus.competition_2;
+      delete entryApparatus.competition_3;
+      if (engine.competition_2) entryApparatus.competition_2 = engine.competition_2;
+      if (engine.competition_3) entryApparatus.competition_3 = engine.competition_3;
+    }
+
+    /*
      * Only what the meet runs for THIS gender.
      *
      * The coach picks from a flat list, which the line above spreads across

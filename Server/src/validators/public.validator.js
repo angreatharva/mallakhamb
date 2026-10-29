@@ -1,6 +1,6 @@
 const { query } = require('express-validator');
 const { objectId } = require('./common.validator');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUPS, CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 
 /**
  * Validation for the anonymous public endpoints.
@@ -44,7 +44,7 @@ const getPublicScores = () => [
 const getPublicTeamChampionship = () => [
   objectId('competitionId', 'query'),
   query('gender').isIn(GENDERS).withMessage(`gender must be one of: ${GENDERS.join(', ')}`),
-  query('ageGroup').isIn(AGE_GROUPS).withMessage('A valid ageGroup is required'),
+  query('ageGroup').isIn(CATEGORY_AGE_GROUPS).withMessage('A valid ageGroup is required'),
 ];
 
 const getPublicTeams = () => [

@@ -1102,11 +1102,18 @@ class SuperAdminService {
       );
 
       if (!playerExists) {
+        // Competition II / III come from the qualification engine, never
+        // from this form (docs/qualification-plan.md) — except on a legacy meet.
+        const entryApparatus = { ...(apparatus || {}) };
+        if (!competition.legacyFinals) {
+          delete entryApparatus.competition_2;
+          delete entryApparatus.competition_3;
+        }
         registeredTeam.players.push({
           player: player._id,
           ageGroup: ageGroup,
           gender: gender,
-          apparatus: apparatus || {}
+          apparatus: entryApparatus
         });
 
         await this.competitionRepository.updateById(competitionId, {

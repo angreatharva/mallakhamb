@@ -22,6 +22,7 @@ import { apparatusFor, entryGender } from '@/utils/scoring/apparatus';
 import { panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { sheetRows, rowFor, playerScoresFor } from '@/utils/scoring/adminSheet';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
+import { ageMatches } from '@/hooks/useAgeGroups';
 
 const AdminScoring = () => {
     const location = useLocation();
@@ -200,7 +201,7 @@ const AdminScoring = () => {
              */
             const teamApparatus = soleApparatus(
                 (selectedTeam.players || [])
-                    .filter(pe => entryGender(pe) === selectedGender.value && pe.ageGroup === selectedAgeGroup.value)
+                    .filter(pe => entryGender(pe) === selectedGender.value && ageMatches(pe.ageGroup, selectedAgeGroup.value))
                     .flatMap(pe => apparatusFor(pe, selectedCompetitionType?.value).map(a => ({ apparatus: a })))
             );
 

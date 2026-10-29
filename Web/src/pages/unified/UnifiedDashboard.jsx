@@ -21,6 +21,7 @@ const WalkInDesk = lazy(() => import('../desk/WalkInDesk'));
 const AdminJudgeFairness = lazy(() => import('../admin/AdminJudgeFairness'));
 const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
 const SuperAdminPlayerTeams = lazy(() => import('../superadmin/SuperAdminPlayerTeams'));
+const AdminFinals = lazy(() => import('../admin/AdminFinals'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
@@ -230,6 +231,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'teams', label: 'Teams' },
     { id: 'lots', label: 'Lots' },
     { id: 'scores', label: 'Scores' },
+    // Competition I → II / III qualifiers (docs/qualification-plan.md).
+    { id: 'finals', label: 'Finals' },
     { id: 'judges', label: 'Judges' },
     { id: 'fairness', label: 'Fairness' },
     { id: 'transactions', label: 'Transactions' },
@@ -242,6 +245,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'teams', label: 'Teams' },
     { id: 'lots', label: 'Lots' },
     { id: 'scores', label: 'Scores' },
+    { id: 'finals', label: 'Finals' },
     { id: 'judges', label: 'Judges' },
     { id: 'fairness', label: 'Fairness' },
     { id: 'transactions', label: 'Transactions' },
@@ -575,6 +579,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <AdminJudgeFairness isSuperAdmin competitionId={selectedCompetition || null} />;
         case 'player-teams':
           return <SuperAdminPlayerTeams />;
+        case 'finals':
+          return <AdminFinals isSuperAdmin competitionId={selectedCompetition || null} />;
         default:
           return null;
       }
@@ -596,6 +602,8 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <WalkInDesk />;
         case 'fairness':
           return <AdminJudgeFairness competitionId={currentCompetition?._id ? String(currentCompetition._id) : null} />;
+        case 'finals':
+          return <AdminFinals competitionId={currentCompetition?._id ? String(currentCompetition._id) : null} />;
         default:
           return null;
       }

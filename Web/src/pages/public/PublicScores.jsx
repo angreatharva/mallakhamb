@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Search, X, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { publicAPI } from '@/services/api';
 import { logger } from '@/infrastructure/logger';
-import { getFilteredAgeGroups } from '@/hooks/useAgeGroups';
+import { getFilteredAgeGroups, withAllAges, typesForAgeGroup } from '@/hooks/useAgeGroups';
 import PlayerRankingBoard, { SkeletonRow } from '@/components/scores/PlayerRankingBoard';
 import ScoreCategoryFilters from '@/components/scores/ScoreCategoryFilters';
 import { rowsFromPublicScores, filterRows } from '@/components/scores/scoreRows';
@@ -24,7 +25,48 @@ const COMPETITION_TYPE_LABELS = {
 const VIEWS = [
   { id: 'players', label: 'Player Scores' },
   { id: 'team', label: 'Team Championship' },
+  // Who moved from Competition I into the Competition II / III finals.
+  { id: 'finals', label: 'Finals' },
 ];
+
+/** The finals' qualifier lists for one competition (public). */
+const FinalsSection = ({ competition }) => {
+  const [finals, setFinals] = useState(null);
+  useEffect(() => {
+    if (!competition) { setFinals(null); return undefined; }
+    let alive = true;
+    setFinals(undefined);
+    publicAPI.getFinals(competition.value)
+      .then((res) => { if (alive) setFinals(res.data?.data?.finals || []); })
+      .catch(() => { if (alive) setFinals([]); });
+    return () => { alive = false; };
+  }, [competition]);
+
+  if (!competition) {
+    return <EmptyState tag="Select a Competition" className="ui-fade-in">Pick a competition to see who qualified for its finals.</EmptyState>;
+  }
+  if (finals === undefined) return <div className="space-y-3">{[...Array(3)].map((_, i) => <SkeletonRow key={i} />)}</div>;
+  if (!finals.length) {
+    return <EmptyState tag="No Finalists Yet" className="ui-fade-in">Finalists appear here as Competition I results are locked.</EmptyState>;
+  }
+  return (
+    <div className="grid gap-4 md:grid-cols-2" data-testid="public-finals">
+      {finals.map((f) => (
+        <Panel key={f._id} className="grid gap-2">
+          <Heading level={3} step="body">{f.label}</Heading>
+          <ol className="m-0 pl-5 grid gap-1">
+            {f.qualifiers.map((q) => (
+              <li key={`${q.playerName}-${q.team}`} className="type-body-s">
+                <strong>{q.playerName}</strong> <span className="text-fg-muted">· {q.team}</span>
+              </li>
+            ))}
+          </ol>
+        </Panel>
+      ))}
+    </div>
+  );
+};
+FinalsSection.propTypes = { competition: PropTypes.object };
 
 /** The category a board is showing, as a caption tag above it. */
 const Caption = ({ children }) => (
@@ -86,15 +128,15 @@ const PublicScores = () => {
   // Boys and girls do not share the top two brackets; the shared helper owns
   // that rule and narrows it further to whatever this competition runs.
   const getAvailableAgeGroups = () => (
-    selectedGender ? getFilteredAgeGroups(selectedCompetition, selectedGender.value) : []
+    selectedGender ? withAllAges(getFilteredAgeGroups(selectedCompetition, selectedGender.value), view === 'team' ? null : selectedCompetition) : []
   );
 
   const getAvailableCompetitionTypes = () => {
     if (!selectedCompetition) return [];
-    return (selectedCompetition.competitionTypes || []).map((type) => ({
+    return typesForAgeGroup((selectedCompetition.competitionTypes || []).map((type) => ({
       value: type,
       label: COMPETITION_TYPE_LABELS[type] || type,
-    }));
+    })), selectedAgeGroup, selectedCompetition);
   };
 
   const getAvailableApparatus = () => {
@@ -190,6 +232,7 @@ const PublicScores = () => {
         // back to the gender's full list. Carried through so that it narrows
         // on its own if the endpoint ever starts sending it.
         ageGroups: c.ageGroups || [],
+        legacyFinals: Boolean(c.legacyFinals),
       })));
       if (!comps.length) {
         logger.warn('No public competitions returned from API');
@@ -301,13 +344,15 @@ const PublicScores = () => {
             selectedApparatus={selectedApparatus}
             onApparatusChange={setSelectedApparatus}
             onClearFilters={handleClearFilters}
-            categoryOnly={view === 'team'}
+            categoryOnly={view !== 'players'}
           />
         </Panel>
 
         {/* Content area */}
         <div id={`results-panel-${view}`}>
-          {view === 'team' ? (
+          {view === 'finals' ? (
+            <FinalsSection competition={selectedCompetition} />
+          ) : view === 'team' ? (
             <TeamChampionshipSection
               filtersSet={teamFiltersSet}
               runsTeamChampionship={runsTeamChampionship}

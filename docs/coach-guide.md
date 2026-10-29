@@ -142,6 +142,15 @@ On the team dashboard, **Scan Paper Form** registers a whole filled form in one 
 
 A player's team is final at each level (District, State, National, …). If a child on your form is already registered with another team at this competition's level, the row says so and cannot be registered — if it is a different child with the same name and date of birth, ask the competition admin.
 
+## Finals (Competition II and III)
+
+You only enter players for **Competition I**. Players move into the finals automatically from Competition I's results, and you are emailed when yours qualify:
+
+- **Competition II (All Round):** the top 2 of each age group (sum of every apparatus), one final for all ages.
+- **Competition III (Apparatus):** the top 10 per apparatus in each age group, at most 2 from one team.
+
+Your qualifiers are listed under **Finals: your qualifiers** on the team dashboard. There is no extra fee for the finals.
+
 ## Pay fees and submit the team
 
 Paying (or applying a valid discount code) is what submits the team; after that the squad is locked.

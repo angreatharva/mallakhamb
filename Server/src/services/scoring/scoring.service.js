@@ -179,6 +179,7 @@ class ScoringService {
         );
       }
 
+      await this._afterScoreChange(score);
       this.metrics.business.scoreSubmitted('accepted');
       return score;
     } catch (error) {
@@ -387,6 +388,29 @@ class ScoringService {
   }
 
   /**
+   * Competition I → II / III (services/scoring/qualification.service): after a
+   * Competition I score of a category changes — saved, locked or unlocked —
+   * recompute the finals it feeds. After the first score of a final, mark that
+   * final started (frozen). Never throws: a score is saved regardless.
+   * @private
+   */
+  async _afterScoreChange(doc) {
+    try {
+      if (!this.qualificationService || !doc) return;
+      const type = toCompetitionTypeSlug(doc.competitionType);
+      const competitionId = doc.competition?._id || doc.competition;
+      if (type === 'competition_1') {
+        await this.qualificationService.onCompetitionOneChange(competitionId, doc.gender, doc.ageGroup);
+      } else {
+        const apparatus = [...new Set((doc.playerScores || []).map((row) => row.apparatus).filter(Boolean).map(apparatusKey))];
+        await this.qualificationService.markStarted(competitionId, type, doc.gender, doc.ageGroup, apparatus);
+      }
+    } catch (error) {
+      this.logger.error('Qualification hook failed', { error: error.message });
+    }
+  }
+
+  /**
    * Lock a score to prevent further modifications
    * @param {string} scoreId - Score ID
    * @returns {Promise<Object>} Updated score
@@ -407,6 +431,7 @@ class ScoringService {
       });
 
       this.logger.info('Score locked', { scoreId });
+      await this._afterScoreChange(score);
 
       return updated;
     } catch (error) {
@@ -446,6 +471,7 @@ class ScoringService {
       });
 
       this.logger.info('Score unlocked', { scoreId });
+      await this._afterScoreChange(score);
 
       return updated;
     } catch (error) {
@@ -1027,6 +1053,7 @@ class ScoringService {
       });
 
       this.logger.info('Score unlocked', { scoreId, adminId });
+      await this._afterScoreChange(scoreDoc);
 
       return {
         message: 'Score unlocked successfully',
@@ -1069,6 +1096,7 @@ class ScoringService {
       );
 
       this.logger.info('Scores unlocked', { competitionId, ageGroup, adminId });
+      await this._afterScoreChange({ competition: competitionId, competitionType: 'Competition I', gender: null, ageGroup });
 
       // Emit Socket.IO event
       if (this.socketManager) {
@@ -1113,6 +1141,7 @@ class ScoringService {
       );
 
       this.logger.info('Scores locked', { competitionId, ageGroup, adminId });
+      await this._afterScoreChange({ competition: competitionId, competitionType: 'Competition I', gender: null, ageGroup });
 
       // Emit Socket.IO event
       if (this.socketManager) {
@@ -1761,6 +1790,15 @@ class ScoringService {
           playerCount: processedPlayerScores.length
         });
       }
+
+      // Competition I → II / III: recompute (or mark the final started).
+      await this._afterScoreChange({
+        competition: scoreData.competition,
+        competitionType: scoreData.competitionType,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+        playerScores: processedPlayerScores,
+      });
 
       // Every live score write — judge, admin, superadmin and the public
       // save-score route — lands here, so this is what scores/min counts.

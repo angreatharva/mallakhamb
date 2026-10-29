@@ -26,4 +26,6 @@ export const playerAPI = {
   getTeams: (competitionId) =>
     api.get('/players/teams', competitionId ? { params: { competitionId } } : undefined),
   getOpenCompetitions: () => api.get('/players/competitions/open'),
+  /** The Competition II / III finals this player qualified for. */
+  getFinals: () => api.get('/players/finals'),
 };

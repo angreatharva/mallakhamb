@@ -21,6 +21,7 @@ import { useCompetition } from '../../contexts/CompetitionContext';
 import { FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/admin/AdminKit';
 import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
+import { ageMatches } from '@/hooks/useAgeGroups';
 
 const JudgeTeamPlayers = () => {
   const navigate = useNavigate();
@@ -307,7 +308,7 @@ const JudgeTeamPlayers = () => {
     return (team.players || [])
       .filter((e) => {
         // Filter by selected gender and age group (not judgeInfo)
-        if (!e.player || entryGender(e) !== selectedGender || e.ageGroup !== selectedAgeGroup) {
+        if (!e.player || entryGender(e) !== selectedGender || !ageMatches(e.ageGroup, selectedAgeGroup)) {
           return false;
         }
         // Only the athletes registered for the apparatus being judged. Goes

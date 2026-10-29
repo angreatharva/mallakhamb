@@ -10,6 +10,7 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { getCompetitionIdFromToken } from '@/utils/auth/tokenUtils';
 import Dropdown from '@/components/auth/Dropdown';
 import PerformancePanel from '@/components/performance/PerformancePanel';
+import QualifiedFinals from '@/components/finals/QualifiedFinals';
 import { levelLabel } from '@/utils/competition/levels';
 import {
   Dialog, EmptyState, Heading, IconButton, Panel, RunningOrder, RunningOrderItem, StatusTag, Tag,
@@ -335,6 +336,9 @@ const PlayerDashboard = () => {
             )}
           </Panel>
         </div>
+
+        {/* Competition II / III finals this player qualified for. */}
+        <QualifiedFinals who="player" load={playerAPI.getFinals} reloadKey={currentCompetition?._id || 'all'} />
 
         {/* My Performance Section */}
         {player?.team && currentCompetition && (

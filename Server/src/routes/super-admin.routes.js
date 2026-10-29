@@ -1,4 +1,5 @@
 const express = require('express');
+const { body, param, query, oneOf } = require('express-validator');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireSuperAdmin } = require('../middleware/auth.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
@@ -66,6 +67,17 @@ function createSuperAdminRoutes(container) {
   router.put('/lots/players', performanceOrderValidator.setPlayerOrder(), handleValidationErrors, performanceOrderController.setPlayerOrder);
 
   // Lucky draw (COP 1.12.4). Same handlers as /api/admin; competitionId is sent explicitly.
+  // Finals (Competition II / III qualifiers) of the meet named by competitionId
+  // (a superadmin is not scoped to one meet). Same handlers as /api/admin.
+  const finals = (name) => (req, res, next) => container.resolve('qualificationController')[name](req, res, next);
+  const meetOf = (req, res, next) => { req.competitionId = req.query.competitionId || req.body?.competitionId; next(); };
+  const meetRule = oneOf([query('competitionId').isMongoId(), body('competitionId').isMongoId()], { message: 'competitionId is required' });
+  router.get('/finals', meetRule, handleValidationErrors, meetOf, finals('list'));
+  router.post('/finals/recompute', meetRule, handleValidationErrors, meetOf, finals('recompute'));
+  router.post('/finals/:finalId/withdraw', meetRule, param('finalId').isMongoId(), body('playerId').isMongoId(), handleValidationErrors, meetOf, finals('withdraw'));
+  router.post('/finals/:finalId/reinstate', meetRule, param('finalId').isMongoId(), body('playerId').isMongoId(), handleValidationErrors, meetOf, finals('reinstate'));
+  router.post('/finals/:finalId/draw', meetRule, param('finalId').isMongoId(), body('order').isArray({ min: 2, max: 20 }), handleValidationErrors, meetOf, finals('draw'));
+
   // "Player teams": a player's team at each level — look, correct, audit
   // (docs/team-per-level-plan.md step 3).
   const playerTeams = container.resolve('playerTeamAdminController');

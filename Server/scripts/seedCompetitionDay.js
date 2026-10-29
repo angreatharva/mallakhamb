@@ -50,7 +50,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const { ApiClient, DEFAULT_BASE } = require('./perf/lib/client');
 const roster = require('./lib/roster');
 const { allMeets } = require('./lib/meets');
-const { readPlan, withTimeKeeper, seatsFor } = require('./lib/panel-plan');
+const { readPlan, withTimeKeeper, seatsFor, panelsForType } = require('./lib/panel-plan');
 const { offeredApparatus } = require('../src/utils/data/competition-apparatus.util');
 const { getTimeDeductionForTime } = require('../src/config/cop-rules');
 
@@ -156,7 +156,14 @@ async function season() {
     });
 }
 
-const categoriesOf = (meet) => meet.plan.panels.map((p) => ({ gender: p.gender, ageGroup: p.ageGroup, size: p.size }));
+/**
+ * The categories a competition type is judged in: Competition I per age group,
+ * Competition II as one "All ages" final per gender (automatic finals,
+ * docs/qualification-plan.md). See scripts/lib/panel-plan#panelsForType.
+ */
+const categoriesOf = (meet, type = 'competition_1') => panelsForType(meet.plan, type)
+  .map((p) => ({ gender: p.gender, ageGroup: p.ageGroup, size: p.size }));
+const isFinal = (type) => type !== 'competition_1';
 
 // ── order ───────────────────────────────────────────────────────────────────
 function checkOrder(roster_, where) {
@@ -179,9 +186,17 @@ async function stepOrder() {
     let drawn = 0;
     let started = 0;
     for (const type of TYPES) {
-      for (const cat of categoriesOf(meet)) {
+      for (const cat of categoriesOf(meet, type)) {
         const q = { gender: cat.gender, ageGroup: cat.ageGroup, competitionType: type };
         const where = `${meet.place} ${cat.gender} ${cat.ageGroup} ${DISPLAY[type]}`;
+        if (isFinal(type)) {
+          // A final has nobody in it until Competition I is locked: started now,
+          // its lots are drawn by the results step once the engine has filled it.
+          const start = await admin.post('/api/admin/age-groups/start', q);
+          if (start.ok) started += 1;
+          else if (!/already been started/i.test(reasonOf(start))) expectThat(false, `${where}: start`, reasonOf(start));
+          continue;
+        }
         const draw = await admin.post('/api/admin/lots/draw', { ...q, includePlayers: true });
         if (!expectThat(draw.ok, `${where}: draw lots`, reasonOf(draw))) continue;
         const read = await admin.get('/api/admin/lots', { query: q });
@@ -297,7 +312,7 @@ async function stepResults() {
     let teamBoards = 0;
     let drawnHere = false;
     for (const type of TYPES) {
-      for (const cat of categoriesOf(meet)) {
+      for (const cat of categoriesOf(meet, type)) {
         const base = { gender: cat.gender, ageGroup: cat.ageGroup, competitionType: type };
         const where = `${meet.place} ${cat.gender} ${cat.ageGroup} ${DISPLAY[type]}`;
         const publicDocs = listOf(await pub.get('/api/public/scores', { query: { competitionId: admin.competitionId, ...base } }));
@@ -350,6 +365,8 @@ async function stepResults() {
           }
         }
 
+        // Team championship: Competition I's alone (finals are about the player).
+        if (isFinal(type)) continue;
         // Team championship: admin board, public board, and the rule recomputed here.
         const boardRead = await admin.get('/api/admin/scores/team-rankings', { query: base });
         if (!expectThat(boardRead.ok, `${where}: team rankings`, reasonOf(boardRead))) continue;
@@ -372,12 +389,54 @@ async function stepResults() {
       }
     }
     say('ok', meet.place, `${standings} standings, ${teamBoards} team boards${drawnHere ? ', 1 lucky draw recorded' : ''}`);
+    await checkFinals(admin, pub, meet);
   }
 
   // The public reference data the results pages read.
   const rules = dataOf(await pub.get('/api/public/cop-rules'));
   expectThat(rules?.timeMinimumSeconds === 60 && rules?.timeLimitSeconds === 90, 'public COP rules: the 60–90 s window', JSON.stringify([rules?.timeMinimumSeconds, rules?.timeLimitSeconds]));
   say('ok', 'lucky draws', `${draws} recorded, cleared and re-recorded`);
+}
+
+// ── finals ──────────────────────────────────────────────────────────────────
+/**
+ * Competition I → II, recomputed here from the PUBLIC Competition I results
+ * and compared with what the engine entered (docs/qualification-plan.md):
+ * one "All ages" final per gender with the top 2 of every age group by the sum
+ * over every apparatus, entered as that final's squad, with a lot draw.
+ */
+async function checkFinals(admin, pub, meet) {
+  const competitionId = String(meet.competition._id);
+  if (!TYPES.includes('competition_2')) return;
+  const finals = dataOf(await admin.get('/api/admin/finals'))?.finals || [];
+  for (const cat of categoriesOf(meet, 'competition_2')) {
+    const where = `${meet.place} ${cat.gender} All ages`;
+    const final = finals.find((f) => f.competitionType === 'competition_2' && f.gender === cat.gender);
+    if (!expectThat(Boolean(final), `${where}: a Competition II final exists`)) continue;
+    const want = [];
+    for (const age of categoriesOf(meet).filter((c) => c.gender === cat.gender)) {
+      const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId, gender: cat.gender, ageGroup: age.ageGroup, competitionType: 'competition_1' } }));
+      const totals = new Map();
+      for (const row of docs.flatMap((d) => d.playerScores || [])) {
+        totals.set(String(row.playerId), round2((totals.get(String(row.playerId)) || 0) + Number(row.finalScore || 0)));
+      }
+      const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+      // Top two — or the whole tied group at the cut, which the engine leaves to a draw.
+      const cut = ranked[1]?.[1];
+      want.push(...ranked.filter(([, total], i) => i < 2 && !(ranked.filter(([, t]) => t === cut).length > 1 && total === cut)).map(([id]) => id));
+    }
+    const got = final.qualifiers.map((q) => String(q.player));
+    const missing = want.filter((id) => !got.includes(id));
+    expectThat(missing.length === 0, `${where}: the top 2 of every age group qualified (sum of every apparatus)`, `${missing.length} missing of ${want.length}`);
+    expectThat(got.length <= 2 * categoriesOf(meet).filter((c) => c.gender === cat.gender).length, `${where}: at most 2 per age group`, `${got.length}`);
+    const squad = listOf(await admin.get('/api/admin/teams/submitted', { query: { gender: cat.gender, ageGroup: 'AllAges', competitionType: 'competition_2' } }))
+      .flatMap((t) => (t.players || []).map((e) => String(e.player?._id || e.player)));
+    expectThat(same([...squad].sort(), [...got].sort()), `${where}: the final's squad is exactly its qualifiers`, `${squad.length} entered, ${got.length} qualified`);
+    const q = { gender: cat.gender, ageGroup: 'AllAges', competitionType: 'competition_2' };
+    const draw = await admin.post('/api/admin/lots/draw', { ...q, includePlayers: true });
+    expectThat(draw.ok, `${where}: lots drawn for the final`, reasonOf(draw));
+  }
+  say('ok', meet.place, 'Competition II finals match the Competition I results');
 }
 
 // ── corrections ─────────────────────────────────────────────────────────────
@@ -557,7 +616,8 @@ async function stepJudges() {
       expectThat(same(gotSeats, wantSeats), `${judge.email} @ ${meetPlace}: holds the plan's seat`, `${gotSeats.join('+')} vs plan ${wantSeats.join('+')}`);
       // Judge 3 sits only on 4- and 5-judge panels, Judge 4 only on 5s: every panel that HAS the seat.
       const panels = new Set(assignments.map((a) => `${a.gender}/${a.ageGroup}`));
-      const owed = meet.plan.panels.filter((p) => wantSeats.some((seat) => seatsFor(p.size).includes(seat)));
+      const owed = [...meet.plan.panels, ...(TYPES.includes('competition_2') ? panelsForType(meet.plan, 'competition_2') : [])]
+        .filter((p) => wantSeats.some((seat) => seatsFor(p.size).includes(seat)));
       expectThat(panels.size === owed.length, `${judge.email} @ ${meetPlace}: seated on every panel with their seat`, `${panels.size}/${owed.length}`);
       const comp = await there.get(`/api/judge/competition/${id}`);
       expectThat(comp.ok && dataOf(comp).place === meetPlace, `${judge.email} @ ${meetPlace}: reads the meet`, reasonOf(comp));

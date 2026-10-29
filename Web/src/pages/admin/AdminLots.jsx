@@ -5,7 +5,7 @@ import { superAdminAPI } from '@/services/api';
 import { adminLotsAPI, superAdminLotsAPI } from '@/services/ordering/lots.api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { useAgeGroups } from '../../hooks/useAgeGroups';
+import { useAgeGroups, withAllAges, typesForAgeGroup } from '../../hooks/useAgeGroups';
 import Dropdown from '@/components/auth/Dropdown';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import SortableList from '@/components/ordering/SortableList';
@@ -272,12 +272,12 @@ const AdminLots = () => {
           </div>
           <div>
             <label className="block type-tag mb-2 text-accent-fg">Age Group</label>
-            <Dropdown options={availableAgeGroups} value={selectedAgeGroup} onChange={setSelectedAgeGroup}
+            <Dropdown options={withAllAges(availableAgeGroups, activeCompetition)} value={selectedAgeGroup} onChange={setSelectedAgeGroup}
               placeholder="Select age group" disabled={!selectedGender} />
           </div>
           <div className="md:col-span-2">
             <label className="block type-tag mb-2 text-accent-fg">Competition</label>
-            <Dropdown options={competitionTypeOptions} value={selectedCompetitionType} onChange={setSelectedCompetitionType}
+            <Dropdown options={typesForAgeGroup(competitionTypeOptions, selectedAgeGroup, activeCompetition)} value={selectedCompetitionType} onChange={setSelectedCompetitionType}
               placeholder="Select competition type" />
           </div>
         </div>

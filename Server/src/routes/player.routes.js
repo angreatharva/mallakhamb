@@ -109,6 +109,9 @@ function createPlayerRoutes(container) {
    */
   router.get('/team/level', authMiddleware, playerAuth, playerValidators.teamAtLevel(), handleValidationErrors, playerController.getTeamAtLevel);
 
+  /** GET /api/players/finals: the Competition II / III finals this player is in. */
+  router.get('/finals', authMiddleware, playerAuth, (req, res, next) => container.resolve('qualificationController').forPlayer(req, res, next));
+
   router.post(
     '/team/join',
     authMiddleware,

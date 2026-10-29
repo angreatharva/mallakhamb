@@ -24,6 +24,7 @@ import { AccountMenu } from '@/components/shell';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
+import { ageMatches, ageGroupMapping } from '@/hooks/useAgeGroups';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -285,7 +286,7 @@ const JudgeDashboard = () => {
         : []);
     const registered = apparatusInUse(
       teams.flatMap((team) => (team.players || []).filter(
-        (e) => e.player && entryGender(e) === gender && e.ageGroup === ageGroup
+        (e) => e.player && entryGender(e) === gender && ageMatches(e.ageGroup, ageGroup)
       )),
       selectedCompetitionType
     );
@@ -558,7 +559,7 @@ const JudgeDashboard = () => {
     
     return team.players
       .filter(e => {
-        if (!e.player || entryGender(e) !== gender || e.ageGroup !== ageGroup) return false;
+        if (!e.player || entryGender(e) !== gender || !ageMatches(e.ageGroup, ageGroup)) return false;
         // isRegisteredFor reads every shape `apparatus` has been stored in; the
         // inline object lookup this replaced silently matched everything when a
         // coach had written a bare name.
@@ -751,6 +752,62 @@ const JudgeDashboard = () => {
   
   const getCompLabel = (val) => competitionTypes.find(c => c.value === val)?.label || val;
 
+  /*
+   * Competition II / III are about the PLAYER, not the team (owner,
+   * 2026-10-29; docs/qualification-plan.md): after the category, the judge
+   * sees the finalists themselves, in running order, each with a small team
+   * tag. Tapping one opens their slip (a Scorer or Time Keeper gets that
+   * player's team sheet, which holds only the team's finalists).
+   */
+  const isFinal = selectedCompetitionType === 'competition_2' || selectedCompetitionType === 'competition_3';
+  const finalists = isFinal
+    ? filteredTeams.flatMap((team) => getFilteredPlayersForTeam(team).map((entry) => ({
+      team,
+      entry,
+      teamPosition: team.runningPosition ?? Number.MAX_SAFE_INTEGER,
+      playerPosition: orderIndex.players.get(`${String(team._id)}:${String(entry.player._id)}`)?.position ?? Number.MAX_SAFE_INTEGER,
+    })))
+      .filter(({ entry, team }) => `${entry.player.firstName} ${entry.player.lastName} ${team.name}`.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => a.teamPosition - b.teamPosition || a.playerPosition - b.playerPosition
+        || `${a.entry.player.firstName} ${a.entry.player.lastName}`.localeCompare(`${b.entry.player.firstName} ${b.entry.player.lastName}`))
+    : [];
+
+  const handleFinalistSelect = ({ team, entry }) => {
+    const heldHere = seatTypesFor(judgeInfo, {
+      gender: selectedGender || judgeInfo.gender,
+      ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+      competitionType: selectedCompetitionType,
+      apparatus: selectedApparatus,
+    });
+    const recorder = heldHere.includes('Scorer') || heldHere.includes('Time Keeper')
+      || (heldHere.length === 0 && RECORDER_ROLES.includes(judgeInfo?.judgeType));
+    if (recorder) { handleTeamSelect(team); return; }
+    if (entry.isFinalized) {
+      toast.success(`Scores locked for ${entry.player.firstName} ${entry.player.lastName}`);
+      return;
+    }
+    navigate('/judge/scoring', {
+      state: {
+        team,
+        player: {
+          id: entry.player._id,
+          name: `${entry.player.firstName} ${entry.player.lastName}`,
+          gender: entry.player.gender || entry.gender,
+          ageGroup: entry.ageGroup,
+          apparatus: entry.apparatus || {},
+          isFinalized: !!entry.isFinalized,
+          finalScore: entry.finalScore ?? null,
+          hasScore: !!entry.hasScore,
+        },
+        competitionType: selectedCompetitionType,
+        apparatus: selectedApparatus,
+        gender: selectedGender || judgeInfo.gender,
+        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+        returnTo: '/judge/dashboard',
+      },
+    });
+  };
+
   /** A meet's name, falling back to its id when the assignment carried no document. */
   const competitionName = (id) =>
     availableCompetitions.find((c) => String(c._id) === String(id))?.name || 'Selected meet';
@@ -829,7 +886,7 @@ const JudgeDashboard = () => {
                     ? [{ label: 'Meet', value: competitionName(selectedCompetitionId) }]
                     : []),
                   { label: 'Gender', value: selectedGender || judgeInfo.gender },
-                  { label: 'Age Group', value: selectedAgeGroup || judgeInfo.ageGroup },
+                  { label: 'Age Group', value: ageGroupMapping[selectedAgeGroup || judgeInfo.ageGroup]?.label || selectedAgeGroup || judgeInfo.ageGroup },
                   { label: 'Competition', value: getCompLabel(selectedCompetitionType) },
                   // '—' rather than "All apparatus": the meet declared none and
                   // nobody has entered, so there was nothing to choose.
@@ -878,7 +935,7 @@ const JudgeDashboard = () => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-fg-muted" />
               <input 
                 type="text" 
-                placeholder="Search teams by name..." aria-label="Search teams" 
+                placeholder={isFinal ? 'Search players or teams...' : 'Search teams by name...'} aria-label={isFinal ? 'Search finalists' : 'Search teams'} 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-ink/5 border border-ink/10 rounded-2xl py-4 pl-12 pr-4 text-base text-ink placeholder-ink/40 focus:border-line-strong transition-colors shadow-lg"
@@ -891,7 +948,38 @@ const JudgeDashboard = () => {
                   style={{ borderColor: J.purple, borderTopColor: 'transparent' }} />
                 <span className="text-sm text-fg-muted">Loading teams...</span>
               </div>
-            ) : filteredTeams.length > 0 ? (
+            ) : isFinal && finalists.length > 0 ? (
+              <ol className="space-y-3 pb-12 m-0 p-0 list-none" aria-label="Finalists in running order" data-testid="judge-finalists">
+                {finalists.map((row, index) => {
+                  const { team, entry } = row;
+                  const name = `${entry.player.firstName} ${entry.player.lastName}`;
+                  return (
+                    <li key={`${team._id}:${entry.player._id}`}>
+                      <button type="button" onClick={() => handleFinalistSelect(row)}
+                        className="w-full rounded-2xl border overflow-hidden transition-all duration-300 text-left hover:bg-ink/5 flex items-center justify-between gap-3 p-4"
+                        style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.08)' }}>
+                        <span className="min-w-0 flex items-center gap-3">
+                          <span className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black flex-shrink-0"
+                            style={{ background: 'rgb(var(--accent) / 0.18)', color: 'rgb(var(--accent-fg))' }}>
+                            {index + 1}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block font-bold text-lg text-ink truncate">{name}</span>
+                            <span className="inline-block mt-1 text-[11px] px-2 py-0.5 rounded-md bg-ink/10 text-fg-secondary font-semibold truncate max-w-full">
+                              {team.name}{entry.ageGroup && selectedAgeGroup === 'AllAges' ? ` · ${ageGroupMapping[entry.ageGroup]?.label || entry.ageGroup}` : ''}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-3 flex-shrink-0">
+                          {entry.isFinalized && <span className="text-xs text-success-fg font-semibold">Scored</span>}
+                          <ChevronRight className="w-5 h-5 text-fg-muted" aria-hidden="true" />
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : filteredTeams.length > 0 && !isFinal ? (
               <div className="space-y-4 pb-12">
                 {filteredTeams.map((team, orderIdx) => {
                   const teamPlayers = getFilteredPlayersForTeam(team);
@@ -953,11 +1041,13 @@ const JudgeDashboard = () => {
             ) : (
               <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
                 <Users className="w-12 h-12 mb-4 text-ink/20" />
-                <p className="text-lg font-bold text-ink/70">No teams found</p>
+                <p className="text-lg font-bold text-ink/70">{isFinal ? 'No finalists yet' : 'No teams found'}</p>
                 <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
                   {searchQuery 
                     ? "No teams match your search query." 
-                    : "There are no teams submitted for this competition category yet."}
+                    : isFinal
+                      ? 'Finalists appear here automatically once Competition I is locked for this category.'
+                      : "There are no teams submitted for this competition category yet."}
                 </p>
               </div>
             )}
@@ -1058,7 +1148,7 @@ const JudgeDashboard = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {availableAgeGroups.map(ag => (
                           <SelectBtn key={ag} selected={selectedAgeGroup === ag} onClick={() => setSelectedAgeGroup(ag)}>
-                            <span>{ag}</span>
+                            <span>{ageGroupMapping[ag]?.label || ag}</span>
                           </SelectBtn>
                         ))}
                       </div>
@@ -1067,7 +1157,7 @@ const JudgeDashboard = () => {
                     <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
                       <p className="type-tag text-fg-muted mb-1">Assigned Age Group</p>
                       <p className="font-bold text-ink">
-                        {availableAgeGroups[0]
+                        {(availableAgeGroups[0] && (ageGroupMapping[availableAgeGroups[0]]?.label || availableAgeGroups[0]))
                           || (selectedGender ? 'No panel in this gender' : judgeInfo.ageGroup)
                           || '—'}
                       </p>

@@ -99,6 +99,10 @@ Scorer and Time Keeper held by the same person: a second window, **Select Your R
 - The Scorer goes straight to the team's score sheet; the Time Keeper to the stopwatch.
 - The running order updates live if the Senior Judge, Scorer or Admin changes it.
 
+## Finals (Competition II and III)
+
+After you choose a Competition II or III category, the dashboard lists the **finalists themselves**, in running order, each with a small team tag (and their age group in the All-ages Competition II final). Tap a player to open their slip. A Scorer or Time Keeper tapping a player opens that player's team sheet, which holds only the team's finalists. Competition II's category is **All ages**.
+
 ## Running order (Senior Judge and Scorer)
 
 The Admin draws lots; the Senior Judge or the Scorer can then change who performs when, and every judge on the panel sees the new order at once.

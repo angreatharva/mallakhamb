@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUPS, CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const { TEAM_SIZES } = require('../utils/scoring/team-championship.util');
 const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 
@@ -122,6 +122,15 @@ const competitionSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: [0, 'Late fee cannot be negative']
+  },
+  /*
+   * Scored before automatic finals existed: its Competition II / III entries
+   * were chosen by coaches and stay as they are; the qualification engine
+   * leaves this meet alone (migration 016, docs/qualification-plan.md).
+   */
+  legacyFinals: {
+    type: Boolean,
+    default: false
   },
   // Ages are measured on 31 December of the year the meet is held — always
   // derived from `startDate` (cop-rules#ageCutoffYear). The old per-meet
@@ -265,7 +274,7 @@ const competitionSchema = new mongoose.Schema({
     },
     ageGroup: {
       type: String,
-      enum: AGE_GROUPS,
+      enum: CATEGORY_AGE_GROUPS,
       required: true
     },
     competitionType: {

@@ -16,6 +16,7 @@
  */
 
 const express = require('express');
+const { body, param } = require('express-validator');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireAdmin, requireSuperAdmin, requireAdminOrScorer } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
@@ -597,6 +598,23 @@ function createAdminRoutes(container) {
   // ==================== Lucky Draw (COP 1.12.4) ====================
   // A tie the rules cannot break is settled by a physical draw at the venue;
   // the admin records the order it produced and the ranking follows it.
+
+  /*
+   * Finals: who moved from Competition I into Competition II / III
+   * (docs/qualification-plan.md). The engine fills them; admins see the lists,
+   * mark a withdrawal (the next in rank fills in) and record a Competition II
+   * draw. Admin and Super Admin, for the meet in context.
+   */
+  const finals = (name) => (req, res, next) => container.resolve('qualificationController')[name](req, res, next);
+  const finalWrite = [authMiddleware, authorize, validateCompetitionContext, requireUnlockedCompetition()];
+  const finalIdRule = param('finalId').isMongoId().withMessage('Invalid final');
+  router.get('/finals', authMiddleware, authorize, validateCompetitionContext, finals('list'));
+  router.post('/finals/recompute', ...finalWrite, finals('recompute'));
+  router.post('/finals/:finalId/withdraw', ...finalWrite, finalIdRule, body('playerId').isMongoId(),
+    body('reason').optional().isString().isLength({ max: 300 }), handleValidationErrors, finals('withdraw'));
+  router.post('/finals/:finalId/reinstate', ...finalWrite, finalIdRule, body('playerId').isMongoId(), handleValidationErrors, finals('reinstate'));
+  router.post('/finals/:finalId/draw', ...finalWrite, finalIdRule, body('ageGroup').isString(),
+    body('order').isArray({ min: 2, max: 20 }), body('order.*').isMongoId(), handleValidationErrors, finals('draw'));
 
   /**
    * @route   POST /api/admin/tie-break/draws

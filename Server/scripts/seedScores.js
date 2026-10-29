@@ -67,6 +67,7 @@ const { JUDGES_PATH } = require('./lib/judges');
 
 const API = (process.env.SEED_API_URL || 'http://127.0.0.1:5000/api').replace(/\/$/, '');
 const PLAN_PATH = path.join(__dirname, 'seed', 'panel-plan.json');
+const { panelsForType } = require('./lib/panel-plan');
 const CAPTURE_PATH = path.join(__dirname, 'seed', 'registrations.generated.json');
 
 /** Evaluation seats in slot order. The Scorer is not one of them. */
@@ -411,10 +412,13 @@ function placesFrom(teams, gender, ageGroup, competitionType) {
   const places = [];
   for (const team of teams || []) {
     for (const entry of team.players || []) {
-      if (entry.gender !== gender || entry.ageGroup !== ageGroup) continue;
+      // "All ages" is Competition II's one final per gender (every age group's
+      // qualifiers); a final holds only the players the engine entered in it.
+      if (entry.gender !== gender || (ageGroup !== 'AllAges' && entry.ageGroup !== ageGroup)) continue;
       if (!entry.player?._id) continue;
 
       const registered = apparatusOf(entry, competitionType);
+      if (competitionType !== 'competition_1' && registered.length === 0) continue;
       const on = registered.length > 0 ? registered : ['Pole Mallakhamb'];
 
       for (const apparatus of on) {
@@ -518,8 +522,12 @@ async function main(extraArgv = []) {
     : await signInSeats(meetPlan, await judgePasswords(), competitionId);
 
   const types = TYPES.filter((t) => !args.type || t.slug === args.type);
-  const panels = meetPlan.panels.filter((p) =>
-    (!args.gender || p.gender === args.gender) && (!args.age || p.ageGroup === args.age));
+  // Competition I's panels are per age group; Competition II's are one
+  // "All ages" final per gender (scripts/lib/panel-plan#panelsForType). Types
+  // run in order, so every Competition I sheet is locked — which is what
+  // fills the finals — before a final is judged.
+  const panelsOf = (slug) => panelsForType(meetPlan, slug).filter((p) =>
+    (!args.gender || p.gender === args.gender) && (!args.age || p.ageGroup === args.age || p.ageGroup === 'AllAges'));
 
   let slips = 0;
   let finalized = 0;
@@ -527,7 +535,7 @@ async function main(extraArgv = []) {
   const problems = [];
 
   for (const type of types) {
-    for (const panel of panels) {
+    for (const panel of panelsOf(type.slug)) {
       const label = `${type.display} · ${panel.gender} ${panel.ageGroup} · ${panel.size}-judge`;
 
       const teams = await call(
@@ -644,7 +652,7 @@ async function main(extraArgv = []) {
 
     const bad = [];
     for (const type of types) {
-      for (const panel of panels) {
+      for (const panel of panelsOf(type.slug)) {
         const teams = await call(
           `/public/submitted-teams?competitionId=${competitionId}&gender=${panel.gender}`
           + `&ageGroup=${panel.ageGroup}&competitionType=${type.slug}`,
@@ -652,7 +660,7 @@ async function main(extraArgv = []) {
         );
         for (const team of teams || []) {
           for (const entry of team.players || []) {
-            if (entry.gender !== panel.gender || entry.ageGroup !== panel.ageGroup) continue;
+            if (entry.gender !== panel.gender || (panel.ageGroup !== 'AllAges' && entry.ageGroup !== panel.ageGroup)) continue;
             if (!entry.isFinalized) continue;
             const value = Number(entry.finalScore);
             if (!legal.has(Number(value.toFixed(2)))) {

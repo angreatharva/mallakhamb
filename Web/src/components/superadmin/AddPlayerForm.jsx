@@ -115,7 +115,10 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     if (!doc || !doc.competitionTypes) return {};
 
     const config = {};
-    doc.competitionTypes.forEach(type => {
+    // Competition II / III are filled from Competition I's results by the
+    // qualification engine (docs/qualification-plan.md) — only a meet scored
+    // before it (legacyFinals) still asks here.
+    doc.competitionTypes.filter((type) => doc.legacyFinals || type === 'competition_1').forEach(type => {
       const offered = offeredApparatus(doc, type, selectedGender.value);
       if (offered.length > 0) config[type] = offered;
     });

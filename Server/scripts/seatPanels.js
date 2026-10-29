@@ -69,7 +69,7 @@ const {
   findCompetition,
   resolveSeatAccounts,
 } = require('./lib/admin-api');
-const { readPlan, planForPlace, seatsFor, withTimeKeeper } = require('./lib/panel-plan');
+const { readPlan, planForPlace, seatsFor, withTimeKeeper, panelsForType } = require('./lib/panel-plan');
 
 function parseArgs(argv) {
   const value = (name) => {
@@ -201,9 +201,22 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
   }
   console.log();
 
+  /*
+   * Each panel with the competition types it judges. Competition II is ONE
+   * "All ages" final per gender since automatic finals
+   * (docs/qualification-plan.md), so the per-age panels judge Competition I
+   * (and III) and an "All ages" panel per gender judges Competition II.
+   */
+  const perAgeTypes = plan.competitionTypes.filter((t) => t !== 'competition_2');
+  const all = [
+    ...(perAgeTypes.length ? meetPlan.panels.map((p) => ({ ...p, types: perAgeTypes })) : []),
+    ...(plan.competitionTypes.includes('competition_2')
+      ? panelsForType(meetPlan, 'competition_2').map((p) => ({ ...p, types: ['competition_2'] }))
+      : []),
+  ];
   const wanted = only
-    ? meetPlan.panels.filter((p) => `${p.gender}/${p.ageGroup}` === only)
-    : meetPlan.panels;
+    ? all.filter((p) => `${p.gender}/${p.ageGroup}` === only)
+    : all;
   if (wanted.length === 0) throw new Error(`--only=${only} matched no panel in the plan`);
 
   /*
@@ -235,7 +248,8 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
       judgeAccount: accountId[judgeType],
     }));
 
-    for (const apparatus of panelApparatus) {
+    const ownApparatus = [...new Set(panel.types.flatMap((t) => apparatusByType.get(t) || []))];
+    for (const apparatus of ownApparatus) {
       // `null` is the meet-declares-none case: one panel for the whole
       // category, which is what a seat with no apparatus has always meant.
       const label = apparatus ? `${categoryLabel} · ${apparatus}` : categoryLabel;
@@ -285,7 +299,7 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
         let created = 0;
         let updated = 0;
         for (const [competitionType, list] of apparatusByType) {
-          if (!list.includes(apparatus)) continue;
+          if (!panel.types.includes(competitionType) || !list.includes(apparatus)) continue;
 
           // The admin routes run behind validateCompetitionContext, which reads
           // the meet from the token, the X-Competition-Id header, or the body. An

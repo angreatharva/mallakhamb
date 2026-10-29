@@ -315,6 +315,39 @@ class OTPService {
   }
 
   /**
+   * A coach's players qualified for a final (Competition II / III), or one
+   * replaced a withdrawn qualifier. One email per final per coach.
+   *
+   * @param {{coachId: *, competitionName: string, finalLabel: string, teamName: string,
+   *   players: Array<{name: string, replacement: boolean}>}} args
+   */
+  async notifyCoachOfQualifiers({ coachId, competitionName, finalLabel, teamName, players = [] }) {
+    try {
+      if (!coachId || !players.length) return;
+      const coach = await this.coachRepository?.findById?.(coachId);
+      if (!coach?.email) return;
+      const lines = players.map((p) => `- ${String(p.name || '').replace(/&#x27;/gi, "'")}${p.replacement ? ' (replacing a withdrawn qualifier)' : ''}`);
+      const message = [
+        `${competitionName}: these ${teamName} players qualified for ${finalLabel}:`,
+        '',
+        ...lines,
+        '',
+        'They are entered automatically. See the Finals list on your dashboard for the running order once the lots are drawn.',
+      ].join('\n');
+      const recipient = { _id: String(coach._id), email: coach.email };
+      await this._sendInBackground('Final qualifiers', recipient, 'coach', (address) =>
+        this.emailService.sendNotification(address, {
+          userName: coach.firstName || 'Coach',
+          title: `Qualified: ${finalLabel}`,
+          message,
+        })
+      );
+    } catch (error) {
+      this.logger.error('Could not send the qualifiers email', { coachId, error: error.message });
+    }
+  }
+
+  /**
    * Run an email send without letting it reject. Returns the settled promise
    * so tests can await the attempt; production callers ignore it.
    * @private

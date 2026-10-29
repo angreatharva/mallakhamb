@@ -1,4 +1,5 @@
 import { apparatusFor, apparatusKey, apparatusToJudge, entryGender } from '@/utils/scoring/apparatus';
+import { ageMatches } from '@/hooks/useAgeGroups';
 
 /**
  * The rows of the Scorer's sheet: one per (athlete, apparatus).
@@ -35,7 +36,7 @@ export function buildScorerRows({ team, gender, ageGroup, competitionType, appar
   const wanted = apparatus ? apparatusKey(apparatus) : null;
 
   return (team?.players || [])
-    .filter((pe) => entryGender(pe) === gender && pe.ageGroup === ageGroup)
+    .filter((pe) => entryGender(pe) === gender && ageMatches(pe.ageGroup, ageGroup))
     .flatMap((pe) => {
       const entered = apparatusFor(pe, competitionType);
       // An athlete with no apparatus recorded still gets one row, judged on

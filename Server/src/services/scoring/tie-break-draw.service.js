@@ -123,6 +123,7 @@ class TieBreakDrawService {
       athletes: ids.length,
       recordedBy: actor?.id
     });
+    await this._afterDraw(competitionId, identity);
 
     return draw;
   }
@@ -148,6 +149,22 @@ class TieBreakDrawService {
       throw new NotFoundError('Lucky draw for this group');
     }
     this.logger.info('Lucky draw cleared', { competitionId, apparatus: filters.apparatus, clearedBy: actor?.id });
+    await this._afterDraw(competitionId, this.buildIdentity(competitionId, filters, key));
+  }
+
+  /**
+   * A Competition I draw can decide who reaches a final (a tie at the cut):
+   * recompute the finals that standing feeds. Resolved lazily — the
+   * qualification service is optional and never blocks a draw.
+   * @private
+   */
+  async _afterDraw(competitionId, identity) {
+    if (identity.competitionType !== 'competition_1') return;
+    try {
+      await this.qualificationService?.onCompetitionOneChange(competitionId, identity.gender, identity.ageGroup);
+    } catch (error) {
+      this.logger.error('Qualification recompute after a draw failed', { error: error.message });
+    }
   }
 }
 
