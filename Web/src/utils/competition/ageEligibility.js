@@ -24,10 +24,11 @@ export const AGE_GROUP_RANGES = Object.freeze({
   Above18: { min: 19, max: Infinity },
 });
 
-/** The meet's override, or the year of its start date. */
+/**
+ * Always the year the competition is held (its start date): every meet in
+ * 2026 measures ages on 31 Dec 2026, whatever the month. No override.
+ */
 export function ageCutoffYear(competition) {
-  const override = Number(competition?.ageCutoffYear);
-  if (Number.isInteger(override) && override > 0) return override;
   const start = competition?.startDate ? new Date(competition.startDate) : null;
   return start && !Number.isNaN(start.getTime()) ? start.getUTCFullYear() : null;
 }

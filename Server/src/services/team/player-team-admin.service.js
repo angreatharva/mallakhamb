@@ -102,7 +102,7 @@ class PlayerTeamAdminService {
   async _entries(player) {
     const meets = await this.competitions.find(
       { 'registeredTeams.players.player': player._id },
-      { sort: { startDate: -1 }, select: 'name level place startDate endDate ageCutoffYear ageGroups registeredTeams' }
+      { sort: { startDate: -1 }, select: 'name level place startDate endDate ageGroups registeredTeams' }
     );
     const rows = [];
     for (const meet of meets || []) {

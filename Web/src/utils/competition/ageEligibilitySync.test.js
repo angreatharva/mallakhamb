@@ -29,6 +29,8 @@ describe('the two stacks agree on age eligibility', () => {
       { startDate: '2022-02-10T00:00:00Z' },
       { startDate: '2022-02-10T00:00:00Z', ageCutoffYear: 2021 },
       { startDate: '2026-12-31T23:59:59Z', ageCutoffYear: null },
+      { startDate: '2026-12-12T00:00:00Z', endDate: '2026-12-13T00:00:00Z' },
+      { startDate: '2027-01-15T00:00:00Z' },
       {},
     ];
     for (const meet of meets) expect(client.ageCutoffYear(meet)).toBe(server.ageCutoffYear(meet));

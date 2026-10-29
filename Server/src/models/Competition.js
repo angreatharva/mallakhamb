@@ -123,18 +123,9 @@ const competitionSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Late fee cannot be negative']
   },
-  /*
-   * The year whose 31 December players' ages are measured on (COP 1.8.3.2).
-   * Unset means the year of `startDate`; a Super Admin sets it for a meet held
-   * in January–March that belongs to the previous season. Read only through
-   * `cop-rules#ageCutoffYear`.
-   */
-  ageCutoffYear: {
-    type: Number,
-    min: [2000, 'Age cut-off year must be 2000 or later'],
-    max: [2100, 'Age cut-off year must be 2100 or earlier'],
-    default: undefined
-  },
+  // Ages are measured on 31 December of the year the meet is held — always
+  // derived from `startDate` (cop-rules#ageCutoffYear). The old per-meet
+  // `ageCutoffYear` override is gone (migration 015 removed saved values).
   description: {
     type: String,
     trim: true

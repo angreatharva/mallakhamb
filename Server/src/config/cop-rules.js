@@ -77,16 +77,17 @@ const AGE_GROUP_RANGES = Object.freeze({
 });
 
 /**
- * The year whose 31 December ages are measured on: the meet's own
- * `ageCutoffYear` when the Super Admin set one (a January–March meet that
- * belongs to the previous season), otherwise the year of its `startDate`.
+ * The year whose 31 December ages are measured on: ALWAYS the year the
+ * competition is held (its start date). Owner, 2026-10-29: every competition
+ * in 2026 measures on 31 Dec 2026, every one in 2027 on 31 Dec 2027, whatever
+ * the month — a meet on 12–13 Dec 2026 and a player born 1 Jan 2016 → age 10
+ * → Under 10. There is no per-meet override (the old "previous season"
+ * choice was removed; migration 015 cleared any saved value).
  *
  * @param {Object} competition
  * @returns {number|null}
  */
 function ageCutoffYear(competition) {
-  const override = Number(competition?.ageCutoffYear);
-  if (Number.isInteger(override) && override > 0) return override;
   const start = competition?.startDate ? new Date(competition.startDate) : null;
   return start && !Number.isNaN(start.getTime()) ? start.getUTCFullYear() : null;
 }

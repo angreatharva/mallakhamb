@@ -5,8 +5,7 @@
  * docs/team-per-level-plan.md).
  *
  *  - Age = cut-off year − birth year, measured on 31 December
- *    (`ageCutoffYear`: the meet's override, else its start-date year — how the
- *    season is chosen is PARKED, see the plan).
+ *    (`ageCutoffYear`: always the year the meet is held — owner, 2026-10-29).
  *  - "Under N" includes N. A player may enter their own group or any HIGHER
  *    one the meet runs. Coming back down after playing up is allowed for now
  *    (PARKED).

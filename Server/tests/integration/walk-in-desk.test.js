@@ -36,6 +36,8 @@ const config = {
 
 const day = (iso) => new Date(`${iso}T00:00:00.000Z`);
 const thisYear = new Date().getUTCFullYear();
+// The meets below are held next January: ages count on 31 Dec of THAT year.
+const ageYear = thisYear + 1;
 
 async function meet(overrides = {}) {
   return Competition.create({
@@ -45,7 +47,6 @@ async function meet(overrides = {}) {
     year: thisYear,
     startDate: day(`${thisYear + 1}-01-20`),
     endDate: day(`${thisYear + 1}-01-22`),
-    ageCutoffYear: thisYear,
     playerFee: 300,
     maxTeamSize: 6,
     competitionTypes: ['competition_1'],
@@ -106,7 +107,7 @@ async function deskUpTo(service, actor, competition) {
   return service.openDraft(actor, { competitionId: competition._id, coachId: coach._id });
 }
 
-const dob = (age, mmdd = '06-15') => `${thisYear - age}-${mmdd}`;
+const dob = (age, mmdd = '06-15') => `${ageYear - age}-${mmdd}`;
 
 beforeAll(async () => {
   await Player.init();
@@ -234,7 +235,7 @@ describe('walk-in desk', () => {
               lastName: { text: 'PATIL', confidence: 0.91 },
               dobDay: { text: '14', confidence: 0.99 },
               dobMonth: { text: '3', confidence: 0.99 },
-              dobYear: { text: String(thisYear - 11), confidence: 0.95 },
+              dobYear: { text: String(ageYear - 11), confidence: 0.95 },
             },
             ticks: [{ apparatus: 'Pole Mallakhamb', checked: true }, { apparatus: 'Rope Mallakhamb', checked: false }],
           },
@@ -251,7 +252,7 @@ describe('walk-in desk', () => {
     expect(result.draft.rows).toHaveLength(1);
     expect(result.draft.rows[0]).toMatchObject({
       source: 'ocr', page: 1, rowNo: 1, firstName: 'AARAV', lastName: 'PATIL',
-      dateOfBirth: `${thisYear - 11}-03-14`, gender: 'Male', writtenAgeGroup: 'Under12', ageGroup: 'Under12',
+      dateOfBirth: `${ageYear - 11}-03-14`, gender: 'Male', writtenAgeGroup: 'Under12', ageGroup: 'Under12',
       apparatus: ['Pole Mallakhamb'], age: 11,
     });
     expect(result.crops[String(result.draft.rows[0]._id)]).toBe('data:image/jpeg;base64,AAAA');
@@ -291,7 +292,7 @@ describe('walk-in desk', () => {
           section: 'Male:Above18', rowNo: 1, empty: false,
           fields: {
             firstName: { text: 'ROHAN', confidence: 0.99 }, lastName: { text: 'SHINDE', confidence: 0.99 },
-            dobDay: { text: '05' }, dobMonth: { text: '06' }, dobYear: { text: String(thisYear - 25) },
+            dobDay: { text: '05' }, dobMonth: { text: '06' }, dobYear: { text: String(ageYear - 25) },
           },
           ticks: [{ apparatus: 'Hanging Mallakhamb', checked: true }],
         }],
@@ -321,7 +322,7 @@ describe('walk-in desk', () => {
 
 describe('walk-in desk: a child who already has a Player ID', () => {
   const Team = require('../../src/models/Team');
-  const y = (age) => thisYear - age;
+  const y = (age) => ageYear - age;
 
   /** A meet, an open draft, and the coach/team behind it. */
   async function setup() {
@@ -482,7 +483,7 @@ describe('paper form for a coach (their own team, their own drafts)', () => {
   }
 
   const row = (overrides = {}) => ({
-    firstName: 'AARAV', lastName: 'PATIL', dateOfBirth: `${thisYear - 11}-03-14`, gender: 'Male', ageGroup: 'Under12',
+    firstName: 'AARAV', lastName: 'PATIL', dateOfBirth: `${ageYear - 11}-03-14`, gender: 'Male', ageGroup: 'Under12',
     apparatus: ['Pole Mallakhamb'], ...overrides,
   });
 
@@ -515,7 +516,7 @@ describe('paper form for a coach (their own team, their own drafts)', () => {
     const otherTeam = await Team.create({ name: 'Holding Club', coach: otherCoach._id });
     await Player.create({
       firstName: 'Aarav', lastName: 'Patil', gender: 'Male', team: otherTeam._id, levelTeams: [{ level: 'state', team: otherTeam._id }],
-      dateOfBirth: new Date(`${thisYear - 11}-03-14T00:00:00Z`), emailType: 'self', email: `held${Math.random()}@example.com`, phone: '9000000001', password: 'PlayerPass1',
+      dateOfBirth: new Date(`${ageYear - 11}-03-14T00:00:00Z`), emailType: 'self', email: `held${Math.random()}@example.com`, phone: '9000000001', password: 'PlayerPass1',
     });
     const draft = await service.openDraft(actor, { competitionId: competition._id });
 

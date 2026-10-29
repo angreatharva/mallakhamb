@@ -32,7 +32,7 @@ Product decisions settled with the owner on 2026-10-28.
 
 ### Parked: revisit after all features are done
 
-1. **How a competition's season / cut-off year is chosen.** For now it stays as built: Super Admin's `ageCutoffYear` override, otherwise the start-date year. This is wrong for a January–March competition with no override.
+1. ~~How a competition's season / cut-off year is chosen.~~ **Decided 2026-10-29:** ages are always counted on 31 December of the year the competition is held. Every meet in 2026 uses 31 Dec 2026, every meet in 2027 uses 31 Dec 2027, whatever the month. Example: a meet on 12–13 Dec 2026 and a player born 1 Jan 2016 gives age 10, so Under 10. The Super Admin's "previous season" override is removed, and migration 015 cleared any saved value.
 2. **Coming back down an age group.** For now a player who played up may enter a lower group again later. COP says they cannot; we may enforce that later. The desk's "cannot return to a lower group" note must be removed or reworded until then.
 
 ## Matching a form row to an existing player (desk and coach)

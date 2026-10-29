@@ -40,7 +40,7 @@ Every new row is compared with everyone on the coach's team's roster (old `team`
 
 ## Age rule (COP 1.8.3.2–1.8.3.5) — `config/cop-rules.js`
 
-`ageCutoffYear(meet)` = `Competition.ageCutoffYear` (Super Admin, optional; start year or the year before) else start-date year. Age = cutoff − birth year. "Under N" includes N; Above16 ≥ 17, Above18 ≥ 19. `eligibleAgeGroups` = lowest + every higher group the meet runs. Mirrored in `Web/src/utils/competition/ageEligibility.js`; **`ageEligibilitySync.test.js` fails on drift**. Since 2026-10-29 enforced EVERYWHERE a player is put into an age group (`utils/data/age-eligibility.util.js`: coach squad entry, the competition route, Super Admin Add Player and its paid order, the player's own choice). Playing up stays allowed; coming back down is allowed for now (parked).
+`ageCutoffYear(meet)` = the year of the meet's start date, ALWAYS (owner, 2026-10-29; the Super Admin override and the `Competition.ageCutoffYear` field are gone, migration 015 unset saved values). Age = cutoff − birth year. "Under N" includes N; Above16 ≥ 17, Above18 ≥ 19. `eligibleAgeGroups` = lowest + every higher group the meet runs. Mirrored in `Web/src/utils/competition/ageEligibility.js`; **`ageEligibilitySync.test.js` fails on drift**. Since 2026-10-29 enforced EVERYWHERE a player is put into an age group (`utils/data/age-eligibility.util.js`: coach squad entry, the competition route, Super Admin Add Player and its paid order, the player's own choice). Playing up stays allowed; coming back down is allowed for now (parked).
 
 ## Form geometry — `utils/walk-in/form-layout.util.js`
 

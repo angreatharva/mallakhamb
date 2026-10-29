@@ -22,7 +22,8 @@ const playerValidators = require('../../src/validators/player.validator');
 const noopLogger = { debug() {}, info() {}, warn() {}, error() {} };
 const config = { get: () => undefined };
 const cache = { get: () => null, set() {}, delete() {}, deletePattern() {} };
-const CUTOFF = 2026;
+// The meets below are held in this year, so ages count on 31 Dec of it.
+const CUTOFF = new Date().getUTCFullYear() + 1;
 const born = (age) => new Date(`${CUTOFF - age}-07-01T00:00:00Z`);
 
 describe('the age check', () => {
@@ -36,15 +37,15 @@ describe('the age check', () => {
     expect(at(17, 'Under16', 'Female')).toBe(false);
   });
 
-  test('the owner\'s example: 2021-22, cut-off 31 Dec 2021 — born 2008 is Under 14, born 2009 may play Under 12', () => {
-    const meet = { ageCutoffYear: 2021 };
+  test('the owner example: a meet held in 2021 counts on 31 Dec 2021 — born 2008 is Under 14, born 2009 may play Under 12', () => {
+    const meet = { startDate: new Date('2021-12-12T00:00:00Z') };
     expect(checkAgeGroup({ dateOfBirth: new Date('2008-12-31'), gender: 'Male', ageGroup: 'Under14', competition: meet }).ok).toBe(true);
     expect(checkAgeGroup({ dateOfBirth: new Date('2008-12-31'), gender: 'Male', ageGroup: 'Under12', competition: meet }).ok).toBe(false);
     expect(checkAgeGroup({ dateOfBirth: new Date('2009-01-01'), gender: 'Male', ageGroup: 'Under12', competition: meet }).ok).toBe(true);
   });
 
   test('the refusal says the age, the cut-off and what to choose', () => {
-    const meet = { ageCutoffYear: CUTOFF, ageGroups: [{ gender: 'Male', ageGroup: 'Under12' }, { gender: 'Male', ageGroup: 'Under14' }] };
+    const meet = { startDate: new Date(`${CUTOFF}-12-12T00:00:00Z`), ageGroups: [{ gender: 'Male', ageGroup: 'Under12' }, { gender: 'Male', ageGroup: 'Under14' }] };
     expect(() => assertAgeGroup({ player: { firstName: 'Aarav', lastName: 'Patil', dateOfBirth: born(13) }, gender: 'Male', ageGroup: 'Under12', competition: meet }))
       .toThrow(`Aarav Patil is 13 on 31 Dec ${CUTOFF}, too old for Under 12. Choose Under 14.`);
   });
@@ -66,8 +67,8 @@ describe('every path enforces it', () => {
     const team = await Team.create({ name: 'Age Club', coach: coach._id });
     const meet = await Competition.create({
       name: `Age meet ${Math.random()}`, level: 'district', place: 'Pune', year: CUTOFF,
-      startDate: new Date(`${CUTOFF + 1}-01-20T00:00:00Z`), endDate: new Date(`${CUTOFF + 1}-01-22T00:00:00Z`),
-      ageCutoffYear: CUTOFF, playerFee: 300, competitionTypes: ['competition_1'],
+      startDate: new Date(`${CUTOFF}-12-12T00:00:00Z`), endDate: new Date(`${CUTOFF}-12-13T00:00:00Z`),
+      playerFee: 300, competitionTypes: ['competition_1'],
       apparatusConfig: { competition_1: ['Pole Mallakhamb'] },
       ageGroups: [{ gender: 'Male', ageGroup: 'Under12' }, { gender: 'Male', ageGroup: 'Under14' }],
       registeredTeams: [{ team: team._id, coach: coach._id, isActive: true, players: [] }],

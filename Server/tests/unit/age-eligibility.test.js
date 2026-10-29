@@ -51,8 +51,20 @@ describe('age eligibility', () => {
 
   it('takes the cut-off year from startDate unless the meet overrides it', () => {
     expect(ageCutoffYear({ startDate: '2022-02-10T00:00:00Z' })).toBe(2022);
-    expect(ageCutoffYear({ startDate: '2022-02-10T00:00:00Z', ageCutoffYear: 2021 })).toBe(2021);
+    // No override any more: a saved value from before is ignored.
+    expect(ageCutoffYear({ startDate: '2022-02-10T00:00:00Z', ageCutoffYear: 2021 })).toBe(2022);
     expect(ageCutoffYear({ startDate: '2022-02-10T00:00:00Z', ageCutoffYear: null })).toBe(2022);
     expect(ageCutoffYear({})).toBeNull();
+  });
+
+  test('the owner example: a meet on 12-13 Dec 2026, a player born 1 Jan 2016 plays Under 10', () => {
+    const meet = { startDate: '2026-12-12T00:00:00Z', endDate: '2026-12-13T00:00:00Z' };
+    const year = ageCutoffYear(meet);
+    expect(year).toBe(2026);
+    const age = ageOnCutoff('2016-01-01T00:00:00Z', year);
+    expect(age).toBe(10);
+    expect(lowestAgeGroup(age, 'Male')).toBe('Under10');
+    // Every meet held in 2027 counts on 31 Dec 2027, January included.
+    expect(ageCutoffYear({ startDate: '2027-01-15T00:00:00Z' })).toBe(2027);
   });
 });
