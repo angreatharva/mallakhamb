@@ -185,3 +185,19 @@ operation is captured in `AuditLog` just because the constant exists.
   lazily grown heap and the API reported itself unhealthy (`87ef2db`).
 - The nightly e2e records the e2e API's own request latency every run
   (`90e7907`); Grafana panels read it.
+
+## Since the last pass (2026-10-31, against `f24bfcd`)
+
+- 8 new rules in `deploy/monitoring/alerts/apply-alerts.js` (OCI platforms; live as `-stg` in the
+  `mallakhamb-oci-staging` group, now 29 rules): `mk-role-auto-failover` (critical),
+  `mk-role-no-holder` (critical), `mk-role-two-active`, `mk-role-judging` (early warning while the
+  standby counts), `mk-role-stale`, `mk-role-oci-blind`, `mk-role-observe`, `mk-mongo-cert-expiry`
+  (60 days; member certificates expire 2028-10-22).
+- New textfile gauges: `mallakhamb_role_*` (reconcile time, oci_ok, holds_service_ip, is_active,
+  failover_bad_ticks, auto_failover_timestamp, mode_act) and
+  `mallakhamb_mongo_member_cert_expiry_timestamp_seconds` (all three members).
+- "OCI is charging money" fired from 2026-10-26: SGD 0.0043 of Notifications email over the
+  1,000/month free tier (the auto-start schedule's START actions were emailed); fixed by
+  `deploy/oci/scripts/events-rule-narrow.sh`, flat since; clears when the month resets.
+- Grafana's provisioning API stores rules with extra fields and reordered annotations; to diff a
+  paste against the live group, compare PromQL, thresholds, `for` (in seconds) and labels only.

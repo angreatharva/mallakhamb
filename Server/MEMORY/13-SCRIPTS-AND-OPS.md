@@ -146,3 +146,26 @@ Under 14). Local run: launch config `api-e2e-local` (port 5001,
 `mallakhamb_local_e2e`) — **drop that DB first**; a stale DB keeps the old
 meet types and finals already started. Last full local run: 21/21 steps, 320
 categories.
+
+## Since the last pass (2026-10-31, against `f24bfcd`)
+
+New and changed scripts in `deploy/server/` (installed to `/usr/local/bin` on the VMs):
+
+- `mallakhamb-role [tick|status|takeover|is-active]`: role reconciler + automatic web failover
+  (`deploy/oci/AUTO-FAILOVER.md`); `ROLE_MODE=act|observe` in `/etc/mallakhamb/role.env`;
+  `/etc/mallakhamb/NO_AUTO_FAILOVER` on the standby pauses takeover. OCI is asked at most every
+  60 s (each CLI call costs ~1 s of the single core).
+- `mallakhamb-service-ip` (+ unit): brings the VM's secondary private IPs up from instance metadata.
+- `mallakhamb-backup-source`: the backup jobs read the **hidden db-03** through a
+  `directConnection` URI (a replica-set URI never selects a hidden member, so they used to read
+  app-02), falling back to the set with `secondaryPreferred` when db-03 is down or > 120 s behind.
+- `mallakhamb-backup`, `-oplog-slice`, `-offsite-copy` first ask `mallakhamb-role is-active` (fresh
+  OCI answer; falls back to the STANDBY marker), so a VM that just lost the IP never backs up twice.
+- `mallakhamb-promote` validates the Caddy config **as user caddy** and chowns `/var/log/caddy`
+  first (see GOTCHAS).
+- `mallakhamb-mongo-metrics` also writes each member's TLS certificate expiry.
+- Cloud Shell: `deploy/oci/scripts/service-ip-setup.sh`, `auto-failover-iam.sh`; `failover-ip.sh`
+  now only `move <nn>`.
+- `Server/scripts/perf/meetDay.js --target=<public API>` against a seedScale fixture is how the
+  failover-with-a-panel drill (readiness 6.8) was run; seedScale drops its target first and
+  refuses the API's own database, so it went into `mallakhambcompetition_prod_restoretest`.

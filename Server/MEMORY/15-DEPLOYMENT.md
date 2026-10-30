@@ -175,3 +175,20 @@ What the plan changes about this doc's assumptions:
   rollback steps were re-verified against the current migration set
   (001-010) — it was read and found consistent in this pass, but not
   exhaustively cross-checked migration-by-migration.
+
+## Since the last pass (2026-10-31, against `f24bfcd`)
+
+- **OCI web failover is automatic** (`deploy/oci/AUTO-FAILOVER.md`). The rule: whichever app VM
+  holds the site's reserved IP `pip-app-01` (137.23.63.84) is the active. The IP now sits on a
+  **secondary** private IP (app-01 10.0.0.51, app-02 10.0.0.246); each VM keeps its own egress IP on
+  its primary (app-01 ephemeral 80.225.247.23, app-02 `pip-app-02` 130.210.4.142), so a VM can move
+  the IP itself. `mallakhamb-role` (timer, every 20 s, both app VMs) promotes the holder, demotes
+  the non-holder, and on the standby takes the IP when the active **machine** is gone (site down
+  AND OCI not RUNNING or both its own mongod and db-03 see the member down, 6 ticks). Never fails
+  back by itself; planned switch = `sudo mallakhamb-role takeover` (~5–8 s). The old
+  `failover-ip.sh move` + `finish` two-step is gone.
+- **Drilled 2026-10-30:** hard power-off of app-01 → app-02 took over by itself in **3 min 40 s**,
+  0 acknowledged writes lost, twice (once with a simulated 28-seat judge panel posting slips: every
+  session carried on after the outage with no re-login). The returning VM demoted itself.
+- The A1 VMs are **1 OCPU / 4 GB** now (idle-reclaim sizing), not 6 GB as written above.
+- `deploy/oci/ARCHITECTURE.md` is the one-page picture (`architecture.svg`, `failover.svg`).

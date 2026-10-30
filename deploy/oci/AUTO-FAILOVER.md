@@ -106,5 +106,6 @@ Policy **`mallakhamb-prod-pol-failover`** (`deploy/oci/scripts/auto-failover-iam
 | B · return | The Resource Scheduler started app-01 at 19:07:33. On its first tick it saw the IP on app-02 and **demoted itself**; its mongod took PRIMARY back (priority 2). 0 failed checks |
 | C · failback `takeover` on app-01 | 2 failed checks (**~5 s**) |
 | After | e2e 00:00 IST PASSED (869 s); off-site copy from app-01's new egress IP OK (18 collections / 358 documents, read from db-03) |
+| **D · hard power-off with a judge panel running** (readiness 6.8, 19:43:13) | Simulated meet (28 seats posting slips + 50 spectators) against the public API. Down 19:43:19 → ~19:47:00 (**3 min 40 s**); from 19:48 every session continued with **zero errors and no re-login**; rollback files 0; app-01 returned and demoted itself; failback ~5 s |
 
 Before (manual): 62–95 s **once someone noticed**. Now: ~4 min with nobody awake, ~5–8 s for a planned switch.

@@ -201,3 +201,13 @@ auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
 - **A player's team at a level is written only by `PlayerTeamService`**
   (conditional `$push`); a second writer would let two teams win the race.
 - **Age cut-off has no override** — don't reintroduce `Competition.ageCutoff`.
+
+- **`caddy validate` as root breaks the next reload** (2026-10-30 drill): it creates any missing
+  access log root-owned, Caddy (user caddy) then cannot open it, the reload fails with "permission
+  denied", and `set -e` stopped `mallakhamb-promote` before the API started — 3 min of staging
+  downtime. Always `runuser -u caddy -- caddy validate`, and chown `/var/log/caddy`.
+- **Moving an OCI reserved IP is `PUBLIC_IP_UPDATE`**, which `use public-ips` does not grant (404
+  NotAuthorizedOrNotFound). The failover policy has `manage public-ips where request.permission =
+  'PUBLIC_IP_UPDATE'`.
+- **A hidden replica-set member is never selected through a replica-set URI**, whatever the read
+  preference; reach db-03 with `directConnection=true` (`mallakhamb-backup-source`).
