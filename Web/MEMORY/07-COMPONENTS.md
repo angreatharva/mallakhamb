@@ -27,8 +27,8 @@ covers:
   - src/utils/security/sanitize.js
 read_when: "reusing or changing a shared (non-design-system, non-responsive) component"
 depends_on: [05-DESIGN-SYSTEM, SHARED-CONTRACTS]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Scope
@@ -479,3 +479,10 @@ export const sanitizeObject = (obj) => { /* recursively sanitizeInput's every st
 `SafeText` is the only component in this doc's scope that calls it.
 `sanitizeObject` is exported but has no confirmed caller among the
 components documented here.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- `components/charts/` — chart primitives for the Stats/Fairness screens —
+  [06-SCREENS/stats-and-fairness.md](06-SCREENS/stats-and-fairness.md).
+- `components/finals/QualifiedFinals.jsx` — coach/player qualifier cards.
+- `superadmin/AddPlayerForm.jsx` — Competition I only; COP age util.

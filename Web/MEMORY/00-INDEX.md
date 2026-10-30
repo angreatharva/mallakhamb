@@ -4,8 +4,8 @@ covers:
   - Web/**
 read_when: "always — the entry point for any change in Web/"
 depends_on: []
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 # MEMORY — router
@@ -24,6 +24,12 @@ panel, the socket-URL fix, and local Home photos. Refreshed again against
 `ff89ca5` (2026-10-21): the account menu and profile page for every role,
 Player ID sign-in and the three player registration paths, Level → Team →
 Competition for players, coach-registered players, and the walk-in desk.
+Refreshed against `4201319` (2026-10-30): profile Stats tabs and the admin
+Fairness board with chart primitives, Admin Scoring rows per athlete ×
+apparatus, a player's team final per level, the Super Admin Players tab, the
+coach paper-form scan, the COP age rule everywhere (31 Dec of the meet's
+year), and the automatic finals with the Finalize gate and the All-ages
+category — see 06-SCREENS/{stats-and-fairness,superadmin-player-teams,admin-finals}.md.
 
 **Line numbers.** Many docs (06-SCREENS especially) cite `file:NNN` lines
 from before the 2026-10 restyle; where a doc says so, treat them as

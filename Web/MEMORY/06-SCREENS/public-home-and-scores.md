@@ -6,8 +6,8 @@ covers:
   - src/pages/public/PublicScores.jsx
 read_when: "changing the public landing page or the public results viewer"
 depends_on: [07-COMPONENTS, 05-DESIGN-SYSTEM]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## `Home.jsx` — the landing page (rebuilt 2026-10-06, `9814afa`)
@@ -121,3 +121,8 @@ search-yields-nothing sub-state within results ("No players found for
   is already written to use it once present (`:109-112`).
 - Changing Home: follow `docs/homepage/README.md`'s fixed requirements and
   re-run `npm run audit:home` on a preview build.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- The results page has a **Finals** view (`/api/public/finals`): finalized
+  Competition II/III qualifier lists only.

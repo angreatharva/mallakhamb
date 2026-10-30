@@ -4,8 +4,8 @@ covers:
   - src/pages/player/PlayerTeamSelection.jsx
 read_when: "changing how a player joins a team, or investigating why the team list shows squads from other meets"
 depends_on: [08-API-INTEGRATION, 03-ROUTING-AND-NAV]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## What it is
@@ -95,3 +95,9 @@ correct even though the list shown is too broad.
 - A player with no email who joins a coach's team causes the server to mail
   their Player ID to that coach — nothing to do on this screen.
 - Test: `PlayerTeamSelection.test.jsx`. See [account-and-player-identity.md](account-and-player-identity.md).
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- Team is **final per level** (`f8773b0`): a level that already has a team is
+  skipped/read-only, a new choice warns that it is final, join-team sends the
+  level, 409 `TEAM_FINAL_AT_LEVEL` is shown — [superadmin-player-teams.md](superadmin-player-teams.md).

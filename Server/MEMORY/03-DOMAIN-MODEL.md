@@ -7,8 +7,8 @@ covers:
   - src/config/judge-seats.js
 read_when: "you need to understand an entity's meaning, lifecycle, or relationships before changing behavior around it — not just its schema shape (see 04-DATA-MODEL for schema/index detail)"
 depends_on: []
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## The entities, in one paragraph each
@@ -236,3 +236,23 @@ see the representation split below.
   exact inverses of each other, or can diverge (e.g. a coach reassigned away
   from a team they still point at). Not traced at the service-code level for
   this doc.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+Four owner rules changed the domain (details in the linked docs):
+
+- **A player's team is final per competition level** (District, State, …):
+  `Player.levelTeams`, one writer (`PlayerTeamService`), 409
+  `TEAM_FINAL_AT_LEVEL`; only a Super Admin correction moves it —
+  [modules/team.md](modules/team.md).
+- **COP age rule at every squad entry**: age on **31 Dec of the year the meet
+  starts** (no override any more), "Under N" includes N, own group or any
+  higher one; 400 `AGE_GROUP_NOT_ALLOWED` — `utils/data/age-eligibility.util`.
+- **Automatic finals**: coaches enter Competition I only. Competition II is ONE
+  "All ages" final per gender (top 2 of each age group by the sum over the
+  gender's apparatus); Competition III is top 10 per gender × age group ×
+  apparatus, max 2 per team. Lists follow locked Comp I results, but nobody is
+  entered until an admin **finalizes** the final — [modules/scoring.md](modules/scoring.md).
+- **`AllAges` is a CATEGORY age group, never a player's**: it exists in
+  `CATEGORY_AGE_GROUPS` (Score, Judge, PerformanceOrder, TieBreakDraw,
+  `startedAgeGroups`) and must be matched with `utils/data/category.util#ageMatches`.

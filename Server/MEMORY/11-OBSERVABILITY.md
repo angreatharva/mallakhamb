@@ -13,8 +13,8 @@ covers:
   - src/routes/health.routes.js
 read_when: "adding logging, debugging why a metric/health check reads wrong, or working on the audit trail"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Logging — `src/infrastructure/logger.js` (Winston wrapper)
@@ -177,3 +177,11 @@ operation is captured in `AuditLog` just because the constant exists.
 - (Resolved 2026-10-03: the `MetricsCollector.flush()` gap is moot — the
   collector is gone, and Prometheus metrics are pulled, so nothing needs
   flushing at shutdown.)
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- `/api/health` measures heap use against V8's `heap_size_limit` (reported as
+  `heap.limit`), not `heapTotal` — right after a restart heapUsed was ~93% of a
+  lazily grown heap and the API reported itself unhealthy (`87ef2db`).
+- The nightly e2e records the e2e API's own request latency every run
+  (`90e7907`); Grafana panels read it.

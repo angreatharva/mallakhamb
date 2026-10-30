@@ -8,8 +8,8 @@ covers:
   - src/docs/api-enums.js
 read_when: "adding/changing any HTTP endpoint, or checking what auth/lock/validator a route already has"
 depends_on: [01-ARCHITECTURE, 06-AUTH-AND-SECURITY]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Coverage check (per the build instructions' verification step)
@@ -316,3 +316,25 @@ and GOTCHAS.md).
 - None outstanding. `POST/DELETE /api/competitions/:id/admins(/:adminId)`
   (once 500ing) were fixed 2026-09-23; `POST /auth/reset-password/:token`
   was removed 2026-10-07.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+New routes (all through the usual auth/role middleware):
+
+- **Stats** `/api/stats`: `GET /player` (player), `/coach` (coach), `/judge`
+  (judge, `?competition=`), `/judge-fairness` (admin/superadmin) —
+  [modules/stats.md](modules/stats.md).
+- **Finals**: `/api/admin/finals` — `GET` list; `POST recompute`,
+  `finalize-all`, `:finalId/finalize`, `:finalId/withdraw`,
+  `:finalId/reinstate`, `:finalId/draw` (II tie order). `/api/superadmin/finals`
+  — the same with `competitionId` (query or body) **plus `:finalId/reopen`**
+  (Super Admin only). `GET /api/coaches/finals`, `GET /api/players/finals`,
+  `GET /api/public/finals?competitionId=` (finalized finals only).
+- **Super Admin Players**: `/api/superadmin/player-teams/` `players`
+  (search), `players/:playerId`, `players/:playerId/correct`,
+  `players/:playerId/remove-entries`, `conflicts`,
+  `conflicts/:conflictId/resolve`, `history`.
+- **Coach paper form**: `/api/coaches/paper-form/` `form`, `ocr/status`,
+  `draft` (GET/POST), `draft/:draftId` (GET/DELETE), `draft/:draftId/scan`,
+  `/rows`, `/submit`, `/slip` — the desk's WalkInService with a coach actor.
+- `POST /api/players/...join-team` now takes the level.

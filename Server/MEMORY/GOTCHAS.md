@@ -185,3 +185,19 @@ auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
 - Whether `Coach.team` and `Team.coach` are always kept as exact inverses.
 - Whether `tests/unit/routes/admin.routes.test.js` is currently passing — project memory flags it as a known-failing test; it passed in this pass's full-suite run (57/57 suites, 720/720 tests), but that hasn't been reconciled with the older memory note.
 - Whether `src/socket/README.md` should be rewritten now that `competition_{id}` rooms are live again — flagged stale above, not rewritten in this pass.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- **`AllAges` filtering lives in TWO places in
+  `competition.repository#findSubmittedRegistrations`** — the `$match` and the
+  `$filter` cond. Skipping it in only one returns zero finalists.
+- **Finalized/started finals never change.** A later Comp I correction only
+  sets `staleSince` (a warning on the card). Reopen is Super Admin only and is
+  refused once any Comp II/III score exists for that final.
+- **`entry.apparatus.competition_2/3` belong to the engine.** Coach and Super
+  Admin squad writes strip them (unless `legacyFinals`); hand-written values are
+  overwritten by `_syncEntries`, which writes FINALIZED finals only.
+- **Coaches are emailed about qualifiers only on Finalize**, never on recompute.
+- **A player's team at a level is written only by `PlayerTeamService`**
+  (conditional `$push`); a second writer would let two teams win the race.
+- **Age cut-off has no override** — don't reintroduce `Competition.ageCutoff`.

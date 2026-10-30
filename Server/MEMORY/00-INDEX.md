@@ -4,8 +4,8 @@ covers:
   - Server/**
 read_when: "always — the entry point for any change in Server/"
 depends_on: []
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 # MEMORY — router
@@ -23,6 +23,11 @@ the Time Keeper seat, Prometheus metrics, and the OCI staging build.
 Refreshed again against `ff89ca5` (2026-10-21): Player IDs and players
 without their own email (migration 012), the account page for every role,
 coach-approved resets, coach-registered players, and the walk-in desk.
+Refreshed against `4201319` (2026-10-30): the Stats API and judge-slip authorship
+(013), a player's team final per competition level (014) with the Super
+Admin Players page and the coach paper form, the COP age rule at every squad
+entry with the cut-off fixed to 31 Dec of the meet's year (015), and the
+automatic Competition II/III finals behind an admin Finalize gate (016).
 
 ## Read order for a cold agent (only 3 docs)
 
@@ -52,6 +57,9 @@ coach-approved resets, coach-registered players, and the walk-in desk.
 | `src/utils/` | Shared helpers, split by concern — [modules/utils.md](modules/utils.md) |
 | `src/services/walk-in/`, `../ocr/` | Walk-in desk + OCR sidecar, COP age rule — [modules/walk-in-desk.md](modules/walk-in-desk.md) |
 | `src/services/auth/account*.service.js`, `src/services/user/coach-player.service.js`, `src/utils/data/player-login-id.util.js` | Player IDs, guardian/no email, `/auth/me/*`, coach approvals, coach-registered players — [modules/accounts.md](modules/accounts.md) |
+| `src/services/stats/`, `src/utils/stats/` | Profile Stats + judge Fairness, published-mark rule, slip authorship — [modules/stats.md](modules/stats.md) |
+| `src/services/scoring/qualification.service.js`, `src/utils/scoring/qualification.util.js`, `src/models/Qualification.js` | Automatic finals (Comp I → II/III), Finalize gate, All-ages category — [modules/scoring.md](modules/scoring.md) |
+| `src/services/team/player-team*.service.js`, `src/utils/data/age-eligibility.util.js` | Team final per level, Super Admin Players page, COP age rule — [modules/team.md](modules/team.md) |
 | `src/errors/` | Error taxonomy — [02-CONVENTIONS.md](02-CONVENTIONS.md) |
 | `src/migrations/` | Schema/data migrations — [04-DATA-MODEL.md](04-DATA-MODEL.md) |
 | `scripts/` | Seed/ops/perf scripts — [13-SCRIPTS-AND-OPS.md](13-SCRIPTS-AND-OPS.md) |

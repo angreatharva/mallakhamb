@@ -7,8 +7,8 @@ covers:
   - src/infrastructure/database/index-manager.js
 read_when: "adding/changing a schema field, an index, or writing a migration"
 depends_on: [03-DOMAIN-MODEL, modules/repositories, modules/infrastructure]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 For entity meaning/relationships/lifecycle, see
@@ -359,3 +359,25 @@ mechanics (strict gapless `###_` ordering, batch rollback on failure).
 - ⚠️ UNVERIFIED: `AuditLog.adminId` populate behavior with no `ref` declared
   — see GOTCHAS.md.
 - ⚠️ UNVERIFIED: whether `Coach.team`/`Team.coach` are guaranteed inverses.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- **Qualification** (`src/models/Qualification.js`, migration-free new
+  collection): one final — `competition, competitionType (competition_2|3),
+  gender, ageGroup (AllAges for II), apparatus (III)`; `status
+  waiting|waiting_draw|set`, `qualifiers[] / tied[] / skipped[]` (player,
+  team, rank, score, sourceAgeGroup, reason), `slices[]` (II, per age group),
+  `waitingFor[]`, `withdrawn[]`, `drawOrders[]`, `computedAt`,
+  **`finalizedAt` / `finalizedBy`** (the Finalize gate), `frozenAt` (first
+  score), `staleSince` / `staleNote`.
+- **Competition**: `legacyFinals: Boolean` (016 sets it on meets already
+  scored/ended — their coach-chosen II/III entries are kept); the
+  `ageCutoff` override is gone (015). `entry.apparatus.competition_2/3` are
+  now written ONLY by the finals engine, for finalized finals.
+- **Player**: `levelTeams[]` (one per level: team, how, when, via); `team`
+  kept as the first team / suggestion. **PlayerTeamConflict** (014's
+  undecidable cases, settled by the Super Admin).
+- **Score** judge slips: `judgeAccountId`, `attribution recorded|inferred` (013).
+- Migrations added: **013** judge slip authors, **014** player teams per
+  level, **015** drop age-cut-off override, **016** automatic finals — see
+  [modules/migrations.md](modules/migrations.md).

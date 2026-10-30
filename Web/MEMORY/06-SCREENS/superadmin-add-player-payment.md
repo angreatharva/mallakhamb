@@ -4,8 +4,8 @@ covers:
   - src/pages/superadmin/SuperAdminAddPlayerPayment.jsx
 read_when: "changing the superadmin add-player payment flow"
 depends_on: [07-COMPONENTS, SHARED-CONTRACTS, 06-SCREENS/superadmin-management]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## What it is
@@ -88,3 +88,8 @@ to refresh its teams list and remount `AddPlayerForm`.
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- `AddPlayerForm` uses the COP age util and offers **Competition I only**; the
+  server strips II/III unless the meet is `legacyFinals`.

@@ -5,8 +5,8 @@ covers:
   - playwright.config.js
 read_when: "running ANY e2e/seed/audit npm script, or before pointing E2E_BASE_URL/E2E_API_URL at anything other than localhost"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Read this before running anything in `e2e/`
@@ -262,3 +262,17 @@ the new Home (`9814afa`). All read-only. Results and run commands:
   you're accidentally running the singular ad-hoc variant
   (`test:e2e:player`/`test:e2e:coach`), which is meant to fail loudly
   on a duplicate rather than skip.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- Every meet runs its own competitions (`Server/scripts/seed/meets.json`
+  `competitionTypes`, read by `support/meets.js#competitionTypesOf` and
+  `support/panel-plan.js#meetCompetitionTypes`).
+- `create-competitions.spec` ticks exactly those types; `seat-panels.spec`
+  seats I/III per age group and II on one **All ages** panel per gender
+  (`panelsForType`); `score-all.spec` takes `SCORE_STAGE=one|finals`.
+- New `finalize-finals.spec.js` (`npm run seed:finalize`): Admin → Finals →
+  "Finalize all ready finals" per meet. `setup:ui` order: scores
+  (SCORE_STAGE=one) → `finalize` → `finals-scores` (SCORE_STAGE=finals).
+- `chooseCategory` picks the age group by its LABEL ("Under 10", "All ages");
+  `squadPlaces` accepts every age group in an All-ages category.

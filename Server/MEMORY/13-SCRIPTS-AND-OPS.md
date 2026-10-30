@@ -5,8 +5,8 @@ covers:
   - package.json
 read_when: "running or changing a seed/ops/perf script, or checking what an npm script actually does before running it"
 depends_on: [01-ARCHITECTURE, 04-DATA-MODEL]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 All 40 npm scripts map cleanly to an existing file (`scripts/*.js`,
@@ -129,3 +129,20 @@ Since 2026-10 a player registration under 18 needs `guardianConsent: true`;
   than reimplementing it.
 - Never point a perf script at the real `MONGODB_URI` — `seedScale.js`'s
   refusal check is there because it's happened before.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+**Seed / e2e chain.** `scripts/seed/meets.json` gives every meet its own
+`competitionTypes`, rotating I+II+III, I+II, I+III, I (`lib/meets#competitionTypesOf`).
+`setup:api` (and `setup`) now run: … `pay` → `order` → `scores` (`--stage=one`,
+Competition I) → `results one` → `corrections` → **`finals`**
+(`seedCompetitionDay.js finals`: finalize-all as the admin, II/III rule
+checks, ties drawn, squads = qualifiers, admin reopen refused, Super Admin
+reopen + re-finalize, lots) → **`finals-scores`** (`seed:scores --
+--stage=finals`) → **`finals-results`** (`results finals`: every judged final
+started, no reopen) → `judge-screens` → `mail` → `coverage`. Panels:
+`lib/panel-plan#panelsForType` (II = one All-ages panel per gender sized like
+Under 14). Local run: launch config `api-e2e-local` (port 5001,
+`mallakhamb_local_e2e`) — **drop that DB first**; a stale DB keeps the old
+meet types and finals already started. Last full local run: 21/21 steps, 320
+categories.

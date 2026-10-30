@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedDashboard.jsx
 read_when: "changing the admin/superadmin dashboard shell, tab system, or competition auto-selection"
 depends_on: [03-ROUTING-AND-NAV, 04-STATE-MANAGEMENT, 06-SCREENS/superadmin-management]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Scope correction: admin/superadmin only
@@ -134,3 +134,15 @@ in [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md).
 - The Super Admin **"Requests"** tab (no-email players' account requests)
   existed briefly and was removed in `3e8e269`: those requests are decided by
   the player's coach.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- New tabs: **Finals** (admin + super admin; super admin gets a meet picker on
+  the tab and fetches the competition list there), **Fairness** (both), and
+  **Players** (super admin) — [admin-finals.md](admin-finals.md),
+  [stats-and-fairness.md](stats-and-fairness.md),
+  [superadmin-player-teams.md](superadmin-player-teams.md).
+- The Super Admin header uses `navFrom='xxl'`: tabs in the bar only from
+  1440px, the menu below.
+- Judges / Lots / Scores pickers offer "All ages" for Competition II
+  (`withAllAges`, `typesForAgeGroup`, `judgeCategoryOptions`).

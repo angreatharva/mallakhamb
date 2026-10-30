@@ -17,8 +17,8 @@ covers:
   - eslint-rules/no-hardcoded-spacing.js
 read_when: "adding a UI primitive, touching colors/spacing/breakpoints/appearance, restyling anything, or wondering why two components share a name"
 depends_on: []
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 Rewritten 2026-10-07. The responsive/appearance work (branch
@@ -230,3 +230,8 @@ before editing one.
   the appearance: `ink` / `FG`.
 - A restyle beyond a value tweak: `docs/design-language/LOOKS.md` (the
   playbook) — pages hold no visual decisions; a restyle is a pack edit.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- Data-viz tokens `viz-1..3`, `viz-up/down/mid` (colour-blind validated in
+  both appearances) are the only chart colours.

@@ -5,8 +5,8 @@ covers:
   - package.json (jest config)
 read_when: "writing a test for any layer, or figuring out where an existing test for a subsystem lives"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Setup
@@ -197,3 +197,12 @@ exit 7 — never log to the ended winston logger),
   per-role logins (`/api/{admin,coaches,players,judge,superadmin}/login`),
   no unified endpoint.
 - See GOTCHAS.md for the broader pattern of stale docs across `docs/`.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+Counts: **103 suites / 1179 tests** green. New: `tests/integration/qualification-service.test.js`
+(finals engine + Finalize gate), `integration/profile-stats.test.js`,
+`unit/stats/judge-lean.util.test.js`, `integration/player-team-per-level.test.js`
+(incl. migration 014), `integration/player-team-admin.test.js`,
+`unit/age-eligibility.test.js`. Migration 016 has no test of its own; the
+local e2e chain exercises it at `prepare`.

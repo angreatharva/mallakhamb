@@ -4,8 +4,8 @@ covers:
   - src/pages/coach/CoachDashboard.jsx
 read_when: "changing the coach's team/roster management screen"
 depends_on: [SHARED-CONTRACTS, 07-COMPONENTS, 04-STATE-MANAGEMENT]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## What it is
@@ -104,3 +104,13 @@ Re-fetched whenever `currentCompetition._id` changes (`:173-177`, from
   not the meet.
 - Every coach page sits behind `CoachPlayerPasswordGate` (default player
   password first). See [account-and-player-identity.md](account-and-player-identity.md).
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- Squad entry is **Competition I only**; Competition II/III come from the
+  finals engine. Qualifiers show in `components/finals/QualifiedFinals.jsx`
+  (finalized finals only) — [admin-finals.md](admin-finals.md).
+- The age rule is the COP util (`utils/competition/ageEligibility.js`); older
+  entries breaking it show the server's `players[].ageIssue` in red; a refusal
+  shows the server's reason.
+- "Scan Paper Form" → `/coach/paper-form` — [superadmin-player-teams.md](superadmin-player-teams.md).

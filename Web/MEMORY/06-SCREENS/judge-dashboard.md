@@ -5,8 +5,8 @@ covers:
   - src/pages/judge/judgeCategoryOptions.js
 read_when: "changing the judge landing screen, the category picker, or multi-meet switching"
 depends_on: [SHARED-CONTRACTS, 09-REALTIME, 08-API-INTEGRATION]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## What it is
@@ -158,3 +158,11 @@ a mixed legacy/specific seat set before assuming it's a bug.
 - The header carries `AccountMenu` (My profile / Change password / Update
   email → `/judge/profile`). Only here — not on the scoring screens, so
   nothing new can take a judge off a slip. See [account-and-player-identity.md](account-and-player-identity.md).
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- A Competition II/III category lists the **finalists themselves** in running
+  order (`data-testid="judge-finalists"`), each with a small team tag (plus
+  their age group in the All-ages final); search covers players and teams.
+- Age group labels come from `ageGroupMapping` ("Under 10", "All ages"); entry
+  filters use `ageMatches`.

@@ -4,8 +4,8 @@ covers:
   - src/services/scoring/**
 read_when: "changing score calculation/aggregation service internals"
 depends_on: [07-SCORING-ENGINE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Automatic finals: Competition I → II / III (2026-10-30)
@@ -83,3 +83,8 @@ README implies (separate `validateScoreData`/`validatePlayerScores`-as-
 simple-methods framing) — the merge/retry/lock logic is one large,
 carefully-commented method. Read [07-SCORING-ENGINE.md](../07-SCORING-ENGINE.md)'s
 full trace before changing it.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+The automatic-finals section above is current, including the Finalize gate.
+Tests: `tests/integration/qualification-service.test.js`.

@@ -4,8 +4,8 @@ covers:
   - src/migrations/**
 read_when: "writing or reasoning about a schema migration"
 depends_on: [04-DATA-MODEL, modules/infrastructure]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 The full migration table (all 12, purpose, rerun-safety) and the "how to add
@@ -37,3 +37,19 @@ ONE team ever entered the player at that level; two or more → a
 `PlayerTeamConflict` (nothing guessed). Only fills levels with no team, so
 re-runs are harmless; `down` pulls entries with `via: 'migration-014'` and the
 unresolved conflicts. See [team.md](team.md).
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+**013 — judge slip authors (2026-10-26).** Stamps `judgeAccountId` +
+`attribution: 'inferred'` on slips written before authorship was recorded,
+from today's seat assignments; by slip `_id` via arrayFilters; re-run no-op.
+See [stats.md](stats.md).
+
+**015 — drop the age cut-off override (2026-10-29).** Unsets
+`Competition.ageCutoff`; the cut-off is always 31 Dec of the start year.
+
+**016 — automatic finals (2026-10-30).** Meets already scored or ended get
+`legacyFinals: true` and keep their coach-chosen Competition II/III entries;
+every other meet has those coach-chosen keys cleared so the engine owns them.
+Then the finals are computed. Deploy note: a release carrying a new migration
+goes to the ACTIVE OCI VM first.

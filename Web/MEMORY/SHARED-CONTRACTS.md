@@ -10,8 +10,8 @@ covers:
   - src/utils/competition/levels.js
 read_when: "changing ANY scoring math, fee/late-fee math, the competition-lock boundary, apparatus-shape reading, or panel-size logic on either stack — this is the file that tells you the other stack exists"
 depends_on: [11-SCORING-CLIENT]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Why this doc exists
@@ -309,3 +309,14 @@ documents (an internal client-only contract between `judgeShared.jsx`'s
 mismatch-detection logic) is likewise client-only — it exists to warn
 judges *before* they submit, and has no server equivalent to drift from
 because the server never runs a "do these judges agree" check itself.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+New duplicated pairs:
+
+| Web | Server | Guard |
+|---|---|---|
+| `utils/competition/ageEligibility.js` (`ageCutoffYear` = start year) | `config/cop-rules#ageCutoffYear`, `utils/data/age-eligibility.util` | unit tests both sides |
+| `hooks/useAgeGroups` `ALL_AGES`, `ageMatches` | `config/cop-rules#ALL_AGES`, `utils/data/category.util#ageMatches` | none — keep in step |
+| `e2e/support/panel-plan.js#panelsForType` | `scripts/lib/panel-plan.js#panelsForType` | none — keep in step |
+| stats D/C/E `averageSlipBreakdown` | `utils/scoring/slip-breakdown.util` | cross-stack parity test |

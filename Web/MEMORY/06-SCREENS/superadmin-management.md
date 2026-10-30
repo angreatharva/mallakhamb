@@ -4,8 +4,8 @@ covers:
   - src/pages/superadmin/SuperAdminManagement.jsx
 read_when: "changing any destructive superadmin action (delete competition/admin, remove admin), or the competition create/edit form"
 depends_on: [08-API-INTEGRATION, 06-SCREENS/unified-dashboard]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## What it is — and what it is NOT
@@ -150,3 +150,8 @@ a form) for assign/remove-admin-per-competition, opened via a green
   by the walk-in desk's age rule.
 - `addPlayerToTeam` (AddPlayerForm) may send `emailType` + `guardian` — the
   server accepts the three player email types. See [account-and-player-identity.md](account-and-player-identity.md).
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- The competition form's "Age cut-off" choice is **removed** (`2ce3ec9`): the
+  cut-off is always 31 Dec of the start year.

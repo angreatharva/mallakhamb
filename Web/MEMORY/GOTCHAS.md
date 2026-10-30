@@ -343,3 +343,13 @@ your own machine.
   as tall keep `-0.05`), and the unpinned stopwatch overflowed a landscape
   phone (its dial is now capped by viewport height too). `npm run audit:home`
   (41 devices) is the check — 0 problems at `3c5c725`.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- **All ages is a category, not an age group.** Filter entries with
+  `ageMatches`, never `entry.ageGroup === selectedAgeGroup` — that shows an
+  empty final.
+- **Finals are invisible until finalized** — coach/player/public/judges see
+  nothing for a computed-but-not-finalized list. That is the design.
+- **A local e2e run on a reused database** fails the finals step (old meet
+  types, finals already started) — drop `mallakhamb_local_e2e` first.

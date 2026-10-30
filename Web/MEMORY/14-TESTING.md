@@ -6,8 +6,8 @@ covers:
   - "**/*.test.jsx"
 read_when: "adding a test, debugging a failing test, or deciding whether a test file already covers something"
 depends_on: [SHARED-CONTRACTS, 10-AUTH-AND-SECURITY, 13-FORMS-AND-VALIDATION]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Stack
@@ -162,3 +162,10 @@ elsewhere in this MEMORY tree — this is a survey. Browser-level checks
   "not a function" style errors, check whether it's exercising something
   outside `setupTests.js`'s two polyfills before assuming the component
   itself is broken.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+Counts: **74 files / 598 tests** green. New: `AdminFinals.test.jsx`,
+`AdminJudgeFairness.test.jsx`, `stats/PlayerStats.test.jsx`,
+`stats/statsModel.test.js`, `utils/scoring/adminSheet.test.js`,
+`CoachPaperForm.test.jsx`, `PlayerTeamSelection.test.jsx` additions.

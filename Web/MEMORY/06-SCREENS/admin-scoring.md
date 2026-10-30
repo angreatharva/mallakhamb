@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminScoring.jsx
 read_when: "changing the admin/superadmin live score-entry screen"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT, 09-REALTIME, 04-STATE-MANAGEMENT]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## What it is
@@ -95,3 +95,12 @@ project — see [01-ARCHITECTURE.md](../01-ARCHITECTURE.md)).
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- One row per **athlete × apparatus** they are entered for in this competition
+  type (`utils/scoring/adminSheet.js`, keyed `playerId|apparatus`), scores load
+  by competition type and every row is posted with its apparatus. Before
+  `6363816` a multi-apparatus save overwrote Pole and dropped Hanging/Rope from
+  the public results.
+- Entry filters use `ageMatches` (All-ages finals).

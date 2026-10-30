@@ -12,8 +12,8 @@ covers:
   - src/repositories/tie-break-draw.repository.js
 read_when: "changing score calculation, ranking, tie-breaks, lucky draws, Team Championship, judge panel maths, or the running-order/lot-draw subsystem"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, 08-REALTIME-SOCKETS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## COP rules — `src/config/cop-rules.js` (single backend source of truth)
@@ -442,3 +442,16 @@ with the real 0-10 `judgeScores` schema).
   as real `ScoringService` methods distinct from the age-group-wide
   `lockScores`/`unlockScores` — so they likely do exist; treat the README's
   broader claims about full decomposition with caution).
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- Every score save / lock / unlock (incl. age-group lock/unlock and the admin
+  unlock) calls `scoringService._afterScoreChange`, which recomputes the
+  automatic finals for Competition I and marks a Competition II/III final
+  **started** (its list frozen) on its first score. Recorded lucky draws do
+  the same via `tieBreakDrawService._afterDraw`. See
+  [modules/scoring.md](modules/scoring.md) "Automatic finals".
+- Score / Judge / PerformanceOrder / TieBreakDraw accept the category age
+  group `AllAges` (Competition II).
+- "Published" is one predicate, `utils/scoring/published-score.util`, shared
+  by the public board, the Stats API and the finals engine.

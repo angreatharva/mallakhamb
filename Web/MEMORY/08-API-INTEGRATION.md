@@ -16,8 +16,8 @@ covers:
   - src/services/user/player.api.js
 read_when: "adding or changing any API call, touching CSRF/refresh/competition-lock handling, or looking up which endpoint a screen actually calls"
 depends_on: [10-AUTH-AND-SECURITY]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: 4201319
+last_verified: 2026-10-30
 ---
 
 ## Two axios instances, one interceptor stack
@@ -397,3 +397,10 @@ rather than a dedicated lots route file, but that's ⚠️ UNVERIFIED.
   `services/index.js`'s barrel or follows the `lots.api.js` precedent
   of direct import — check how existing callers of similar modules
   import them before choosing.
+
+## Since the last pass (2026-10-30, against `4201319`)
+
+- `services/user/stats.api.js` (`/stats/*`), `services/user/paper-form.api.js`
+  (`/coaches/paper-form/*`), `admin.api.js` / `super-admin.api.js`
+  `finals.*` (incl. `finalize`, `finalizeAll`, super-admin `reopen`, all with
+  `competitionId` under `/superadmin`), super-admin `playerTeams.*`.
