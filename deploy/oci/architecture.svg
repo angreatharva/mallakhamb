@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1520 870" width="1520" height="870" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>Mallakhamb on Oracle Cloud (OCI): architecture</title>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#2B2F36"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#8A8F98"/>
+    </marker>
+    <style>
+      .t  { font-size: 15px; font-weight: 700; fill: #1F2329; }
+      .s  { font-size: 12.5px; fill: #3D434C; }
+      .xs { font-size: 11.5px; fill: #5A616B; }
+      .h  { font-size: 17px; font-weight: 700; fill: #1F2329; }
+      .g  { fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+      .ln { stroke: #2B2F36; stroke-width: 2; fill: none; }
+      .dl { stroke: #8A8F98; stroke-width: 1.8; fill: none; stroke-dasharray: 6 5; }
+      .rp { stroke: #2E8B57; stroke-width: 2; fill: none; stroke-dasharray: 5 4; }
+    </style>
+    <!-- icons: 24x24 white line glyphs, drawn on a coloured disc -->
+    <symbol id="i-users" viewBox="0 0 24 24"><circle class="g" cx="9" cy="8" r="3.2"/><path class="g" d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle class="g" cx="17" cy="9" r="2.5"/><path class="g" d="M16 14.2c2.8.2 5 2.4 5 5.3"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle class="g" cx="12" cy="12" r="9"/><ellipse class="g" cx="12" cy="12" rx="4" ry="9"/><path class="g" d="M3 12h18M4.5 7.5h15M4.5 16.5h15"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path class="g" d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle class="g" cx="12" cy="10" r="2.3"/></symbol>
+    <symbol id="i-gw" viewBox="0 0 24 24"><rect class="g" x="4" y="9" width="16" height="9" rx="2"/><path class="g" d="M8 13.5h8M12 9V4M9 6.5a4.2 4.2 0 0 1 6 0"/></symbol>
+    <symbol id="i-fw" viewBox="0 0 24 24"><path class="g" d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.9-4.3-1.7-7.5-5.3-7.5-9.9V6z"/><path class="g" d="M8 12h8M12 8v8"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect class="g" x="5" y="10.5" width="14" height="10" rx="2"/><path class="g" d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5"/></symbol>
+    <symbol id="i-hex" viewBox="0 0 24 24"><path class="g" d="M12 3l8 4.6v8.8L12 21l-8-4.6V7.6z"/><path class="g" d="M9 10v4.2c0 1 .7 1.6 1.5 1.6M13.5 14.6c.4.8 1.2 1.2 2.1 1.2 1 0 1.6-.6 1.6-1.4 0-1.9-3.6-1-3.6-3 0-.8.7-1.4 1.6-1.4.8 0 1.4.3 1.8 1"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path class="g" d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M8 9.5h8M8 12h8M8 14.5h5"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect class="g" x="4" y="4" width="16" height="7" rx="1.5"/><rect class="g" x="4" y="13" width="16" height="7" rx="1.5"/><path class="g" d="M7.5 7.5h.01M7.5 16.5h.01M11 7.5h5M11 16.5h5"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path class="g" d="M19.5 10.5A7.7 7.7 0 0 0 5.4 7.6M4.5 13.5a7.7 7.7 0 0 0 14.1 2.9"/><path class="g" d="M5 3.8v4h4M19 20.2v-4h-4"/><circle class="g" cx="12" cy="12" r="1.6"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse class="g" cx="12" cy="6" rx="7" ry="2.8"/><path class="g" d="M5 6v12c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8V6M5 12c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle class="g" cx="8" cy="15" r="4"/><path class="g" d="M11 12l8.5-8.5M16.5 6.5l2 2M14 9l2 2"/></symbol>
+    <symbol id="i-bucket" viewBox="0 0 24 24"><ellipse class="g" cx="12" cy="6" rx="8" ry="2.5"/><path class="g" d="M4 6l2 13c.3 1.2 2.8 2 6 2s5.7-.8 6-2l2-13"/></symbol>
+    <symbol id="i-id" viewBox="0 0 24 24"><rect class="g" x="3" y="5" width="18" height="14" rx="2"/><circle class="g" cx="9" cy="10.5" r="2"/><path class="g" d="M6 16c.4-1.7 1.6-2.6 3-2.6s2.6.9 3 2.6M14.5 10h4M14.5 13.5h4"/></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><rect class="g" x="3" y="5" width="18" height="14" rx="2"/><path class="g" d="M7 10l3 2.5L7 15M12.5 15H17"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path class="g" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.8 1.8H4.2z"/><path class="g" d="M10 20.5a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle class="g" cx="12" cy="12" r="8.5"/><path class="g" d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path class="g" d="M4 20h16M6.5 20v-6M11 20V6M15.5 20v-9M20 20V9"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect class="g" x="3" y="6" width="18" height="12" rx="2"/><path class="g" d="M3 10h18M6.5 14.5h4"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect class="g" x="3" y="5.5" width="18" height="13" rx="2"/><path class="g" d="M3.5 7l8.5 6 8.5-6"/></symbol>
+    <symbol id="i-git" viewBox="0 0 24 24"><circle class="g" cx="6.5" cy="6" r="2.2"/><circle class="g" cx="6.5" cy="18" r="2.2"/><circle class="g" cx="17.5" cy="8.5" r="2.2"/><path class="g" d="M6.5 8.2v7.6M17.5 10.7c0 3.6-4 4.3-9.4 5.9"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path class="g" d="M7 18.5h10.5a4 4 0 0 0 .6-8A6 6 0 0 0 6.6 9.2 4.7 4.7 0 0 0 7 18.5z"/><path class="g" d="M12 11.5v5M9.8 14.3L12 16.5l2.2-2.2"/></symbol>
+  </defs>
+
+  <rect x="0" y="0" width="1520" height="870" rx="18" fill="#F3F4F6"/>
+  <text class="h" x="28" y="36">Mallakhamb on Oracle Cloud (OCI) · ap-mumbai-1 · Always Free</text>
+
+  <!-- ===== left: users, DNS, edge ===== -->
+  <g transform="translate(90,170)"><circle r="34" fill="#7B3FBF"/><use href="#i-globe" x="-20" y="-20" width="40" height="40"/></g>
+  <text class="t" x="90" y="225" text-anchor="middle">DNS</text>
+  <text class="xs" x="90" y="242" text-anchor="middle">sslip.io now · BigRock at cutover</text>
+  <line class="ln" x1="90" y1="252" x2="90" y2="384" marker-start="url(#a)" marker-end="url(#a)"/>
+
+  <g transform="translate(90,430)"><circle r="38" fill="#7B3FBF"/><use href="#i-users" x="-23" y="-23" width="46" height="46"/></g>
+  <text class="t" x="90" y="490" text-anchor="middle">Users</text>
+  <text class="xs" x="90" y="507" text-anchor="middle">players · coaches</text>
+  <text class="xs" x="90" y="522" text-anchor="middle">judges · admins</text>
+
+  <line class="ln" x1="130" y1="430" x2="210" y2="430" marker-end="url(#a)"/>
+  <text class="xs" x="170" y="420" text-anchor="middle">HTTPS 443</text>
+
+  <g transform="translate(250,430)"><circle r="34" fill="#7B3FBF"/><use href="#i-pin" x="-20" y="-20" width="40" height="40"/></g>
+  <text class="t" x="250" y="484" text-anchor="middle">Site IP</text>
+  <text class="xs" x="250" y="501" text-anchor="middle">137.23.63.84 (reserved)</text>
+  <text class="xs" x="250" y="516" text-anchor="middle">moves on failover</text>
+
+  <g transform="translate(330,250)"><circle r="32" fill="#D9453B"/><use href="#i-fw" x="-19" y="-19" width="38" height="38"/></g>
+  <text class="t" x="330" y="302" text-anchor="middle">3 firewalls</text>
+  <text class="xs" x="330" y="319" text-anchor="middle">security list · NSG · iptables</text>
+  <path class="ln" d="M330 330 V 405" marker-end="url(#a)"/>
+
+  <line class="ln" x1="286" y1="430" x2="366" y2="430" marker-end="url(#a)"/>
+  <g transform="translate(405,430)"><circle r="34" fill="#6B7380"/><use href="#i-gw" x="-20" y="-20" width="40" height="40"/></g>
+  <text class="t" x="405" y="484" text-anchor="middle">Internet</text>
+  <text class="t" x="405" y="503" text-anchor="middle">Gateway</text>
+  <text class="xs" x="405" y="521" text-anchor="middle">no NAT</text>
+
+  <!-- ===== the OCI box ===== -->
+  <rect x="470" y="56" width="760" height="790" rx="14" fill="#E4F2E8" stroke="#2E8B57" stroke-width="2"/>
+  <text class="t" x="490" y="82">VCN 10.0.0.0/16 · one public subnet · 3 fault domains</text>
+
+  <!-- app tier (white) -->
+  <rect x="492" y="96" width="384" height="734" rx="10" fill="#FFFFFF" stroke="#C9CFD6"/>
+  <text class="s" x="510" y="118" font-weight="700">App tier · 2 × A1 (Arm) 1 OCPU / 4 GB</text>
+
+  <!-- app-01 -->
+  <rect x="508" y="130" width="352" height="262" rx="10" fill="#FFF6EA" stroke="#E8891C" stroke-width="1.5"/>
+  <g transform="translate(548,172)"><circle r="26" fill="#E8891C"/><use href="#i-server" x="-15" y="-15" width="30" height="30"/></g>
+  <text class="t" x="584" y="166">app-01 · FD-1 · ACTIVE</text>
+  <text class="xs" x="584" y="184">10.0.0.50 · site IP on secondary 10.0.0.51</text>
+  <text class="xs" x="584" y="200">own egress IP 80.225.247.23</text>
+
+  <g transform="translate(572,282)"><circle r="28" fill="#E8891C"/><use href="#i-lock" x="-16" y="-16" width="32" height="32"/></g>
+  <g transform="translate(686,282)"><circle r="28" fill="#E8891C"/><use href="#i-hex" x="-16" y="-16" width="32" height="32"/></g>
+  <g transform="translate(800,282)"><circle r="28" fill="#E8891C"/><use href="#i-scan" x="-16" y="-16" width="32" height="32"/></g>
+  <line class="ln" x1="602" y1="282" x2="654" y2="282" marker-end="url(#a)"/>
+  <line class="ln" x1="716" y1="282" x2="768" y2="282" marker-end="url(#a)"/>
+  <text class="s" x="572" y="330" text-anchor="middle" font-weight="700">Caddy</text>
+  <text class="xs" x="572" y="346" text-anchor="middle">TLS · SPA · proxy</text>
+  <text class="s" x="686" y="330" text-anchor="middle" font-weight="700">Node API</text>
+  <text class="xs" x="686" y="346" text-anchor="middle">:5000 REST + socket.io</text>
+  <text class="s" x="800" y="330" text-anchor="middle" font-weight="700">OCR</text>
+  <text class="xs" x="800" y="346" text-anchor="middle">:8090 PP-OCRv5</text>
+  <text class="xs" x="684" y="374" text-anchor="middle">+ Alloy (metrics) · backup timers · nightly e2e 00/18 IST</text>
+
+  <!-- role reconciler (like the ASG) -->
+  <g transform="translate(684,468)"><circle r="32" fill="#A2561C"/><use href="#i-sync" x="-19" y="-19" width="38" height="38"/></g>
+  <text class="t" x="726" y="460">mallakhamb-role</text>
+  <text class="xs" x="726" y="477">every 20 s on both VMs:</text>
+  <text class="xs" x="726" y="492">IP holder = active;</text>
+  <text class="xs" x="726" y="507">standby takes over in ~4 min</text>
+  <path class="dl" d="M684 436 V 396" marker-end="url(#ag)"/>
+  <path class="dl" d="M684 500 V 540" marker-end="url(#ag)"/>
+
+  <!-- app-02 -->
+  <rect x="508" y="544" width="352" height="270" rx="10" fill="#F6F6F6" stroke="#B8BEC6" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <g transform="translate(548,586)"><circle r="26" fill="#C68A4E"/><use href="#i-server" x="-15" y="-15" width="30" height="30"/></g>
+  <text class="t" x="584" y="580">app-02 · FD-2 · STANDBY</text>
+  <text class="xs" x="584" y="598">10.0.0.245 · secondary 10.0.0.246 (empty)</text>
+  <text class="xs" x="584" y="614">own egress IP 130.210.4.142</text>
+  <g opacity="0.45">
+    <g transform="translate(572,696)"><circle r="28" fill="#E8891C"/><use href="#i-lock" x="-16" y="-16" width="32" height="32"/></g>
+    <g transform="translate(686,696)"><circle r="28" fill="#E8891C"/><use href="#i-hex" x="-16" y="-16" width="32" height="32"/></g>
+    <g transform="translate(800,696)"><circle r="28" fill="#E8891C"/><use href="#i-scan" x="-16" y="-16" width="32" height="32"/></g>
+  </g>
+  <text class="xs" x="686" y="752" text-anchor="middle">same release, same env, Caddy sites parked</text>
+  <text class="xs" x="686" y="768" text-anchor="middle">API + OCR installed but stopped</text>
+  <text class="xs" x="686" y="796" text-anchor="middle">+ Alloy · nightly e2e 06/12 IST</text>
+
+  <!-- traffic into the app tier -->
+  <path class="ln" d="M439 430 H 476 V 282 H 540" marker-end="url(#a)"/>
+  <path class="dl" d="M476 430 V 696 H 540" marker-end="url(#ag)"/>
+  <text class="xs" x="482" y="660" transform="rotate(-90 482 660)" fill="#6B7380">after failover</text>
+
+  <!-- data tier -->
+  <text class="s" x="900" y="118" font-weight="700">Data tier · MongoDB 8.0 replica set</text>
+  <text class="xs" x="900" y="134">one database, three copies · w: majority (2 of 3)</text>
+
+  <g transform="translate(944,206)"><circle r="32" fill="#2E8B57"/><use href="#i-db" x="-19" y="-19" width="38" height="38"/></g>
+  <text class="t" x="986" y="198">PRIMARY · p2</text>
+  <text class="xs" x="986" y="215">on app-01 · takes every write</text>
+
+  <g transform="translate(944,430)"><circle r="32" fill="#2E8B57"/><use href="#i-db" x="-19" y="-19" width="38" height="38"/></g>
+  <text class="t" x="986" y="422">SECONDARY · p1</text>
+  <text class="xs" x="986" y="439">on app-02 · becomes primary</text>
+  <text class="xs" x="986" y="454">if app-01 is lost (~10 s)</text>
+
+  <g transform="translate(944,654)"><circle r="32" fill="#2E8B57"/><use href="#i-db" x="-19" y="-19" width="38" height="38"/></g>
+  <text class="t" x="986" y="640">HIDDEN · p0 · 1 vote</text>
+  <text class="xs" x="986" y="657">db-03 · FD-3 · E2.1.Micro 1 GB</text>
+  <text class="xs" x="986" y="672">tie-breaker + backup source</text>
+
+  <path class="rp" d="M944 240 V 396" marker-start="url(#a)" marker-end="url(#a)"/>
+  <path class="rp" d="M944 464 V 620" marker-start="url(#a)" marker-end="url(#a)"/>
+  <text class="xs" x="952" y="322" fill="#2E8B57">replication · TLS + x.509</text>
+
+  <!-- API → primary -->
+  <path class="ln" d="M860 206 H 908" marker-end="url(#a)"/>
+  <text class="xs" x="884" y="197" text-anchor="middle">writes</text>
+
+  <!-- ===== right: OCI services ===== -->
+  <g transform="translate(1300,110)"><circle r="30" fill="#C2399E"/><use href="#i-id" x="-18" y="-18" width="36" height="36"/></g>
+  <text class="t" x="1342" y="104">IAM</text><text class="xs" x="1342" y="121">dynamic group · 4 policies</text><text class="xs" x="1342" y="136">quota = free tier only</text>
+  <g transform="translate(1300,232)"><circle r="30" fill="#C2399E"/><use href="#i-key" x="-18" y="-18" width="36" height="36"/></g>
+  <text class="t" x="1342" y="226">Vault</text><text class="xs" x="1342" y="243">API env · DB certs + users</text><text class="xs" x="1342" y="258">off-site URI</text>
+  <g transform="translate(1300,354)"><circle r="30" fill="#C2399E"/><use href="#i-bucket" x="-18" y="-18" width="36" height="36"/></g>
+  <text class="t" x="1342" y="348">Object Storage</text><text class="xs" x="1342" y="365">daily · monthly · meet dumps</text><text class="xs" x="1342" y="380">15-min oplog slices (PITR)</text>
+  <g transform="translate(1300,476)"><circle r="30" fill="#C2399E"/><use href="#i-term" x="-18" y="-18" width="36" height="36"/></g>
+  <text class="t" x="1342" y="470">Bastion</text><text class="xs" x="1342" y="487">the only SSH way in</text><text class="xs" x="1342" y="502">sessions ≤ 3 h</text>
+  <g transform="translate(1300,598)"><circle r="30" fill="#C2399E"/><use href="#i-bell" x="-18" y="-18" width="36" height="36"/></g>
+  <text class="t" x="1342" y="592">Events + ONS</text><text class="xs" x="1342" y="609">email on VM stop /</text><text class="xs" x="1342" y="624">reset / terminate</text>
+  <g transform="translate(1300,720)"><circle r="30" fill="#C2399E"/><use href="#i-clock" x="-18" y="-18" width="36" height="36"/></g>
+  <text class="t" x="1342" y="714">Scheduler</text><text class="xs" x="1342" y="731">starts a stopped VM</text><text class="xs" x="1342" y="746">at :07 / :37</text>
+  <g class="ln" marker-start="url(#a)" marker-end="url(#a)">
+    <line x1="1234" y1="110" x2="1266" y2="110"/><line x1="1234" y1="232" x2="1266" y2="232"/>
+    <line x1="1234" y1="354" x2="1266" y2="354"/><line x1="1234" y1="476" x2="1266" y2="476"/>
+    <line x1="1234" y1="598" x2="1266" y2="598"/><line x1="1234" y1="720" x2="1266" y2="720"/>
+  </g>
+  <text class="xs" x="1300" y="796" text-anchor="middle">Block storage: 3 × 50 GB boot volumes</text>
+  <text class="xs" x="1300" y="812" text-anchor="middle">+ golden image + weekly backups</text>
+
+  <!-- ===== bottom-left: outside services ===== -->
+  <rect x="24" y="576" width="420" height="270" rx="12" fill="#FFFFFF" stroke="#C9CFD6"/>
+  <text class="s" x="40" y="600" font-weight="700">Outside OCI</text>
+  <g transform="translate(90,650)"><circle r="26" fill="#2F6FD6"/><use href="#i-card" x="-15" y="-15" width="30" height="30"/></g>
+  <text class="s" x="90" y="696" text-anchor="middle" font-weight="700">Razorpay</text><text class="xs" x="90" y="714" text-anchor="middle">payments + webhooks</text>
+  <g transform="translate(234,650)"><circle r="26" fill="#2F6FD6"/><use href="#i-mail" x="-15" y="-15" width="30" height="30"/></g>
+  <text class="s" x="234" y="696" text-anchor="middle" font-weight="700">Gmail API</text><text class="xs" x="234" y="714" text-anchor="middle">OTPs · Player IDs</text>
+  <g transform="translate(372,650)"><circle r="26" fill="#2F6FD6"/><use href="#i-git" x="-15" y="-15" width="30" height="30"/></g>
+  <text class="s" x="372" y="696" text-anchor="middle" font-weight="700">GitHub</text><text class="xs" x="372" y="714" text-anchor="middle">read-only deploy key</text>
+  <g transform="translate(140,768)"><circle r="26" fill="#2F6FD6"/><use href="#i-chart" x="-15" y="-15" width="30" height="30"/></g>
+  <text class="s" x="140" y="814" text-anchor="middle" font-weight="700">Grafana Cloud</text><text class="xs" x="140" y="832" text-anchor="middle">metrics · 29 alerts · synthetics</text>
+  <g transform="translate(320,768)"><circle r="26" fill="#2F6FD6"/><use href="#i-cloud" x="-15" y="-15" width="30" height="30"/></g>
+  <text class="s" x="320" y="814" text-anchor="middle" font-weight="700">MongoDB Atlas</text><text class="xs" x="320" y="832" text-anchor="middle">hourly off-site copy</text>
+  <path class="ln" d="M444 720 H 476" marker-start="url(#a)" marker-end="url(#a)"/>
+</svg>

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 400" width="1480" height="400" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<title>Automatic failover in four steps</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9z" fill="#2B2F36"/></marker>
+<style>.t{font-size:16px;font-weight:700;fill:#1F2329}.v{font-size:14px;font-weight:700}.r{font-size:12px}.c{font-size:12.5px;fill:#3D434C}</style></defs>
+<rect width="1480" height="400" rx="18" fill="#F3F4F6"/>
+<rect x="20" y="16" width="345" height="368" rx="12" fill="#fff" stroke="#C9CFD6"/>
+<text class="t" x="36" y="44">1 · Normal</text>
+<circle cx="115" cy="88" r="22" fill="#7B3FBF"/><text x="115" y="93" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">IP</text>
+<text x="192" y="72" text-anchor="middle" class="r" fill="#5A616B">137.23.63.84</text>
+<line x1="115" y1="110" x2="115" y2="142" stroke="#2B2F36" stroke-width="2" marker-end="url(#a)"/>
+<rect x="40" y="146" width="150" height="96" rx="10" fill="#E8891C" stroke="#8A8F98"/>
+<text class="v" x="115" y="172" text-anchor="middle" fill="#fff">app-01</text>
+<text class="r" x="115" y="192" text-anchor="middle" fill="#fff">web: ACTIVE</text>
+<rect x="60" y="204" width="110" height="26" rx="13" fill="#2E8B57"/>
+<text class="r" x="115" y="222" text-anchor="middle" fill="#fff">DB: PRIMARY</text>
+<rect x="195" y="146" width="150" height="96" rx="10" fill="#C9CDD3" stroke="#8A8F98" stroke-dasharray="5 4"/>
+<text class="v" x="270" y="172" text-anchor="middle" fill="#1F2329">app-02</text>
+<text class="r" x="270" y="192" text-anchor="middle" fill="#1F2329">web: standby</text>
+<rect x="215" y="204" width="110" height="26" rx="13" fill="#7FB89A"/>
+<text class="r" x="270" y="222" text-anchor="middle" fill="#fff">DB: SECONDARY</text>
+<rect x="117" y="262" width="150" height="40" rx="10" fill="#E4F2E8" stroke="#2E8B57"/>
+<text class="r" x="192" y="287" text-anchor="middle" fill="#1F2329">db-03 · HIDDEN</text>
+<text class="c" x="36" y="334">app-01 serves the site; every write is on</text>
+<text class="c" x="36" y="353">2 of 3 copies before the user sees &quot;saved&quot;.</text>
+<path d="M367 200 h14" stroke="#2B2F36" stroke-width="2" marker-end="url(#a)"/>
+<rect x="385" y="16" width="345" height="368" rx="12" fill="#fff" stroke="#C9CFD6"/>
+<text class="t" x="401" y="44">2 · app-01 is lost</text>
+<circle cx="480" cy="88" r="22" fill="#7B3FBF"/><text x="480" y="93" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">IP</text>
+<text x="557" y="72" text-anchor="middle" class="r" fill="#5A616B">137.23.63.84</text>
+<line x1="480" y1="110" x2="480" y2="142" stroke="#2B2F36" stroke-width="2" marker-end="url(#a)"/>
+<rect x="405" y="146" width="150" height="96" rx="10" fill="#D9453B" stroke="#8A8F98"/>
+<text class="v" x="480" y="172" text-anchor="middle" fill="#fff">app-01</text>
+<text class="r" x="480" y="192" text-anchor="middle" fill="#fff">web: DOWN</text>
+<rect x="425" y="204" width="110" height="26" rx="13" fill="#6B7380"/>
+<text class="r" x="480" y="222" text-anchor="middle" fill="#fff">DB: —</text>
+<rect x="560" y="146" width="150" height="96" rx="10" fill="#C9CDD3" stroke="#8A8F98" stroke-dasharray="5 4"/>
+<text class="v" x="635" y="172" text-anchor="middle" fill="#1F2329">app-02</text>
+<text class="r" x="635" y="192" text-anchor="middle" fill="#1F2329">web: standby</text>
+<rect x="580" y="204" width="110" height="26" rx="13" fill="#2E8B57"/>
+<text class="r" x="635" y="222" text-anchor="middle" fill="#fff">DB: PRIMARY ✓</text>
+<rect x="482" y="262" width="150" height="40" rx="10" fill="#E4F2E8" stroke="#2E8B57"/>
+<text class="r" x="557" y="287" text-anchor="middle" fill="#1F2329">db-03 · voted</text>
+<text class="c" x="401" y="334">DB: app-02 + db-03 elect a new PRIMARY in ~10 s,</text>
+<text class="c" x="401" y="353">no data lost. Site: no answer yet.</text>
+<path d="M732 200 h14" stroke="#2B2F36" stroke-width="2" marker-end="url(#a)"/>
+<rect x="750" y="16" width="345" height="368" rx="12" fill="#fff" stroke="#C9CFD6"/>
+<text class="t" x="766" y="44">3 · app-02 takes over (~4 min)</text>
+<circle cx="1000" cy="88" r="22" fill="#7B3FBF"/><text x="1000" y="93" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">IP</text>
+<text x="922" y="72" text-anchor="middle" class="r" fill="#5A616B">137.23.63.84</text>
+<line x1="1000" y1="110" x2="1000" y2="142" stroke="#2B2F36" stroke-width="2" marker-end="url(#a)"/>
+<rect x="770" y="146" width="150" height="96" rx="10" fill="#D9453B" stroke="#8A8F98"/>
+<text class="v" x="845" y="172" text-anchor="middle" fill="#fff">app-01</text>
+<text class="r" x="845" y="192" text-anchor="middle" fill="#fff">web: DOWN</text>
+<rect x="790" y="204" width="110" height="26" rx="13" fill="#6B7380"/>
+<text class="r" x="845" y="222" text-anchor="middle" fill="#fff">DB: —</text>
+<rect x="925" y="146" width="150" height="96" rx="10" fill="#E8891C" stroke="#8A8F98"/>
+<text class="v" x="1000" y="172" text-anchor="middle" fill="#fff">app-02</text>
+<text class="r" x="1000" y="192" text-anchor="middle" fill="#fff">web: ACTIVE</text>
+<rect x="945" y="204" width="110" height="26" rx="13" fill="#2E8B57"/>
+<text class="r" x="1000" y="222" text-anchor="middle" fill="#fff">DB: PRIMARY</text>
+<rect x="847" y="262" width="150" height="40" rx="10" fill="#E4F2E8" stroke="#2E8B57"/>
+<text class="r" x="922" y="287" text-anchor="middle" fill="#1F2329">db-03 · HIDDEN</text>
+<text class="c" x="766" y="334">6 checks in a row: site down AND machine gone →</text>
+<text class="c" x="766" y="353">app-02 moves the site IP to itself, promotes, alerts.</text>
+<path d="M1097 200 h14" stroke="#2B2F36" stroke-width="2" marker-end="url(#a)"/>
+<rect x="1115" y="16" width="345" height="368" rx="12" fill="#fff" stroke="#C9CFD6"/>
+<text class="t" x="1131" y="44">4 · app-01 comes back</text>
+<circle cx="1365" cy="88" r="22" fill="#7B3FBF"/><text x="1365" y="93" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">IP</text>
+<text x="1287" y="72" text-anchor="middle" class="r" fill="#5A616B">137.23.63.84</text>
+<line x1="1365" y1="110" x2="1365" y2="142" stroke="#2B2F36" stroke-width="2" marker-end="url(#a)"/>
+<rect x="1135" y="146" width="150" height="96" rx="10" fill="#C9CDD3" stroke="#8A8F98" stroke-dasharray="5 4"/>
+<text class="v" x="1210" y="172" text-anchor="middle" fill="#1F2329">app-01</text>
+<text class="r" x="1210" y="192" text-anchor="middle" fill="#1F2329">web: standby</text>
+<rect x="1155" y="204" width="110" height="26" rx="13" fill="#2E8B57"/>
+<text class="r" x="1210" y="222" text-anchor="middle" fill="#fff">DB: PRIMARY</text>
+<rect x="1290" y="146" width="150" height="96" rx="10" fill="#E8891C" stroke="#8A8F98"/>
+<text class="v" x="1365" y="172" text-anchor="middle" fill="#fff">app-02</text>
+<text class="r" x="1365" y="192" text-anchor="middle" fill="#fff">web: ACTIVE</text>
+<rect x="1310" y="204" width="110" height="26" rx="13" fill="#7FB89A"/>
+<text class="r" x="1365" y="222" text-anchor="middle" fill="#fff">DB: SECONDARY</text>
+<rect x="1212" y="262" width="150" height="40" rx="10" fill="#E4F2E8" stroke="#2E8B57"/>
+<text class="r" x="1287" y="287" text-anchor="middle" fill="#1F2329">db-03 · HIDDEN</text>
+<text class="c" x="1131" y="334">It sees the IP elsewhere and demotes itself; the DB</text>
+<text class="c" x="1131" y="353">catches up. Fail back later: mallakhamb-role takeover.</text>
+</svg>

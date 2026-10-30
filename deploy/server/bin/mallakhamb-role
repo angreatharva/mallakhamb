@@ -136,14 +136,22 @@ else
 fi
 
 move_ip_to_me() {   # attach the service IP to THIS VM's secondary private IP
-  local sec
+  local sec err
   sec="$(oci_ network private-ip list --vnic-id "$MYVNIC" --query 'data[?"is-primary"==`false`] | [0].id' --raw-output)"
   [ -n "$sec" ] && [ "$sec" != null ] || { log "this VM has no secondary private IP: run service-ip-setup.sh first"; return 1; }
-  if ! oci_ network public-ip update --public-ip-id "$P1_ID" --private-ip-id "$sec" --force \
-         --wait-for-state ASSIGNED --max-wait-seconds 120 >/dev/null; then
-    log "direct move refused; unassigning first"
-    oci_ network public-ip update --public-ip-id "$P1_ID" --private-ip-id '' --force --wait-for-state AVAILABLE --max-wait-seconds 120 >/dev/null || return 1
-    oci_ network public-ip update --public-ip-id "$P1_ID" --private-ip-id "$sec" --force --wait-for-state ASSIGNED --max-wait-seconds 120 >/dev/null || return 1
+  ipupd() { timeout 150 "$OCI" network public-ip update --public-ip-id "$P1_ID" --private-ip-id "$1" --force \
+              --wait-for-state "$2" --max-wait-seconds 120 2>&1 >/dev/null | grep -o '"code": "[^"]*"' | head -1; }
+  err="$(ipupd "$sec" ASSIGNED)"
+  if [ -n "$err" ] || [ "$(oci_ network public-ip get --public-ip-id "$P1_ID" --query 'data."private-ip-id"' --raw-output)" != "$sec" ]; then
+    log "direct move refused (${err:-not attached}); trying unassign + assign"
+    err="$(ipupd '' AVAILABLE)"
+    [ -z "$err" ] || { log "unassign refused (${err}): the IP stays where it was"; return 1; }
+    err="$(ipupd "$sec" ASSIGNED)"
+    if [ -n "$err" ]; then
+      log "assign refused (${err}) after unassign: putting the IP back on its previous address"
+      [ -n "${P1_PRIV:-}" ] && [ "$P1_PRIV" != null ] && ipupd "$P1_PRIV" ASSIGNED >/dev/null
+      return 1
+    fi
   fi
   HOLDER=me; CTS=$(date +%s)
 }
@@ -154,7 +162,7 @@ fi
 
 # --- manual takeover: "make THIS VM the active now" (planned switch, failback) ---
 if [ "$CMD" = takeover ]; then
-  [ "$HOLDER" = me ] && log "already holding the service IP" || { log "takeover: moving the service IP to app-$ME"; move_ip_to_me || finish 1; }
+  [ "$HOLDER" = me ] && log "already holding the service IP" || { log "takeover: moving the service IP to app-$ME"; move_ip_to_me || { log "takeover FAILED: nothing changed"; finish 1; }; }
   [ "$ROLE" = standby ] && { /usr/local/bin/mallakhamb-promote || finish 1; }
   log "takeover done: app-$ME is the active; app-$OTHER demotes itself on its next tick"
   BAD=0; finish

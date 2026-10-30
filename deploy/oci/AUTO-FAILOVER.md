@@ -67,7 +67,7 @@ flowchart TB
 
 ## Permissions
 
-Policy **`mallakhamb-prod-pol-failover`** (`deploy/oci/scripts/auto-failover-iam.sh`) for dynamic group `mallakhamb-prod-dg-app`, in compartment `mallakhamb-prod`: `read instances`, `inspect vnic-attachments`, `use private-ips`, `use public-ips`. Deleting the policy switches automatic failover off (the VMs then report `oci_ok 0` and change nothing). Trade-off: a compromised app VM could move the site's IP. It is the web server already, so it could take the site down anyway. It cannot create, delete or pay for anything.
+Policy **`mallakhamb-prod-pol-failover`** (`deploy/oci/scripts/auto-failover-iam.sh`) for dynamic group `mallakhamb-prod-dg-app`, in compartment `mallakhamb-prod`: `read instances`, `inspect vnic-attachments`, `use private-ips`, `use public-ips`, and `manage public-ips` **restricted to `PUBLIC_IP_UPDATE`**. Re-pointing a reserved IP at another private IP is an *update*, which `use` doesn't include (the first drill failed safely with `NotAuthorizedOrNotFound`). The condition keeps create and delete out of reach. Deleting the policy switches automatic failover off (the VMs then report `oci_ok 0` and change nothing). Trade-off: a compromised app VM could move the site's IP. It is the web server already, so it could take the site down anyway. It cannot create, delete or pay for anything.
 
 ## Alerts (Grafana, staging group `-stg`)
 
@@ -95,3 +95,16 @@ Policy **`mallakhamb-prod-pol-failover`** (`deploy/oci/scripts/auto-failover-iam
 2. `service-ip-setup.sh migrate` at 18:11:20: 137.23.63.84 moved from app-01's primary to its secondary. **One failed health check (1 s).** app-01's primary got the ephemeral egress IP 80.225.247.23.
 3. `auto-failover-iam.sh`: policy ACTIVE.
 4. `mallakhamb-role` in observe mode on both VMs, then `act`. The decision logic was first checked locally against 16 simulated situations (machine loss three ways, API crash, standby partitioned, observe, maintenance switch, cool-down, no primary, OCI down, IP on nobody, returning active, manual takeover, `is-active` in four cases).
+5. **Drills (2026-10-30, UTC; public health checked every second from outside):**
+
+| Drill | Result |
+|---|---|
+| A1 · planned `takeover` on app-02 | **Failed safely**: OCI refused the move (`NotAuthorizedOrNotFound`, needs `PUBLIC_IP_UPDATE`); 0 failed checks. Policy got its fifth statement |
+| A2 · `takeover` on app-02 again | IP moved, app-01 demoted itself, but **the site was down 18:50:58–18:53:55**. Root cause in the *existing* `mallakhamb-promote`: `caddy validate` ran as root, created the missing OCR access log root-owned, the reload failed, `set -e` stopped promote before the API started. Fixed: validate as `caddy`, `chown` the log folder first |
+| A3 · failback `takeover` on app-01 | 3 failed checks (**~8 s**); app-02 demoted itself |
+| **B · hard power-off of app-01** (`instance action STOP`, 18:57:06) | app-02 logged 6 ticks of `oci=STOPPED seen-by-me=0 seen-by-db03=0 primary=app-02.db`, moved the IP and promoted. **Down 18:57:12 → 19:00:52 (3 min 40 s), no human, no data lost.** Alerts fired: *Standby thinks the active is gone*, then *Automatic failover happened* (critical, 19:02:20) |
+| B · return | The Resource Scheduler started app-01 at 19:07:33. On its first tick it saw the IP on app-02 and **demoted itself**; its mongod took PRIMARY back (priority 2). 0 failed checks |
+| C · failback `takeover` on app-01 | 2 failed checks (**~5 s**) |
+| After | e2e 00:00 IST PASSED (869 s); off-site copy from app-01's new egress IP OK (18 collections / 358 documents, read from db-03) |
+
+Before (manual): 62–95 s **once someone noticed**. Now: ~4 min with nobody awake, ~5–8 s for a planned switch.

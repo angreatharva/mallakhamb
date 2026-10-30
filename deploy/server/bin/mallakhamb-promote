@@ -4,7 +4,12 @@ set -euo pipefail
 rm -f /etc/mallakhamb/STANDBY
 shopt -s nullglob
 for f in /etc/caddy/sites-standby/*.caddy; do cp "$f" /etc/caddy/sites/; done
-caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy      # certificates are issued now that the IP is here
+# Validate AS caddy: run as root, validate creates any missing access log root-owned, and the reload
+# then fails with "permission denied" (drill 2026-10-30: the site stayed down until fixed by hand).
+mkdir -p /var/log/caddy && chown -R caddy:caddy /var/log/caddy
+runuser -u caddy -- caddy validate --config /etc/caddy/Caddyfile >/dev/null \
+  || { echo "CADDY CONFIG INVALID — not promoting further" >&2; exit 1; }
+systemctl reload caddy      # certificates are issued now that the IP is here
 /usr/local/bin/mallakhamb-render-env
 systemctl enable --now mallakhamb
 for i in $(seq 1 60); do
