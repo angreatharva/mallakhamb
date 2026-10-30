@@ -272,6 +272,10 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     if (isSuperAdmin && activeTab === 'overview') {
       fetchCompetitions();
       fetchSuperAdminData();
+    } else if (isSuperAdmin && activeTab === 'finals') {
+      // The Finals tab has its own meet picker, which needs the list.
+      if (!competitions.length) fetchCompetitions();
+      setLoading(false);
     } else if (!isSuperAdmin && activeTab === 'dashboard') {
       if (currentCompetition) {
         logger.info('Fetching admin dashboard data for competition', { competitionId: currentCompetition._id });
@@ -580,7 +584,22 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         case 'player-teams':
           return <SuperAdminPlayerTeams />;
         case 'finals':
-          return <AdminFinals isSuperAdmin competitionId={selectedCompetition || null} />;
+          return (
+            <AdminFinals isSuperAdmin competitionId={selectedCompetition || null}
+              meetPicker={(
+                <Dropdown
+                  label="Competition"
+                  options={competitions.map((comp) => ({ value: comp._id, label: `${comp.name} (${comp.year}) — ${comp.place}` }))}
+                  value={selectedCompetition ? (() => {
+                    const comp = competitions.find((c) => c._id === selectedCompetition);
+                    return { value: selectedCompetition, label: comp ? `${comp.name} (${comp.year}) — ${comp.place}` : '' };
+                  })() : null}
+                  onChange={(option) => setSelectedCompetition(option ? option.value : null)}
+                  placeholder="Choose a competition"
+                />
+              )}
+            />
+          );
         default:
           return null;
       }

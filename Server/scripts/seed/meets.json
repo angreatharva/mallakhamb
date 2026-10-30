@@ -25,30 +25,185 @@
   "name": "Bhausaheb Ranade Navodit",
   "year": 2026,
   "meets": [
-    { "place": "Mumbai", "level": "district", "startDate": "2026-10-03" },
-    { "place": "Pune", "level": "district", "startDate": "2026-10-10" },
-    { "place": "Nashik", "level": "district", "startDate": "2026-10-17" },
-
-    { "place": "Nagpur", "level": "state", "startDate": "2026-10-24" },
-    { "place": "Kolhapur", "level": "state", "startDate": "2026-10-31" },
-    { "place": "Aurangabad", "level": "state", "startDate": "2026-11-07" },
-
-    { "place": "Delhi", "level": "national", "startDate": "2026-11-14" },
-    { "place": "Bengaluru", "level": "national", "startDate": "2026-11-21" },
-    { "place": "Chennai", "level": "national", "startDate": "2026-11-28" },
-
-    { "place": "Goa", "level": "international", "startDate": "2026-12-05" },
-    { "place": "Hyderabad", "level": "international", "startDate": "2026-12-12" },
-    { "place": "Kolkata", "level": "international", "startDate": "2026-12-19" },
-
-    { "place": "Varanasi", "level": "university", "startDate": "2026-12-26" },
-    { "place": "Bhopal", "level": "university", "startDate": "2027-01-02" },
-    { "place": "Jaipur", "level": "university", "startDate": "2027-01-09" },
-    { "place": "Indore", "level": "university", "startDate": "2027-01-16" },
-
-    { "place": "Thane", "level": "dso", "startDate": "2027-01-23" },
-    { "place": "Satara", "level": "dso", "startDate": "2027-01-30" },
-    { "place": "Ratnagiri", "level": "dso", "startDate": "2027-02-06" },
-    { "place": "Latur", "level": "dso", "startDate": "2027-02-13" }
+    {
+      "place": "Mumbai",
+      "level": "district",
+      "startDate": "2026-10-03",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Pune",
+      "level": "district",
+      "startDate": "2026-10-10",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2"
+      ]
+    },
+    {
+      "place": "Nashik",
+      "level": "district",
+      "startDate": "2026-10-17",
+      "competitionTypes": [
+        "competition_1",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Nagpur",
+      "level": "state",
+      "startDate": "2026-10-24",
+      "competitionTypes": [
+        "competition_1"
+      ]
+    },
+    {
+      "place": "Kolhapur",
+      "level": "state",
+      "startDate": "2026-10-31",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Aurangabad",
+      "level": "state",
+      "startDate": "2026-11-07",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2"
+      ]
+    },
+    {
+      "place": "Delhi",
+      "level": "national",
+      "startDate": "2026-11-14",
+      "competitionTypes": [
+        "competition_1",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Bengaluru",
+      "level": "national",
+      "startDate": "2026-11-21",
+      "competitionTypes": [
+        "competition_1"
+      ]
+    },
+    {
+      "place": "Chennai",
+      "level": "national",
+      "startDate": "2026-11-28",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Goa",
+      "level": "international",
+      "startDate": "2026-12-05",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2"
+      ]
+    },
+    {
+      "place": "Hyderabad",
+      "level": "international",
+      "startDate": "2026-12-12",
+      "competitionTypes": [
+        "competition_1",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Kolkata",
+      "level": "international",
+      "startDate": "2026-12-19",
+      "competitionTypes": [
+        "competition_1"
+      ]
+    },
+    {
+      "place": "Varanasi",
+      "level": "university",
+      "startDate": "2026-12-26",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Bhopal",
+      "level": "university",
+      "startDate": "2027-01-02",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2"
+      ]
+    },
+    {
+      "place": "Jaipur",
+      "level": "university",
+      "startDate": "2027-01-09",
+      "competitionTypes": [
+        "competition_1",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Indore",
+      "level": "university",
+      "startDate": "2027-01-16",
+      "competitionTypes": [
+        "competition_1"
+      ]
+    },
+    {
+      "place": "Thane",
+      "level": "dso",
+      "startDate": "2027-01-23",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Satara",
+      "level": "dso",
+      "startDate": "2027-01-30",
+      "competitionTypes": [
+        "competition_1",
+        "competition_2"
+      ]
+    },
+    {
+      "place": "Ratnagiri",
+      "level": "dso",
+      "startDate": "2027-02-06",
+      "competitionTypes": [
+        "competition_1",
+        "competition_3"
+      ]
+    },
+    {
+      "place": "Latur",
+      "level": "dso",
+      "startDate": "2027-02-13",
+      "competitionTypes": [
+        "competition_1"
+      ]
+    }
   ]
 }

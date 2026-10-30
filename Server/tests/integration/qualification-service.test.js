@@ -106,12 +106,19 @@ describe('qualification service', () => {
     expect(pole().qualifiers.map((q) => q.playerName)).toEqual(['A1 Q', 'A2 Q', 'B1 Q']); // A3 passed over: Alpha already has 2
     expect(pole().skipped).toEqual([expect.objectContaining({ playerName: 'A3 Q', reason: 'team_cap' })]);
 
-    // The entries now carry the finals the engine decided.
+    // Built, but nobody is entered or emailed until an admin finalizes it.
+    const entryOf = (doc, p) => doc.registeredTeams.flatMap((rt) => rt.players).find((e) => String(e.player) === String(p._id));
+    const before = await Competition.findById(competition._id).lean();
+    expect(entryOf(before, a1).apparatus.competition_3).toBeUndefined();
+    expect(otpService.notifyCoachOfQualifiers).not.toHaveBeenCalled();
+
+    const result = await service.finalizeAll({ id: null }, competition._id);
+    expect(result.finalized.map((f) => f.label)).toEqual(expect.arrayContaining([expect.stringMatching(/Under 14 · Pole/), expect.stringMatching(/Under 14 · Rope/)]));
+    expect(result.finals.find((f) => f.apparatus === POLE && f.ageGroup === 'Under14').status).toBe('finalized');
     const saved = await Competition.findById(competition._id).lean();
-    const entryOf = (p) => saved.registeredTeams.flatMap((rt) => rt.players).find((e) => String(e.player) === String(p._id));
-    expect(entryOf(a1).apparatus.competition_3).toEqual(expect.arrayContaining([POLE, ROPE]));
+    expect(entryOf(saved, a1).apparatus.competition_3).toEqual(expect.arrayContaining([POLE, ROPE]));
     // A3 is Alpha's third on both apparatus: passed over on each, in no final.
-    expect(entryOf(a3).apparatus.competition_3).toBeUndefined();
+    expect(entryOf(saved, a3).apparatus.competition_3).toBeUndefined();
     expect(otpService.notifyCoachOfQualifiers).toHaveBeenCalled();
   });
 
@@ -150,7 +157,9 @@ describe('qualification service', () => {
     const doc = (await service.list(competition._id)).find((f) => f.apparatus === POLE);
     expect(doc.qualifiers).toHaveLength(4);
     // Make the cap bite less: withdraw P2, everyone else stays (only 4 performed).
+    await service.finalize({ id: null }, doc._id);
     const after = await service.withdraw({ id: null }, doc._id, { playerId: String(boys[1]._id) });
+    expect(after.finalizedAt).toBeTruthy(); // still finalized, the next in rank in the freed place
     expect(ids(after.qualifiers)).toEqual([boys[0], boys[2], boys[3]].map((p) => String(p._id)).sort());
 
     // The final starts: a Competition I correction now only warns.
@@ -178,5 +187,40 @@ describe('qualification service', () => {
     await scores(legacy, a, 'Under14', [[p, POLE, 9]]);
     await service.onCompetitionOneChange(legacy._id, 'Male', 'Under14');
     expect(await service.list(legacy._id)).toEqual([]);
+  });
+
+  test('finalize is refused while Competition I is unlocked; a finalized list only warns on a correction; Super Admin reopens it', async () => {
+    const { service } = build();
+    const a = await team('Gate');
+    const b = await team('Gated');
+    const [g1, g2] = [await player('Ga', 13), await player('Gb', 13)];
+    const competition = await meet([
+      { team: a, players: [{ player: g1, ageGroup: 'Under14' }] },
+      { team: b, players: [{ player: g2, ageGroup: 'Under14' }] },
+    ], ['competition_1', 'competition_3']);
+    await scores(competition, a, 'Under14', [[g1, POLE, 9], [g1, ROPE, 9]]);
+    await service.onCompetitionOneChange(competition._id, 'Male', 'Under14');
+    let pole = (await service.list(competition._id)).find((f) => f.apparatus === POLE);
+    expect(pole.blockers.join(' ')).toMatch(/Gated: Competition I Pole not locked yet/);
+    await expect(service.finalize({ id: null }, pole._id)).rejects.toMatchObject({ details: expect.objectContaining({ reason: 'NOT_READY' }) });
+
+    const bScores = await scores(competition, b, 'Under14', [[g2, POLE, 8], [g2, ROPE, 8]]);
+    await service.finalize({ id: null }, pole._id);
+    // A correction that would reorder the finalists: the finalized list stays, with a warning.
+    await Score.updateOne({ _id: bScores._id }, { $set: { 'playerScores.0.finalScore': 9.9 } });
+    await service.onCompetitionOneChange(competition._id, 'Male', 'Under14');
+    pole = (await service.list(competition._id)).find((f) => f.apparatus === POLE);
+    expect(pole.status).toBe('finalized');
+    expect(pole.qualifiers.map((q) => q.playerName)).toEqual(['Ga Q', 'Gb Q']);
+    expect(pole.staleSince).toBeTruthy();
+
+    // Reopened (Super Admin route): it recomputes, and is not entered any more.
+    await service.reopen({ id: null }, pole._id);
+    pole = (await service.list(competition._id)).find((f) => f.apparatus === POLE);
+    expect(pole.status).toBe('set');
+    expect(pole.qualifiers.map((q) => q.playerName)).toEqual(['Gb Q', 'Ga Q']);
+    const saved = await Competition.findById(competition._id).lean();
+    const entry = saved.registeredTeams.flatMap((rt) => rt.players).find((e) => String(e.player) === String(g1._id));
+    expect(entry.apparatus.competition_3).toBeUndefined(); // only Pole was finalized, and it is reopened
   });
 });

@@ -4,8 +4,10 @@
  * scoring, done the way their screens do it. Four steps of `setup:api`:
  *
  *   node scripts/seedCompetitionDay.js order        # before scores
- *   node scripts/seedCompetitionDay.js results      # after scores
+ *   node scripts/seedCompetitionDay.js results one  # after Competition I is judged
  *   node scripts/seedCompetitionDay.js corrections  # after results
+ *   node scripts/seedCompetitionDay.js finals       # Finalize all ready finals + checks
+ *   node scripts/seedCompetitionDay.js results finals  # after the finals are judged
  *   node scripts/seedCompetitionDay.js judges       # after corrections
  *   PLACE=Nagpur node scripts/seedCompetitionDay.js results   # one meet
  *
@@ -49,7 +51,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 
 const { ApiClient, DEFAULT_BASE } = require('./perf/lib/client');
 const roster = require('./lib/roster');
-const { allMeets } = require('./lib/meets');
+const { allMeets, competitionTypesOf } = require('./lib/meets');
 const { readPlan, withTimeKeeper, seatsFor, panelsForType } = require('./lib/panel-plan');
 const { offeredApparatus } = require('../src/utils/data/competition-apparatus.util');
 const { getTimeDeductionForTime } = require('../src/config/cop-rules');
@@ -61,8 +63,13 @@ const ADMIN = {
   email: process.env.SEED_ADMIN_EMAIL || 'admin@gmail.com',
   password: process.env.SEED_ADMIN_PASSWORD || 'Admin@2026',
 };
-const TYPES = ['competition_1', 'competition_2'];
-const DISPLAY = { competition_1: 'Competition I', competition_2: 'Competition II' };
+const SUPERADMIN = {
+  email: process.env.SEED_SUPERADMIN_EMAIL || 'Superadmin@gmail.com',
+  password: process.env.SEED_SUPERADMIN_PASSWORD || 'Superadmin@2026',
+};
+const DISPLAY = { competition_1: 'Competition I', competition_2: 'Competition II', competition_3: 'Competition III' };
+// `results one` reads Competition I only, `results finals` the finals only.
+const STAGE = process.argv[3] || null;
 
 // ── reporting ───────────────────────────────────────────────────────────────
 /*
@@ -185,7 +192,7 @@ async function stepOrder() {
     admin.competitionId = String(meet.competition._id);
     let drawn = 0;
     let started = 0;
-    for (const type of TYPES) {
+    for (const type of competitionTypesOf(meet)) {
       for (const cat of categoriesOf(meet, type)) {
         const q = { gender: cat.gender, ageGroup: cat.ageGroup, competitionType: type };
         const where = `${meet.place} ${cat.gender} ${cat.ageGroup} ${DISPLAY[type]}`;
@@ -303,6 +310,7 @@ function championship(rows, maxTeamSize) {
 async function stepResults() {
   const admin = await asAdmin();
   const pub = new ApiClient({ baseUrl: BASE_URL, label: 'public' });
+  const superadmin = STAGE === 'finals' ? await asSuperAdmin() : null;
   let draws = 0;
   for (const meet of await season()) {
     admin.competitionId = String(meet.competition._id);
@@ -310,8 +318,11 @@ async function stepResults() {
     const maxTeamSize = competition.maxTeamSize || 6;
     let standings = 0;
     let teamBoards = 0;
-    let drawnHere = false;
-    for (const type of TYPES) {
+    // The finals stage records no lucky draw: Competition I's are drawn already.
+    let drawnHere = STAGE === 'finals';
+    const typesHere = competitionTypesOf(meet)
+      .filter((t) => (STAGE === 'one' ? t === 'competition_1' : STAGE === 'finals' ? t !== 'competition_1' : true));
+    for (const type of typesHere) {
       for (const cat of categoriesOf(meet, type)) {
         const base = { gender: cat.gender, ageGroup: cat.ageGroup, competitionType: type };
         const where = `${meet.place} ${cat.gender} ${cat.ageGroup} ${DISPLAY[type]}`;
@@ -388,55 +399,231 @@ async function stepResults() {
         teamBoards += 1;
       }
     }
-    say('ok', meet.place, `${standings} standings, ${teamBoards} team boards${drawnHere ? ', 1 lucky draw recorded' : ''}`);
-    await checkFinals(admin, pub, meet);
+    say('ok', meet.place, `${standings} standings, ${teamBoards} team boards${drawnHere && STAGE !== 'finals' ? ', 1 lucky draw recorded' : ''}`);
+    if (STAGE === 'finals' && typesHere.length) await checkFinalsStarted(admin, superadmin, meet);
   }
 
   // The public reference data the results pages read.
   const rules = dataOf(await pub.get('/api/public/cop-rules'));
   expectThat(rules?.timeMinimumSeconds === 60 && rules?.timeLimitSeconds === 90, 'public COP rules: the 60–90 s window', JSON.stringify([rules?.timeMinimumSeconds, rules?.timeLimitSeconds]));
-  say('ok', 'lucky draws', `${draws} recorded, cleared and re-recorded`);
+  if (STAGE !== 'finals') say('ok', 'lucky draws', `${draws} recorded, cleared and re-recorded`);
 }
 
 // ── finals ──────────────────────────────────────────────────────────────────
 /**
- * Competition I → II, recomputed here from the PUBLIC Competition I results
- * and compared with what the engine entered (docs/qualification-plan.md):
- * one "All ages" final per gender with the top 2 of every age group by the sum
- * over every apparatus, entered as that final's squad, with a lot draw.
+ * The admin's "Finalize all ready finals" (docs/qualification-plan.md), after
+ * Competition I is judged, published and corrected. Per meet:
+ *
+ *  - before: no final is finalized and no final's squad has anybody in it;
+ *  - a tie at a cut is settled the way the admin does it (III: the lucky draw
+ *    on the Competition I standing; II: the draw on the final's card);
+ *  - finalize-all as the ADMIN: every final with qualifiers is finalized and
+ *    nothing is left "not ready";
+ *  - Competition II recomputed here from the PUBLIC Competition I results (top
+ *    2 of every age group by the sum over every apparatus); Competition III
+ *    from the admin standing (top 10, at most 2 per team, by rank);
+ *  - every final category's squad is exactly its qualifiers, the public page
+ *    lists the finalized finals, the admin cannot reopen one and the Super
+ *    Admin can (and finalizes it again), a second finalize-all finds nothing;
+ *  - lots drawn for every final category, checked as a proper order.
  */
-async function checkFinals(admin, pub, meet) {
-  const competitionId = String(meet.competition._id);
-  if (!TYPES.includes('competition_2')) return;
-  const finals = dataOf(await admin.get('/api/admin/finals'))?.finals || [];
-  for (const cat of categoriesOf(meet, 'competition_2')) {
-    const where = `${meet.place} ${cat.gender} All ages`;
-    const final = finals.find((f) => f.competitionType === 'competition_2' && f.gender === cat.gender);
-    if (!expectThat(Boolean(final), `${where}: a Competition II final exists`)) continue;
-    const want = [];
-    for (const age of categoriesOf(meet).filter((c) => c.gender === cat.gender)) {
-      const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId, gender: cat.gender, ageGroup: age.ageGroup, competitionType: 'competition_1' } }));
-      const totals = new Map();
-      for (const row of docs.flatMap((d) => d.playerScores || [])) {
-        totals.set(String(row.playerId), round2((totals.get(String(row.playerId)) || 0) + Number(row.finalScore || 0)));
+const finalTypesOf = (meet) => competitionTypesOf(meet).filter((t) => t !== 'competition_1');
+
+async function asSuperAdmin() {
+  const client = new ApiClient({ baseUrl: BASE_URL, label: SUPERADMIN.email });
+  const r = await client.login('/api/superadmin/login', SUPERADMIN);
+  if (!r.ok) throw new Error(`Super Admin sign-in: ${reasonOf(r)}`);
+  return client;
+}
+
+const finalsOf = async (admin) => dataOf(await admin.get('/api/admin/finals'))?.finals || [];
+
+/** The squad of one final category, as the judges and the lots read it. */
+async function squadOf(admin, gender, ageGroup, competitionType) {
+  return listOf(await admin.get('/api/admin/teams/submitted', { query: { gender, ageGroup, competitionType } }))
+    .flatMap((t) => (t.players || []).map((e) => String(e.player?._id || e.player)));
+}
+
+/** The final categories of a meet: II one All-ages per gender, III per age group. */
+const finalCategories = (meet) => finalTypesOf(meet)
+  .flatMap((type) => categoriesOf(meet, type).map((cat) => ({ ...cat, type })));
+
+/** Settle the ties waiting at a cut, as the admin does. Returns how many. */
+async function settleTies(admin, finals, where) {
+  let settled = 0;
+  for (const final of finals.filter((f) => f.status === 'waiting_draw')) {
+    if (final.competitionType === 'competition_2') {
+      for (const ageGroup of [...new Set(final.tied.map((t) => t.ageGroup))]) {
+        const order = final.tied.filter((t) => t.ageGroup === ageGroup).map((t) => t.player).reverse();
+        const r = await admin.post(`/api/admin/finals/${final._id}/draw`, { ageGroup, order });
+        if (expectThat(r.ok, `${where} ${final.label}: the draw on the final's card`, reasonOf(r))) settled += 1;
       }
-      const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
-      // Top two — or the whole tied group at the cut, which the engine leaves to a draw.
-      const cut = ranked[1]?.[1];
-      want.push(...ranked.filter(([, total], i) => i < 2 && !(ranked.filter(([, t]) => t === cut).length > 1 && total === cut)).map(([id]) => id));
+      continue;
     }
-    const got = final.qualifiers.map((q) => String(q.player));
-    const missing = want.filter((id) => !got.includes(id));
-    expectThat(missing.length === 0, `${where}: the top 2 of every age group qualified (sum of every apparatus)`, `${missing.length} missing of ${want.length}`);
-    expectThat(got.length <= 2 * categoriesOf(meet).filter((c) => c.gender === cat.gender).length, `${where}: at most 2 per age group`, `${got.length}`);
-    const squad = listOf(await admin.get('/api/admin/teams/submitted', { query: { gender: cat.gender, ageGroup: 'AllAges', competitionType: 'competition_2' } }))
-      .flatMap((t) => (t.players || []).map((e) => String(e.player?._id || e.player)));
-    expectThat(same([...squad].sort(), [...got].sort()), `${where}: the final's squad is exactly its qualifiers`, `${squad.length} entered, ${got.length} qualified`);
-    const q = { gender: cat.gender, ageGroup: 'AllAges', competitionType: 'competition_2' };
-    const draw = await admin.post('/api/admin/lots/draw', { ...q, includePlayers: true });
-    expectThat(draw.ok, `${where}: lots drawn for the final`, reasonOf(draw));
+    // Competition III: the physical draw is recorded on the Competition I standing.
+    const base = { gender: final.gender, ageGroup: final.ageGroup, competitionType: 'competition_1', apparatus: final.apparatus };
+    const rows = standing(dataOf(await admin.get('/api/admin/scores/individual', { query: base })), final.apparatus);
+    const tiedIds = new Set(final.tied.map((t) => String(t.player)));
+    const keys = [...new Set(rows.filter((r) => tiedIds.has(r.playerId) && r.tieBreakInfo?.awaitingLuckyDraw).map((r) => r.tieBreakInfo.tieGroupKey))];
+    for (const key of keys) {
+      const order = rows.filter((r) => r.tieBreakInfo?.tieGroupKey === key).map((r) => r.playerId).reverse();
+      const r = await admin.post('/api/admin/tie-break/draws', { ...base, order });
+      if (expectThat(r.ok, `${where} ${final.label}: the lucky draw on the Competition I standing`, reasonOf(r))) settled += 1;
+    }
   }
-  say('ok', meet.place, 'Competition II finals match the Competition I results');
+  return settled;
+}
+
+/** Competition II: the top 2 of every age group, by the sum over every apparatus (public results). */
+async function checkAllRound(pub, meet, final, where) {
+  const competitionId = String(meet.competition._id);
+  const want = [];
+  const ageGroups = categoriesOf(meet).filter((c) => c.gender === final.gender);
+  for (const age of ageGroups) {
+    const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId, gender: final.gender, ageGroup: age.ageGroup, competitionType: 'competition_1' } }));
+    const totals = new Map();
+    for (const row of docs.flatMap((d) => d.playerScores || [])) {
+      totals.set(String(row.playerId), round2((totals.get(String(row.playerId)) || 0) + Number(row.finalScore || 0)));
+    }
+    const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+    // Top two; a level total at the cut is the tie-break's (or the draw's) to settle.
+    const cut = ranked[1]?.[1];
+    const levelAtCut = ranked.filter(([, t]) => t === cut).length > 1;
+    want.push(...ranked.filter(([, total], i) => i < 2 && !(levelAtCut && total === cut)).map(([id]) => id));
+  }
+  const got = final.qualifiers.map((q) => String(q.player));
+  const missing = want.filter((id) => !got.includes(id));
+  expectThat(missing.length === 0, `${where}: the top 2 of every age group qualified (sum of every apparatus)`, `${missing.length} missing of ${want.length}`);
+  expectThat(got.length <= 2 * ageGroups.length, `${where}: at most 2 per age group`, `${got.length}`);
+}
+
+/** Competition III: top 10 on the apparatus, at most 2 per team, in rank order. */
+async function checkApparatusFinal(admin, final, where) {
+  const base = { gender: final.gender, ageGroup: final.ageGroup, competitionType: 'competition_1', apparatus: final.apparatus };
+  const rows = standing(dataOf(await admin.get('/api/admin/scores/individual', { query: base })), final.apparatus)
+    .sort((a, b) => a.rank - b.rank);
+  const perTeam = new Map();
+  const want = [];
+  for (const r of rows) {
+    if (want.length === 10) break;
+    const n = perTeam.get(r.teamName) || 0;
+    if (n === 2) continue;
+    perTeam.set(r.teamName, n + 1);
+    want.push(r.playerId);
+  }
+  const got = final.qualifiers.map((q) => String(q.player));
+  expectThat(same([...got].sort(), [...want].sort()), `${where}: top 10 by rank, at most 2 per team`,
+    `want ${want.length}, got ${got.length}, ${want.filter((id) => !got.includes(id)).length} differ`);
+  const teams = new Map();
+  for (const q of final.qualifiers) teams.set(q.team?._id, (teams.get(q.team?._id) || 0) + 1);
+  expectThat(got.length <= 10 && [...teams.values()].every((n) => n <= 2), `${where}: never more than 10, never 3 from one team`,
+    `${got.length} qualifiers, most from one team ${Math.max(0, ...teams.values())}`);
+  const capped = final.skipped.filter((s) => s.reason === 'team_cap');
+  expectThat(capped.every((s) => (teams.get(s.team?._id) || 0) === 2), `${where}: a passed-over player's team has its two`, `${capped.length} passed over`);
+}
+
+async function stepFinals() {
+  const admin = await asAdmin();
+  const superadmin = await asSuperAdmin();
+  const pub = new ApiClient({ baseUrl: BASE_URL, label: 'public' });
+  for (const meet of await season()) {
+    const competitionId = String(meet.competition._id);
+    admin.competitionId = competitionId;
+    const types = finalTypesOf(meet);
+    let finals = await finalsOf(admin);
+    const shape = competitionTypesOf(meet).map((t) => DISPLAY[t].replace('Competition ', '')).join('+');
+    if (!types.length) {
+      expectThat(finals.length === 0, `${meet.place} (${shape}): no finals for a Competition I-only meet`, `${finals.length} found`);
+      say('ok', meet.place, `${shape}: Competition I only, no finals`);
+      continue;
+    }
+    expectThat(finals.every((f) => types.includes(f.competitionType)), `${meet.place} (${shape}): only the meet's own finals exist`,
+      [...new Set(finals.map((f) => f.competitionType))].join(','));
+
+    // Before Finalize nobody is entered (a re-run after a finalize skips this).
+    const fresh = finals.every((f) => !f.finalizedAt && f.status !== 'started');
+    if (fresh) {
+      for (const cat of finalCategories(meet)) {
+        const squad = await squadOf(admin, cat.gender, cat.ageGroup, cat.type);
+        expectThat(squad.length === 0, `${meet.place} ${cat.gender} ${cat.ageGroup} ${DISPLAY[cat.type]}: nobody entered before Finalize`, `${squad.length} entered`);
+      }
+      const early = dataOf(await pub.get('/api/public/finals', { query: { competitionId } }))?.finals || [];
+      expectThat(early.length === 0, `${meet.place}: the public sees no final before Finalize`, `${early.length} shown`);
+    }
+
+    const ties = await settleTies(admin, finals, meet.place);
+    if (ties) finals = dataOf(await admin.post('/api/admin/finals/recompute', {}))?.finals || await finalsOf(admin);
+
+    const all = await admin.post('/api/admin/finals/finalize-all', {});
+    if (!expectThat(all.ok, `${meet.place}: Finalize all ready finals (admin)`, reasonOf(all))) continue;
+    const { notReady = [] } = dataOf(all) || {};
+    const empty = (n) => n.blockers.every((b) => /Nobody (is entered|qualified)/i.test(b));
+    expectThat(notReady.every(empty), `${meet.place}: nothing left "not ready"`,
+      notReady.filter((n) => !empty(n)).slice(0, 3).map((n) => `${n.label}: ${n.blockers.join(' · ')}`).join('; '));
+    finals = await finalsOf(admin);
+    const live = finals.filter((f) => f.qualifiers.length);
+    expectThat(live.length > 0 && live.every((f) => ['finalized', 'started'].includes(f.status)), `${meet.place}: every final with qualifiers is finalized`,
+      `${live.filter((f) => !['finalized', 'started'].includes(f.status)).length} of ${live.length} not`);
+
+    for (const final of live) {
+      const where = `${meet.place} ${final.label}`;
+      if (final.competitionType === 'competition_2') await checkAllRound(pub, meet, final, where);
+      else await checkApparatusFinal(admin, final, where);
+    }
+
+    // Each final category's squad is exactly the qualifiers of its finals.
+    for (const cat of finalCategories(meet)) {
+      const want = [...new Set(live.filter((f) => f.competitionType === cat.type && f.gender === cat.gender && f.ageGroup === cat.ageGroup)
+        .flatMap((f) => f.qualifiers.map((q) => String(q.player))))].sort();
+      const got = [...new Set(await squadOf(admin, cat.gender, cat.ageGroup, cat.type))].sort();
+      expectThat(same(got, want), `${meet.place} ${cat.gender} ${cat.ageGroup} ${DISPLAY[cat.type]}: the squad is exactly its qualifiers`,
+        `${got.length} entered, ${want.length} qualified`);
+    }
+    const shown = dataOf(await pub.get('/api/public/finals', { query: { competitionId } }))?.finals || [];
+    expectThat(shown.length === live.length, `${meet.place}: the public lists every finalized final`, `${shown.length}/${live.length}`);
+
+    // Reopen: Super Admin only, before the final's first score.
+    const one = live.find((f) => f.status === 'finalized');
+    if (one) {
+      const adminTry = await admin.post(`/api/admin/finals/${one._id}/reopen`, {});
+      expectThat(adminTry.status === 404 || adminTry.status === 403, `${meet.place}: an admin cannot reopen a final`, `HTTP ${adminTry.status}`);
+      const reopened = await superadmin.post(`/api/superadmin/finals/${one._id}/reopen`, { competitionId });
+      const after = (await finalsOf(admin)).find((f) => String(f._id) === String(one._id));
+      expectThat(reopened.ok && !after?.finalizedAt, `${meet.place} ${one.label}: the Super Admin reopens it`, reasonOf(reopened));
+      const again = await superadmin.post(`/api/superadmin/finals/${one._id}/finalize`, { competitionId });
+      const back = (await finalsOf(admin)).find((f) => String(f._id) === String(one._id));
+      expectThat(again.ok && back?.status === 'finalized' && same(back.qualifiers.map((q) => q.player).sort(), one.qualifiers.map((q) => q.player).sort()),
+        `${meet.place} ${one.label}: finalized again, same finalists`, reasonOf(again));
+    }
+    const second = dataOf(await admin.post('/api/admin/finals/finalize-all', {})) || {};
+    expectThat((second.finalized || []).length === 0, `${meet.place}: a second Finalize all finds nothing to do`, `${(second.finalized || []).length} finalized`);
+
+    // The running order of every final category, by the admin's lot draw.
+    let drawn = 0;
+    for (const cat of finalCategories(meet)) {
+      if (!live.some((f) => f.competitionType === cat.type && f.gender === cat.gender && f.ageGroup === cat.ageGroup)) continue;
+      const q = { gender: cat.gender, ageGroup: cat.ageGroup, competitionType: cat.type };
+      const where = `${meet.place} ${cat.gender} ${cat.ageGroup} ${DISPLAY[cat.type]}`;
+      const draw = await admin.post('/api/admin/lots/draw', { ...q, includePlayers: true });
+      if (!expectThat(draw.ok, `${where}: lots drawn for the final`, reasonOf(draw))) continue;
+      if (checkOrder(dataOf(await admin.get('/api/admin/lots', { query: q })), where)) drawn += 1;
+    }
+    say('ok', meet.place, `${shape}: ${live.length} finals finalized${ties ? `, ${ties} tie(s) drawn` : ''}, ${drawn} final orders drawn`);
+  }
+}
+
+/** After the finals are judged: each one has started, and nobody can reopen it now. */
+async function checkFinalsStarted(admin, superadmin, meet) {
+  const competitionId = String(meet.competition._id);
+  const finals = (await finalsOf(admin)).filter((f) => f.qualifiers.length);
+  const notStarted = finals.filter((f) => f.status !== 'started');
+  expectThat(notStarted.length === 0, `${meet.place}: every judged final has started (its list is frozen)`,
+    notStarted.slice(0, 3).map((f) => `${f.label}: ${f.status}`).join('; '));
+  const one = finals[0];
+  if (one) {
+    const r = await superadmin.post(`/api/superadmin/finals/${one._id}/reopen`, { competitionId });
+    expectThat(r.status === 400 || r.status === 409 || r.status === 422, `${meet.place} ${one.label}: a started final cannot be reopened`, `HTTP ${r.status}`);
+  }
 }
 
 // ── corrections ─────────────────────────────────────────────────────────────
@@ -616,7 +803,7 @@ async function stepJudges() {
       expectThat(same(gotSeats, wantSeats), `${judge.email} @ ${meetPlace}: holds the plan's seat`, `${gotSeats.join('+')} vs plan ${wantSeats.join('+')}`);
       // Judge 3 sits only on 4- and 5-judge panels, Judge 4 only on 5s: every panel that HAS the seat.
       const panels = new Set(assignments.map((a) => `${a.gender}/${a.ageGroup}`));
-      const owed = [...meet.plan.panels, ...(TYPES.includes('competition_2') ? panelsForType(meet.plan, 'competition_2') : [])]
+      const owed = [...meet.plan.panels, ...(competitionTypesOf(meet).includes('competition_2') ? panelsForType(meet.plan, 'competition_2') : [])]
         .filter((p) => wantSeats.some((seat) => seatsFor(p.size).includes(seat)));
       expectThat(panels.size === owed.length, `${judge.email} @ ${meetPlace}: seated on every panel with their seat`, `${panels.size}/${owed.length}`);
       const comp = await there.get(`/api/judge/competition/${id}`);
@@ -661,7 +848,7 @@ async function asJudgeWith(email, password) {
 }
 
 // ── runner ──────────────────────────────────────────────────────────────────
-const STEPS = { order: stepOrder, results: stepResults, corrections: stepCorrections, judges: stepJudges };
+const STEPS = { order: stepOrder, results: stepResults, finals: stepFinals, corrections: stepCorrections, judges: stepJudges };
 
 (async () => {
   if (!STEPS[STEP]) {

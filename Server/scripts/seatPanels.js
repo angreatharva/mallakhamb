@@ -207,10 +207,12 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
    * (docs/qualification-plan.md), so the per-age panels judge Competition I
    * (and III) and an "All ages" panel per gender judges Competition II.
    */
-  const perAgeTypes = plan.competitionTypes.filter((t) => t !== 'competition_2');
+  // The MEET's competitions (I only, I+II, I+III or I+II+III), not the plan's.
+  const meetTypes = competition.competitionTypes?.length ? competition.competitionTypes : plan.competitionTypes;
+  const perAgeTypes = meetTypes.filter((t) => t !== 'competition_2');
   const all = [
     ...(perAgeTypes.length ? meetPlan.panels.map((p) => ({ ...p, types: perAgeTypes })) : []),
-    ...(plan.competitionTypes.includes('competition_2')
+    ...(meetTypes.includes('competition_2')
       ? panelsForType(meetPlan, 'competition_2').map((p) => ({ ...p, types: ['competition_2'] }))
       : []),
   ];
@@ -229,7 +231,7 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
    * A property of the MEET, not of the category, so it is resolved once.
    */
   const apparatusByType = new Map(
-    plan.competitionTypes.map((ct) => [ct, apparatusFor(competition, ct, apparatusOnly)])
+    meetTypes.map((ct) => [ct, apparatusFor(competition, ct, apparatusOnly)])
   );
   const panelApparatus = [...new Set([...apparatusByType.values()].flat())];
   console.log(

@@ -59,6 +59,12 @@ export const createAdminAPI = (basePath = '/admin') => ({
     withdraw: (finalId, data) => api.post(`${basePath}/finals/${finalId}/withdraw`, data),
     reinstate: (finalId, data) => api.post(`${basePath}/finals/${finalId}/reinstate`, data),
     draw: (finalId, data) => api.post(`${basePath}/finals/${finalId}/draw`, data),
+    /** Enter the finalists of one ready final (judges, lots, coaches, public). */
+    finalize: (finalId, competitionId) => api.post(`${basePath}/finals/${finalId}/finalize`, { competitionId }),
+    /** Finalize every final of the meet that is ready; the rest are reported. */
+    finalizeAll: (competitionId) => api.post(`${basePath}/finals/finalize-all`, { competitionId }),
+    /** Super Admin only (/superadmin), before the final's first score. */
+    reopen: (finalId, competitionId) => api.post(`${basePath}/finals/${finalId}/reopen`, { competitionId }),
   },
 });
 

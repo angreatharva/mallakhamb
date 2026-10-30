@@ -610,6 +610,9 @@ function createAdminRoutes(container) {
   const finalIdRule = param('finalId').isMongoId().withMessage('Invalid final');
   router.get('/finals', authMiddleware, authorize, validateCompetitionContext, finals('list'));
   router.post('/finals/recompute', ...finalWrite, finals('recompute'));
+  // Finalize: only then are the finalists entered (reopening is Super Admin only).
+  router.post('/finals/finalize-all', ...finalWrite, finals('finalizeAll'));
+  router.post('/finals/:finalId/finalize', ...finalWrite, finalIdRule, handleValidationErrors, finals('finalize'));
   router.post('/finals/:finalId/withdraw', ...finalWrite, finalIdRule, body('playerId').isMongoId(),
     body('reason').optional().isString().isLength({ max: 300 }), handleValidationErrors, finals('withdraw'));
   router.post('/finals/:finalId/reinstate', ...finalWrite, finalIdRule, body('playerId').isMongoId(), handleValidationErrors, finals('reinstate'));

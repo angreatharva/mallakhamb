@@ -219,9 +219,10 @@ export const createCompetition = async (page, meet) => {
   await field(page, 'BASE FEE').fill(String(meet.playerFee));
   await field(page, 'LATE FEE').fill(String(meet.lateFee));
 
-  // Competition I and II. The panel plan seats every panel for both, and a type
-  // with no apparatus behind it is refused by the form.
-  for (const label of ['Competition I', 'Competition II']) {
+  // The meet's own competitions (I, I+II, I+III or I+II+III, meets.json); a
+  // type with no apparatus behind it is refused by the form.
+  const LABEL = { competition_1: 'Competition I', competition_2: 'Competition II', competition_3: 'Competition III' };
+  for (const label of (meet.competitionTypes || ['competition_1', 'competition_2']).map((t) => LABEL[t])) {
     await tick(page.getByRole('checkbox', { name: new RegExp(`^${label}\\b`) }));
   }
   for (const apparatus of ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb']) {

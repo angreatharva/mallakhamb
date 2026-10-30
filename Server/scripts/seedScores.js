@@ -97,6 +97,7 @@ const TIME_BANDS = ['85', '92', '95', '98', '105'];
 const TYPES = [
   { slug: 'competition_1', display: 'Competition I' },
   { slug: 'competition_2', display: 'Competition II' },
+  { slug: 'competition_3', display: 'Competition III' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -461,6 +462,9 @@ function parseArgs(argv) {
   return {
     place: flag('place'),
     type: flag('type'),
+    // `--stage=one` judges Competition I only; `--stage=finals` the finals only
+    // (they exist once Competition I is locked and the finals are finalized).
+    stage: flag('stage'),
     gender: flag('gender'),
     age: flag('age'),
     dryRun: argv.includes('--dry-run'),
@@ -521,7 +525,13 @@ async function main(extraArgv = []) {
     ? {}
     : await signInSeats(meetPlan, await judgePasswords(), competitionId);
 
-  const types = TYPES.filter((t) => !args.type || t.slug === args.type);
+  // The meet's own competitions; Competition I and the finals are separate
+  // stages because a final has nobody in it until it is finalized.
+  const meetTypes = competition.competitionTypes?.length ? competition.competitionTypes : ['competition_1', 'competition_2'];
+  const types = TYPES.filter((t) => meetTypes.includes(t.slug)
+    && (!args.type || t.slug === args.type)
+    && (args.stage !== 'one' || t.slug === 'competition_1')
+    && (args.stage !== 'finals' || t.slug !== 'competition_1'));
   // Competition I's panels are per age group; Competition II's are one
   // "All ages" final per gender (scripts/lib/panel-plan#panelsForType). Types
   // run in order, so every Competition I sheet is locked — which is what

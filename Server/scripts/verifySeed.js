@@ -83,7 +83,7 @@ async function verify() {
 
   const competitions = await db.collection('competitions')
     .find({ isDeleted: { $ne: true } })
-    .project({ place: 1, level: 1, registeredTeams: 1 })
+    .project({ place: 1, level: 1, registeredTeams: 1, competitionTypes: 1 })
     .toArray();
   const teams = await db.collection('teams').find({}).project({ name: 1, coach: 1 }).toArray();
   const coaches = await db.collection('coaches').find({}).project({ email: 1 }).toArray();
@@ -239,6 +239,7 @@ async function verify() {
 
   // ── panels ─────────────────────────────────────────────────────────────────
   const plan = readPlan();
+  const typesOfMeet = (competition) => (competition.competitionTypes?.length ? competition.competitionTypes : plan.competitionTypes);
   let panelProblems = [];
   let seatedPanels = 0;
 
@@ -252,7 +253,8 @@ async function verify() {
     }
 
     // Competition II is one "All ages" panel per gender (automatic finals).
-    const panelsHere = [...new Set(plan.competitionTypes.flatMap((type) => panelsForType(meetPlan, type)))];
+    // The MEET's own competitions (I, I+II, I+III or I+II+III).
+    const panelsHere = [...new Set(typesOfMeet(competition).flatMap((type) => panelsForType(meetPlan, type)))];
     for (const panel of panelsHere) {
       const want = seatsFor(panel.size);
       const seated = assignments.filter((a) =>
@@ -325,8 +327,12 @@ async function verify() {
   }
 
   // Per type: Competition I per age group, Competition II one "All ages" final per gender.
-  const expectedCategories = competitions.length
-    * plan.competitionTypes.reduce((sum, type) => sum + panelsForType(plan, type).length, 0);
+  // Competition III per age group too, each meet by its own competitions.
+  const expectedCategories = competitions.reduce((total, competition) => {
+    let meetPlan;
+    try { meetPlan = planForPlace(plan, competition.place); } catch { return total; }
+    return total + typesOfMeet(competition).reduce((sum, type) => sum + panelsForType(meetPlan, type).length, 0);
+  }, 0);
   check('scores', `every category judged — ${expectedCategories} expected`,
     expectedCategories > 0 && byCategory.size === expectedCategories,
     orphaned.length

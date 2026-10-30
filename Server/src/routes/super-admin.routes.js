@@ -74,6 +74,10 @@ function createSuperAdminRoutes(container) {
   const meetRule = oneOf([query('competitionId').isMongoId(), body('competitionId').isMongoId()], { message: 'competitionId is required' });
   router.get('/finals', meetRule, handleValidationErrors, meetOf, finals('list'));
   router.post('/finals/recompute', meetRule, handleValidationErrors, meetOf, finals('recompute'));
+  router.post('/finals/finalize-all', meetRule, handleValidationErrors, meetOf, finals('finalizeAll'));
+  router.post('/finals/:finalId/finalize', meetRule, param('finalId').isMongoId(), handleValidationErrors, meetOf, finals('finalize'));
+  // Reopen a finalized final (before its first score): Super Admin only.
+  router.post('/finals/:finalId/reopen', meetRule, param('finalId').isMongoId(), handleValidationErrors, meetOf, finals('reopen'));
   router.post('/finals/:finalId/withdraw', meetRule, param('finalId').isMongoId(), body('playerId').isMongoId(), handleValidationErrors, meetOf, finals('withdraw'));
   router.post('/finals/:finalId/reinstate', meetRule, param('finalId').isMongoId(), body('playerId').isMongoId(), handleValidationErrors, meetOf, finals('reinstate'));
   router.post('/finals/:finalId/draw', meetRule, param('finalId').isMongoId(), body('order').isArray({ min: 2, max: 20 }), handleValidationErrors, meetOf, finals('draw'));

@@ -17,8 +17,8 @@ import { chooseLevelForPlace } from './level-flows.js';
  * touching.
  */
 
-/** Age groups are stored as `Under10` and offered as `Under 10`. */
-const ageGroupLabel = (ageGroup) => ageGroup.replace(/^(Under|Above)/, '$1 ');
+/** Age groups are stored as `Under10` and offered as `Under 10`; Competition II's as "All ages". */
+export const ageGroupLabel = (ageGroup) => (ageGroup === 'AllAges' ? 'All ages' : ageGroup.replace(/^(Under|Above)/, '$1 '));
 
 /** The competition-type labels the picker shows, keyed by slug. */
 const COMPETITION_TYPE_LABEL = {
@@ -218,6 +218,12 @@ export const adminSignIn = async (page, place) => {
  * @param {import('@playwright/test').Page} page
  * @param {string} competitionId - from `adminSignIn`
  */
+/** Admin → Finals, on one meet. */
+export const openFinals = async (page, competitionId) => {
+  await page.goto(`/admin/dashboard/finals?competitionId=${competitionId}`);
+  await expect(page.getByRole('button', { name: /Finalize all ready finals/ })).toBeVisible({ timeout: 30_000 });
+};
+
 export const openJudges = async (page, competitionId) => {
   await page.goto(`/admin/dashboard/judges?competitionId=${competitionId}`);
   await expect(page.getByRole('heading', { name: 'Manage Judges' })).toBeVisible({ timeout: 20_000 });

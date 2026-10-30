@@ -10,14 +10,14 @@ import AdminFinals from './AdminFinals';
 
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/services/user/admin.api', () => ({
-  adminAPI: { finals: { list: vi.fn(), recompute: vi.fn(), withdraw: vi.fn(), reinstate: vi.fn(), draw: vi.fn() } },
+  adminAPI: { finals: { list: vi.fn(), recompute: vi.fn(), withdraw: vi.fn(), reinstate: vi.fn(), draw: vi.fn(), finalize: vi.fn(), finalizeAll: vi.fn(), reopen: vi.fn() } },
 }));
 vi.mock('@/services/user/super-admin.api', () => ({ superAdminAPI: { finals: {} } }));
 vi.mock('@/contexts/CompetitionContext', () => ({ useCompetition: () => ({ currentCompetition: null }) }));
 
 const final = {
   _id: 'f1', label: 'Competition III (Apparatus) — Boys Under 14 · Pole', competitionType: 'competition_3', gender: 'Male',
-  ageGroup: 'Under14', apparatus: 'Pole Mallakhamb', status: 'set',
+  ageGroup: 'Under14', apparatus: 'Pole Mallakhamb', status: 'set', blockers: [],
   qualifiers: [
     { player: 'p1', playerName: 'Aarav Patil', team: { _id: 't1', name: 'SGAM' }, rank: 1, score: 9.4 },
     { player: 'p2', playerName: 'Rohan Joshi', team: { _id: 't1', name: 'SGAM' }, rank: 2, score: 9.1 },
@@ -46,6 +46,23 @@ describe('AdminFinals', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Withdraw' }));
     await waitFor(() => expect(adminAPI.finals.withdraw).toHaveBeenCalledWith('f1', { playerId: 'p1', competitionId: 'c1' }));
     expect(adminAPI.finals.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('Finalize all shows what it will enter first, then finalizes', async () => {
+    adminAPI.finals.finalizeAll.mockResolvedValue({ data: { data: { finalized: [{ _id: 'f1' }], notReady: [{ _id: 'f2' }] } } });
+    render(<AdminFinals competitionId="c1" />);
+    fireEvent.click(await screen.findByText('Finalize all ready finals'));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByTestId('finalize-summary').textContent).toMatch(/Aarav Patil \(SGAM\).*Passed over: Omkar Rane/);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Finalize all ready' }));
+    await waitFor(() => expect(adminAPI.finals.finalizeAll).toHaveBeenCalledWith('c1'));
+  });
+
+  it('a final that is not ready has no Finalize button, and says why', async () => {
+    adminAPI.finals.list.mockResolvedValue({ data: { data: { finals: [{ ...final, blockers: ['SGAM: Competition I Pole not locked yet'] }] } } });
+    render(<AdminFinals competitionId="c1" />);
+    expect(await screen.findByText(/Not ready: SGAM: Competition I Pole not locked yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Finalize' })).toBeNull();
   });
 
   it('a waiting Competition II final says what it waits for', async () => {

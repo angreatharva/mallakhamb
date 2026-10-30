@@ -89,6 +89,15 @@ export const levelForPlace = (place) => {
  * @param {string} level
  * @returns {Array<{place: string, level: string, startDate: string}>}
  */
+/**
+ * The competitions a seeded meet runs — I only, I+II, I+III or I+II+III, as
+ * meets.json names them. Mirrors Server/scripts/lib/meets.js competitionTypesOf.
+ */
+export const competitionTypesOf = (place) => {
+  const meet = MEETS.find((m) => m.place === place);
+  return meet?.competitionTypes?.length ? meet.competitionTypes : ['competition_1', 'competition_2'];
+};
+
 export const meetsAtLevel = (level) => MEETS.filter((m) => m.level === level);
 
 /** Just the places at one level. */

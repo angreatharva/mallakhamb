@@ -37,14 +37,26 @@ Owner rules and decisions: `docs/qualification-plan.md`. As built:
   `entryInCompetition`, `categoryAgeGroups`) is applied in
   `findSubmittedRegistrations`, `getSubmittedTeams` (finals show only their
   qualifiers), the running order and the judges' summary.
+- **Finalize gate (owner, 2026-10-30):** the engine computes lists, but
+  `_syncEntries` writes ONLY finalized finals and coaches are emailed only on
+  finalize. `finalize` recomputes then refuses (`NOT_READY` + `blockers`) unless
+  Comp I is fully locked, no tie waits, no stale warning; `finalizeAll` does every
+  ready final and reports the rest. A finalized list never changes (a later Comp I
+  change only sets `staleSince`); `reopen` is Super Admin only and refused once
+  the final has a score. Public/coach/player read finalized finals only.
 - **API:** `/api/admin/finals` (+ `/superadmin/finals?competitionId=`) list,
-  recompute, withdraw, reinstate, draw; `/api/coaches/finals`,
+  recompute, withdraw, reinstate, draw, finalize-all, `:id/finalize`
+  (+ Super Admin `:id/reopen`); `/api/coaches/finals`,
   `/api/players/finals`, `/api/public/finals`.
 - **Web:** Finals tab (`pages/admin/AdminFinals.jsx`), All ages in the Judges /
   Lots / Scores pickers (`useAgeGroups` `withAllAges`, `typesForAgeGroup`),
   player-first finalists list on the judge dashboard, coach / player
   `QualifiedFinals`, public Finals view.
-- **Seed chain:** `scripts/lib/panel-plan#panelsForType` (II = one All-ages panel
+- **Seed chain:** meets.json gives each meet `competitionTypes` (rotating
+  I+II+III, I+II, I+III, I). setupApi/setupAll: `scores --stage=one` →
+  `results one` → corrections → `finals` (finalize-all + rule checks + reopen) →
+  `finals-scores` → `results finals`. setupUi: score-all SCORE_STAGE=one →
+  finalize-finals.spec → SCORE_STAGE=finals. `scripts/lib/panel-plan#panelsForType` (II = one All-ages panel
   per gender, sized like that gender's Under 14 panel); seatPanels,
   seedScores, seedCompetitionDay (`checkFinals`) and verifySeed use it.
 

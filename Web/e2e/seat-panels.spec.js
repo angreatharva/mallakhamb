@@ -11,7 +11,8 @@ import {
   staffSlot,
 } from './support/admin-flows.js';
 import {
-  PLAN_COMPETITION_TYPES,
+  meetCompetitionTypes,
+  panelsForType,
   PLAN_PROVENANCE,
   seatsFor,
   withTimeKeeper,
@@ -98,7 +99,18 @@ test.beforeAll(() => {
 });
 
 for (const meet of MEETS) {
-  const wanted = meet.panels.filter(
+  /*
+   * The meet's own competitions. I and III are judged per age group; II is
+   * one "All ages" final per gender (automatic finals), so its panels are
+   * separate categories seated for Competition II alone.
+   */
+  const types = meetCompetitionTypes(meet);
+  const perAge = types.filter((t) => t !== 'competition_2');
+  const panelsHere = [
+    ...(perAge.length ? meet.panels.map((p) => ({ ...p, types: perAge })) : []),
+    ...(types.includes('competition_2') ? panelsForType(meet, 'competition_2').map((p) => ({ ...p, types: ['competition_2'] })) : []),
+  ];
+  const wanted = panelsHere.filter(
     (panel) =>
       (!process.env.ONLY_GENDER || process.env.ONLY_GENDER === panel.gender) &&
       (!process.env.ONLY_AGE || process.env.ONLY_AGE === panel.ageGroup)
@@ -126,7 +138,7 @@ for (const meet of MEETS) {
 
         const seats = seatsFor(panel.size);
 
-        for (const competitionType of PLAN_COMPETITION_TYPES) {
+        for (const competitionType of panel.types) {
           // Read from the screen, per competition type: a meet may run
           // Competition I on Pole alone and Competition III on all three.
           await selectCategory(page, { action: 'add', ...panel, competitionType });
@@ -169,7 +181,7 @@ for (const meet of MEETS) {
 
           const expected = seatsFor(panel.size);
 
-          for (const competitionType of PLAN_COMPETITION_TYPES) {
+          for (const competitionType of panel.types) {
             await selectCategory(page, { action: 'list', ...panel, competitionType });
             const apparatusList = await apparatusChoices(page);
 

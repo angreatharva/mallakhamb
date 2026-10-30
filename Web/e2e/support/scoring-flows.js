@@ -107,7 +107,8 @@ export const chooseCategory = async (page, {
   // holds in the chosen gender and age group, so it renders empty — and the
   // Continue button stays dead — until both are picked.
   await pickOrConfirm(page, gender);
-  await pickOrConfirm(page, ageGroup);
+  // The picker shows labels ("Under 10", "All ages"), not the stored value.
+  await pickOrConfirm(page, ageGroup === 'AllAges' ? 'All ages' : ageGroup.replace(/^(Under|Above)(\d)/, '$1 $2'));
 
   // `\b` keeps "Competition I" off "Competition II" — the accessible name
   // carries the sub-label too ("Competition I Team").
@@ -676,7 +677,8 @@ export const squadPlaces = async (page, { competitionId, gender, ageGroup, compe
   const places = [];
   for (const team of teams || []) {
     for (const entry of team.players || []) {
-      if (entry.gender !== gender || entry.ageGroup !== ageGroup) continue;
+      // The All-ages Competition II final holds every age group's qualifiers.
+      if (entry.gender !== gender || (ageGroup !== 'AllAges' && entry.ageGroup !== ageGroup)) continue;
       const registered = apparatusOf(entry, competitionType);
       // An entry naming no apparatus is "not specified", not "none" — those
       // athletes stay eligible for whatever is being judged.
@@ -728,7 +730,7 @@ export const apparatusInCategory = async (page, category) => {
   const seen = new Set();
   for (const team of teams || []) {
     for (const entry of team.players || []) {
-      if (entry.gender !== category.gender || entry.ageGroup !== category.ageGroup) continue;
+      if (entry.gender !== category.gender || (category.ageGroup !== 'AllAges' && entry.ageGroup !== category.ageGroup)) continue;
       for (const name of apparatusOf(entry, category.competitionType)) seen.add(name);
     }
   }

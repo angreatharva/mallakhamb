@@ -43,6 +43,7 @@
     "seed:panels:headed": "playwright test e2e/seat-panels.spec.js --headed",
     "seed:pay": "playwright test e2e/pay-entries.spec.js",
     "seed:pay:headed": "playwright test e2e/pay-entries.spec.js --headed",
+    "seed:finalize": "playwright test e2e/finalize-finals.spec.js",
     "seed:scores": "playwright test e2e/score-all.spec.js --workers=2",
     "seed:scores:fast": "playwright test e2e/score-all.spec.js --workers=2 --trace=off",
     "seed:scores:one": "playwright test e2e/score-all.spec.js --workers=1 --grep \"Competition I . Male Under10\"",

@@ -63,6 +63,9 @@ const qualificationSchema = new mongoose.Schema({
     at: { type: Date, default: Date.now },
   }],
   computedAt: { type: Date, default: null },
+  /** Entered only once an Admin or Super Admin finalizes it (owner, 2026-10-30). */
+  finalizedAt: { type: Date, default: null },
+  finalizedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
   frozenAt: { type: Date, default: null },
   staleSince: { type: Date, default: null },
   staleNote: { type: String, default: '' },

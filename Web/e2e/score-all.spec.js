@@ -3,6 +3,8 @@ import { getDifficultyRequirement } from '../src/utils/scoring/copRules.js';
 import { apiGet, clearSession, competitionIdFor } from './support/browser.js';
 import { judgeSignIn, judgeSignInAt } from './support/judge-flows.js';
 import {
+  meetCompetitionTypes,
+  panelsForType,
   PLAN_PROVENANCE,
   evaluatorSeats,
   judgeInSeat,
@@ -110,7 +112,15 @@ test.beforeAll(() => {
 const TYPES = [
   { slug: 'competition_1', label: 'Competition I' },
   { slug: 'competition_2', label: 'Competition II' },
+  { slug: 'competition_3', label: 'Competition III' },
 ];
+
+/*
+ * SCORE_STAGE=one judges Competition I; SCORE_STAGE=finals the finals, which
+ * have nobody in them until the admin finalizes them (finalize-finals.spec).
+ */
+const STAGE = process.env.SCORE_STAGE || null;
+const inStage = (slug) => (STAGE === 'one' ? slug === 'competition_1' : STAGE === 'finals' ? slug !== 'competition_1' : true);
 
 /**
  * Who sits in which seat comes from the plan, and so does every panel's size.
@@ -333,8 +343,9 @@ const walkFlight = async (page, places, slipFor, afterSubmit) => {
 for (const meet of MEETS) {
   for (const type of TYPES) {
     if (process.env.ONLY_TYPE && process.env.ONLY_TYPE !== type.slug) continue;
+    if (!meetCompetitionTypes(meet).includes(type.slug) || !inStage(type.slug)) continue;
 
-    for (const panel of meet.panels) {
+    for (const panel of panelsForType(meet, type.slug)) {
       if (process.env.ONLY_GENDER && process.env.ONLY_GENDER !== panel.gender) continue;
       if (process.env.ONLY_AGE && process.env.ONLY_AGE !== panel.ageGroup) continue;
 

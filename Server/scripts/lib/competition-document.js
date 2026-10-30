@@ -14,7 +14,7 @@
  * @module scripts/lib/competition-document
  */
 
-const { readMeets, startDateOf, endDateOf } = require('./meets');
+const { readMeets, startDateOf, endDateOf, competitionTypesOf } = require('./meets');
 
 const { name: NAME, year: YEAR } = readMeets();
 
@@ -75,6 +75,7 @@ function feeDeadlineOf(meet) {
  * @param {boolean} [late] - put the fee deadline in the past, so late fees bite now
  */
 function buildCompetition(meet, adminIds, late = false) {
+  const types = competitionTypesOf(meet);
   const ageGroups = [];
   for (const gender of GENDERS) {
     for (const ageGroup of AGE_GROUPS) ageGroups.push({ gender, ageGroup });
@@ -91,11 +92,11 @@ function buildCompetition(meet, adminIds, late = false) {
     startDate: startDateOf(meet),
     endDate: endDateOf(meet),
     description: `${NAME} — ${meet.place} ${YEAR}`,
-    competitionTypes: COMPETITION_TYPES,
-    apparatusConfig: Object.fromEntries(COMPETITION_TYPES.map((type) => [type, APPARATUS])),
+    competitionTypes: types,
+    apparatusConfig: Object.fromEntries(types.map((type) => [type, APPARATUS])),
     // Per gender: women do not compete on Hanging Mallakhamb (COP §11), so the
     // union above is still all three.
-    apparatusByGender: Object.fromEntries(COMPETITION_TYPES.map((type) => [type, {
+    apparatusByGender: Object.fromEntries(types.map((type) => [type, {
       Male: APPARATUS,
       Female: APPARATUS.filter((name) => name !== 'Hanging Mallakhamb'),
     }])),

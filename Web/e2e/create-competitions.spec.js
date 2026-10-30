@@ -116,6 +116,7 @@ for (const meet of meetsToCreate()) {
       feeDueDate: asDateInput(document.feeDueDate),
       playerFee: PLAYER_FEE,
       lateFee: LATE_FEE,
+      competitionTypes: document.competitionTypes,
     });
 
     /*
@@ -133,8 +134,8 @@ for (const meet of meetsToCreate()) {
     expect(created.level, `${meet.place} was created at the wrong level`).toBe(meet.level);
     expect(
       created.competitionTypes?.sort(),
-      `${meet.place} must run both competition types — the panel plan seats every panel for both`
-    ).toEqual(['competition_1', 'competition_2']);
+      `${meet.place} must run exactly its own competitions (meets.json)`
+    ).toEqual([...document.competitionTypes].sort());
     expect(
       created.ageGroups?.length,
       `${meet.place} has no categories, so no athlete can be entered anywhere`

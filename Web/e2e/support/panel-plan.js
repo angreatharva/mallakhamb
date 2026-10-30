@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { JUDGE_ROSTER } from './judge-roster.js';
+import { competitionTypesOf } from './meets.js';
 
 /**
  * The meet's panel plan, as the specs need it.
@@ -103,6 +104,24 @@ export const PLAN_PLACE = PLAN.place;
 
 /** The competition types every panel is seated for. */
 export const PLAN_COMPETITION_TYPES = PLAN.competitionTypes;
+
+/**
+ * The panels one competition type is judged by. Competition II is one "All
+ * ages" final per gender, sized like that gender's Under 14 panel; I and III
+ * are per age group. Mirrors Server/scripts/lib/panel-plan.js panelsForType.
+ */
+export const panelsForType = (meetPlan, competitionType) => {
+  if (competitionType !== 'competition_2') return meetPlan.panels;
+  const genders = [...new Set(meetPlan.panels.map((p) => p.gender))];
+  return genders.map((gender) => {
+    const own = meetPlan.panels.filter((p) => p.gender === gender);
+    const like = own.find((p) => p.ageGroup === 'Under14') || own[0];
+    return { gender, ageGroup: 'AllAges', size: like.size };
+  });
+};
+
+/** The competitions a meet runs (meets.json), for the specs that judge or seat it. */
+export const meetCompetitionTypes = (meet) => competitionTypesOf(meet.place);
 
 /** Seat name → the email of the judge who holds it, on every panel. */
 export const SEAT_EMAIL = PLAN.seats;

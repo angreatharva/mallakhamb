@@ -254,14 +254,35 @@ function steps(args) {
       id: 'scores',
       where: 'web',
       needsApi: true,
-      env: meetSide,
-      title: 'Judging every meet',
+      env: { ...meetSide, SCORE_STAGE: 'one' },
+      title: 'Judging Competition I at every meet',
       command: ['npm', 'run', 'seed:scores', '--', ...scoringParallel],
       why: `Every judge signs in and works their flight for ${label} — slips, `
         + 'the chief\'s mismatch and tolerance alerts, the overrides that clear '
         + 'them, Final Submit, then the Scorer\'s times across all five '
         + 'deduction bands. BY FAR THE LONGEST STEP: ~620 slips per meet, each a '
         + 'page interaction. This is the one to narrow with --meets.',
+    },
+    {
+      id: 'finalize',
+      where: 'web',
+      needsApi: true,
+      env: meetSide,
+      title: 'Finalize the finals (Competition II / III)',
+      command: ['npm', 'run', 'seed:finalize', '--', ...parallel],
+      why: 'Admin → Finals → "Finalize all ready finals" at every meet that runs a '
+        + 'final: the summary lists them, the button enters them, the board reads '
+        + 'Finalized. Nobody is in a final until this runs.',
+    },
+    {
+      id: 'finals-scores',
+      where: 'web',
+      needsApi: true,
+      env: { ...meetSide, SCORE_STAGE: 'finals' },
+      title: 'Judging the finals',
+      command: ['npm', 'run', 'seed:scores', '--', ...scoringParallel],
+      why: 'The panels judge Competition II (All ages) and III (per apparatus) — the '
+        + 'finalized finalists only, player-first on the judge dashboard.',
     },
   ];
 }

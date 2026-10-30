@@ -20,8 +20,13 @@
  * longer choose them — so panels, the lot draw, the judges' and Scorer's sheets
  * and the public board pick the finalists up through their existing paths.
  *
- * Once a final's first score exists it is frozen: a later Competition I
- * correction marks it stale (the admin is warned) but changes nobody.
+ * The engine BUILDS the lists; an Admin or Super Admin FINALIZES them
+ * (owner, 2026-10-30). Only a finalized final is entered — written into the
+ * squads, shown to judges, lots, coaches, players and the public, emailed.
+ * Finalizing needs Competition I fully locked, no tie waiting for a draw and
+ * no stale warning. A finalized final's list no longer recomputes: a later
+ * Competition I correction only marks it stale. Only a Super Admin reopens
+ * one, and only before its first score; after that it is frozen for good.
  *
  * Meets marked `legacyFinals` (scored before this existed) are left alone.
  *
@@ -285,26 +290,32 @@ class QualificationService {
   /** @private */
   async _store(identity, existing, next) {
     const started = await this._started(identity.competition, identity.competitionType, identity.gender, identity.ageGroup, identity.apparatus);
-    if (started) {
-      // Frozen: the list stays; a different result only warns the admin.
+    if (started || existing?.finalizedAt) {
+      // Finalized (or already started): the list stays; a different result
+      // only warns the admin.
       const changed = !sameQualifiers(
         (existing?.qualifiers || []).map((q) => ({ playerId: idOf(q.player) })),
         next.qualifiers.map((q) => ({ playerId: idOf(q.player) }))
       );
       await this.qualifications.upsertFinal(identity, {
-        frozenAt: existing?.frozenAt || new Date(),
+        ...(started ? { frozenAt: existing?.frozenAt || new Date() } : {}),
         staleSince: changed ? (existing?.staleSince || new Date()) : null,
-        staleNote: changed ? 'A Competition I correction would change who qualified, but this final has already started.' : '',
+        staleNote: changed
+          ? (started
+            ? 'A Competition I correction would change who qualified, but this final has already started.'
+            : 'A Competition I correction would change who qualified since this final was finalized. A Super Admin can reopen it to recompute.')
+          : '',
       });
       return;
     }
-    const saved = await this.qualifications.upsertFinal(identity, { ...next, computedAt: new Date(), frozenAt: null, staleSince: null, staleNote: '' });
-    await this._tellCoaches(saved, existing);
+    // Not finalized yet: the list follows Competition I freely. Nobody is
+    // entered or emailed until an admin finalizes it.
+    await this.qualifications.upsertFinal(identity, { ...next, computedAt: new Date(), frozenAt: null, staleSince: null, staleNote: '' });
   }
 
   /** Email each coach whose player newly qualified (once per change). @private */
   async _tellCoaches(saved, existing) {
-    if (!this.otpService?.notifyCoachOfQualifiers || saved.status === 'waiting') return;
+    if (!this.otpService?.notifyCoachOfQualifiers || !saved.finalizedAt) return;
     const before = new Set((existing?.qualifiers || []).map((q) => idOf(q.player)));
     const added = (saved.qualifiers || []).filter((q) => !before.has(idOf(q.player)));
     if (!added.length) return;
@@ -332,7 +343,8 @@ class QualificationService {
    */
   async _syncEntries(competitionId, gender) {
     const competition = await this.competitions.findById(competitionId);
-    const docs = await this.qualifications.find({ competition: competitionId, gender }) || [];
+    // Only a FINALIZED final is entered (owner, 2026-10-30).
+    const docs = (await this.qualifications.find({ competition: competitionId, gender }) || []).filter((d) => d.finalizedAt);
     const ii = docs.find((d) => d.competitionType === 'competition_2');
     const allRound = new Set((ii?.qualifiers || []).map((q) => idOf(q.player)));
     const iiApparatus = offeredApparatus(competition, 'competition_2', gender);
@@ -378,8 +390,27 @@ class QualificationService {
     if (doc.frozenAt) throw new BusinessRuleError('This final has started; a withdrawal can no longer be replaced.');
     if (!(doc.qualifiers || []).some((q) => sameId(q.player, playerId))) throw new ValidationError('That player is not a qualifier of this final');
     await this.qualifications.updateById(doc._id, { $push: { withdrawn: { player: playerId, by: actor?.id || null, reason: String(reason).slice(0, 300) } } });
-    await this.onCompetitionOneChange(doc.competition, doc.gender, doc.competitionType === 'competition_3' ? doc.ageGroup : null);
+    await this._recomputeKeepingFinalized(doc);
     return this.qualifications.findById(doc._id);
+  }
+
+  /**
+   * Recompute one final after a withdrawal or reinstatement. A finalized
+   * final stays finalized with the next in rank in the freed place (and that
+   * coach is emailed); if the change leaves it not ready (a new tie at the
+   * cut) it goes back to "not finalized" for the admin.
+   * @private
+   */
+  async _recomputeKeepingFinalized(doc) {
+    const finalized = doc.finalizedAt ? { finalizedAt: doc.finalizedAt, finalizedBy: doc.finalizedBy } : null;
+    if (finalized) await this.qualifications.updateById(doc._id, { finalizedAt: null, staleSince: null, staleNote: '' });
+    await this.onCompetitionOneChange(doc.competition, doc.gender, doc.competitionType === 'competition_3' ? doc.ageGroup : null);
+    if (!finalized) return;
+    const fresh = await this.qualifications.findById(doc._id);
+    if (fresh.status !== 'set') return;
+    const saved = await this.qualifications.updateById(doc._id, finalized);
+    await this._syncEntries(doc.competition, doc.gender);
+    await this._tellCoaches(saved, doc);
   }
 
   /** Undo a withdrawal (a mistake), while the final has not started. */
@@ -387,13 +418,14 @@ class QualificationService {
     const doc = await this._final(qualificationId, competitionId);
     if (doc.frozenAt) throw new BusinessRuleError('This final has started.');
     await this.qualifications.updateById(doc._id, { $pull: { withdrawn: { player: playerId } } });
-    await this.onCompetitionOneChange(doc.competition, doc.gender, doc.competitionType === 'competition_3' ? doc.ageGroup : null);
+    await this._recomputeKeepingFinalized(doc);
     return this.qualifications.findById(doc._id);
   }
 
   /** Competition II: the drawn order of a tie the rules could not break. */
   async recordAllRoundDraw(actor, qualificationId, { ageGroup, order, competitionId = null }) {
     const doc = await this._final(qualificationId, competitionId);
+    if (doc.finalizedAt || doc.frozenAt) throw new BusinessRuleError('This final is already finalized.');
     if (doc.competitionType !== 'competition_2') throw new ValidationError('Competition III ties are drawn on the Competition I standing (Scores tab)');
     if (!Array.isArray(order) || order.length < 2) throw new ValidationError('Give the drawn order of the tied players');
     const tiedHere = new Set((doc.tied || []).filter((t) => t.sourceAgeGroup === ageGroup).map((t) => idOf(t.player)));
@@ -404,6 +436,73 @@ class QualificationService {
     drawOrders.push({ ageGroup, order, by: actor?.id || null, at: new Date() });
     await this.qualifications.updateById(doc._id, { drawOrders });
     await this.onCompetitionOneChange(doc.competition, doc.gender, null);
+    return this.qualifications.findById(doc._id);
+  }
+
+  // ── Finalize (owner, 2026-10-30) ───────────────────────────────────────
+
+  /** Why a final cannot be finalized yet — empty when it can. */
+  _blockers(doc) {
+    if (doc.frozenAt) return ['This final has already started.'];
+    if (doc.finalizedAt) return ['Already finalized.'];
+    const blockers = [];
+    if (doc.status === 'waiting') blockers.push(...(doc.waitingFor?.length ? doc.waitingFor : ['Competition I is not finished for this final yet.']));
+    if (doc.status === 'waiting_draw') blockers.push(...(doc.waitingFor?.length ? doc.waitingFor : ['A tie for the last place needs a lucky draw.']));
+    if (doc.staleSince) blockers.push(doc.staleNote || 'Competition I changed since this list was computed.');
+    if (!(doc.qualifiers || []).length && doc.status === 'set') blockers.push('Nobody qualified for this final.');
+    return blockers;
+  }
+
+  /**
+   * Finalize one final: its finalists are entered (squads, judges, lots,
+   * coaches, players, public) and their coaches emailed.
+   */
+  async finalize(actor, qualificationId, { competitionId = null } = {}) {
+    // Recompute first, so the check runs on Competition I as it is now.
+    const before = await this._final(qualificationId, competitionId);
+    await this.onCompetitionOneChange(before.competition, before.gender, before.competitionType === 'competition_3' ? before.ageGroup : null);
+    const doc = await this._final(qualificationId, competitionId);
+    const blockers = this._blockers(doc);
+    if (blockers.length) throw new BusinessRuleError(`${finalLabel(doc)} cannot be finalized yet: ${blockers.join(' · ')}`, { reason: 'NOT_READY', blockers });
+    const saved = await this.qualifications.updateById(doc._id, { finalizedAt: new Date(), finalizedBy: actor?.id || null });
+    await this._syncEntries(doc.competition, doc.gender);
+    await this._tellCoaches(saved, null);
+    return saved;
+  }
+
+  /**
+   * Finalize every final of the meet that is ready; report the others with
+   * what they wait for. Never partial within one final.
+   */
+  async finalizeAll(actor, competitionId) {
+    await this.recomputeAll(competitionId);
+    const docs = await this.qualifications.find({ competition: competitionId }) || [];
+    const finalized = [];
+    const notReady = [];
+    for (const doc of docs) {
+      if (doc.finalizedAt || doc.frozenAt) continue;
+      const blockers = this._blockers(doc);
+      if (blockers.length) { notReady.push({ _id: doc._id, label: finalLabel(doc), blockers }); continue; }
+      const saved = await this.qualifications.updateById(doc._id, { finalizedAt: new Date(), finalizedBy: actor?.id || null });
+      finalized.push({ _id: doc._id, label: finalLabel(doc), qualifiers: (doc.qualifiers || []).length });
+      await this._tellCoaches(saved, null);
+    }
+    for (const gender of [...new Set(docs.map((d) => d.gender))]) await this._syncEntries(competitionId, gender);
+    return { finalized, notReady, finals: await this.list(competitionId) };
+  }
+
+  /**
+   * Reopen a finalized final (Super Admin only, before its first score): its
+   * finalists leave the squads and the list follows Competition I again.
+   */
+  async reopen(actor, qualificationId, { competitionId = null } = {}) {
+    const doc = await this._final(qualificationId, competitionId);
+    if (!doc.finalizedAt) throw new BusinessRuleError('This final is not finalized.');
+    if (doc.frozenAt || await this._started(doc.competition, doc.competitionType, doc.gender, doc.ageGroup, doc.apparatus)) {
+      throw new BusinessRuleError('This final has started and can no longer be reopened.');
+    }
+    await this.qualifications.updateById(doc._id, { finalizedAt: null, finalizedBy: null, staleSince: null, staleNote: '' });
+    await this.onCompetitionOneChange(doc.competition, doc.gender, doc.competitionType === 'competition_3' ? doc.ageGroup : null);
     return this.qualifications.findById(doc._id);
   }
 
@@ -422,7 +521,9 @@ class QualificationService {
       gender: d.gender,
       ageGroup: d.ageGroup,
       apparatus: d.apparatus,
-      status: d.frozenAt ? 'started' : d.status,
+      status: d.frozenAt ? 'started' : d.finalizedAt ? 'finalized' : d.status,
+      finalizedAt: d.finalizedAt || null,
+      blockers: this._blockers(d),
       qualifiers: (d.qualifiers || []).map(person),
       tied: (d.tied || []).map(person),
       skipped: (d.skipped || []).map(person),
@@ -438,7 +539,7 @@ class QualificationService {
 
   /** The finals one player is in, for the player dashboard. */
   async forPlayer(playerId) {
-    const docs = await this.qualifications.find({ 'qualifiers.player': playerId }, { populate: { path: 'competition', select: 'name startDate level' } }) || [];
+    const docs = await this.qualifications.find({ 'qualifiers.player': playerId, finalizedAt: { $ne: null } }, { populate: { path: 'competition', select: 'name startDate level' } }) || [];
     return docs.map((d) => ({ competition: d.competition ? { _id: d.competition._id, name: d.competition.name } : null, label: finalLabel(d), competitionType: d.competitionType, apparatus: d.apparatus }));
   }
 
@@ -447,7 +548,7 @@ class QualificationService {
     const competition = await this.competitions.findById(competitionId, { select: 'registeredTeams' });
     const mine = (competition?.registeredTeams || []).find((rt) => sameId(rt.coach, coachId));
     if (!mine) return [];
-    const all = await this.list(competitionId);
+    const all = (await this.list(competitionId)).filter((f) => f.finalizedAt);
     return all
       .map((f) => ({ ...f, qualifiers: f.qualifiers.filter((q) => sameId(q.team?._id, mine.team)), skipped: [], tied: [] }))
       .filter((f) => f.qualifiers.length);

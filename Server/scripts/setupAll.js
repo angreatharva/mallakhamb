@@ -227,10 +227,10 @@ const STEPS = [
     id: 'scores',
     where: 'server',
     needsApi: true,
-    title: 'Judging every meet',
-    command: ['npm', 'run', 'seed:scores'],
+    title: 'Judging Competition I at every meet',
+    command: ['npm', 'run', 'seed:scores', '--', '--stage=one'],
     why: 'Judges all twenty meets over the API — every athlete, every apparatus, '
-      + 'both competition types, each meet by its OWN panel sizes and its own six '
+      + 'Competition I only (the finals come after Finalize), each meet by its OWN panel sizes and its own six '
       + 'judges. Posts the slips wrong first and corrects them, the way a panel '
       + 'actually reaches a score, rather than writing the settled numbers. THE '
       + 'SECOND-LONGEST STEP, about 35 minutes. `npm --prefix Server run '
@@ -241,7 +241,7 @@ const STEPS = [
     where: 'server',
     needsApi: true,
     title: 'Standings, team championship and lucky draws',
-    command: ['node', 'scripts/seedCompetitionDay.js', 'results'],
+    command: ['node', 'scripts/seedCompetitionDay.js', 'results', 'one'],
     why: 'Every category, type and apparatus: ranks follow the finals, shared places '
       + 'are real unresolved ties, the public board shows the same finals, team '
       + 'totals equal the best 5 of 6 per apparatus recomputed here (admin and '
@@ -257,6 +257,37 @@ const STEPS = [
       + '(the published final moves by that deduction), put it back — on a 3-, a '
       + '4- and a 5-judge panel. Plus the admin screen\'s save on a multi-'
       + 'apparatus sheet: every result and every apparatus\' lock must survive it.',
+  },
+  {
+    id: 'finals',
+    where: 'server',
+    needsApi: true,
+    title: 'Finalize the finals (Competition II / III)',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'finals'],
+    why: 'The admin\'s "Finalize all ready finals" at every meet, after Competition I '
+      + 'is locked and corrected: nobody is entered before it; ties at a cut drawn '
+      + 'as the admin does; II = top 2 of every age group by the sum (recomputed '
+      + 'from the public results), III = top 10 per apparatus, max 2 per team; '
+      + 'squads = qualifiers; the admin cannot reopen, the Super Admin can; lots '
+      + 'drawn. Meets run I only, I+II, I+III and I+II+III.',
+  },
+  {
+    id: 'finals-scores',
+    where: 'server',
+    needsApi: true,
+    title: 'Judging the finals',
+    command: ['npm', 'run', 'seed:scores', '--', '--stage=finals'],
+    why: 'The panels judge Competition II (All ages) and Competition III (per '
+      + 'apparatus) of every meet that runs them — only the finalized finalists.',
+  },
+  {
+    id: 'finals-results',
+    where: 'server',
+    needsApi: true,
+    title: 'Finals standings',
+    command: ['node', 'scripts/seedCompetitionDay.js', 'results', 'finals'],
+    why: 'Every final\'s standing per apparatus and its public board; every judged '
+      + 'final has started, and even the Super Admin can no longer reopen it.',
   },
   {
     id: 'judge-screens',

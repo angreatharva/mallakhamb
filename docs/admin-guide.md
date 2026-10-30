@@ -127,7 +127,7 @@ On screens narrower than 1440 px the Super Admin tabs are in the menu (☰).
 
 ## Finals tab (Competition II and III)
 
-Finalists move from Competition I **automatically**, the moment the Senior Judge and Scorer save and lock Competition I. You never pick them.
+The lists are worked out from Competition I **automatically**, the moment the Senior Judge and Scorer save and lock it. You never pick the finalists — but nobody is entered in a final until you **Finalize** it.
 
 - **Competition II (All Round Individual):** one final per gender with **all age groups together**: the **top 2 of each age group**, ranked on the sum of their Competition I scores on every apparatus.
 - **Competition III (Apparatus Championship):** per age group and apparatus, the **top 10** on that apparatus, **at most 2 from one team**. A team's third player is passed over and the next player gets the place; the card says who was passed over.
@@ -135,6 +135,8 @@ Finalists move from Competition I **automatically**, the moment the Senior Judge
 - **Tie for the last place:** for III, record the lucky draw on the Competition I standing in the Scores tab. For II, tap the tied players on the final's card in the drawn order.
 - **Withdraw** a qualifier (before the final's first score): the next in rank takes the place and the coach is emailed. **Reinstate** undoes it.
 - If a Competition I score is corrected after a final has started, the list stays as it is and the card warns you.
+- **Finalize:** a final reads **Ready to finalize** once Competition I is fully locked, no tie is waiting and nothing changed since. **Finalize all ready finals** shows a summary (every finalist, anyone passed over, and the finals that are not ready yet with the reason), then enters the finalists for the judges, the lots, the coaches (who are emailed), the players and the public results. Each card also has its own **Finalize** button. A finalized list is locked.
+- **Reopen** (Super Admin only, before the final's first score) takes a finalized final back off the judges' and coaches' screens so it follows Competition I again.
 - Seat the panels in the **Judges** tab: Competition II uses the age group **All ages**; Competition III uses each age group. Draw the running order in the **Lots** tab once the final is filled.
 - Meets scored before this feature keep their old Competition II/III entries.
 
