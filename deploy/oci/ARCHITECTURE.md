@@ -10,6 +10,7 @@ How to read this file:
 |---|---|
 | [§0 Glossary](#0-glossary-every-abbreviation-its-full-form-what-it-means-and-why-we-need-it) | Every abbreviation: its full form, what it means, and why we use it |
 | [§1 The whole picture](#1-the-whole-picture) | One diagram of everything |
+| [§1A What lives where](#1a-what-lives-where-the-complete-map) | The in-depth map: every OCI resource, every VM's processes, ports, files, data, secrets, logs and timers, and where each kind of data is kept |
 | [§2 The two database questions](#2-the-two-database-questions) | "Does app-01 have its own database?" and "Why is there a db-03?" |
 | [§3–§13 The layers](#3-tenancy-and-governance) | Tenancy, network, compute, storage, software, database, secrets, backups, timers, monitoring, access, cost |
 | [§14 Failure scenarios](#14-failure-scenarios-what-breaks-what-happens-what-the-user-sees) | 20 scenarios, each with a diagram or timeline, what happens automatically, what a human does, and what data can be lost |
@@ -198,6 +199,279 @@ flowchart TB
 
 ---
 
+## 1A. What lives where: the complete map
+
+Everything below the OCI console line was read **from the live VMs on 2026-10-30** (17:30 UTC; app-01 ACTIVE, app-02 STANDBY, both on `81061ed`). db-03 facts come from `install-mongo.sh` and the M3 results, because no Bastion session to it was open. Sizes are what was on disk at that moment.
+
+### 1A.1 The layers at a glance
+
+```mermaid
+flowchart TB
+  L0["Layer 0 · Outside OCI<br/>users · DNS · GitHub · Gmail API · Razorpay · Grafana Cloud · MongoDB Atlas"]
+  L1["Layer 1 · OCI account (tenancy mallakhambindia, compartment mallakhamb-prod)<br/>IAM · quota · budget · Vault · Object Storage · Bastion · Resource Scheduler · Events/Notifications"]
+  L2["Layer 2 · Network (VCN 10.0.0.0/16)<br/>Internet Gateway · route table · security list · NSG · 2 reserved IPs · 1 ephemeral IP"]
+  L3["Layer 3 · Compute + disk<br/>app-01 (FD-1) · app-02 (FD-2) · db-03 (FD-3) · 3 boot volumes · volume backups"]
+  L4["Layer 4 · Inside each VM<br/>host firewall · systemd services · timers · files · data · logs"]
+  L5["Layer 5 · The data<br/>replica set 'mallakhamb' · 3 copies · oplog · backups in 3 places"]
+  L0 --> L1 --> L2 --> L3 --> L4 --> L5
+```
+
+### 1A.2 The full map, part 1: the OCI account (each VM drawn as one box)
+
+```mermaid
+flowchart LR
+  subgraph EXT["OUTSIDE OCI"]
+    direction TB
+    USR["Users<br/>browsers · phones"]
+    DNSX["DNS<br/>sslip.io now · BigRock at cutover"]
+    RZX["Razorpay<br/>orders + webhooks"]
+    GMX["Gmail API<br/>outgoing mail"]
+    GHX["GitHub<br/>read-only deploy key"]
+    GCX["Grafana Cloud<br/>metrics · 21 alerts · synthetics"]
+    ATX[("MongoDB Atlas M0<br/>…_prod_offsite (hourly)")]
+  end
+
+  subgraph ACC["OCI ACCOUNT · tenancy mallakhambindia · ap-mumbai-1 · compartment mallakhamb-prod"]
+    direction TB
+    subgraph NET["VCN 10.0.0.0/16 · one public subnet · Internet Gateway · NO NAT<br/>security list: 80/443 world, 22 + ICMP VCN only · NSG: 27017 VCN only"]
+      direction TB
+      IP1(("137.23.63.84<br/>reserved · ACTIVE"))
+      IP2(("130.210.4.142<br/>reserved · STANDBY"))
+      APP1["app-01 · FD-1 · 10.0.0.50<br/>ACTIVE web + DB PRIMARY"]
+      APP2["app-02 · FD-2 · 10.0.0.245<br/>STANDBY web + DB SECONDARY"]
+      DB3["db-03 · FD-3 · 10.0.0.70<br/>DB HIDDEN · ephemeral public IP (outbound only)"]
+      IP1 --> APP1
+      IP2 -.-> APP2
+    end
+    subgraph VLT["Vault -kv-01 · key -key-01"]
+      direction TB
+      S1["secret-api-env v9"]
+      S2["secret-e2e-env"]
+      S3["secret-mongo-* (CA, 3 member certs, users)"]
+      S4["secret-mongo-offsite-uri"]
+      S5["secret-mongo-prod-source-uri"]
+    end
+    subgraph OBJ["Object Storage · bkt-backups<br/>VMs may write, never delete"]
+      direction TB
+      B1["daily/ 35 d · monthly/ 400 d"]
+      B2["meet/ 35 d"]
+      B3["pitr-base/ + oplog/ 35 d"]
+      B4["manual/"]
+    end
+    subgraph BLK["Block storage (150 of 200 GB free)"]
+      direction TB
+      BV["3 boot volumes × 50 GB<br/>bv-app-01 · bv-app-02 · bv-db-03"]
+      BVB["golden image + weekly backups ×3 (app-01)"]
+    end
+    subgraph OPS["Operations"]
+      direction TB
+      BAS["Bastion · SSH sessions ≤ 3 h"]
+      SCH["Resource Scheduler · auto-start :07 / :37"]
+      EVN["Events → Notifications · email"]
+    end
+    subgraph GOV["Governance"]
+      direction TB
+      QUO["Quota: free tier only"]
+      BUD["Budget SGD 1.50 / month"]
+      IAMX["IAM dg-app + pol-app<br/>(app-01, app-02)"]
+    end
+  end
+
+  USR --> DNSX
+  USR -->|"HTTPS 443"| IP1
+  RZX -->|"webhooks"| IP1
+  GCX -->|"scrape /metrics · synthetics"| IP1
+  APP1 -->|"mail · orders"| GMX & RZX
+  APP1 & APP2 -->|"git fetch"| GHX
+  APP1 & APP2 & DB3 -->|"metrics"| GCX
+  APP1 -->|"backups"| OBJ
+  APP1 -->|"hourly copy"| ATX
+  APP1 & APP2 -->|"instance principal"| VLT
+  BAS -->|"SSH"| APP1 & APP2 & DB3
+  SCH --> APP1 & APP2 & DB3
+  EVN -.->|"VM stopped"| USR
+  BV --- APP1 & APP2 & DB3
+```
+
+### 1A.2b The full map, part 2: inside the three VMs
+
+```mermaid
+flowchart TB
+  IN(("HTTPS from<br/>137.23.63.84"))
+  subgraph A1["app-01 · FD-1 · 10.0.0.50 · A1 1 OCPU / 4 GB + 2 GB swap · ACTIVE"]
+    direction TB
+    A1C["caddy :443 :80 · admin 127.0.0.1:2019<br/>sites/: staging-web · staging-api · staging-ocr"]
+    A1W["/opt/mallakhamb/current/Web/dist<br/>(the SPA, served as static files)"]
+    A1N["mallakhamb.service · Node 24 · :5000<br/>REST + socket.io · user mallakhamb<br/>env /etc/mallakhamb/app.env"]
+    A1O["mallakhamb-ocr · Python PP-OCRv5<br/>127.0.0.1:8090 · photos in memory only"]
+    A1M[("mongod 8.0.34 · PRIMARY p2<br/>127.0.0.1 + 10.0.0.50 :27017<br/>/var/lib/mongodb 344 MB")]
+    A1T["timers: backup · oplog-slice · offsite-copy ·<br/>mongo-metrics · oci-cost · oci-idle · e2e 00/18 IST"]
+    A1A["alloy 127.0.0.1:12345 · job mallakhamb-host"]
+    A1C --> A1W
+    A1C --> A1N --> A1O
+  end
+  subgraph A2["app-02 · FD-2 · 10.0.0.245 · A1 1 OCPU / 4 GB + 2 GB swap · STANDBY"]
+    direction TB
+    A2C["caddy · admin only<br/>sites/ EMPTY · sites-standby/ holds 3 files"]
+    A2N["mallakhamb.service + ocr<br/>INSTALLED, stopped, disabled<br/>/etc/mallakhamb/STANDBY marker"]
+    A2M[("mongod 8.0.34 · SECONDARY p1<br/>127.0.0.1 + 10.0.0.245 :27017<br/>/var/lib/mongodb 338 MB")]
+    A2T["timers: mongo-metrics · oci-cost ·<br/>oci-idle · e2e 06/12 IST"]
+    A2A["alloy · job mallakhamb-host-standby"]
+    A2C ~~~ A2N
+  end
+  subgraph D3["db-03 · FD-3 · 10.0.0.70 · E2.1.Micro 1/8 OCPU / 1 GB + 2 GB swap"]
+    direction TB
+    D3M[("mongod 8.0.34 · HIDDEN p0 · votes 1<br/>cache 0.25 GB · the backup source")]
+    D3T["timer: mongo-metrics"]
+    D3A["alloy · job mallakhamb-db"]
+  end
+  IN --> A1C
+  A1N -->|"reads + writes"| A1M
+  A1M <-->|"replication · TLS + x.509"| A2M
+  A1M <-->|"replication"| D3M
+  A2M <-->|"replication"| D3M
+  A1T -->|"backups read here"| D3M
+```
+
+### 1A.3 Inside each VM: processes, ports and who runs them
+
+| Process (systemd unit) | Runs as | Listens on | app-01 (ACTIVE) | app-02 (STANDBY) | db-03 |
+|---|---|---|---|---|---|
+| `caddy.service` (Caddy 2.11.7) | caddy | `*:443`, `*:80`; admin API `127.0.0.1:2019` | running, **serves 3 sites** | running, **serves nothing** | — |
+| `mallakhamb.service` (Node v24.22.0) | mallakhamb | `*:5000` (REST + socket.io) | running, enabled | **stopped, disabled** | — |
+| `mallakhamb-ocr.service` (Python 3.12) | mallakhamb | `127.0.0.1:8090` | running | stopped | — |
+| `mongod.service` (8.0.34) | mongodb | `127.0.0.1:27017` + own private IP `:27017` | PRIMARY | SECONDARY | HIDDEN SECONDARY |
+| `mongodb-tune.service` | root | — | runs at boot (kernel tuning for mongod) | same | same |
+| `alloy.service` (v1.20.1) | alloy | `127.0.0.1:12345` | job `mallakhamb-host` | job `mallakhamb-host-standby` | job `mallakhamb-db` |
+| `netfilter-persistent` | root | — | loads the host firewall at boot | same | same |
+| `sshd` (Ubuntu) | root | `*:22` | reachable only from the Bastion | same | same |
+| `rpcbind` (Ubuntu default) | root | `*:111` | blocked by both firewalls | same | same |
+| e2e: `mallakhamb-e2e-mongod` / `-e2e-api` | mallakhamb | `127.0.0.1:27027` / `:5001` | only during its 00/18 IST run | only during its 06/12 IST run | — |
+| PITR scratch mongod | root | `127.0.0.1:27099` | only during `mallakhamb-pitr` | — | — |
+
+**How ports stay private.** Three layers, all three must allow a packet:
+
+```mermaid
+flowchart LR
+  P["Packet from the internet"] --> SLX{"OCI security list<br/>80, 443 only<br/>(22, ICMP: VCN only)"}
+  SLX -->|"other port"| X1["dropped"]
+  SLX -->|"80/443"| NSGX{"NSG<br/>27017 VCN only"}
+  NSGX --> HF{"host iptables<br/>22, 80, 443 open ·<br/>27017 from 10.0.0.0/24 ·<br/>then REJECT everything"}
+  HF -->|"80/443"| C["Caddy"]
+  HF -->|"5000, 8090, 111, 2019, 12345 …"| X2["rejected"]
+```
+
+The API binds `*:5000` (all interfaces), not 127.0.0.1. It's still private: the security list never admits 5000 and the host firewall ends in `REJECT`. Checked 2026-10-30: `http://137.23.63.84:5000` from the internet gets no connection.
+
+### 1A.4 Inside each VM: every file and directory that matters
+
+| Path | Owner / mode | What it is | Written by | Read by | On which VMs |
+|---|---|---|---|---|---|
+| `/opt/mallakhamb/repo.git` (96 MB) | root | Bare Git mirror of the repo | `mallakhamb-deploy` (git fetch, read-only key) | deploy | app-01, app-02 |
+| `/opt/mallakhamb/releases/<sha>-<web.env hash>/` (5 kept, 2.2 GB) | root | One built release: `Server/`, `Web/dist`, `ocr/` (+ `.venv`), `.complete` | `mallakhamb-deploy` | systemd units | app-01, app-02 |
+| `/opt/mallakhamb/current` | symlink | The live release (`81061ed…-14e2a4fd`) | deploy / rollback (atomic switch) | `mallakhamb.service`, Caddy web root | app-01, app-02 |
+| `/opt/mallakhamb/DEPLOYED_SHA` | root 0644 | The deployed commit | deploy | humans, metrics | app-01, app-02 |
+| `/opt/mallakhamb/mallakhamb.bundle` | root | Git bundle: fallback code source if GitHub is unreachable | by hand | deploy (fallback) | app-01, app-02 |
+| `/opt/mallakhamb/ocr-models/` (7.5 MB) | root | PP-OCRv5 models, pinned by sha256 | `fetch-models.sh` | OCR sidecar | app-01, app-02 |
+| `/etc/mallakhamb/app.env` | root:mallakhamb **0640** | The API's whole environment (DB URI, JWT, Razorpay, mail, OCR token…) | `mallakhamb-render-env` from Vault `secret-api-env` | API, backup jobs | app-01, app-02 |
+| `/etc/mallakhamb/e2e.env` | root:mallakhamb 0640 | app.env + overrides for the nightly test (port 5001, throw-away DB, no mail/payments) | `mallakhamb-e2e` | e2e API | app-01, app-02 |
+| `/etc/mallakhamb/ocr.env` | root:mallakhamb 0640 | OCR token and settings | install (O15) | OCR sidecar | app-01, app-02 |
+| `/etc/mallakhamb/web.env` | root 0644 | Build-time settings for the SPA (API host) | install | deploy (web build) | app-01, app-02 |
+| `/etc/mallakhamb/release.env` | root 0644 | Release metadata | deploy | API (`app_info`) | app-01, app-02 |
+| `/etc/mallakhamb/platform.sh` | root 0644 | OCI hooks: Vault fetch, bucket upload, repo URL | install | every `mallakhamb-*` script | app-01, app-02 |
+| `/etc/mallakhamb/mongo.env` | root 0644 | Vault OCID for the mongo secrets (no secret values) | install | offsite copy, tls-fetch | app-01, app-02 |
+| `/etc/mallakhamb/mongo-monitor.env` | root **0600** | Monitor user's password | `mongo-tls-fetch … monitor` | `mallakhamb-mongo-metrics` | all three |
+| `/etc/mallakhamb/mongo-ca.pem` | root 0644 | Public CA certificate (the API's TLS trust anchor) | `mongo-tls-fetch` | API, backup jobs | app-01, app-02 |
+| `/etc/mallakhamb/STANDBY` | root 0644 | **Marker: this VM is the standby.** Every backup job exits at once if it exists | `mallakhamb-demote` (removed by `promote`) | backup jobs, promote | app-02 only |
+| `/etc/mongod.conf` | root | mongod settings (§7) | `install-mongo.sh` | mongod | all three |
+| `/etc/mongodb/tls/ca.pem` | root:mongodb 0444 | CA certificate | `mongo-tls-fetch` | mongod | all three |
+| `/etc/mongodb/tls/member.pem` | mongodb **0400** | This member's certificate + private key | `mongo-tls-fetch` | mongod | all three |
+| `/var/lib/mongodb/` (344 / 338 MB) | mongodb | **The database files** (WiredTiger) incl. the 2 GB-capped oplog | mongod | mongod | all three |
+| `/etc/hosts` (3 lines) | root | `app-01.db` 10.0.0.50 · `app-02.db` 10.0.0.245 · `db-03.db` 10.0.0.70 | install | driver, mongod | all three |
+| `/etc/caddy/Caddyfile` | root | Imports `sites/*.caddy` | install | Caddy | app-01, app-02 |
+| `/etc/caddy/sites/` | root | **Live** site files (web, api, ocr) | promote (copies in) / demote (moves out) | Caddy | app-01: 3 files · app-02: empty |
+| `/etc/caddy/sites-standby/` | root | Parked copies of the site files | demote | promote | app-01, app-02 |
+| `/var/lib/caddy/` | caddy | Let's Encrypt certificates and account | Caddy | Caddy | app-01, app-02 |
+| `/etc/default/alloy` | root:alloy 0640 | Grafana token + scrape job name | `install-alloy.sh`, promote/demote | Alloy | all three |
+| `/var/lib/alloy/textfile/*.prom` | root 0644 | Our metrics: release + role, backup, offsite, oplog-slice, pitr-base, mongo, e2e, oci-cost, oci-idle | the matching jobs | Alloy → Grafana | all three (backup files: active) |
+| `/var/lib/mallakhamb/oplog-slice.state` | root | "base day, last oplog position": where the next slice starts | `mallakhamb-oplog-slice` | same | the active |
+| `/usr/local/bin/mallakhamb-*` (17 scripts) + `mongo-tls-fetch` | root 0755 | deploy, promote, demote, rollback, render-env, envcheck, backup, backup-source, oplog-slice, offsite-copy, pitr, restore-drill, mongo-metrics, oci-cost, oci-idle, e2e, counts | `install.sh` | systemd, operators | app-01, app-02 (db-03: mongo-metrics) |
+| `/opt/oci-cli/` | root | OCI CLI in a Python venv | install | platform.sh hooks | app-01, app-02 |
+| `/swapfile` | root | 2 GB swap | install | kernel | all three |
+
+### 1A.5 Where each kind of data lives
+
+| Data | Lives in | Copies | Never stored |
+|---|---|---|---|
+| Users, competitions, teams, registrations, scores, running order, payments records | MongoDB `mallakhambcompetition_prod` | 3 live (app-01, app-02, db-03) + bucket dumps + oplog slices + Atlas hourly | — |
+| Judge profile photos | **Inside MongoDB** (downscaled ~256×256 JPEG, inline in `JudgeAccount`) | Same as above | No file uploads exist anywhere: no S3, no Cloudinary, no disk folder |
+| Walk-in paper-form photos | **Memory only**, for the length of one OCR request | none | Never written to disk by the API or the sidecar |
+| Sandbox data | `mallakhambcompetition_dev` (currently empty) | 3 live | — |
+| Restore-drill copies | `mallakhambcompetition_prod_restoretest` | temporary | — |
+| Nightly test data | Throw-away mongod on `127.0.0.1:27027`, fresh empty directory each run | none, wiped after the run | Never on the replica set |
+| Card details | **Razorpay only** | — | Never on our servers |
+| Outgoing mail | Gmail API | — | No mail server on OCI |
+| Live sessions | Signed JWT in the browser's cookie / header | — | No session store on the server |
+| Code | GitHub → `/opt/mallakhamb/repo.git` → `releases/` | 2 VMs × up to 5 releases | — |
+| Secrets | Vault (master copy) → rendered files in `/etc/mallakhamb` (§1A.6) | Vault + each app VM | Never in Git, never on a laptop |
+| Metrics, dashboards, alerts | Grafana Cloud | — | No metrics database on OCI |
+
+### 1A.6 Where each secret lives, from the Vault to the process that uses it
+
+```mermaid
+flowchart LR
+  subgraph V["OCI Vault -kv-01 (master copies)"]
+    E1["secret-api-env"]
+    E2["secret-e2e-env"]
+    E3["secret-mongo-ca-key/ca-cert/member-*/users"]
+    E4["secret-mongo-offsite-uri"]
+    E5["secret-mongo-prod-source-uri"]
+  end
+  E1 -->|"mallakhamb-render-env<br/>(every API start)"| F1["/etc/mallakhamb/app.env 0640"]
+  F1 --> P1["Node API"]
+  F1 -->|"BACKUP_URI"| P2["backup · oplog-slice · offsite-copy"]
+  E2 -->|"mallakhamb-e2e"| F2["/etc/mallakhamb/e2e.env 0640"] --> P3["e2e API :5001"]
+  E3 -->|"mongo-tls-fetch"| F3["/etc/mongodb/tls/member.pem 0400<br/>/etc/mongodb/tls/ca.pem<br/>/etc/mallakhamb/mongo-ca.pem<br/>/etc/mallakhamb/mongo-monitor.env 0600"]
+  F3 --> P4["mongod · API TLS · metrics"]
+  E4 -->|"read at run time, never saved"| P5["mallakhamb-offsite-copy"]
+  E5 -->|"read at run time, never saved"| P6["mongo-copy-db.sh (cutover)"]
+  GT["Grafana token (pasted once)"] --> F4["/etc/default/alloy 0640"] --> P7["Alloy"]
+  DK["GitHub deploy key (read-only)"] --> F5["/root/.ssh/mallakhamb_deploy"] --> P8["mallakhamb-deploy"]
+```
+
+db-03 isn't in the dynamic group, so it never talks to the Vault. app-01 relays its certificate and monitor password over SSH (`tar | untar`).
+
+### 1A.7 Where each log lives
+
+| Log | Path | Rotation |
+|---|---|---|
+| API (Node) | `/var/log/mallakhamb/` (740 KB on app-01) + `journalctl -u mallakhamb` | app logger + journald |
+| OCR sidecar | `journalctl -u mallakhamb-ocr` | journald |
+| Caddy access logs | `/var/log/caddy/*-access.log` (42 MB on app-01) | Caddy's own roll |
+| mongod | `/var/log/mongodb/mongod.log` (44 MB on app-01) | `/etc/logrotate.d/mongod` (`logRotate: reopen`) |
+| Backup, slice, off-site, e2e, deploy | `journalctl -u mallakhamb-<job>` (each run prints `… ok` or the error; backups also print `backup-source: …`) | journald |
+| Alloy | `journalctl -u alloy` | journald |
+| OCI-level actions | OCI Audit (console) | Oracle, 365 days |
+
+### 1A.8 What changes when the roles swap
+
+| Thing | On the ACTIVE | On the STANDBY | Moved by |
+|---|---|---|---|
+| Reserved IP 137.23.63.84 | attached | — | `failover-ip.sh move` (Cloud Shell) |
+| Reserved IP 130.210.4.142 | — | attached | `failover-ip.sh finish` |
+| `/etc/mallakhamb/STANDBY` | absent | present | promote removes / demote creates |
+| Caddy site files | in `sites/` | in `sites-standby/` | promote / demote |
+| `mallakhamb.service` (+ OCR) | enabled + running | disabled + stopped | promote / demote |
+| backup, oplog-slice, offsite-copy timers | enabled | disabled | promote / demote |
+| `backup-meet` timer | enabled by hand on meet days | disabled | operator |
+| Alloy scrape job | `mallakhamb-host` | `mallakhamb-host-standby` | promote / demote |
+| `role=` in `mallakhamb_release.prom` | `active` | `standby` | promote / demote |
+| e2e slots | 00 + 18 IST | 06 + 12 IST | decided at run time (whichever VM runs `mallakhamb.service` is the active), so they move by themselves |
+| `NO_E2E` marker | `/etc/mallakhamb/NO_E2E`, if present, skips that VM's runs | | operator |
+| mongod role | **independent**: PRIMARY goes to the highest-priority healthy member (app-01) by election, not by promote/demote | | the replica set itself |
+
+---
+
 ## 2. The two database questions
 
 ### 2.1 "If app-01 has its own MongoDB and app-01 fails, how does app-02 have app-01's data?"
@@ -328,7 +602,8 @@ Every port in one place:
 |---|---|---|
 | 443 | Caddy | Internet (active only; the standby serves no site) |
 | 80 | Caddy | Internet: only redirects to 443 and answers Let's Encrypt challenges |
-| 5000 | Node API | 127.0.0.1 only (Caddy) |
+| 5000 | Node API | Binds all interfaces, but only Caddy (127.0.0.1) can reach it: the security list and the host firewall's final REJECT block it from outside (§1A.3) |
+| 2019 / 12345 | Caddy admin API / Alloy | 127.0.0.1 only |
 | 8090 | OCR sidecar | 127.0.0.1 only (the API). Also published through Caddy's `ocr-` host until the cutover, for Render |
 | 27017 | mongod | 127.0.0.1 + the VCN, TLS required |
 | 5001 / 27027 | e2e API / throw-away mongod | 127.0.0.1, only while a nightly run is going |
@@ -570,7 +845,7 @@ flowchart LR
 | `mallakhamb-mongo-metrics` | every minute at :15 s | all three |
 | `mallakhamb-oci-cost` | hourly :23 | app VMs |
 | `mallakhamb-oci-idle` | hourly :41 | app VMs |
-| `mallakhamb-e2e` | 00, 06, 12, 18 IST. **Active takes 00 + 18, standby takes 06 + 12** | both app VMs |
+| `mallakhamb-e2e` | 00, 06, 12, 18 IST. **Active takes 00 + 18, standby takes 06 + 12** (decided at run time, so a failover moves them) | both app VMs |
 
 ### 10.1 Nightly lifecycle check (e2e)
 
@@ -784,8 +1059,8 @@ flowchart LR
     A2["app-02<br/>→ elected PRIMARY"]
     D3["db-03"]
   end
-  A1 -.x.- A2
-  A1 -.x.- D3
+  A1 -. "link cut" .- A2
+  A1 -. "link cut" .- D3
   A2 --- D3
 ```
 
