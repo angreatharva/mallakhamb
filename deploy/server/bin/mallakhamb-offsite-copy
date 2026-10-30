@@ -21,14 +21,15 @@ OFF_URI="${BASH_REMATCH[1]}${DST_DB}${BASH_REMATCH[4]}"
 [[ "$OFF_URI" != *"replicaSet=mallakhamb"* ]] || { echo "refusing: OFFSITE_URI points at the replica set itself" >&2; exit 1; }
 [[ "$DST_DB" == *_offsite ]] || { echo "refusing: target $DST_DB does not end in _offsite" >&2; exit 1; }
 
-printf 'uri: "%s"\n' "$BACKUP_URI" > "$W/src.yaml"
+SRC_URI="$(BACKUP_URI="$BACKUP_URI" mallakhamb-backup-source)"   # the hidden db-03, else any secondary
+printf 'uri: "%s"\n' "$SRC_URI" > "$W/src.yaml"
 printf 'uri: "%s"\n' "$OFF_URI" > "$W/dst.yaml"
-mongodump --config="$W/src.yaml" --readPreference=secondaryPreferred --db="$APP_DB" --archive="$W/app.gz" --gzip --quiet
+mongodump --config="$W/src.yaml" --db="$APP_DB" --archive="$W/app.gz" --gzip --quiet
 mongorestore --config="$W/dst.yaml" --archive="$W/app.gz" --gzip --drop \
   --nsInclude="${APP_DB}.*" --nsFrom="${APP_DB}.*" --nsTo="${DST_DB}.*" --quiet
-SRC="$BACKUP_URI" DST="$OFF_URI" mongosh --quiet --nodb --eval '
+SRC="$SRC_URI" DST="$OFF_URI" mongosh --quiet --nodb --eval '
   const n = (u) => { const d = connect(u); return Object.fromEntries(d.getCollectionNames().filter(c => !c.startsWith("system.")).sort().map(c => [c, d[c].countDocuments({})])); };
-  const a = n(process.env.SRC + (process.env.SRC.includes("?") ? "&" : "?") + "readPreference=secondaryPreferred"), b = n(process.env.DST);
+  const a = n(process.env.SRC), b = n(process.env.DST);
   if (JSON.stringify(a) !== JSON.stringify(b)) { print("copy differs: " + JSON.stringify({ source: a, offsite: b })); quit(1); }
   print("off-site copy matches: " + Object.keys(a).length + " collections, " + Object.values(a).reduce((x, y) => x + y, 0) + " documents");'
 T=/var/lib/alloy/textfile

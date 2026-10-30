@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# MONGODB-SELF-HOSTED-PLAN.md §4 — which replica-set member the backups read from.
+#
+# Backups (mallakhamb-backup, -oplog-slice, -offsite-copy) should read the HIDDEN member (db-03), so a
+# dump loads neither the primary (live scoring) nor app-02 (the failover target). A replica-set
+# connection never selects a hidden member, so it has to be reached with directConnection=true.
+# If no hidden member is a healthy, caught-up secondary, fall back to the whole set with
+# readPreference=secondaryPreferred (app-02, or the primary when nothing else is up): a backup from
+# a busier member beats no backup.
+#
+# In:  BACKUP_URI in the environment (never an argument: ps would show the password). Whatever
+#      database path it carries (or none) is kept.
+# Out: stdout = the URI to read from (it carries its own readPreference, so callers pass no
+#      --readPreference); stderr = one line saying which member and why.
+set -euo pipefail
+U="${BACKUP_URI:?BACKUP_URI not set}"
+MAX_LAG_S="${MAX_LAG_S:-120}"   # the primary writes a no-op every 10 s, so a caught-up member is seconds old
+if [[ ! "$U" =~ ^mongodb://([^@/]+@)?([^/?]+)/([^?]*)(\?(.*))?$ ]] || [[ "$U" != *replicaSet=* ]]; then
+  # not our self-hosted set (e.g. Atlas mongodb+srv:// on another platform): the old behaviour
+  B="${U%%\?*}"; Q="$( [[ "$U" == *\?* ]] && tr '&' '\n' <<<"${U#*\?}" | grep -viE '^readPreference=' | grep -v '^$' | paste -sd'&' || true)"
+  echo "backup-source: not a self-hosted replica set, secondaryPreferred" >&2
+  printf '%s?%s%sreadPreference=secondaryPreferred\n' "$B" "$Q" "${Q:+&}"; exit 0
+fi
+CRED="${BASH_REMATCH[1]}"; HOSTS="${BASH_REMATCH[2]}"; DB="${BASH_REMATCH[3]}"; Q="${BASH_REMATCH[5]:-}"
+# keep every option except the ones that decide which member is used
+KEEP="$(tr '&' '\n' <<<"$Q" | grep -viE '^(replicaSet|readPreference|directConnection|serverSelectionTimeoutMS)=' | grep -v '^$' | paste -sd'&' || true)"
+SEP="${KEEP:+&}"
+SETQ="$(tr '&' '\n' <<<"$Q" | grep -viE '^readPreference=' | grep -v '^$' | paste -sd'&' || true)"
+SET_URI="mongodb://${CRED}${HOSTS}/${DB}?${SETQ}${SETQ:+&}readPreference=secondaryPreferred"
+
+IFS=',' read -r -a LIST <<<"$HOSTS"
+WHY=()
+for h in "${LIST[@]}"; do
+  D="mongodb://${CRED}${h}/${DB}?${KEEP}${SEP}directConnection=true&readPreference=secondary&serverSelectionTimeoutMS=5000&connectTimeoutMS=5000"
+  # "hidden <lag s>" | "other"; nothing at all if the member can't be reached
+  R="$(P="$D" timeout 20 mongosh --quiet --nodb --eval '
+    const h = connect(process.env.P).hello();
+    const w = h.lastWrite && h.lastWrite.lastWriteDate;
+    print((h.hidden && h.secondary && w) ? "hidden " + Math.round((Date.now() - w.getTime()) / 1000) : "other")' 2>/dev/null | tail -1 || true)"
+  case "$R" in
+    hidden\ *)
+      LAG="${R#hidden }"
+      if [ "$LAG" -le "$MAX_LAG_S" ]; then
+        echo "backup-source: hidden member ${h} (${LAG} s behind)" >&2
+        printf '%s\n' "$D"; exit 0
+      fi
+      WHY+=("hidden member ${h} is ${LAG} s behind, limit ${MAX_LAG_S} s");;
+    other) ;;
+    *) WHY+=("${h} did not answer");;
+  esac
+done
+[ "${#WHY[@]}" -gt 0 ] || WHY=("no hidden member answered")
+echo "backup-source: FALLBACK to the set, secondaryPreferred ($(IFS=';'; echo "${WHY[*]}" | sed 's/;/; /g'))" >&2
+printf '%s\n' "$SET_URI"

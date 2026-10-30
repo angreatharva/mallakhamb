@@ -9,7 +9,9 @@
 #
 # Base + the slices after it, replayed with --oplogLimit, rebuild the data at any second
 # (mallakhamb-pitr). Slices never overlap, so a replay never applies a write twice.
-# Reads a secondary as mallakhamb_backup (BACKUP_URI), so the primary is not loaded.
+# Reads as mallakhamb_backup (BACKUP_URI) from the member mallakhamb-backup-source picks: the hidden
+# db-03, else any secondary. Oplog positions are the same on every member, so a chain may switch
+# members between runs; within a run one member serves the newest-entry probe, the base and the slice.
 set -euo pipefail
 [ -f /etc/mallakhamb/STANDBY ] && { echo "standby: oplog slices run on the active only"; exit 0; }
 . /etc/mallakhamb/platform.sh
@@ -21,16 +23,17 @@ STATE=/var/lib/mallakhamb/oplog-slice.state                  # "<base-day> <t> <
 mkdir -p /var/lib/mallakhamb
 umask 077
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
-printf 'uri: "%s"\n' "$SET_URI" > "$W/set.yaml"
+SRC_URI="$(BACKUP_URI="$SET_URI" mallakhamb-backup-source)"
+printf 'uri: "%s"\n' "$SRC_URI" > "$W/set.yaml"
 STAMP=$(date -u +%Y-%m-%dT%H%MZ); TODAY=$(date -u +%F)
 last_ts() {   # the last oplog position in a .bson file → "t i" (empty if the file has no entries)
   # "|| true": no entries is an answer, not an error (set -e + pipefail would end the script)
   { bsondump --quiet "$1" 2>/dev/null | tail -1 | grep -o '"ts":{"\$timestamp":{"t":[0-9]*,"i":[0-9]*}}' \
     | sed -E 's/.*"t":([0-9]+),"i":([0-9]+).*/\1 \2/'; } || true
 }
-newest_ts() { # the newest entry in a secondary's oplog right now → "t i"
-  SET_URI="$SET_URI" mongosh --quiet --nodb --eval '
-    const c = connect(process.env.SET_URI + (process.env.SET_URI.includes("?") ? "&" : "?") + "readPreference=secondaryPreferred");
+newest_ts() { # the newest entry in the source member's oplog right now → "t i"
+  SRC_URI="$SRC_URI" mongosh --quiet --nodb --eval '
+    const c = connect(process.env.SRC_URI);
     const e = c.getSiblingDB("local").oplog.rs.find({}, { ts: 1 }).sort({ $natural: -1 }).limit(1).next();
     print(e.ts.getHighBits() + " " + e.ts.getLowBits())'
 }
@@ -45,7 +48,7 @@ read -r BASE_DAY FROM_T FROM_I < "$STATE" 2>/dev/null || { BASE_DAY=""; FROM_T="
 # 1. A new base, once a UTC day (and whenever there is no chain to continue, e.g. after a failover).
 if [ "$BASE_DAY" != "$TODAY" ] || [ -z "$FROM_T" ]; then
   START=$(newest_ts)                    # if nothing is written during the dump, the base ends here
-  mongodump --config="$W/set.yaml" --readPreference=secondaryPreferred --oplog --out="$W/base" --quiet
+  mongodump --config="$W/set.yaml" --oplog --out="$W/base" --quiet
   END=$(last_ts "$W/base/oplog.bson"); END="${END:-$START}"
   read -r FROM_T FROM_I <<<"$END"
   tar -C "$W" -czf "$W/base.tar.gz" base
@@ -55,9 +58,9 @@ if [ "$BASE_DAY" != "$TODAY" ] || [ -z "$FROM_T" ]; then
   echo "base ok: pitr-base/${STAMP}_${FROM_T}.${FROM_I}.tar.gz ($(stat -c %s "$W/base.tar.gz") bytes)"
 fi
 
-# 2. The slice: every oplog entry after the last position, from a secondary.
+# 2. The slice: every oplog entry after the last position, from the same member.
 printf '{"ts":{"$gt":{"$timestamp":{"t":%s,"i":%s}}}}' "$FROM_T" "$FROM_I" > "$W/q.json"
-mongodump --config="$W/set.yaml" --readPreference=secondaryPreferred --db=local --collection=oplog.rs \
+mongodump --config="$W/set.yaml" --db=local --collection=oplog.rs \
   --queryFile="$W/q.json" --out="$W/slice" --quiet
 F="$W/slice/local/oplog.rs.bson"
 TO=$(last_ts "$F")

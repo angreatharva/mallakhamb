@@ -588,14 +588,19 @@ Run as the default admin user [PLATFORM: `ubuntu` over the OCI Bastion, or AWS S
   BACKUP_URI="$(sed -n "s/^BACKUP_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
   [ -n "$BACKUP_URI" ] || { echo "BACKUP_URI missing" >&2; exit 1; }
   STAMP=$(date -u +%Y-%m-%dT%H%MZ)
-  FILE=$(mktemp --suffix=.archive.gz); trap 'rm -f "$FILE"' EXIT
-  # read from a secondary so a dump during a meet doesn't compete with live scoring on the primary
-  mongodump --uri="$BACKUP_URI" --readPreference=secondaryPreferred --archive="$FILE" --gzip --quiet
+  umask 077
+  W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
+  FILE="$W/dump.archive.gz"
+  # read the hidden member (db-03), so a dump during a meet loads neither the primary (live scoring)
+  # nor app-02; mallakhamb-backup-source falls back to any secondary when db-03 can't serve it
+  printf 'uri: "%s"\n' "$(BACKUP_URI="$BACKUP_URI" mallakhamb-backup-source)" > "$W/src.yaml"
+  mongodump --config="$W/src.yaml" --archive="$FILE" --gzip --quiet
   [ -s "$FILE" ] || { echo "empty dump" >&2; exit 1; }
   upload_backup "$FILE" "${KIND}/${STAMP}.archive.gz"
   if [ "$KIND" = daily ] && [ "$(date -u +%d)" = "01" ]; then upload_backup "$FILE" "monthly/${STAMP}.archive.gz"; fi
   T=/var/lib/alloy/textfile
   printf '# HELP mallakhamb_backup_last_success_timestamp_seconds Unix time of the last good database backup\n# TYPE mallakhamb_backup_last_success_timestamp_seconds gauge\nmallakhamb_backup_last_success_timestamp_seconds %s\n' "$(date +%s)" > "$T/.backup.tmp"
+  chmod 0644 "$T/.backup.tmp"              # umask 077 above; Alloy (user alloy) must read it
   mv "$T/.backup.tmp" "$T/mallakhamb_backup.prom"
   echo "backup ok: ${KIND}/${STAMP}.archive.gz ($(stat -c %s "$FILE") bytes)"
   ```
