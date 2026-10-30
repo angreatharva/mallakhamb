@@ -936,7 +936,7 @@ flowchart LR
 2. **One availability domain.** Fault domains protect against rack failures, not against losing the Mumbai building. The Atlas off-site copy is the only protection against that.
 3. **Two VMs down = no writes.** That's the price of never allowing split brain.
 4. **db-03 is tiny** (1 GB RAM). Fine at a few MB of data. Re-check if the database ever reaches hundreds of MB (plan §4a growth limits).
-5. **Backups read db-03 only once the 2026-10-30 scripts are installed** on both app VMs. Until then the VMs run the old scripts, which read app-02.
+5. **Backups read db-03 since 2026-10-30 17:21 UTC.** The scripts are installed on both app VMs, and a manual run of all three jobs on app-01 logged `hidden member db-03.db`. Those scripts come from branch `deploy/backups-read-db03`. Until that branch is merged, re-running `install.sh` from master would put the old app-02-reading scripts back.
 6. **Mongo member certificates expire 2028-10-22.** It must be on a calendar.
 7. **Old releases pile up on the standby** (it never prunes).
 8. **`/api/health` can say "unhealthy" right after a restart** (heap measured against the current heap, not the limit). Fixed locally, not deployed. Use `/api/health/ready`.
