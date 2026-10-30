@@ -53,4 +53,9 @@ fi
 [ "$up" = 1 ] || printf '# HELP mallakhamb_mongo_up 1 if this member answered over TLS with the monitor login\n# TYPE mallakhamb_mongo_up gauge\nmallakhamb_mongo_up 0\n' > "$OUT"
 n=$(find /var/lib/mongodb/rollback -type f 2>/dev/null | wc -l)
 printf '# HELP mallakhamb_mongo_rollback_files files in mongod rollback/ (writes a failover undid)\n# TYPE mallakhamb_mongo_rollback_files gauge\nmallakhamb_mongo_rollback_files %s\n' "$n" >> "$OUT"
+# This member's TLS certificate: when it expires the members refuse each other (alert 60 days ahead).
+end="$(openssl x509 -enddate -noout -in /etc/mongodb/tls/member.pem 2>/dev/null | cut -d= -f2)"
+if [ -n "$end" ] && exp="$(date -d "$end" +%s 2>/dev/null)"; then
+  printf '# HELP mallakhamb_mongo_member_cert_expiry_timestamp_seconds When this member'"'"'s TLS certificate expires\n# TYPE mallakhamb_mongo_member_cert_expiry_timestamp_seconds gauge\nmallakhamb_mongo_member_cert_expiry_timestamp_seconds %s\n' "$exp" >> "$OUT"
+fi
 mv -f "$OUT" "$T/mallakhamb_mongo.prom"

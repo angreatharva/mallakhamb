@@ -1,33 +1,24 @@
 #!/usr/bin/env bash
-# OCI PLAN O13 — the IP half of a failover. Run in Cloud Shell. Drilled both ways 2026-10-16.
+# OCI PLAN O13 — planned switch of the ACTIVE app VM, from Cloud Shell. Since automatic failover
+# (deploy/oci/AUTO-FAILOVER.md) the site's IP pip-app-01 (137.23.63.84) lives on a SECONDARY private
+# IP, and the role follows the IP: move it, and within ~20 s mallakhamb-role promotes the VM that
+# now holds it and demotes the other. No VM loses its internet, so there is no "finish" step.
 #
-#   move <nn>    production IP pip-app-01 (137.23.63.84) -> vm-app-<nn>; both IPs are unassigned
-#                first, so the old active is left with NO public IP (cannot serve, cannot reach Atlas)
-#   finish <nn>  standby IP pip-app-02 -> vm-app-<nn>; run ONLY after that VM ran mallakhamb-demote
+#   move <nn>   pip-app-01 → vm-app-<nn>'s secondary private IP
 #
-# Full failover A -> B:  move B  ->  B: sudo mallakhamb-promote  ->  check health  ->
-#                        A: sudo mallakhamb-demote (over the Bastion, private IP)  ->  finish A
+# Easier from a VM (no Cloud Shell): `sudo mallakhamb-role takeover` on the VM that should be active.
+# The old two-step procedure (move + finish, IPs on primary addresses) applies only before
+# service-ip-setup.sh migrate has run.
 set -euo pipefail
-ACT=${1:?move|finish}; NN=${2:?01|02}
+ACT=${1:?move}; NN=${2:?01|02}
+[ "$ACT" = move ] || { echo "only 'move' exists now (no 'finish' step since AUTO-FAILOVER)"; exit 2; }
 C=$(oci iam compartment list --compartment-id "$OCI_TENANCY" --name mallakhamb-prod --query 'data[0].id' --raw-output)
-pip() { oci network public-ip list -c "$C" --scope REGION --lifetime RESERVED --all --query "data[?\"display-name\"=='mallakhamb-prod-bom-pip-app-$1'].id | [0]" --raw-output; }
-priv() {
-  local i v
-  i=$(oci compute instance list -c "$C" --display-name "mallakhamb-prod-bom-vm-app-$1" --lifecycle-state RUNNING --query 'data[0].id' --raw-output)
-  v=$(oci compute vnic-attachment list -c "$C" --instance-id "$i" --query 'data[0]."vnic-id"' --raw-output)
-  oci network private-ip list --vnic-id "$v" --query 'data[0].id' --raw-output
-}
-P1=$(pip 01); P2=$(pip 02); T=$(priv "$NN")
-if [ "$ACT" = move ]; then
-  oci network public-ip update --public-ip-id "$P1" --private-ip-id '' --force --wait-for-state AVAILABLE >/dev/null
-  oci network public-ip update --public-ip-id "$P2" --private-ip-id '' --force --wait-for-state AVAILABLE >/dev/null
-  oci network public-ip update --public-ip-id "$P1" --private-ip-id "$T" --force --wait-for-state ASSIGNED >/dev/null
-else
-  oci network public-ip update --public-ip-id "$P2" --private-ip-id "$T" --force --wait-for-state ASSIGNED >/dev/null
-fi
-for n in 01 02; do
-  id=$(pip $n)
-  echo "pip-app-$n $(oci network public-ip get --public-ip-id "$id" --query 'data."ip-address"' --raw-output) -> ...$(oci network public-ip get --public-ip-id "$id" --query 'data."private-ip-id"' --raw-output | tail -c 9) ($(oci network public-ip get --public-ip-id "$id" --query 'data."lifecycle-state"' --raw-output))"
-done
-for n in 01 02; do echo "vm-app-$n private-ip ends ...$(priv $n | tail -c 9)"; done
-echo "$ACT $NN done at $(date -u +%H:%M:%S)"
+P1=$(oci network public-ip list -c "$C" --scope REGION --lifetime RESERVED --all --query "data[?\"display-name\"=='mallakhamb-prod-bom-pip-app-01'].id | [0]" --raw-output)
+I=$(oci compute instance list -c "$C" --display-name "mallakhamb-prod-bom-vm-app-$NN" --lifecycle-state RUNNING --query 'data[0].id' --raw-output)
+V=$(oci compute vnic-attachment list -c "$C" --instance-id "$I" --query 'data[0]."vnic-id"' --raw-output)
+S=$(oci network private-ip list --vnic-id "$V" --query 'data[?"is-primary"==`false`] | [0].id' --raw-output)
+[ -n "$S" ] && [ "$S" != null ] || { echo "vm-app-$NN has no secondary private IP (run service-ip-setup.sh secondaries)"; exit 1; }
+oci network public-ip update --public-ip-id "$P1" --private-ip-id "$S" --force --wait-for-state ASSIGNED >/dev/null \
+  || { oci network public-ip update --public-ip-id "$P1" --private-ip-id '' --force --wait-for-state AVAILABLE >/dev/null
+       oci network public-ip update --public-ip-id "$P1" --private-ip-id "$S" --force --wait-for-state ASSIGNED >/dev/null; }
+echo "137.23.63.84 → vm-app-$NN at $(date -u +%H:%M:%S); roles follow within ~20 s (journalctl -u mallakhamb-role)"

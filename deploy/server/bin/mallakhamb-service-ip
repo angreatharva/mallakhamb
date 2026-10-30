@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# deploy/oci/AUTO-FAILOVER.md — bring this VM's SECONDARY private IPs up on its network interface.
+#
+# The site's reserved public IP (pip-app-01, 137.23.63.84) is attached to a secondary private IP
+# (app-01: 10.0.0.51, app-02: 10.0.0.246), never to a VM's primary one. Each VM keeps its own
+# public IP on its primary address for going out, so moving the site's IP never cuts a VM off the
+# internet. OCI routes the secondary address to the VNIC, but Ubuntu only configures the primary
+# by DHCP: this adds the rest. The list comes from the instance metadata service, so nothing is
+# hard-coded and a VM with no secondary IP does nothing. Idempotent (ip addr replace).
+set -euo pipefail
+J="$(curl -sf --max-time 5 -H 'Authorization: Bearer Oracle' http://169.254.169.254/opc/v2/vnics/)" \
+  || { echo "service-ip: instance metadata not reachable" >&2; exit 1; }
+python3 - "$J" <<'PY' | while read -r mac ip prefix; do
+import json, sys
+for v in json.loads(sys.argv[1]):
+    prefix = v["subnetCidrBlock"].split("/")[1]
+    for ip in v.get("secondaryPrivateIps") or []:
+        print(v["macAddr"].lower(), ip, prefix)
+PY
+  dev="$(ip -o link | awk -v m="$mac" 'tolower($0) ~ m {sub(":","",$2); print $2; exit}')"
+  [ -n "$dev" ] || { echo "service-ip: no interface with MAC $mac" >&2; continue; }
+  if ip -o -4 addr show dev "$dev" | grep -q " ${ip}/"; then continue; fi
+  ip addr replace "${ip}/${prefix}" dev "$dev"
+  echo "service-ip: added ${ip}/${prefix} on ${dev}"
+done

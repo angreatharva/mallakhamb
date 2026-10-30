@@ -290,7 +290,7 @@ groups:
           service: mallakhamb-api
           severity: warning
         annotations:
-          summary: 'API memory is above 85 % of its 3 GiB budget ({{ humanize1024 $values.A.Value }}B).'
+          summary: 'API memory is above 85 % of its 1.5 GiB budget ({{ humanize1024 $values.A.Value }}B).'
           description: >-
             Past the budget the VM swaps, then the kernel may kill the process, which drops every live tablet connection
             (systemd restarts it). First look: Runtime → RSS and heap, then the Host row. Runbook: PLAN.md §8 "Memory
@@ -328,7 +328,7 @@ groups:
                 - evaluator:
                     type: gt
                     params:
-                      - 2738041651
+                      - 1369020826
               datasource:
                 type: __expr__
                 uid: __expr__
@@ -2272,6 +2272,432 @@ groups:
                     type: gt
                     params:
                       - 10800
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-role-auto-failover
+        title: Automatic failover happened
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: The standby took over the site in the last hour because the active VM was gone.
+          description: >-
+            The site should be up on the other VM. Find out why the old active died (Console → Instances; OCI audit;
+            journalctl on it once it is back). When it returns it demotes itself. Fail back in a quiet window: sudo
+            mallakhamb-role takeover on the VM that should be active. Runbook: deploy/oci/AUTO-FAILOVER.md.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                time() -
+                max(mallakhamb_role_auto_failover_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 3600
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-role-no-holder
+        title: Site IP attached to no VM
+        condition: C
+        for: 3m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          service: mallakhamb-api
+          severity: critical
+        annotations:
+          summary: 'Neither app VM holds the site''s reserved IP (137.23.63.84): the site is unreachable.'
+          description: >-
+            Cloud Shell: bash ~/service-ip-setup.sh status. Put it back: sudo mallakhamb-role takeover on the VM that
+            should be active, or deploy/oci/scripts/failover-ip.sh move <nn>. Runbook: deploy/oci/AUTO-FAILOVER.md.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'max(mallakhamb_role_holds_service_ip{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-role-two-active
+        title: Two app VMs configured active
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: Both app VMs run as the active (no STANDBY marker) for 5 minutes.
+          description: >-
+            Only the IP holder gets traffic, but both take backups. The non-holder's mallakhamb-role should demote it
+            within a minute: journalctl -u mallakhamb-role -n 30 on it; is it in observe mode, or blind to OCI? Runbook:
+            deploy/oci/AUTO-FAILOVER.md.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'sum(mallakhamb_role_is_active{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-role-judging
+        title: Standby thinks the active is gone
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'The standby has counted {{ $values.A.Value }} ticks of the active looking gone (it takes over at 6).'
+          description: >-
+            Early warning. journalctl -u mallakhamb-role -n 20 on the standby shows why (site, OCI state, both database
+            views). To stop a takeover during planned work: sudo touch /etc/mallakhamb/NO_AUTO_FAILOVER on the standby.
+            Runbook: deploy/oci/AUTO-FAILOVER.md.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'max(mallakhamb_role_failover_bad_ticks{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-role-stale
+        title: Role reconciler not running
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: mallakhamb-role has not run on one app VM for more than 5 minutes.
+          description: >-
+            Automatic failover and self-demotion are off on that VM. systemctl status mallakhamb-role.timer; journalctl
+            -u mallakhamb-role -n 30. Runbook: deploy/oci/AUTO-FAILOVER.md.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                time() -
+                min(mallakhamb_role_reconcile_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 300
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-role-oci-blind
+        title: Automatic failover cannot see OCI
+        condition: C
+        for: 15m
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'An app VM cannot ask OCI who holds the site''s IP, so it can neither take over nor step aside.'
+          description: >-
+            On that VM: sudo mallakhamb-role status. Usually the policy mallakhamb-prod-pol-failover, or OCI's API is
+            unreachable. Backups fall back to the STANDBY marker meanwhile. Runbook: deploy/oci/AUTO-FAILOVER.md.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'min(mallakhamb_role_oci_ok{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-role-observe
+        title: Automatic failover only observing
+        condition: C
+        for: 1h
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'mallakhamb-role runs in observe mode on an app VM: it logs decisions but will not take over.'
+          description: >-
+            Intended only while testing. Set ROLE_MODE=act in /etc/mallakhamb/role.env on both app VMs. Runbook:
+            deploy/oci/AUTO-FAILOVER.md.
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-oci-resources
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: 'min(mallakhamb_role_mode_act{scrape_job=~"mallakhamb-host|mallakhamb-host-standby"})'
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+              datasource:
+                type: __expr__
+                uid: __expr__
+        isPaused: false
+      - uid: mk-mongo-cert-expiry
+        title: MongoDB member certificate expiring
+        condition: C
+        for: 1h
+        noDataState: OK
+        execErrState: KeepLast
+        labels:
+          service: mallakhamb-api
+          severity: warning
+        annotations:
+          summary: 'A replica-set member certificate expires in {{ humanizeDuration $values.A.Value }}.'
+          description: >-
+            When it expires the members refuse each other and the set falls apart. Re-issue from the private CA (Vault
+            secrets mallakhamb-prod-bom-secret-mongo-*, deploy/server/mongo-tls-fetch.sh) and restart one member at a
+            time. Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+          runbook_url: >-
+            https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
+          __dashboardUid__: mallakhamb-database
+          __panelId__: '1'
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: grafanacloud-prom
+            model:
+              refId: A
+              expr: >-
+                min(mallakhamb_mongo_member_cert_expiry_timestamp_seconds{scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db"})
+                - time()
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+              datasource:
+                type: prometheus
+                uid: grafanacloud-prom
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 5184000
               datasource:
                 type: __expr__
                 uid: __expr__

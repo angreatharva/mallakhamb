@@ -1,0 +1,9 @@
+[Unit]
+Description=Mallakhamb role reconciler and automatic web failover (deploy/oci/AUTO-FAILOVER.md)
+After=network-online.target mongod.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mallakhamb-role tick
+TimeoutStartSec=600

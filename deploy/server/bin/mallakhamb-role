@@ -1,0 +1,215 @@
+#!/usr/bin/env bash
+# deploy/oci/AUTO-FAILOVER.md — who is the ACTIVE app VM, and automatic failover of the web half.
+#
+# THE RULE: whichever VM holds the site's reserved IP (pip-app-01, 137.23.63.84) is the active.
+# Every 20 s on both app VMs (mallakhamb-role.timer) this script:
+#   1. reconciles: holds the IP but is a standby → mallakhamb-promote;
+#                  is active but the IP is on the other VM → mallakhamb-demote (a returning VM
+#                  steps aside by itself);
+#   2. on the STANDBY only, watches the active and moves the IP to itself (then promotes) when ALL
+#      of these hold for FAIL_TICKS ticks in a row (6 × 20 s ≈ 2 min):
+#        a. the active's site does not answer /api/health/ready over the VCN;
+#        b. the active MACHINE is gone, not just a process: OCI says it is not RUNNING, or BOTH this
+#           VM's mongod and db-03's see its replica-set member as unreachable (two vantage points,
+#           the same majority MongoDB itself trusts);
+#        c. this VM's mongod sees a PRIMARY (otherwise taking over cannot serve anything);
+#        d. no /etc/mallakhamb/NO_AUTO_FAILOVER, and no automatic failover in the last COOLDOWN_S.
+#      An API crash, a bad deploy or a certificate problem fails (b), so it never triggers; systemd
+#      restarts the API, and a bad release would fail on the standby too. It never fails BACK by
+#      itself: going back is `sudo mallakhamb-role takeover` on the VM that should be active.
+#
+# ROLE_MODE in /etc/mallakhamb/role.env: observe (default: decide and log, change nothing) | act.
+# Usage: mallakhamb-role [tick|status|takeover|is-active]
+#   is-active: exit 0 if THIS VM holds the site's IP (fresh OCI answer), else 1. The backup jobs ask
+#   it first, so a VM that has just lost the IP never takes a backup twice. If OCI cannot be asked,
+#   it falls back to the STANDBY marker (the rule before automatic failover).
+set -uo pipefail
+exec 9>/run/mallakhamb-role.lock
+if [ "${1:-tick}" = tick ]; then flock -n 9 || { echo "role: another run is in progress"; exit 0; }
+else flock -w 120 9 || { echo "role: busy" >&2; exit 2; }; fi
+. /etc/mallakhamb/platform.sh
+[ -f /etc/mallakhamb/role.env ] && . /etc/mallakhamb/role.env
+MODE="${ROLE_MODE:-observe}"; CONF_MODE="$MODE"
+FAIL_TICKS="${FAIL_TICKS:-6}"
+COOLDOWN_S="${COOLDOWN_S:-1800}"
+CMD="${1:-tick}"
+DEFAULT_EXIT=0
+[ "$CMD" = is-active ] && [ -f /etc/mallakhamb/STANDBY ] && DEFAULT_EXIT=1
+SVC_PIP_NAME="mallakhamb-prod-bom-pip-app-01"
+STATE=/var/lib/mallakhamb/role.state            # "<bad ticks> <unix time of the last automatic failover>"
+TXT=/var/lib/alloy/textfile
+mkdir -p /var/lib/mallakhamb
+log() { echo "role: $*"; }
+act() { [ "$MODE" = act ] || [ "$CMD" = takeover ]; }
+oci_() { timeout 60 "$OCI" "$@" 2>/dev/null; }
+
+H="$(hostname)"; ME="${H##*app-}"
+case "$ME" in 01) OTHER=02 ;; 02) OTHER=01 ;; *) log "not an app VM ($H)"; exit 0 ;; esac
+BAD=0; LAST_AUTO=0
+[ -s "$STATE" ] && read -r BAD LAST_AUTO < "$STATE"
+[[ "$BAD" =~ ^[0-9]+$ ]] || BAD=0; [[ "$LAST_AUTO" =~ ^[0-9]+$ ]] || LAST_AUTO=0
+NOW=$(date +%s)
+OCI_OK=1; HOLDER=unknown; WHY=""
+
+metrics() {
+  local active=0 holds=0
+  [ -f /etc/mallakhamb/STANDBY ] || active=1
+  [ "$HOLDER" = me ] && holds=1
+  [ -d "$TXT" ] || return 0
+  ( umask 022
+    { echo "# HELP mallakhamb_role_reconcile_timestamp_seconds Last run of mallakhamb-role"
+      echo "# TYPE mallakhamb_role_reconcile_timestamp_seconds gauge"
+      echo "mallakhamb_role_reconcile_timestamp_seconds $NOW"
+      echo "# HELP mallakhamb_role_oci_ok 1 if this VM could ask OCI who holds the service IP"
+      echo "# TYPE mallakhamb_role_oci_ok gauge"
+      echo "mallakhamb_role_oci_ok $OCI_OK"
+      echo "# HELP mallakhamb_role_holds_service_ip 1 if the site's reserved IP is on this VM"
+      echo "# TYPE mallakhamb_role_holds_service_ip gauge"
+      echo "mallakhamb_role_holds_service_ip $holds"
+      echo "# HELP mallakhamb_role_is_active 1 if this VM is configured as the active (no STANDBY marker)"
+      echo "# TYPE mallakhamb_role_is_active gauge"
+      echo "mallakhamb_role_is_active $active"
+      echo "# HELP mallakhamb_role_failover_bad_ticks Consecutive ticks on which the standby judged the active gone"
+      echo "# TYPE mallakhamb_role_failover_bad_ticks gauge"
+      echo "mallakhamb_role_failover_bad_ticks $BAD"
+      echo "# HELP mallakhamb_role_auto_failover_timestamp_seconds Unix time of this VM's last automatic takeover (0 = never)"
+      echo "# TYPE mallakhamb_role_auto_failover_timestamp_seconds gauge"
+      echo "mallakhamb_role_auto_failover_timestamp_seconds $LAST_AUTO"
+      echo "# HELP mallakhamb_role_mode_act 1 if automatic failover may act, 0 if it only observes"
+      echo "# TYPE mallakhamb_role_mode_act gauge"
+      echo "mallakhamb_role_mode_act $([ "$CONF_MODE" = act ] && echo 1 || echo 0)"
+    } > "$TXT/.mallakhamb_role.tmp" && mv -f "$TXT/.mallakhamb_role.tmp" "$TXT/mallakhamb_role.prom" )
+}
+finish() {
+  echo "$BAD $LAST_AUTO" > "$STATE"
+  case "$HOLDER" in me|other|none) [ -n "${P1_ID:-}" ] && echo "${CTS:-0} $HOLDER $P1_ID" > /var/lib/mallakhamb/role.cache ;; esac
+  metrics
+  [ "$CMD" = status ] && echo "role: app-$ME role=$ROLE holder=$HOLDER mode=$CONF_MODE bad-ticks=$BAD oci-ok=$OCI_OK"
+  exit "${1:-$DEFAULT_EXIT}"
+}
+
+# --- who am I, and who holds the service IP (OCI is the only source of truth) ---
+/usr/local/bin/mallakhamb-service-ip >/dev/null 2>&1 || true
+ROLE=active; [ -f /etc/mallakhamb/STANDBY ] && ROLE=standby
+[ "$CMD" = status ] && MODE=observe
+
+# Cheap first, every tick: the standby asks the active's site over the VCN (no OCI call).
+CODE=""
+if [ "$ROLE" = standby ]; then
+  AH="$(awk 'NR==1{print $1; exit}' $(ls /etc/caddy/sites/*api*.caddy /etc/caddy/sites-standby/*api*.caddy 2>/dev/null | head -1) 2>/dev/null)"
+  OPRIV="$(getent hosts "app-$OTHER.db" | awk '{print $1}')"
+  CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 --resolve "$AH:443:$OPRIV" "https://$AH/api/health/ready" 2>/dev/null)"
+fi
+
+# OCI is asked at most every OCI_EVERY s (each CLI call costs ~1 s of the only CPU core), and at
+# once when the active looks unwell or a command other than tick runs.
+CACHE=/var/lib/mallakhamb/role.cache          # "<unix time> <holder> <service IP OCID>"
+OCI_EVERY="${OCI_EVERY:-60}"
+CTS=0; CHOLDER=""; P1_ID=""
+[ -s "$CACHE" ] && read -r CTS CHOLDER P1_ID < "$CACHE"
+[[ "$CTS" =~ ^[0-9]+$ ]] || CTS=0
+NEED=0
+[ "$CMD" != tick ] && NEED=1
+[ $((NOW - CTS)) -ge "$OCI_EVERY" ] && NEED=1
+[ "$ROLE" = standby ] && [ "$CODE" != 200 ] && NEED=1
+case "$CHOLDER" in me|other|none) ;; *) NEED=1 ;; esac
+IMDS() { curl -sf --max-time 5 -H 'Authorization: Bearer Oracle' "http://169.254.169.254/opc/v2/$1"; }
+if [ "$NEED" = 0 ]; then
+  HOLDER="$CHOLDER"
+else
+  C="$(IMDS instance/ | python3 -c 'import sys,json; print(json.load(sys.stdin)["compartmentId"])' 2>/dev/null)"
+  MYVNIC="$(IMDS vnics/ | python3 -c 'import sys,json; print(json.load(sys.stdin)[0]["vnicId"])' 2>/dev/null)"
+  [ -n "$C" ] && [ -n "$MYVNIC" ] || { OCI_OK=0; log "instance metadata not reachable"; finish; }
+  P1="$(oci_ network public-ip list -c "$C" --scope REGION --lifetime RESERVED --all \
+          --query "data[?\"display-name\"=='$SVC_PIP_NAME'] | [0].[id,\"private-ip-id\"]" --raw-output | tr -d '[]", ' | grep . | paste -sd' ')"
+  read -r P1_ID P1_PRIV <<<"$P1"
+  [ -n "$P1_ID" ] || { OCI_OK=0; log "cannot read the service IP from OCI (permissions or network)"; finish; }
+  if [ -z "$P1_PRIV" ] || [ "$P1_PRIV" = null ]; then
+    HOLDER=none
+  else
+    V="$(oci_ network private-ip get --private-ip-id "$P1_PRIV" --query 'data."vnic-id"' --raw-output)"
+    if [ -z "$V" ]; then OCI_OK=0; log "cannot read the service IP's private address"; finish
+    elif [ "$V" = "$MYVNIC" ]; then HOLDER=me
+    else HOLDER=other; fi
+  fi
+  CTS=$NOW
+fi
+
+move_ip_to_me() {   # attach the service IP to THIS VM's secondary private IP
+  local sec
+  sec="$(oci_ network private-ip list --vnic-id "$MYVNIC" --query 'data[?"is-primary"==`false`] | [0].id' --raw-output)"
+  [ -n "$sec" ] && [ "$sec" != null ] || { log "this VM has no secondary private IP: run service-ip-setup.sh first"; return 1; }
+  if ! oci_ network public-ip update --public-ip-id "$P1_ID" --private-ip-id "$sec" --force \
+         --wait-for-state ASSIGNED --max-wait-seconds 120 >/dev/null; then
+    log "direct move refused; unassigning first"
+    oci_ network public-ip update --public-ip-id "$P1_ID" --private-ip-id '' --force --wait-for-state AVAILABLE --max-wait-seconds 120 >/dev/null || return 1
+    oci_ network public-ip update --public-ip-id "$P1_ID" --private-ip-id "$sec" --force --wait-for-state ASSIGNED --max-wait-seconds 120 >/dev/null || return 1
+  fi
+  HOLDER=me; CTS=$(date +%s)
+}
+
+if [ "$CMD" = is-active ]; then
+  case "$HOLDER" in me) finish 0 ;; other) finish 1 ;; *) finish "$DEFAULT_EXIT" ;; esac
+fi
+
+# --- manual takeover: "make THIS VM the active now" (planned switch, failback) ---
+if [ "$CMD" = takeover ]; then
+  [ "$HOLDER" = me ] && log "already holding the service IP" || { log "takeover: moving the service IP to app-$ME"; move_ip_to_me || finish 1; }
+  [ "$ROLE" = standby ] && { /usr/local/bin/mallakhamb-promote || finish 1; }
+  log "takeover done: app-$ME is the active; app-$OTHER demotes itself on its next tick"
+  BAD=0; finish
+fi
+
+# --- 1. reconcile the role with the IP ---
+if [ "$HOLDER" = me ] && [ "$ROLE" = standby ]; then
+  log "this VM holds the service IP but is a standby → promote$(act || echo ' (observe: not done)')"
+  act && { /usr/local/bin/mallakhamb-promote && ROLE=active; }
+elif [ "$HOLDER" = other ] && [ "$ROLE" = active ]; then
+  log "the service IP is on app-$OTHER but this VM is active → demote$(act || echo ' (observe: not done)')"
+  act && { /usr/local/bin/mallakhamb-demote && ROLE=standby; }
+  BAD=0; finish                                   # just stepped aside: start watching next tick
+elif [ "$HOLDER" = none ]; then
+  log "WARNING: the service IP is attached to no VM"
+fi
+
+# --- 2. the standby watches the active ---
+if [ "$ROLE" != standby ] || [ "$HOLDER" != other ]; then BAD=0; finish; fi
+
+if [ "$CODE" = 200 ]; then
+  [ "$BAD" -gt 0 ] && log "active app-$OTHER answers again (200); watch reset"
+  BAD=0; finish
+fi
+
+view() {   # $1 mongod host → "<health of the other app member> <primary name or ->", or "? ?"
+  ( set -a; . /etc/mallakhamb/mongo-monitor.env 2>/dev/null; set +a
+    M="app-$OTHER.db" timeout 20 mongosh --quiet --tls --tlsCAFile /etc/mongodb/tls/ca.pem --host "$1" --eval '
+      if (!db.getSiblingDB("admin").auth("mallakhamb_monitor", process.env.MONGO_MONITOR_PASSWORD).ok) throw new Error("auth");
+      const s = rs.status(), m = s.members.find(x => x.name.startsWith(process.env.M + ":")), p = s.members.find(x => x.stateStr === "PRIMARY");
+      print((m ? m.health : "?") + " " + (p ? p.name.split(":")[0] : "-"))' 2>/dev/null | tail -1 ) | grep -E '^[0-9?]+ ' || echo "? ?"
+}
+OTHER_STATE="$(oci_ compute instance list -c "$C" --display-name "mallakhamb-prod-bom-vm-app-$OTHER" \
+      --query "data[?\"lifecycle-state\"!='TERMINATED'] | [0].\"lifecycle-state\"" --raw-output)"
+[ -n "$OTHER_STATE" ] || OTHER_STATE=UNKNOWN
+read -r H_LOCAL PRIM_LOCAL <<<"$(view localhost)"
+read -r H_DB03 _ <<<"$(view db-03.db)"
+GONE=0
+[ "$OTHER_STATE" != RUNNING ] && [ "$OTHER_STATE" != UNKNOWN ] && GONE=1
+[ "$H_LOCAL" = 0 ] && [ "$H_DB03" = 0 ] && GONE=1
+WHY="site=${CODE:-none} oci=$OTHER_STATE seen-by-me=$H_LOCAL seen-by-db03=$H_DB03 primary=$PRIM_LOCAL"
+if [ "$GONE" = 0 ]; then
+  log "active app-$OTHER's site fails ($WHY) but its machine is not gone: no failover (systemd / a human handles this)"
+  BAD=0; finish
+fi
+BAD=$((BAD + 1))
+log "active app-$OTHER looks GONE ($WHY): tick $BAD of $FAIL_TICKS"
+[ "$BAD" -ge "$FAIL_TICKS" ] || finish
+[ "$PRIM_LOCAL" != - ] || { log "no PRIMARY visible from this VM: taking over could not serve; waiting"; finish; }
+[ -f /etc/mallakhamb/NO_AUTO_FAILOVER ] && { log "NO_AUTO_FAILOVER is set: not taking over"; finish; }
+[ $((NOW - LAST_AUTO)) -ge "$COOLDOWN_S" ] || { log "automatic failover already ran $((NOW - LAST_AUTO)) s ago (cool-down ${COOLDOWN_S} s): not again"; finish; }
+if ! act; then log "WOULD FAIL OVER NOW (observe mode: nothing changed)"; finish; fi
+log "AUTOMATIC FAILOVER: moving the service IP from app-$OTHER to app-$ME"
+move_ip_to_me || { log "moving the service IP FAILED"; finish 1; }
+LAST_AUTO=$NOW; BAD=0
+/usr/local/bin/mallakhamb-promote || { log "promote reported a problem (see above)"; finish 1; }
+log "AUTOMATIC FAILOVER DONE: app-$ME is the active"
+finish

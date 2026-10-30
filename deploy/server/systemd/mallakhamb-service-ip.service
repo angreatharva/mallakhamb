@@ -1,0 +1,13 @@
+[Unit]
+Description=Mallakhamb: bring up this VM's secondary private IPs (the site's IP lands on one of them)
+After=network-online.target
+Wants=network-online.target
+Before=caddy.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/mallakhamb-service-ip
+
+[Install]
+WantedBy=multi-user.target

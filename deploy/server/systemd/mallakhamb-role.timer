@@ -1,0 +1,10 @@
+[Unit]
+Description=Mallakhamb role reconciler every 20 s (app VMs)
+
+[Timer]
+OnBootSec=45s
+OnUnitInactiveSec=20s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

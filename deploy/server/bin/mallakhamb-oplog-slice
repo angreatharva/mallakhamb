@@ -14,6 +14,10 @@
 # members between runs; within a run one member serves the newest-entry probe, the base and the slice.
 set -euo pipefail
 [ -f /etc/mallakhamb/STANDBY ] && { echo "standby: oplog slices run on the active only"; exit 0; }
+# AUTO-FAILOVER: the site's IP decides who the active is; a VM that has just lost it skips
+if [ -x /usr/local/bin/mallakhamb-role ] && ! /usr/local/bin/mallakhamb-role is-active >/dev/null 2>&1; then
+  echo "this VM does not hold the site's IP: the active takes the backups"; exit 0
+fi
 . /etc/mallakhamb/platform.sh
 BACKUP_URI="$(sed -n "s/^BACKUP_URI='\(.*\)'$/\1/p" /etc/mallakhamb/app.env)"
 [[ "$BACKUP_URI" == *"replicaSet=mallakhamb"* ]] || { echo "BACKUP_URI is not the replica set; nothing to slice"; exit 0; }

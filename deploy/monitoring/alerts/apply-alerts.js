@@ -233,6 +233,35 @@
       'The OCI budget has not been read for more than 3 hours, so the cost alerts are blind.',
       'On either app VM: sudo mallakhamb-oci-cost (prints the error); journalctl -u mallakhamb-oci-cost. Usually the policy mallakhamb-prod-pol-budget-read, or the budget mallakhamb-guard was renamed or deleted. OCI still emails its own budget alerts meanwhile.'],
   );
+  // Automatic web failover (deploy/oci/AUTO-FAILOVER.md): mallakhamb-role on both app VMs. The
+  // site's reserved IP decides the active; the standby takes it over when the active machine is gone.
+  const ADOC = 'Runbook: deploy/oci/AUTO-FAILOVER.md.';
+  if (P.mongo) RULES.push(
+    ['mk-role-auto-failover', 'Automatic failover happened', `time() - max(mallakhamb_role_auto_failover_timestamp_seconds{${CJ}})`, 'lt', 3600, '0m', 'critical', 'mallakhamb-oci-resources', 1,
+      'The standby took over the site in the last hour because the active VM was gone.',
+      `The site should be up on the other VM. Find out why the old active died (Console → Instances; OCI audit; journalctl on it once it is back). When it returns it demotes itself. Fail back in a quiet window: sudo mallakhamb-role takeover on the VM that should be active. ${ADOC}`],
+    ['mk-role-no-holder', 'Site IP attached to no VM', `max(mallakhamb_role_holds_service_ip{${CJ}})`, 'lt', 1, '3m', 'critical', 'mallakhamb-oci-resources', 1,
+      'Neither app VM holds the site\'s reserved IP (137.23.63.84): the site is unreachable.',
+      `Cloud Shell: bash ~/service-ip-setup.sh status. Put it back: sudo mallakhamb-role takeover on the VM that should be active, or deploy/oci/scripts/failover-ip.sh move <nn>. ${ADOC}`],
+    ['mk-role-two-active', 'Two app VMs configured active', `sum(mallakhamb_role_is_active{${CJ}})`, 'gt', 1, '5m', 'warning', 'mallakhamb-oci-resources', 1,
+      'Both app VMs run as the active (no STANDBY marker) for 5 minutes.',
+      `Only the IP holder gets traffic, but both take backups. The non-holder's mallakhamb-role should demote it within a minute: journalctl -u mallakhamb-role -n 30 on it; is it in observe mode, or blind to OCI? ${ADOC}`],
+    ['mk-role-judging', 'Standby thinks the active is gone', `max(mallakhamb_role_failover_bad_ticks{${CJ}})`, 'gt', 0, '0m', 'warning', 'mallakhamb-oci-resources', 1,
+      'The standby has counted {{ $values.A.Value }} ticks of the active looking gone (it takes over at 6).',
+      `Early warning. journalctl -u mallakhamb-role -n 20 on the standby shows why (site, OCI state, both database views). To stop a takeover during planned work: sudo touch /etc/mallakhamb/NO_AUTO_FAILOVER on the standby. ${ADOC}`],
+    ['mk-role-stale', 'Role reconciler not running', `time() - min(mallakhamb_role_reconcile_timestamp_seconds{${CJ}})`, 'gt', 300, '5m', 'warning', 'mallakhamb-oci-resources', 1,
+      'mallakhamb-role has not run on one app VM for more than 5 minutes.',
+      `Automatic failover and self-demotion are off on that VM. systemctl status mallakhamb-role.timer; journalctl -u mallakhamb-role -n 30. ${ADOC}`],
+    ['mk-role-oci-blind', 'Automatic failover cannot see OCI', `min(mallakhamb_role_oci_ok{${CJ}})`, 'lt', 1, '15m', 'warning', 'mallakhamb-oci-resources', 1,
+      'An app VM cannot ask OCI who holds the site\'s IP, so it can neither take over nor step aside.',
+      `On that VM: sudo mallakhamb-role status. Usually the policy mallakhamb-prod-pol-failover, or OCI's API is unreachable. Backups fall back to the STANDBY marker meanwhile. ${ADOC}`],
+    ['mk-role-observe', 'Automatic failover only observing', `min(mallakhamb_role_mode_act{${CJ}})`, 'lt', 1, '1h', 'warning', 'mallakhamb-oci-resources', 1,
+      'mallakhamb-role runs in observe mode on an app VM: it logs decisions but will not take over.',
+      `Intended only while testing. Set ROLE_MODE=act in /etc/mallakhamb/role.env on both app VMs. ${ADOC}`],
+    ['mk-mongo-cert-expiry', 'MongoDB member certificate expiring', `min(mallakhamb_mongo_member_cert_expiry_timestamp_seconds{${MJ}}) - time()`, 'lt', 60 * 86400, '1h', 'warning', 'mallakhamb-database', 1,
+      'A replica-set member certificate expires in {{ humanizeDuration $values.A.Value }}.',
+      `When it expires the members refuse each other and the set falls apart. Re-issue from the private CA (Vault secrets mallakhamb-prod-bom-secret-mongo-*, deploy/server/mongo-tls-fetch.sh) and restart one member at a time. ${MDOC}`],
+  );
     return { RULES };
   };
 
@@ -275,7 +304,7 @@
   const STAGING_GROUP = 'mallakhamb-oci-staging';
   // Since M4 staging runs on the self-hosted replica set, so its rules are live here too.
   // Since 2026-10-24 also the VM-silent rules (idle reclaim, readiness §3): a stopped VM must page now.
-  const STAGING_PREFIXES = ['mk-e2e-', 'mk-mongo-', 'mk-oplog-', 'mk-pitr-', 'mk-offsite-', 'mk-oci-cost-', 'mk-host-missing', 'mk-standby-missing', 'mk-vm-'];
+  const STAGING_PREFIXES = ['mk-e2e-', 'mk-role-', 'mk-mongo-', 'mk-oplog-', 'mk-pitr-', 'mk-offsite-', 'mk-oci-cost-', 'mk-host-missing', 'mk-standby-missing', 'mk-vm-'];
   const stagingRules = () => spec('oci').RULES
     .filter(([uid]) => STAGING_PREFIXES.some((p) => uid.startsWith(p)))
     .map((r) => {
