@@ -51,6 +51,14 @@ export const superAdminAPI = {
     resolveConflict: (conflictId, data) => api.post(`/superadmin/player-teams/conflicts/${conflictId}/resolve`, data),
     history: (params) => api.get('/superadmin/player-teams/history', { params }),
   },
+  // The owner's correction tools and History (docs/superadmin-control-plan.md).
+  // Every write carries a `reason`, kept in History.
+  fix: {
+    history: (params) => api.get('/superadmin/history', { params }),
+    undo: (logId, reason) => api.post(`/superadmin/history/${logId}/undo`, { reason }),
+    deletedCompetitions: () => api.get('/superadmin/competitions-deleted'),
+    restoreCompetition: (id, reason) => api.post(`/superadmin/competitions/${id}/restore`, { reason }),
+  },
   createPlayerPaymentOrder: (data) => api.post('/superadmin/players/payment/create', data),
   verifyPlayerPaymentAndAdd: (data) => {
     return api.post('/superadmin/players/payment/verify', data);

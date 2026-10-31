@@ -117,6 +117,9 @@ function createSuperAdminRoutes(container) {
   router.post('/account-requests/:requestId/approve', accountValidators.decideRequest(), handleValidationErrors, requests.approve);
   router.post('/account-requests/:requestId/reject', accountValidators.decideRequest(), handleValidationErrors, requests.reject);
 
+  // The owner's correction tools and History (docs/superadmin-control-plan.md).
+  require('./superadmin-corrections.routes')(router, container);
+
   return router;
 }
 

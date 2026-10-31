@@ -7,6 +7,7 @@ const { applyApparatusByGender } = require('../../utils/data/competition-apparat
 const { hasRoomInSquad, isValidTeamSize, TEAM_SIZES } = require('../../utils/scoring/team-championship.util');
 const { assertAgeGroup } = require('../../utils/data/age-eligibility.util');
 
+const { requireReason } = require('../superadmin/correction.service');
 const ONLY_ONE_OWNER = 'There is only one Super Admin. Hand ownership over on the server with scripts/createSuperAdmin.js --transfer-to <email>.';
 const TEAM_SIZE_MESSAGE = `Max team size must be ${TEAM_SIZES.join(' or ')} players per age group`;
 const {
@@ -157,7 +158,9 @@ class SuperAdminService {
     playerRepository,
     logger,
     config,
+    correctionService,
   }) {
+    this.corrections = correctionService;
     this.authenticationService = authenticationService;
     this.adminRepository = adminRepository;
     this.coachRepository = coachRepository;
@@ -212,7 +215,7 @@ class SuperAdminService {
    * These are the fields the Management screen edits, plus a password, which
    * updateById saves through the model's pre-save hook and so is hashed.
    */
-  async updateAdmin(adminId, payload = {}) {
+  async updateAdmin(adminId, payload = {}, actorId = null) {
     const updates = {};
     if (payload.name !== undefined) updates.name = String(payload.name).trim();
     if (payload.email !== undefined) updates.email = String(payload.email).trim().toLowerCase();
@@ -234,13 +237,29 @@ class SuperAdminService {
       updates.password = String(payload.password);
     }
     const updated = await this.adminRepository.updateById(adminId, updates);
+    await this._record(actorId, {
+      entity: 'admin', entityId: adminId, action: 'ADMIN_UPDATED', label: target.name, reason: payload.reason,
+      before: target, after: { ...updated, password: updates.password ? '(changed)' : undefined },
+      fields: Object.keys(updates), undoable: !updates.password,
+    });
     return updated ? stripSensitiveFields(updated) : updated;
   }
-  async deleteAdmin(adminId) {
+
+  /** Write a correction when the record service is wired (absent in some harnesses). */
+  async _record(actorId, entry) {
+    if (!this.corrections || !actorId) return null;
+    return this.corrections.record({ actor: { id: actorId }, ...entry });
+  }
+  async deleteAdmin(adminId, actorId = null) {
     const target = await this.adminRepository.findById(adminId);
     if (!target) throw new NotFoundError('Admin');
     if (target.role === 'superadmin') throw new ValidationError('The Super Admin account cannot be deleted');
-    return this.adminRepository.deleteById(adminId);
+    const result = await this.adminRepository.deleteById(adminId);
+    await this._record(actorId, {
+      entity: 'admin', entityId: adminId, action: 'ADMIN_DELETED', label: target.name,
+      extra: { snapshot: { name: target.name, email: target.email, competitions: (target.competitions || []).map(String) } },
+    });
+    return result;
   }
 
   /**
@@ -260,11 +279,13 @@ class SuperAdminService {
    * strand them. `isActive: false` is refused; true brings back a coach
    * deactivated before this rule.
    */
-  async updateCoachStatus(coachId, isActive) {
+  async updateCoachStatus(coachId, isActive, actorId = null) {
     if (isActive !== true && isActive !== 'true') {
       throw new ValidationError('Coaches cannot be deactivated');
     }
-    return this.coachRepository.updateById(coachId, { isActive: true });
+    const updated = await this.coachRepository.updateById(coachId, { isActive: true });
+    await this._record(actorId, { entity: 'coach', entityId: coachId, action: 'COACH_ACTIVATED', label: fullName(updated || {}) });
+    return updated;
   }
 
   async getAllTeams(filters = {}) {
@@ -487,7 +508,19 @@ class SuperAdminService {
     }); 
   }
   
-  async updateCompetition(id, payload) {
+  async updateCompetition(id, payload, actorId = null) {
+    const seen = {};
+    const updated = await this._updateCompetition(id, payload, seen);
+    const before = seen.before;
+    await this._record(actorId, {
+      entity: 'competition', entityId: id, action: 'COMPETITION_UPDATED', label: updated?.name || before?.name,
+      reason: payload?.reason, competitionId: id, before, after: updated,
+      fields: ['name', 'level', 'place', 'year', 'startDate', 'endDate', 'registrationOpenDate', 'feeDueDate', 'playerFee', 'lateFee', 'apparatusFees', 'maxTeamSize', 'competitionTypes', 'apparatusByGender', 'ageGroups', 'description', 'status'],
+    });
+    return updated;
+  }
+
+  async _updateCompetition(id, payload, seen = {}) {
     /*
      * The stored competition is needed to validate the window: an edit that
      * only moves the End Date still has to be checked against the fee deadline
@@ -495,6 +528,7 @@ class SuperAdminService {
      */
     const existing = await this.competitionRepository.findById(id);
     if (!existing) throw new NotFoundError('Competition');
+    seen.before = existing;
 
     const body = applyApparatusByGender(normalizeFeeWindow(payload, existing), existing.competitionTypes);
 
@@ -515,8 +549,27 @@ class SuperAdminService {
     }
     return this.competitionRepository.updateById(id, body);
   }
-  async deleteCompetition(id) {
-    return this.competitionService.deleteCompetition(id);
+  async deleteCompetition(id, actorId = null) {
+    const before = await this.competitionRepository.findById(id);
+    const result = await this.competitionService.deleteCompetition(id);
+    await this._record(actorId, { entity: 'competition', entityId: id, action: 'COMPETITION_DELETED', label: before?.name, competitionId: id });
+    return result;
+  }
+
+  /** Bring back a deleted (soft-deleted) competition. */
+  async restoreCompetition(id, actorId, reason) {
+    const why = requireReason(reason);
+    const Competition = this.competitionRepository.model;
+    const doc = await Competition.findOne({ _id: id, isDeleted: true }).lean();
+    if (!doc) throw new NotFoundError('Deleted competition');
+    await Competition.updateOne({ _id: id }, { $set: { isDeleted: false } });
+    await this._record(actorId, { entity: 'competition', entityId: id, action: 'COMPETITION_RESTORED', label: doc.name, reason: why, competitionId: id });
+    return this.competitionRepository.findById(id);
+  }
+
+  /** Deleted competitions, for the restore list. */
+  async getDeletedCompetitions() {
+    return this.competitionRepository.model.find({ isDeleted: true }).select('name year place level startDate endDate updatedAt').sort({ updatedAt: -1 }).lean();
   }
 
   async assignAdminToCompetition(id, adminId) {

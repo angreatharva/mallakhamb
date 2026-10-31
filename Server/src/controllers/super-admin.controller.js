@@ -74,7 +74,7 @@ function createSuperAdminController(container) {
     /** @route PUT /api/super-admin/coaches/:coachId/status */
     updateCoachStatus: asyncHandler(async (req, res) => {
       const coach = await superAdminService.updateCoachStatus(
-        req.params.coachId, req.body.isActive
+        req.params.coachId, req.body.isActive, req.user._id
       );
       res.json({ success: true, data: coach, message: 'Coach status updated successfully.' });
     }),

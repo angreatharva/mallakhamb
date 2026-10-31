@@ -12,6 +12,7 @@ const TeamRepository = require('../repositories/team.repository');
 const ScoreRepository = require('../repositories/score.repository');
 const TransactionRepository = require('../repositories/transaction.repository');
 const AuditLogRepository = require('../repositories/audit-log.repository');
+const CorrectionService = require('../services/superadmin/correction.service');
 const PerformanceOrderRepository = require('../repositories/performance-order.repository');
 const TieBreakDrawRepository = require('../repositories/tie-break-draw.repository');
 const WalkInRegistrationRepository = require('../repositories/walk-in-registration.repository');
@@ -94,6 +95,13 @@ const { setTokenInvalidationService } = require('../utils/security/token-invalid
  * construction so the services' signatures (and every test that builds them
  * by hand) stay as they were; a service built without it skips the rule.
  */
+/** Admin edits made from Management can be undone from History. */
+function withSuperAdminUndo(c, service) {
+  c.resolve('correctionService').registerUndo('admin', (actor, id, values, reason) =>
+    service.updateAdmin(id, { ...values, reason }, actor.id));
+  return service;
+}
+
 function withPlayerTeams(c, service) {
   service.playerTeamService = c.resolve('playerTeamService');
   return service;
@@ -348,7 +356,14 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('logger')
   ), 'singleton');
-  container.register('superAdminService', (c) => withPlayerTeams(c, new SuperAdminService({
+  // The owner's correction record + History (docs/superadmin-control-plan.md).
+  container.register('correctionService', (c) => new CorrectionService({
+    auditLogRepository: c.resolve('auditLogRepository'),
+    adminRepository: c.resolve('adminRepository'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+  container.register('superAdminService', (c) => withSuperAdminUndo(c, withPlayerTeams(c, new SuperAdminService({
+    correctionService: c.resolve('correctionService'),
     authenticationService: c.resolve('authenticationService'),
     adminRepository: c.resolve('adminRepository'),
     coachRepository: c.resolve('coachRepository'),
@@ -360,7 +375,7 @@ function bootstrap() {
     playerRepository: c.resolve('playerRepository'),
     logger: c.resolve('logger'),
     config: c.resolve('config'),
-  })), 'singleton');
+  }))), 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({
