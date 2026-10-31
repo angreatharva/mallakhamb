@@ -230,9 +230,19 @@ describe('HIGH-5 — scoring rooms over a real transport', () => {
 });
 
 /** Mint a token for a role socket auth never looks up in the DB. */
-function tokenForRole(userType, compId = competitionId) {
-  return container.resolve('tokenService')
-    .generateToken(String(new mongoose.Types.ObjectId()), userType, String(compId));
+/**
+ * A token for a real, active account of this role. The handshake refuses a
+ * token whose account is missing or deactivated, exactly as the HTTP auth
+ * middleware does (security audit 2026-10-31, L5), so the account must exist.
+ */
+async function tokenForRole(userType, compId = competitionId) {
+  const id = new mongoose.Types.ObjectId();
+  const collection = { admin: 'admins', coach: 'coaches', player: 'players' }[userType];
+  await mongoose.connection.collection(collection).insertOne({
+    _id: id, name: `Socket ${userType}`, firstName: 'Socket', lastName: userType,
+    email: `socket.${id}@example.com`, isActive: true, role: userType === 'admin' ? 'admin' : undefined,
+  });
+  return container.resolve('tokenService').generateToken(String(id), userType, String(compId));
 }
 
 describe('competition rooms over a real transport', () => {
@@ -242,8 +252,8 @@ describe('competition rooms over a real transport', () => {
   // nothing ever joined that room — the broadcasts reached nobody.
 
   test('a socket auto-joins its own competition room at connect', async () => {
-    const admin = await connect(tokenForRole('admin'));
-    const observer = await connect(tokenForRole('admin'));
+    const admin = await connect(await tokenForRole('admin'));
+    const observer = await connect(await tokenForRole('admin'));
 
     const received = waitFor(observer, 'competition_updated');
     container.resolve('socketManager').emitToRoom(
@@ -259,7 +269,7 @@ describe('competition rooms over a real transport', () => {
 
   test('an admin may explicitly join a different competition room', async () => {
     const otherCompetitionId = new mongoose.Types.ObjectId();
-    const admin = await connect(tokenForRole('admin'));
+    const admin = await connect(await tokenForRole('admin'));
 
     const joined = waitFor(admin, EventTypes.ROOM_JOINED);
     admin.emit(EventTypes.JOIN_COMPETITION_ROOM, { competitionId: String(otherCompetitionId) });
@@ -271,7 +281,7 @@ describe('competition rooms over a real transport', () => {
 
   test('a coach cannot join a competition room other than their own', async () => {
     const otherCompetitionId = new mongoose.Types.ObjectId();
-    const coach = await connect(tokenForRole('coach', competitionId));
+    const coach = await connect(await tokenForRole('coach', competitionId));
 
     const errored = waitFor(coach, 'error', 1000);
     const joined = waitFor(coach, EventTypes.ROOM_JOINED, 1000);

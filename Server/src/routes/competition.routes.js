@@ -10,7 +10,8 @@
 
 const express = require('express');
 const createAuthMiddleware = require('../middleware/auth.middleware');
-const { requireAdmin, requireCoach } = require('../middleware/auth.middleware');
+const { requireAdmin, requireSuperAdmin, requireCoach } = require('../middleware/auth.middleware');
+const { requireCompetitionAccess } = require('../middleware/competition-context.middleware');
 const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const {
@@ -41,7 +42,14 @@ function createCompetitionRoutes(container) {
    */
   const requireUnlockedCompetition = createCompetitionLockGuard(container);
 
-  router.post('/', authMiddleware, requireAdmin, createCompetition(), handleValidationErrors, controller.createCompetition);
+  /*
+   * Creating, editing, re-statusing and deleting a meet, and choosing its
+   * admins, are SUPER ADMIN acts (security audit 2026-10-31, H1). These used to
+   * take `requireAdmin`, which let an admin of one meet add themselves to any
+   * other meet and edit or delete it. The SPA does all of this through
+   * /api/superadmin/competitions; these routes are kept for API clients.
+   */
+  router.post('/', authMiddleware, requireSuperAdmin, createCompetition(), handleValidationErrors, controller.createCompetition);
 
 /**
  * @route   GET /api/competitions
@@ -76,21 +84,21 @@ function createCompetitionRoutes(container) {
  * @desc    Update competition
  * @access  Super Admin only
  */
-  router.put('/:id', authMiddleware, requireAdmin, requireUnlockedCompetition({ param: 'id' }), updateCompetition(), handleValidationErrors, controller.updateCompetition);
+  router.put('/:id', authMiddleware, requireSuperAdmin, requireUnlockedCompetition({ param: 'id' }), updateCompetition(), handleValidationErrors, controller.updateCompetition);
 
 /**
  * @route   DELETE /api/competitions/:id
  * @desc    Delete competition
  * @access  Super Admin only
  */
-  router.delete('/:id', authMiddleware, requireAdmin, requireUnlockedCompetition({ param: 'id' }), deleteCompetition(), handleValidationErrors, controller.deleteCompetition);
+  router.delete('/:id', authMiddleware, requireSuperAdmin, requireUnlockedCompetition({ param: 'id' }), deleteCompetition(), handleValidationErrors, controller.deleteCompetition);
 
 /**
  * @route   PATCH /api/competitions/:id/status
  * @desc    Update competition status
- * @access  Admin only
+ * @access  Super Admin only
  */
-  router.patch('/:id/status', authMiddleware, requireAdmin, requireUnlockedCompetition({ param: 'id' }), updateCompetitionStatus(), handleValidationErrors, controller.updateCompetitionStatus);
+  router.patch('/:id/status', authMiddleware, requireSuperAdmin, requireUnlockedCompetition({ param: 'id' }), updateCompetitionStatus(), handleValidationErrors, controller.updateCompetitionStatus);
 
 /**
  * @route   POST /api/competitions/:competitionId/register
@@ -123,30 +131,30 @@ function createCompetitionRoutes(container) {
 /**
  * @route   GET /api/competitions/:competitionId/teams/:teamId
  * @desc    Get team registration details
- * @access  Authenticated users
+ * @access  The coach who owns the team, an admin of the meet, or Super Admin
  */
   router.get('/:competitionId/teams/:teamId', authMiddleware, controller.getTeamRegistration);
 
 /**
  * @route   GET /api/competitions/:competitionId/registrations
  * @desc    Get all registrations for a competition
- * @access  Admin only
+ * @access  Admin assigned to the meet, or Super Admin
  */
-  router.get('/:competitionId/registrations', authMiddleware, requireAdmin, controller.getCompetitionRegistrations);
+  router.get('/:competitionId/registrations', authMiddleware, requireAdmin, requireCompetitionAccess({ param: 'competitionId' }), controller.getCompetitionRegistrations);
 
 /**
  * @route   POST /api/competitions/:id/admins
  * @desc    Assign admin to competition
  * @access  Super Admin only
  */
-  router.post('/:id/admins', authMiddleware, requireAdmin, requireUnlockedCompetition({ param: 'id' }), controller.assignAdmin);
+  router.post('/:id/admins', authMiddleware, requireSuperAdmin, requireUnlockedCompetition({ param: 'id' }), controller.assignAdmin);
 
 /**
  * @route   DELETE /api/competitions/:id/admins/:adminId
  * @desc    Remove admin from competition
  * @access  Super Admin only
  */
-  router.delete('/:id/admins/:adminId', authMiddleware, requireAdmin, requireUnlockedCompetition({ param: 'id' }), controller.removeAdmin);
+  router.delete('/:id/admins/:adminId', authMiddleware, requireSuperAdmin, requireUnlockedCompetition({ param: 'id' }), controller.removeAdmin);
 
   return router;
 }

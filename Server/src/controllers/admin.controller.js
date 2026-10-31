@@ -111,8 +111,10 @@ function createAdminController(container) {
       if (ageGroup) filters.ageGroup = ageGroup;
       if (gender) filters.gender = gender;
       if (status) filters.status = status;
-      if (coachName) filters.coachName = { $regex: coachName, $options: 'i' };
-      if (teamName) filters.name = { $regex: teamName, $options: 'i' };
+      // Literal, capped substring matches (security audit 2026-10-31, L4).
+      const literal = (v) => String(v).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (coachName) filters.coachName = { $regex: literal(coachName), $options: 'i' };
+      if (teamName) filters.name = { $regex: literal(teamName), $options: 'i' };
 
       const pagination = { page: parseInt(page) || 1, limit: parseInt(limit) || 10 };
       const result = await adminService.getAllTeams(req.competitionId, filters, pagination);

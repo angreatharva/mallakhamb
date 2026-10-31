@@ -1408,7 +1408,9 @@ class AdminService extends UserService {
       this.logger.info('Player details retrieved', { playerId });
 
       return {
-        player,
+        // Stripped (security audit 2026-10-31, H3): this is a lean document, so
+        // no toJSON transform runs on it.
+        player: stripSensitiveFields(player),
         scores,
         registrationDate: player.createdAt
       };

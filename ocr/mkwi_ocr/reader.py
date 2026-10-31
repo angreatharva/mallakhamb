@@ -17,9 +17,17 @@ Pipeline:
 from __future__ import annotations
 
 import base64
+import os
 from dataclasses import dataclass
 
-import cv2
+# Refuse decompression bombs before they are decoded (security audit
+# 2026-10-31, L10): a small PNG can declare a huge canvas, and imdecode would
+# allocate it in full before the resize below ever runs. OpenCV reads this
+# limit when cv2 is imported. 64 MP is well above any phone photo the desk
+# sends (the browser shrinks it first) and ~200 MB decoded at most.
+os.environ.setdefault("OPENCV_IO_MAX_IMAGE_PIXELS", str(64 * 1024 * 1024))
+
+import cv2  # noqa: E402  (must follow the limit above)
 import numpy as np
 
 from .recognizer import DIGIT_CHARS, NAME_CHARS
@@ -55,7 +63,10 @@ class Marker:
 
 def _decode(image_bytes: bytes) -> np.ndarray:
     data = np.frombuffer(image_bytes, dtype=np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+    try:
+        img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+    except cv2.error:
+        img = None  # over OPENCV_IO_MAX_IMAGE_PIXELS, or a corrupt header
     if img is None:
         raise Unreadable("That file is not a photo we can open.", "not_an_image")
     h, w = img.shape[:2]

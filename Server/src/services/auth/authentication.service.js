@@ -34,6 +34,10 @@ const {
 } = require('../../utils/security/account-lockout.util');
 const { createUserRepositoryResolver } = require('../../utils/auth/user-repository-resolver');
 const { INVALID_CODE_MESSAGE } = require('./otp.service');
+
+// The reset-code fields are `select: false` on every user model (H3); the two
+// flows that check a code opt back into them.
+const RESET_CODE_FIELDS = '+resetPasswordToken +resetPasswordExpires';
 // Shared so /auth/me and login can never disagree about what is sensitive.
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 // Shared with judge.service, which authenticates against a different collection
@@ -406,7 +410,9 @@ class AuthenticationService {
   async verifyOTP(email, otp, userType = null) {
     try {
       const normalizedEmail = normalizeEmail(email);
-      const { user, userType: foundType } = await this.findUserAcrossTypes(normalizedEmail, userType);
+      const { user, userType: foundType } = await this.findUserAcrossTypes(
+        normalizedEmail, userType, { select: RESET_CODE_FIELDS }
+      );
 
       if (!user) {
         this.logger.warn('OTP verification failed: User not found', { email });
@@ -451,7 +457,9 @@ class AuthenticationService {
       }
 
       const normalizedEmail = normalizeEmail(email);
-      const { user, userType: foundType } = await this.findUserAcrossTypes(normalizedEmail, userType);
+      const { user, userType: foundType } = await this.findUserAcrossTypes(
+        normalizedEmail, userType, { select: RESET_CODE_FIELDS }
+      );
 
       if (!user) {
         this.logger.warn('Password reset failed: User not found', { email });
@@ -477,7 +485,9 @@ class AuthenticationService {
       const updatedUser = await repository.model.findOneAndUpdate(
         {
           _id: user._id,
-          resetPasswordToken: otp,
+          // The stored value (a hash) that verifyOTP just matched — not the
+          // plain code, which is never stored.
+          resetPasswordToken: user.resetPasswordToken,
           resetPasswordExpires: { $gt: new Date() }
         },
         {
@@ -548,7 +558,7 @@ class AuthenticationService {
    * @throws {NotFoundError} If competition not found
    * @throws {AuthorizationError} If the user is not assigned to the competition
    */
-  async setCompetitionContext(userId, userType, competitionId) {
+  async setCompetitionContext(userId, userType, competitionId, authTime = null) {
     try {
       // Validate competition exists
       const competition = await this.competitionRepository.findById(competitionId);
@@ -594,7 +604,8 @@ class AuthenticationService {
       }
 
       // Generate new token with competition context
-      const token = this.tokenService.generateToken(userId, userType, competitionId);
+      // Same session, new meet: the sign-in time carries over (MAX_SESSION_MS).
+      const token = this.tokenService.generateToken(userId, userType, competitionId, { authTime });
 
       this.logger.info('Competition context set', { 
         userId, 
@@ -766,7 +777,7 @@ class AuthenticationService {
    *   flow passes the type of the portal the user came from.
    * @returns {Promise<Object>} { user, userType } or { user: null, userType: null }
    */
-  async findUserAcrossTypes(email, onlyType = null) {
+  async findUserAcrossTypes(email, onlyType = null, options = {}) {
     // Judges are looked up in the account collection: a panel seat never had
     // an address to send an OTP to.
     const order = [
@@ -782,13 +793,13 @@ class AuthenticationService {
       // means rather than this lookup.
       if (!looksLikeEmail(email)) {
         if (onlyType && onlyType !== 'player') return { user: null, userType: null };
-        const user = await this.playerRepository.findByLoginId(email);
+        const user = await this.playerRepository.findByLoginId(email, options);
         return user ? { user, userType: 'player' } : { user: null, userType: null };
       }
 
       for (const [userType, repository] of order) {
         if (onlyType && userType !== onlyType) continue;
-        const user = await repository.findByEmail(email);
+        const user = await repository.findByEmail(email, options);
         if (user) {
           return { user, userType };
         }

@@ -19,7 +19,6 @@ const createCoachRoutes = require('./coach.routes');
 const createAdminRoutes = require('./admin.routes');
 const createCompetitionRoutes = require('./competition.routes');
 const createTeamRoutes = require('./team.routes');
-const createScoringRoutes = require('./scoring.routes');
 const createJudgeRoutes = require('./judge.routes');
 const createSuperAdminRoutes = require('./super-admin.routes');
 const createPaymentRoutes = require('./payment.routes');
@@ -50,7 +49,6 @@ const API_VERSION = 'v1';
  * - /api/admin - Admin management
  * - /api/competitions - Competition management
  * - /api/teams - Team management
- * - /api/scoring - Scoring operations
  * 
  * Middleware is applied in the correct order for each route group
  * 
@@ -62,7 +60,7 @@ const API_VERSION = 'v1';
  * @returns {void}
  */
 function loadRoutes(app, container, options = {}) {
-  const { authLimiter, userLimiter, judgeLoginLimiter } = options;
+  const { authLimiter, userLimiter, judgeLoginLimiter, accountLimiters } = options;
 
   /**
    * LOW-2 / task 4.1 — API versioning.
@@ -103,6 +101,26 @@ function loadRoutes(app, container, options = {}) {
     process.env.NODE_ENV !== 'production' && process.env.ENABLE_API_DOCS === 'true';
   if (docsEnabled) {
     apiRouter.use('/docs', createDocsRoutes(container));
+  }
+
+  // ============================================================
+  // PER-ACCOUNT GUESSING LIMITS (security audit 2026-10-31, H4)
+  // ============================================================
+  // Every sign-in and every password-reset step, keyed by the ACCOUNT named in
+  // the body — never by IP, so a venue is never throttled as a group (that is
+  // why the per-IP limiters below are off in production). Failed attempts only
+  // for sign-in and code checks; reset-code requests are capped per account.
+  // See createAccountGuessLimiters in security.middleware.js.
+  if (accountLimiters) {
+    const accounts = express.Router();
+    for (const base of ['/players', '/coaches', '/admin', '/superadmin', '/judge']) {
+      accounts.post(`${base}/login`, accountLimiters.failedLogin);
+    }
+    accounts.post('/auth/forgot-password', accountLimiters.resetRequest);
+    for (const path of ['/auth/verify-otp', '/auth/reset-password-otp', '/auth/reset-password-coach']) {
+      accounts.post(path, accountLimiters.resetGuess);
+    }
+    apiRouter.use(accounts);
   }
 
   // ============================================================
@@ -147,6 +165,8 @@ function loadRoutes(app, container, options = {}) {
     guessable.post('/forgot-password', authLimiter);
     guessable.post('/verify-otp', authLimiter);
     guessable.post('/reset-password-otp', authLimiter);
+    // The coach-code reset is the same kind of guessing surface (H4).
+    guessable.post('/reset-password-coach', authLimiter);
     apiRouter.use('/auth', guessable);
   }
   apiRouter.use('/auth', authRouter);
@@ -218,6 +238,17 @@ function loadRoutes(app, container, options = {}) {
     judgeAuthRouter.post('/login', judgeLoginLimiter);
     apiRouter.use('/judge', judgeAuthRouter);
   }
+  // Super admin login and judge self-registration sat outside every per-IP
+  // limiter (security audit 2026-10-31, H4); they now follow the same switch
+  // as the other logins and registrations.
+  if (authLimiter) {
+    const superAdminAuthRouter = express.Router();
+    superAdminAuthRouter.post('/login', authLimiter);
+    apiRouter.use('/superadmin', superAdminAuthRouter);
+    const judgeRegisterRouter = express.Router();
+    judgeRegisterRouter.post('/register', authLimiter);
+    apiRouter.use('/judge', judgeRegisterRouter);
+  }
   apiRouter.use('/superadmin', superAdminRoutes);
   apiRouter.use('/judge', judgeRoutes);
 
@@ -245,7 +276,13 @@ function loadRoutes(app, container, options = {}) {
     apiRouter.use('/teams', userLimiter);
   }
   apiRouter.use('/teams', createTeamRoutes(container));
-  apiRouter.use('/scoring', createScoringRoutes(container));
+
+  // /api/scoring is GONE (security audit 2026-10-31, C1). It accepted any judge
+  // token — including one minted seconds earlier by open self-registration —
+  // and wrote the request body straight into any unlocked score of any meet,
+  // isLocked included. No client ever called it: judges save slips through
+  // /api/public/save-score and the Scorer through /api/judge/scores/save, both
+  // of which bind the slip to the seat the caller actually holds.
 
   // ============================================================
   // STATS ROUTES (profile Stats tabs, admin Judge fairness board)
@@ -298,7 +335,6 @@ function getRouteGroups() {
     judge: '/api/judge',
     competitions: '/api/competitions',
     teams: '/api/teams',
-    scoring: '/api/scoring',
     webhooks: '/api/webhooks'
   };
 }

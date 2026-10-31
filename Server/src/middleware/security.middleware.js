@@ -508,6 +508,90 @@ function createJudgeLoginRateLimitMiddleware(container) {
 }
 
 /**
+ * The account a login or reset request is aimed at, lower-cased and trimmed.
+ * The SPA sends `identifier` (an email or a Player ID); older clients and the
+ * judge screen send `email`; `username` is the pre-account judge field.
+ * @param {import('express').Request} req
+ * @returns {string} '' when the body names no account
+ */
+function accountIdentifier(req) {
+  const body = req.body || {};
+  const raw = body.identifier ?? body.email ?? body.loginId ?? body.username;
+  return typeof raw === 'string' ? raw.trim().toLowerCase().slice(0, 254) : '';
+}
+
+/**
+ * Per-ACCOUNT guessing limits (security audit 2026-10-31, H4).
+ *
+ * The per-IP limiters are switched off in production on purpose (owner
+ * decision D5, deploy/oci/PRODUCTION-READINESS.md §2.3): a venue puts every
+ * tablet and phone behind one address, and an IP budget throttles the whole
+ * venue. That left credentials and reset codes with no limit at all beyond the
+ * five-strike lockout, and every new reset code reset the five-guess counter.
+ *
+ * These are keyed by the ACCOUNT being guessed at, never by IP, so a venue is
+ * never throttled as a group. Logins and code checks count only FAILED
+ * attempts (a correct password or code is never limited), and requesting a
+ * reset code is capped per account per hour — that cap is what bounds the
+ * number of codes, and therefore guesses, an attacker can cycle through.
+ *
+ * Their own switch, ACCOUNT_RATE_LIMIT_ENABLED (default on everywhere except
+ * the test runner), independent of RATE_LIMIT_ENABLED.
+ *
+ * @param {Object} container - DI container
+ * @returns {{failedLogin: Function, resetRequest: Function, resetGuess: Function}}
+ */
+function createAccountGuessLimiters(container) {
+  const logger = container.resolve('logger');
+
+  const limiter = ({ name, windowMs, max, failedOnly, message }) => rateLimit({
+    windowMs,
+    max,
+    // Namespaced by the route (/coaches/login, /judge/login …) so one address
+    // that is a coach and a judge has a budget per account, not one between
+    // them; /api and /api/v1 share it.
+    keyGenerator: (req) => `${name}:${req.route?.path || req.baseUrl}:${accountIdentifier(req)}`,
+    // A request naming no account cannot sign anyone in; the route's own
+    // validation answers it.
+    skip: (req) => accountIdentifier(req) === '',
+    skipSuccessfulRequests: failedOnly,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      logger.warn('Account guess limit reached', { limiter: name, path: req.originalUrl });
+      res.status(429).json({
+        success: false,
+        error: { message, code: 'AUTH_RATE_LIMIT_EXCEEDED' },
+      });
+    },
+  });
+
+  return {
+    failedLogin: limiter({
+      name: 'login',
+      windowMs: 15 * 60 * 1000,
+      max: 10,
+      failedOnly: true,
+      message: 'Too many failed sign-in attempts for this account. Please wait 15 minutes and try again.',
+    }),
+    resetRequest: limiter({
+      name: 'reset-request',
+      windowMs: 60 * 60 * 1000,
+      max: 5,
+      failedOnly: false,
+      message: 'Too many reset codes requested for this account. Please wait an hour and try again.',
+    }),
+    resetGuess: limiter({
+      name: 'reset-guess',
+      windowMs: 15 * 60 * 1000,
+      max: 10,
+      failedOnly: true,
+      message: 'Too many wrong codes for this account. Please wait 15 minutes and request a new code.',
+    }),
+  };
+}
+
+/**
  * Request size limit middleware
  * @param {string} limit - Size limit (e.g., '10mb', '1kb')
  * @returns {Object} Middleware configuration for express.json and express.urlencoded
@@ -527,6 +611,8 @@ module.exports = {
   createUserRateLimitMiddleware,
   createAuthRateLimitMiddleware,
   createJudgeLoginRateLimitMiddleware,
+  createAccountGuessLimiters,
+  accountIdentifier,
   createStrictRateLimit,
   createRequestSizeLimits,
   getRateLimitConfig,

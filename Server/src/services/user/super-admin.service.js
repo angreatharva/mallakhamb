@@ -1,4 +1,4 @@
-const { fullName, coachCard, enteredPlayerCard } = require('../../utils/data/user-projection.util');
+const { fullName, coachCard, enteredPlayerCard, stripSensitiveFields } = require('../../utils/data/user-projection.util');
 const { NotFoundError, ValidationError } = require('../../errors');
 const mongoose = require('mongoose');
 const { EMAIL_TYPES } = require('../../models/Player');
@@ -14,6 +14,9 @@ const {
   buildReceipt,
   verifyPaymentSignature,
   fetchPaymentDetails,
+  fetchOrder,
+  assertOrderIsFor,
+  assertPaymentNotUsed,
   isPaymentSuccessful,
   paidAtFrom,
 } = require('../payment/razorpay.gateway');
@@ -192,9 +195,38 @@ class SuperAdminService {
     return result;
   }
 
-  async getAllAdmins() { return this.adminRepository.find({}, { sort: { createdAt: -1 } }); }
+  async getAllAdmins() {
+    const admins = await this.adminRepository.find({}, { sort: { createdAt: -1 } });
+    return admins.map(stripSensitiveFields);
+  }
   async createAdmin(payload) { return this.authenticationService.register(payload, 'admin'); }
-  async updateAdmin(adminId, payload) { return this.adminRepository.updateById(adminId, payload); }
+  /**
+   * Edit an admin. An allow-list, not the request body (security audit
+   * 2026-10-31, L3): the body used to be written as-is, so any field on the
+   * Admin document — lockout counters, reset codes, anything — could be set.
+   * These are the fields the Management screen edits, plus a password, which
+   * updateById saves through the model's pre-save hook and so is hashed.
+   */
+  async updateAdmin(adminId, payload = {}) {
+    const updates = {};
+    if (payload.name !== undefined) updates.name = String(payload.name).trim();
+    if (payload.email !== undefined) updates.email = String(payload.email).trim().toLowerCase();
+    if (payload.role !== undefined) {
+      if (!['admin', 'superadmin'].includes(payload.role)) {
+        throw new ValidationError('Role must be admin or superadmin');
+      }
+      updates.role = payload.role;
+    }
+    if (payload.isActive !== undefined) updates.isActive = payload.isActive === true || payload.isActive === 'true';
+    if (payload.password !== undefined && payload.password !== '') {
+      if (String(payload.password).length < 8) {
+        throw new ValidationError('Password must be at least 8 characters long');
+      }
+      updates.password = String(payload.password);
+    }
+    const updated = await this.adminRepository.updateById(adminId, updates);
+    return updated ? stripSensitiveFields(updated) : updated;
+  }
   async deleteAdmin(adminId) { return this.adminRepository.deleteById(adminId); }
 
   /**
@@ -206,7 +238,7 @@ class SuperAdminService {
    */
   async getAllCoaches() {
     const coaches = await this.coachRepository.find({}, { sort: { createdAt: -1 } });
-    return coaches.map((coach) => ({ ...coach, name: fullName(coach) }));
+    return coaches.map((coach) => ({ ...stripSensitiveFields(coach), name: fullName(coach) }));
   }
   /**
    * Activate only. A coach cannot be deactivated: the requests of the players
@@ -914,6 +946,16 @@ class SuperAdminService {
         });
         throw new ValidationError('Payment verification failed: Order mismatch');
       }
+
+      // The order must be for THIS meet, and the payment unused (security
+      // audit 2026-10-31, M5).
+      assertOrderIsFor(await fetchOrder(this.config, paymentPayload.razorpay_order_id), {
+        competitionId: playerData.competitionId,
+      });
+      await assertPaymentNotUsed(
+        { competitionRepository: this.competitionRepository, transactionRepository: this.transactionRepository },
+        paymentPayload.razorpay_payment_id
+      );
 
       // Get competition to use competition-specific player fee
       const competition = await this.competitionRepository.findById(playerData.competitionId);

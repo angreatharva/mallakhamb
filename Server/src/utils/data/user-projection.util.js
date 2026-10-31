@@ -242,6 +242,25 @@ const SENSITIVE_USER_FIELDS = [
 ];
 
 /**
+ * The panel record stamped on a score: who sat and in which seat, nothing
+ * else. Clients used to include each judge's EMAIL — their sign-in — and the
+ * anonymous results feed served the record whole (security audit 2026-10-31,
+ * M1). Applied when a score is saved and again when it is published, so
+ * documents written before the fix are clean on the way out too.
+ * @param {*} details - `judgeDetails` as sent or stored (array, object or empty)
+ * @returns {*} the same shape, minus contact fields
+ */
+function panelRecord(details) {
+  const clean = (entry) => {
+    if (!entry || typeof entry !== 'object') return entry;
+    const { email, phone, ...rest } = entry; // eslint-disable-line no-unused-vars
+    return rest;
+  };
+  if (Array.isArray(details)) return details.map(clean);
+  return details && typeof details === 'object' ? clean(details) : details;
+}
+
+/**
  * Remove every sensitive field from a user object destined for a response.
  * @param {Object} userObject
  * @returns {Object} a copy without the sensitive fields
@@ -298,6 +317,7 @@ module.exports = {
   stripSlipBreakdowns,
   SENSITIVE_USER_FIELDS,
   stripSensitiveFields,
+  panelRecord,
   SUBMITTED_TEAM_COACH_FIELDS,
   SUBMITTED_TEAM_PLAYER_FIELDS,
   SUBMITTED_TEAM_COACH_FIELD_LIST,

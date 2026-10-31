@@ -29,6 +29,7 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
   toMongoProjection,
+  panelRecord,
 } = require('../../utils/data/user-projection.util');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
 const { rankTeamChampionship } = require('../../utils/scoring/team-championship.util');
@@ -1356,7 +1357,9 @@ class ScoringService {
         ageGroup: scoreData.ageGroup,
         competitionType: competitionTypeKey,
         playerScores: processedPlayerScores,
-        judgeDetails: scoreData.judgeDetails || {},
+        // Names and seats only — never a judge's email (security audit
+        // 2026-10-31, M1); older clients still send it.
+        judgeDetails: panelRecord(scoreData.judgeDetails || {}),
         timeKeeper: scoreData.timeKeeper || '',
         scorer: scoreData.scorer || '',
         remarks: scoreData.remarks || '',
@@ -1621,7 +1624,7 @@ class ScoringService {
           scoreDocData.timeKeeper = scoreData.timeKeeper ?? existingScore.timeKeeper ?? '';
           scoreDocData.scorer = scoreData.scorer ?? existingScore.scorer ?? '';
           scoreDocData.remarks = scoreData.remarks ?? existingScore.remarks ?? '';
-          scoreDocData.judgeDetails = scoreData.judgeDetails ?? existingScore.judgeDetails ?? {};
+          scoreDocData.judgeDetails = panelRecord(scoreData.judgeDetails ?? existingScore.judgeDetails ?? {});
 
           // Optimistic-concurrency guard. Matching on the `__v` we just read
           // means a judge whose slip was computed from stale state matches zero

@@ -635,9 +635,10 @@ const ScorerScoring = () => {
             finalScore: parseFloat(calculateFinalScore(scores[p.id]))
           };
         }),
-        // Judges hold accounts now, so the panel record keeps the person's
-        // address rather than the slot-derived username it used to stamp here.
-        judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, email: j.email }))
+        // Who sat, by name and seat. No email: this record is served by the
+        // anonymous results feed, and a judge's email is their login
+        // (security audit 2026-10-31, M1).
+        judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType }))
       };
 
       if (competitionId) {

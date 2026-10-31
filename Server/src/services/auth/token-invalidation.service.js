@@ -32,18 +32,68 @@ const KEYS = {
  */
 const DEFAULT_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 
+/**
+ * How long a logout must be remembered: long enough that every token issued
+ * before it has expired. Tokens live JWT_EXPIRES_IN (24h); a week is generous
+ * and keeps the collection tiny.
+ */
+const REVOCATION_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
 class TokenInvalidationService {
   /**
    * @param {import('../infrastructure/redis-client')|null} redisClient - RedisClient wrapper (may be null)
    * @param {Object} logger - Logger instance
+   * @param {Object|null} [store] - durable copy of logouts (security audit
+   *   2026-10-31, M4): `{ load(now) -> [{_id, revokedAt}], save(id, revokedAt, expiresAt) }`.
+   *   Without one, logouts live only in this process, as before.
    */
-  constructor(redisClient, logger) {
+  constructor(redisClient, logger, store = null) {
     this.redisClient = redisClient;
     this.logger = logger;
+    this.store = store;
+    this._hydration = null;
 
     // In-memory fallback stores
     this._logoutTimestamps = new Map();
     this._assignmentChanges = new Map();
+  }
+
+  /**
+   * Load the durable logouts into memory, once per process. Called lazily by
+   * the first check, so a request that arrives while the process is still
+   * starting waits for it rather than being let through on an empty map.
+   * Never rejects: a store that cannot be read leaves the process exactly as
+   * it was before there was a store.
+   * @returns {Promise<void>}
+   */
+  hydrate() {
+    if (!this.store) return Promise.resolve();
+    if (!this._hydration) {
+      this._hydration = (async () => {
+        try {
+          const records = await this.store.load(new Date());
+          for (const record of records || []) {
+            const at = new Date(record.revokedAt).getTime();
+            const id = String(record._id);
+            if (!(this._logoutTimestamps.get(id) >= at)) this._logoutTimestamps.set(id, at);
+          }
+          this.logger.info('Session revocations loaded', { count: (records || []).length });
+        } catch (error) {
+          this.logger.error('Could not load session revocations', { error: error.message });
+        }
+      })();
+    }
+    return this._hydration;
+  }
+
+  /** Write a logout through to the durable store. Logged, never thrown. */
+  async _persistLogout(id, at) {
+    if (!this.store) return;
+    try {
+      await this.store.save(id, new Date(at), new Date(at + REVOCATION_RETENTION_MS));
+    } catch (error) {
+      this.logger.error('Could not persist session revocation', { error: error.message });
+    }
   }
 
   // ------------------------------------------------------------------
@@ -75,6 +125,8 @@ class TokenInvalidationService {
     const id = String(userId);
     const now = Date.now();
 
+    await this._persistLogout(id, now);
+
     if (this._isRedisAvailable()) {
       try {
         await this._redis().set(
@@ -104,6 +156,7 @@ class TokenInvalidationService {
    */
   async isTokenLoggedOut(userId, tokenIssuedAt) {
     const id = String(userId);
+    await this.hydrate();
 
     if (this._isRedisAvailable()) {
       try {

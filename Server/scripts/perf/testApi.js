@@ -625,26 +625,37 @@ async function run() {
       ageGroups: [{ gender: 'Male', ageGroup: 'Under14' }],
     });
 
+    // Creating, re-statusing and deleting meets are super admin acts
+    // (security audit 2026-10-31, H1); a meet admin is refused outright.
+    await step('POST /api/competitions refuses a meet admin',
+      admin.post('/api/competitions', newMeet('refused', new Date(Date.now() + 30 * 86400000))),
+      { expect: [403] });
+
     const started = await step('POST /api/competitions',
-      admin.post('/api/competitions', newMeet('started', new Date(Date.now() - 86400000))),
+      superadmin.post('/api/competitions', newMeet('started', new Date(Date.now() - 86400000))),
       { skipOn: [400, 403] });
 
     if (started?._id) {
+      await step('PATCH /api/competitions/:id/status refuses a meet admin',
+        admin.patch(`/api/competitions/${started._id}/status`, { status: 'ongoing' }),
+        { expect: [403] });
       await step('PATCH /api/competitions/:id/status',
-        admin.patch(`/api/competitions/${started._id}/status`, { status: 'ongoing' }));
+        superadmin.patch(`/api/competitions/${started._id}/status`, { status: 'ongoing' }));
       await step('PATCH /api/competitions/:id/status rejects an unknown status',
-        admin.patch(`/api/competitions/${started._id}/status`, { status: 'banana' }),
+        superadmin.patch(`/api/competitions/${started._id}/status`, { status: 'banana' }),
         { expect: [400, 422] });
       await step('DELETE /api/competitions/:id refuses a started meet',
-        admin.del(`/api/competitions/${started._id}`), { expect: [409, 422] });
+        superadmin.del(`/api/competitions/${started._id}`), { expect: [409, 422] });
     }
 
     const upcoming = await step('POST /api/competitions (upcoming)',
-      admin.post('/api/competitions', newMeet('upcoming', new Date(Date.now() + 30 * 86400000))),
+      superadmin.post('/api/competitions', newMeet('upcoming', new Date(Date.now() + 30 * 86400000))),
       { skipOn: [400, 403] });
 
     if (upcoming?._id) {
-      await step('DELETE /api/competitions/:id', admin.del(`/api/competitions/${upcoming._id}`));
+      await step('DELETE /api/competitions/:id refuses a meet admin',
+        admin.del(`/api/competitions/${upcoming._id}`), { expect: [403] });
+      await step('DELETE /api/competitions/:id', superadmin.del(`/api/competitions/${upcoming._id}`));
     }
 
     /*

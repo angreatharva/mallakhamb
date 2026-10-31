@@ -298,7 +298,7 @@ class JudgeService extends UserService {
    * @returns {Promise<Object>} { token, competition }
    * @throws {AuthorizationError} If the judge holds no seat at that meet
    */
-  async setCompetitionContext(judgeAccountId, competitionId) {
+  async setCompetitionContext(judgeAccountId, competitionId, authTime = null) {
     try {
       const assignments = await this.getAssignments(judgeAccountId, competitionId);
 
@@ -317,7 +317,9 @@ class JudgeService extends UserService {
       const token = this.tokenService.generateToken(
         String(judgeAccountId),
         'judge',
-        String(competitionId)
+        String(competitionId),
+        // Same session, new meet: the sign-in time carries over.
+        { authTime }
       );
 
       this.logger.info('Competition context set', { judgeAccountId, competitionId });

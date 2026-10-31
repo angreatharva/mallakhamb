@@ -56,13 +56,19 @@ const adminSchema = new mongoose.Schema({
   // Password-reset OTP. These were missing from this schema while every other
   // account type had them, so Mongoose's strict mode silently dropped the OTP
   // the reset flow wrote — no admin or superadmin could ever reset a password.
+  // The reset code, stored as its SHA-256 (security audit 2026-10-31, H3), and
+  // never loaded unless a query opts in with .select('+resetPasswordToken'):
+  // `.lean()` results skip the toJSON transform below, so a projection that
+  // forgot to drop it handed a live reset code to whoever read the account.
   resetPasswordToken: {
     type: String,
-    default: null
+    default: null,
+    select: false
   },
   resetPasswordExpires: {
     type: Date,
-    default: null
+    default: null,
+    select: false
   },
   resetPasswordAttempts: {
     type: Number,

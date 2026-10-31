@@ -46,6 +46,9 @@ const {
   buildReceipt,
   verifyPaymentSignature,
   fetchPaymentDetails,
+  fetchOrder,
+  assertOrderIsFor,
+  assertPaymentNotUsed,
   isPaymentSuccessful,
   paidAtFrom,
 } = require('../payment/razorpay.gateway');
@@ -1226,6 +1229,18 @@ class CoachService extends UserService {
         });
         throw new ValidationError('Payment verification failed: Order mismatch');
       }
+
+      // The order must be THIS coach's, for THIS meet — read from the notes we
+      // wrote when creating it — and the payment must not have paid for
+      // anything already (security audit 2026-10-31, M5).
+      assertOrderIsFor(await fetchOrder(this.config, payload.razorpay_order_id), {
+        competitionId,
+        coachId,
+      });
+      await assertPaymentNotUsed(
+        { competitionRepository: this.competitionRepository, transactionRepository: this.transactionRepository },
+        payload.razorpay_payment_id
+      );
 
       // Get team details for transaction record
       const team = await this.teamRepository.findById(registeredTeam.team);

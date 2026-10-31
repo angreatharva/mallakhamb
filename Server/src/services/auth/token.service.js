@@ -25,6 +25,15 @@ const TOKEN_ROTATION_THRESHOLD_MS = 12 * 60 * 60 * 1000;
 /** Refresh token lifetime in days */
 const REFRESH_TOKEN_DAYS = 7;
 
+/**
+ * The longest a sign-in lasts, however often its tokens are rotated or
+ * refreshed (security audit 2026-10-31, M4). Before this, a token used at
+ * least once every 24 hours rotated forever, so a stolen one never died.
+ * Thirty days is far longer than any competition, so no one is signed out
+ * mid-meet; after it, the person simply signs in again.
+ */
+const MAX_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+
 class TokenService {
   /**
    * Create a token service
@@ -51,7 +60,7 @@ class TokenService {
    *   before the logout and be refused. Pass the next whole second.
    * @returns {string} JWT token
    */
-  generateToken(userId, userType, competitionId = null, { issuedAt } = {}) {
+  generateToken(userId, userType, competitionId = null, { issuedAt, authTime } = {}) {
     try {
       const payload = {
         userId,
@@ -59,6 +68,9 @@ class TokenService {
         ...(competitionId && { competitionId }),
         // jwt.sign adds `iat` (issued-at) itself unless one is given
         ...(issuedAt && { iat: issuedAt }),
+        // When the person signed in (seconds). Carried through rotation so the
+        // session has an absolute end — see MAX_SESSION_MS.
+        auth_time: authTime || Math.floor(Date.now() / 1000),
       };
 
       const secret = this.config.get('jwt.secret');
@@ -88,7 +100,9 @@ class TokenService {
   verifyToken(token) {
     try {
       const secret = this.config.get('jwt.secret');
-      const decoded = jwt.verify(token, secret);
+      // Pinned to the one algorithm this service signs with (security audit
+      // 2026-10-31, L2), so no token can choose how it is checked.
+      const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
 
       this.logger.debug('Token verified', { userId: decoded.userId });
 
@@ -162,10 +176,18 @@ class TokenService {
       return null;
     }
 
+    // Past the absolute session limit, stop extending: the token runs out on
+    // its own `exp` and the person signs in again.
+    const authTime = decoded.auth_time || decoded.iat;
+    if (Date.now() - authTime * 1000 >= MAX_SESSION_MS) {
+      return null;
+    }
+
     const newToken = this.generateToken(
       decoded.userId,
       decoded.userType,
-      decoded.competitionId || null
+      decoded.competitionId || null,
+      { authTime }
     );
 
     this.logger.info('Token rotated (age threshold reached)', {
@@ -202,7 +224,7 @@ class TokenService {
    * @param {string|null} [family] - Token family UUID (null = new family)
    * @returns {Promise<{ token: string, family: string }>}
    */
-  async generateRefreshToken(userId, userType, family = null, competitionId = null) {
+  async generateRefreshToken(userId, userType, family = null, competitionId = null, authTime = null) {
     const rawToken = crypto.randomBytes(40).toString('hex');
     const tokenHash = this._hashToken(rawToken);
     const tokenFamily = family || crypto.randomUUID();
@@ -220,6 +242,8 @@ class TokenService {
       // with no competition context, and the next request they made was
       // refused for a context they had never lost.
       competitionId: competitionId || null,
+      // A new family is a new sign-in; a rotation keeps the family's.
+      authTime: authTime || new Date(),
     });
 
     this.logger.debug('Refresh token generated', { userId, userType, family: tokenFamily });
@@ -265,6 +289,14 @@ class TokenService {
       throw new AuthenticationError('Refresh token expired');
     }
 
+    // The absolute session limit: a family refreshed every week would
+    // otherwise never end (MAX_SESSION_MS).
+    const authTime = new Date(tokenRecord.authTime || tokenRecord.createdAt || Date.now());
+    if (Date.now() - authTime.getTime() >= MAX_SESSION_MS) {
+      await this.refreshTokenRepository.revokeFamily(tokenRecord.family);
+      throw new AuthenticationError('Session expired. Please log in again.');
+    }
+
     // Mark old token as used
     await this.refreshTokenRepository.markUsed(tokenHash);
 
@@ -273,6 +305,7 @@ class TokenService {
       tokenRecord.userId.toString(),
       tokenRecord.userType,
       tokenRecord.competitionId ? tokenRecord.competitionId.toString() : null,
+      { authTime: Math.floor(authTime.getTime() / 1000) },
     );
 
     const { token: newRefreshToken, family } = await this.generateRefreshToken(
@@ -280,6 +313,7 @@ class TokenService {
       tokenRecord.userType,
       tokenRecord.family, // same family
       tokenRecord.competitionId,
+      authTime,
     );
 
     this.logger.info('Refresh token rotated', {

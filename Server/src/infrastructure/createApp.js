@@ -4,7 +4,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
-const { createCorsMiddleware, createHelmetMiddleware, generateNonceMiddleware, createAuthRateLimitMiddleware, createUserRateLimitMiddleware, createJudgeLoginRateLimitMiddleware } = require('../middleware/security.middleware');
+const { createCorsMiddleware, createHelmetMiddleware, generateNonceMiddleware, createAuthRateLimitMiddleware, createUserRateLimitMiddleware, createJudgeLoginRateLimitMiddleware, createAccountGuessLimiters } = require('../middleware/security.middleware');
 const { createCsrfMiddleware } = require('../middleware/csrf.middleware');
 const { createCorrelationMiddleware } = require('../middleware/correlation.middleware');
 const { errorHandler, notFoundHandler } = require('../middleware/error.middleware');
@@ -17,6 +17,16 @@ function createApp(container) {
   const app = express();
   const logger = container.resolve('logger');
 
+  // Wire the token-invalidation service before any route can check a logout.
+  // Resolving it is what connects the auth middleware to the durable store;
+  // left to server.js alone, any other way of building the app (a test, a
+  // script) silently kept logouts in a per-process map (audit 2026-10-31, M4).
+  try {
+    container.resolve('tokenInvalidationService');
+  } catch (error) {
+    logger.warn('Token invalidation service unavailable; logouts are per-process', { error: error.message });
+  }
+
   // Trust proxy - Required for Render and other reverse proxies
   app.set('trust proxy', 1);
 
@@ -27,9 +37,19 @@ function createApp(container) {
 
   // HTTPS enforcement in production
   if (process.env.NODE_ENV === 'production') {
+    // The redirect target is built from the Host header, which the client
+    // controls; only a well-formed host name is echoed back, so the redirect
+    // cannot be bent into a URL of the caller's choosing (security audit
+    // 2026-10-31, L6). Caddy and Render answer plain HTTP themselves, so this
+    // is a backstop.
+    const SAFE_HOST = /^[A-Za-z0-9.-]+(:\d{1,5})?$/;
     app.use((req, res, next) => {
       if (req.header('x-forwarded-proto') !== 'https') {
-        return res.redirect(`https://${req.header('host')}${req.url}`);
+        const host = req.header('host') || '';
+        if (!SAFE_HOST.test(host)) {
+          return res.status(400).json({ success: false, error: { message: 'Bad Host header', code: 'BAD_HOST' } });
+        }
+        return res.redirect(`https://${host}${req.url}`);
       }
       next();
     });
@@ -169,7 +189,13 @@ function createApp(container) {
     });
   }
 
-  loadRoutes(app, container, { authLimiter, userLimiter, judgeLoginLimiter });
+  // Per-account guessing limits: their own switch, on even where the per-IP
+  // limiters above are off (see createAccountGuessLimiters).
+  const accountLimiters = appConfig.get('security.accountRateLimitEnabled')
+    ? createAccountGuessLimiters(container)
+    : undefined;
+
+  loadRoutes(app, container, { authLimiter, userLimiter, judgeLoginLimiter, accountLimiters });
 
   /**
    * LOW-3: these were gated on `NODE_ENV !== 'production'`, which meant they

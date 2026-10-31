@@ -111,9 +111,11 @@ function createCompetitionController(container) {
 
     /** @route POST /api/competitions/:competitionId/register */
     registerTeam: asyncHandler(async (req, res) => {
-      const { teamId, coachId } = req.body;
+      // The coach is the caller, never a body field: a body `coachId` let one
+      // coach enter another coach's team (security audit 2026-10-31, H2).
+      const { teamId } = req.body;
       const registration = await registrationService.registerTeam(
-        req.params.competitionId, teamId, coachId
+        req.params.competitionId, teamId, req.user._id
       );
       res.json({ success: true, data: registration, message: 'Team registered successfully' });
     }),
@@ -150,7 +152,8 @@ function createCompetitionController(container) {
     /** @route GET /api/competitions/:competitionId/teams/:teamId */
     getTeamRegistration: asyncHandler(async (req, res) => {
       const registration = await registrationService.getTeamRegistration(
-        req.params.competitionId, req.params.teamId
+        req.params.competitionId, req.params.teamId,
+        { id: req.user._id, type: req.userType, user: req.user }
       );
       res.json({ success: true, data: registration });
     }),
@@ -170,7 +173,8 @@ function createCompetitionController(container) {
     /** @route DELETE /api/competitions/:competitionId/teams/:teamId/players/:playerId */
     removePlayerFromTeam: asyncHandler(async (req, res) => {
       await registrationService.removePlayerFromRegistration(
-        req.params.competitionId, req.params.teamId, req.params.playerId
+        req.params.competitionId, req.params.teamId, req.params.playerId,
+        { id: req.user._id, type: req.userType || 'coach' }
       );
       res.json({ success: true, message: 'Player removed from team successfully' });
     }),

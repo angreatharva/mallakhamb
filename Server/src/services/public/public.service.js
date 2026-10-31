@@ -17,6 +17,7 @@ const {
   SUBMITTED_TEAM_PLAYER_FIELD_LIST,
   projectFields,
   stripSlipBreakdowns,
+  panelRecord,
 } = require('../../utils/data/user-projection.util');
 const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 const { publishedScoreQuery, publishedPlayerScores } = require('../../utils/scoring/published-score.util');
@@ -157,15 +158,34 @@ class PublicService {
         }
 
         const teamName = scoreObj.teamId?.name || 'Unknown Team';
+        const team = scoreObj.teamId && typeof scoreObj.teamId === 'object'
+          ? { _id: scoreObj.teamId._id, name: scoreObj.teamId.name }
+          : scoreObj.teamId;
 
+        // An ALLOW-LIST, not `...scoreObj` (security audit 2026-10-31, M1/M6):
+        // this feed is anonymous, and the whole document carried every judge's
+        // email (their sign-in), the ids of the admins who locked it, the
+        // coach's id and Mongo internals. The results board reads only
+        // `_id`, `playerScores` and `teamName` (Web/src/components/scores).
         return {
-          ...scoreObj,
+          _id: scoreObj._id,
+          competition: scoreObj.competition,
+          gender: scoreObj.gender,
+          ageGroup: scoreObj.ageGroup,
+          competitionType: scoreObj.competitionType,
+          isLocked: scoreObj.isLocked,
+          lockedApparatus: scoreObj.lockedApparatus,
+          judgeDetails: (Array.isArray(scoreObj.judgeDetails) ? panelRecord(scoreObj.judgeDetails) : [])
+            .map(({ judgeName, judgeType }) => ({ judgeName, judgeType })),
           // Stamped on every row as well as the document. The board pools
           // athletes from every team into one standing, so each row has to
           // carry its own team once it is separated from its parent.
           playerScores: playerScores.map((ps) => ({ ...ps, teamName })),
           teamName,
-          team: scoreObj.teamId,
+          teamId: team,
+          team,
+          createdAt: scoreObj.createdAt,
+          updatedAt: scoreObj.updatedAt,
         };
       }).filter(score => score.playerScores.length > 0); // Only include scores with matching finalized players
 

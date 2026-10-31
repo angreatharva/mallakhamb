@@ -1,5 +1,5 @@
 const OTPService = require('../../../../src/services/auth/otp.service');
-const { INVALID_CODE_MESSAGE } = require('../../../../src/services/auth/otp.service');
+const { INVALID_CODE_MESSAGE, hashResetCode } = require('../../../../src/services/auth/otp.service');
 const { ValidationError } = require('../../../../src/errors');
 
 describe('OTPService', () => {
@@ -84,13 +84,18 @@ describe('OTPService', () => {
       await delivery;
 
       expect(mockPlayerRepo.updateById).toHaveBeenCalledWith('user123', {
-        resetPasswordToken: expect.any(String),
+        resetPasswordToken: expect.stringMatching(/^[0-9a-f]{64}$/),
         resetPasswordExpires: expect.any(Date),
         resetPasswordAttempts: 0
       });
+      // The account keeps only the code's SHA-256; the plain code goes out in
+      // the email and nowhere else (security audit 2026-10-31, H3).
       const stored = mockPlayerRepo.updateById.mock.calls[0][1].resetPasswordToken;
+      const emailed = mockEmailService.sendOTP.mock.calls[0][1].otp;
+      expect(emailed).toMatch(/^\d{6}$/);
+      expect(stored).toBe(hashResetCode(emailed));
       expect(mockEmailService.sendOTP).toHaveBeenCalledWith('test@example.com', {
-        otp: stored,
+        otp: emailed,
         userName: 'Test User',
         expiryMinutes: 15
       });

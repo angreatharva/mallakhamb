@@ -12,6 +12,14 @@
  * @param {number} data.expiryMinutes - OTP expiry time in minutes
  * @returns {Object} Email content with subject, text, and html
  */
+/** HTML-escape a user-entered value for the HTML part (security audit 2026-10-31, L11). */
+const esc = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 function generateOTPEmail(data) {
   const { otp, userName, expiryMinutes } = data;
 
@@ -69,7 +77,7 @@ Mallakhamb Competition Team
 <body>
   <div class="container">
     <h2>OTP Verification</h2>
-    <p>Hello ${userName || 'User'},</p>
+    <p>Hello ${esc(userName || 'User')},</p>
     <p>Your OTP code is:</p>
     
     <div class="otp-box">

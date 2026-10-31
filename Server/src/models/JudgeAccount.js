@@ -111,13 +111,19 @@ const judgeAccountSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // The reset code, stored as its SHA-256 (security audit 2026-10-31, H3), and
+  // never loaded unless a query opts in with .select('+resetPasswordToken'):
+  // `.lean()` results skip the toJSON transform below, so a projection that
+  // forgot to drop it handed a live reset code to whoever read the account.
   resetPasswordToken: {
     type: String,
-    default: null
+    default: null,
+    select: false
   },
   resetPasswordExpires: {
     type: Date,
-    default: null
+    default: null,
+    select: false
   },
   // Wrong OTP guesses against the current code. At the cap the code is
   // discarded, so a 6-digit code can't be brute-forced from many IPs.

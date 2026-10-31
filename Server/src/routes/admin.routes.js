@@ -19,7 +19,7 @@ const express = require('express');
 const { body, param } = require('express-validator');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireAdmin, requireSuperAdmin, requireAdminOrScorer } = require('../middleware/auth.middleware');
-const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
+const { validateCompetitionContext, requireCompetitionAccess } = require('../middleware/competition-context.middleware');
 const { createCompetitionLockGuard } = require('../middleware/competition-lock.middleware');
 const { handleValidationErrors } = require('../middleware/validation.middleware');
 const adminValidator = require('../validators/admin.validator');
@@ -164,6 +164,11 @@ function createAdminRoutes(container) {
     '/teams/:teamId',
     authMiddleware,
     authorize,
+    // The meet this team is read in: the signed-in meet, and a `?competition=`
+    // the caller names must be one they may act on too (security audit
+    // 2026-10-31, M9 — the query used to override the meet unchecked).
+    validateCompetitionContext,
+    requireCompetitionAccess({ query: 'competition' }),
     adminValidator.getTeamDetails(),
     handleValidationErrors,
     adminController.getTeamDetails
@@ -172,12 +177,15 @@ function createAdminRoutes(container) {
   /**
    * @route   PUT /api/admin/teams/:teamId/approve
    * @desc    Approve team
-   * @access  Admin, SuperAdmin
+   * @access  SuperAdmin
    */
   router.put(
     '/teams/:teamId/approve',
     authMiddleware,
-    authorize,
+    // Super admin only (security audit 2026-10-31, M9): these act on a team or
+    // player by id with no meet in scope, so an admin of one meet could reach
+    // any athlete's record. The SPA does not call them.
+    requireSuperAdmin,
     requireUnlockedCompetition(),
     adminValidator.approveTeam(),
     handleValidationErrors,
@@ -187,12 +195,15 @@ function createAdminRoutes(container) {
   /**
    * @route   PUT /api/admin/teams/:teamId/reject
    * @desc    Reject team
-   * @access  Admin, SuperAdmin
+   * @access  SuperAdmin
    */
   router.put(
     '/teams/:teamId/reject',
     authMiddleware,
-    authorize,
+    // Super admin only (security audit 2026-10-31, M9): these act on a team or
+    // player by id with no meet in scope, so an admin of one meet could reach
+    // any athlete's record. The SPA does not call them.
+    requireSuperAdmin,
     requireUnlockedCompetition(),
     adminValidator.rejectTeam(),
     handleValidationErrors,
@@ -219,12 +230,15 @@ function createAdminRoutes(container) {
   /**
    * @route   GET /api/admin/players/:playerId
    * @desc    Get player details
-   * @access  Admin, SuperAdmin
+   * @access  SuperAdmin
    */
   router.get(
     '/players/:playerId',
     authMiddleware,
-    authorize,
+    // Super admin only (security audit 2026-10-31, M9): these act on a team or
+    // player by id with no meet in scope, so an admin of one meet could reach
+    // any athlete's record. The SPA does not call them.
+    requireSuperAdmin,
     adminValidator.getPlayerDetails(),
     handleValidationErrors,
     adminController.getPlayerDetails
@@ -233,12 +247,15 @@ function createAdminRoutes(container) {
   /**
    * @route   PUT /api/admin/players/:playerId/status
    * @desc    Update player status
-   * @access  Admin, SuperAdmin
+   * @access  SuperAdmin
    */
   router.put(
     '/players/:playerId/status',
     authMiddleware,
-    authorize,
+    // Super admin only (security audit 2026-10-31, M9): these act on a team or
+    // player by id with no meet in scope, so an admin of one meet could reach
+    // any athlete's record. The SPA does not call them.
+    requireSuperAdmin,
     requireUnlockedCompetition(),
     adminValidator.updatePlayerStatus(),
     handleValidationErrors,
@@ -248,12 +265,15 @@ function createAdminRoutes(container) {
   /**
    * @route   PUT /api/admin/players/:playerId/team
    * @desc    Assign player to team
-   * @access  Admin, SuperAdmin
+   * @access  SuperAdmin
    */
   router.put(
     '/players/:playerId/team',
     authMiddleware,
-    authorize,
+    // Super admin only (security audit 2026-10-31, M9): these act on a team or
+    // player by id with no meet in scope, so an admin of one meet could reach
+    // any athlete's record. The SPA does not call them.
+    requireSuperAdmin,
     requireUnlockedCompetition(),
     adminValidator.assignPlayerToTeam(),
     handleValidationErrors,
