@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { Heading, Spinner, Tabs, TabPanel } from '@/components/ui';
 
+const AccountsSection = lazy(() => import('./fix/AccountsSection'));
 const RestoreSection = lazy(() => import('./fix/RestoreSection'));
 
 const ID = 'sa-fix';
@@ -11,6 +12,7 @@ const ID = 'sa-fix';
  * keeps (docs/superadmin-control-plan.md).
  */
 const SECTIONS = [
+  { id: 'accounts', label: 'Accounts', Component: AccountsSection },
   { id: 'restore', label: 'Restore', Component: RestoreSection },
 ];
 

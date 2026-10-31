@@ -58,6 +58,12 @@ export const superAdminAPI = {
     undo: (logId, reason) => api.post(`/superadmin/history/${logId}/undo`, { reason }),
     deletedCompetitions: () => api.get('/superadmin/competitions-deleted'),
     restoreCompetition: (id, reason) => api.post(`/superadmin/competitions/${id}/restore`, { reason }),
+    searchAccounts: (params) => api.get('/superadmin/accounts', { params }),
+    getAccount: (type, id) => api.get(`/superadmin/accounts/${type}/${id}`),
+    updateAccount: (type, id, data) => api.put(`/superadmin/accounts/${type}/${id}`, data),
+    resetPassword: (type, id, reason) => api.post(`/superadmin/accounts/${type}/${id}/reset-password`, { reason }),
+    signOut: (type, id, reason) => api.post(`/superadmin/accounts/${type}/${id}/sign-out`, { reason }),
+    setActive: (type, id, isActive, reason) => api.post(`/superadmin/accounts/${type}/${id}/active`, { isActive, reason }),
   },
   createPlayerPaymentOrder: (data) => api.post('/superadmin/players/payment/create', data),
   verifyPlayerPaymentAndAdd: (data) => {

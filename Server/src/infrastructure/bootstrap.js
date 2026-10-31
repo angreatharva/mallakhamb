@@ -376,6 +376,21 @@ function bootstrap() {
     logger: c.resolve('logger'),
     config: c.resolve('config'),
   }))), 'singleton');
+  // Phase 3: the owner edits any account (docs/superadmin-control-plan.md).
+  container.register('accountsAdminService', (c) => {
+    const AccountsAdminService = require('../services/superadmin/accounts-admin.service');
+    const service = new AccountsAdminService({
+      correctionService: c.resolve('correctionService'),
+      superAdminService: c.resolve('superAdminService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      tokenService: c.resolve('tokenService'),
+      logger: c.resolve('logger'),
+    });
+    for (const type of ['player', 'coach', 'judge']) {
+      c.resolve('correctionService').registerUndo(type, (actor, id, values, reason) => service.undoFields(actor, type, id, values, reason));
+    }
+    return service;
+  }, 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({

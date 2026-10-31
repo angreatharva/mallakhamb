@@ -21,8 +21,20 @@ const actorOf = (req) => ({ id: String(req.user._id), name: req.user.name || nul
 const id = (name) => [param(name).isMongoId().withMessage(`Invalid ${name}`), handleValidationErrors];
 
 function mountCorrectionRoutes(router, container) {
-  const corrections = svc(container, 'correctionService');
   const superAdmin = svc(container, 'superAdminService');
+  const accounts = svc(container, 'accountsAdminService');
+  /*
+   * Services register their undo handlers when they are built, and singletons
+   * are built on first use. History must know every handler even right after
+   * a restart, so resolving it resolves the services that own them first.
+   */
+  const UNDO_OWNERS = ['superAdminService', 'accountsAdminService', 'teamAdminService'];
+  const corrections = () => {
+    for (const name of UNDO_OWNERS) {
+      try { container.resolve(name); } catch { /* not registered in this harness */ }
+    }
+    return container.resolve('correctionService');
+  };
 
   // ── Phase 2: History ────────────────────────────────────────────────────
   router.get('/history', asyncHandler(async (req, res) => {
@@ -40,6 +52,31 @@ function mountCorrectionRoutes(router, container) {
   router.post('/competitions/:id/restore', id('id'), asyncHandler(async (req, res) => {
     const competition = await superAdmin().restoreCompetition(req.params.id, String(req.user._id), req.body?.reason);
     res.json({ success: true, data: competition, message: 'Competition restored.' });
+  }));
+
+  // ── Phase 3: accounts ───────────────────────────────────────────────────
+  const typed = [param('type').isIn(['player', 'coach', 'judge', 'admin']).withMessage('Unknown account type'), param('accountId').isMongoId().withMessage('Invalid account id'), handleValidationErrors];
+  router.get('/accounts', asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await accounts().search(req.query) });
+  }));
+  router.get('/accounts/:type/:accountId', typed, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await accounts().get(req.params.type, req.params.accountId) });
+  }));
+  router.put('/accounts/:type/:accountId', typed, asyncHandler(async (req, res) => {
+    const data = await accounts().update(actorOf(req), req.params.type, req.params.accountId, req.body || {});
+    res.json({ success: true, data, message: 'Saved.' });
+  }));
+  router.post('/accounts/:type/:accountId/reset-password', typed, asyncHandler(async (req, res) => {
+    const data = await accounts().resetPassword(actorOf(req), req.params.type, req.params.accountId, req.body || {});
+    res.json({ success: true, data, message: 'Temporary password set.' });
+  }));
+  router.post('/accounts/:type/:accountId/sign-out', typed, asyncHandler(async (req, res) => {
+    const data = await accounts().signOutEverywhere(actorOf(req), req.params.type, req.params.accountId, req.body || {});
+    res.json({ success: true, data, message: 'Signed out everywhere.' });
+  }));
+  router.post('/accounts/:type/:accountId/active', typed, asyncHandler(async (req, res) => {
+    const data = await accounts().setActive(actorOf(req), req.params.type, req.params.accountId, req.body || {});
+    res.json({ success: true, data });
   }));
 
   return router;

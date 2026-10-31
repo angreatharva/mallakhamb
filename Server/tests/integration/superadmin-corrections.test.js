@@ -74,7 +74,7 @@ async function seed() {
     startDate: new Date(Date.now() + 7 * 86400000), endDate: new Date(Date.now() + 9 * 86400000),
     competitionTypes: ['competition_1'], playerFee: 500, maxTeamSize: 6, status: 'upcoming', isDeleted: false,
     admins: [ids.admin],
-    ageGroups: [{ gender: 'Female', ageGroup: 'Under14' }],
+    ageGroups: [{ gender: 'Female', ageGroup: 'Under14' }, { gender: 'Female', ageGroup: 'Under16' }, { gender: 'Female', ageGroup: 'Above16' }],
     registeredTeams: [{
       _id: oid(), team: ids.teamA, coach: ids.coachA, gender: 'Female', isSubmitted: true, paymentStatus: 'completed',
       players: [
@@ -83,7 +83,7 @@ async function seed() {
       ],
     }],
   });
-  await col('judgeaccounts').insertOne({ _id: ids.judgeAcc, firstName: 'Judge', lastName: 'Kale', email: 'kale@example.com', password: hash, isActive: true });
+  await col('judges').insertOne({ _id: ids.judgeAcc, firstName: 'Judge', lastName: 'Kale', email: 'kale@example.com', password: hash, isActive: true });
   return ids;
 }
 
@@ -128,3 +128,73 @@ describe('Phase 2 — History and Undo', () => {
   });
 });
 
+
+describe('Phase 3 — accounts', () => {
+  it('finds players, coaches and judges by name, email or Player ID', async () => {
+    const ids = await seed();
+    const found = (await as(ids.owner).get('/api/superadmin/accounts?q=riya')).body.data;
+    expect(found.map((a) => a.type)).toContain('player');
+    const judge = (await as(ids.owner).get('/api/superadmin/accounts?q=kale@example')).body.data;
+    expect(judge[0]).toMatchObject({ type: 'judge', name: 'Judge Kale' });
+  });
+
+  it('edits a player with a reason, records it, and the edit can be undone', async () => {
+    const ids = await seed();
+    const path = `/api/superadmin/accounts/player/${ids.p1}`;
+    expect((await as(ids.owner).send('put', path, { lastName: 'Mane-Patil' })).status).toBe(400);
+    const res = await as(ids.owner).send('put', path, { lastName: 'Mane-Patil', reason: REASON });
+    expect(res.status).toBe(200);
+    expect(res.body.data.name).toBe('Riya Mane-Patil');
+    const row = (await history(ids.owner, '?entity=player')).rows[0];
+    expect(row).toMatchObject({ action: 'PLAYER_UPDATED', reason: REASON, undoable: true });
+    expect(row.changes).toEqual([{ field: 'lastName', from: 'Mane', to: 'Mane-Patil' }]);
+    expect((await as(ids.owner).send('post', `/api/superadmin/history/${row._id}/undo`, { reason: 'Name was right' })).status).toBe(200);
+    expect((await col('players').findOne({ _id: ids.p1 })).lastName).toBe('Mane');
+  });
+
+  it('a date-of-birth fix reports entries the age rule no longer allows, and moves them on request', async () => {
+    const ids = await seed();
+    const res = await as(ids.owner).send('put', `/api/superadmin/accounts/player/${ids.p1}`, {
+      dateOfBirth: `${new Date().getFullYear() - 18}-03-01`, reason: REASON, fixAgeGroups: true,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.moved).toEqual([{ competition: 'District Meet', from: 'Under14', to: 'Above16' }]);
+    const meet = await col('competitions').findOne({ _id: ids.meet });
+    const entry = meet.registeredTeams[0].players.find((p) => String(p.player) === String(ids.p1));
+    expect(entry.ageGroup).toBe('Above16');
+  });
+
+  it('an email already used by another player is refused', async () => {
+    const ids = await seed();
+    const res = await as(ids.owner).send('put', `/api/superadmin/accounts/player/${ids.p1}`, { email: 'asha@example.com', reason: REASON });
+    expect(res.status).toBe(409);
+  });
+
+  it('reset password returns a temporary password that works, and signs the account out', async () => {
+    const ids = await seed();
+    const res = await as(ids.owner).send('post', `/api/superadmin/accounts/coach/${ids.coachA}/reset-password`, { reason: REASON });
+    expect(res.status).toBe(200);
+    const temp = res.body.data.temporaryPassword;
+    expect(temp).toMatch(/^[A-Za-z2-9]{10}$/);
+    const stored = await col('coaches').findOne({ _id: ids.coachA });
+    expect(await bcrypt.compare(temp, stored.password)).toBe(true);
+    expect(await col('sessionrevocations').findOne({ _id: String(ids.coachA) })).toBeTruthy();
+    const row = (await history(ids.owner, '?entity=coach')).rows[0];
+    expect(row).toMatchObject({ action: 'PASSWORD_RESET_BY_OWNER', undoable: false });
+    expect(JSON.stringify(row)).not.toContain(temp);
+  });
+
+  it('deactivates a judge account, never a coach or the owner', async () => {
+    const ids = await seed();
+    expect((await as(ids.owner).send('post', `/api/superadmin/accounts/judge/${ids.judgeAcc}/active`, { isActive: false, reason: REASON })).status).toBe(200);
+    expect((await col('judges').findOne({ _id: ids.judgeAcc })).isActive).toBe(false);
+    expect((await as(ids.owner).send('post', `/api/superadmin/accounts/coach/${ids.coachA}/active`, { isActive: false, reason: REASON })).status).toBe(422);
+    expect((await as(ids.owner).send('post', `/api/superadmin/accounts/admin/${ids.owner}/active`, { isActive: false, reason: REASON })).status).toBe(422);
+  });
+
+  it('sign out everywhere is recorded', async () => {
+    const ids = await seed();
+    expect((await as(ids.owner).send('post', `/api/superadmin/accounts/player/${ids.p2}/sign-out`, { reason: REASON })).status).toBe(200);
+    expect(await col('sessionrevocations').findOne({ _id: String(ids.p2) })).toBeTruthy();
+  });
+});
