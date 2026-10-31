@@ -27,8 +27,6 @@ const { loadAssignments, competitionsFor } = require('../../utils/data/judge-ass
 const { normalizeEmail, sanitizeString, sanitizeUserData } = require('../../utils/validation/sanitization.util');
 const { recordLogout } = require('../../utils/security/token-invalidation.util');
 const {
-  getLockoutState,
-  registerFailedAttempt,
   clearedLockoutState,
   lockoutMessage,
 } = require('../../utils/security/account-lockout.util');
@@ -45,7 +43,8 @@ const { stripSensitiveFields } = require('../../utils/data/user-projection.util'
 const {
   equalizeFailedLoginTiming,
   securitySetting,
-  lockoutPolicy,
+  checkLockout,
+  nextFailedAttempt,
   DEFAULT_BCRYPT_ROUNDS,
 } = require('../../utils/security/login-security.util');
 const { emailTypeOf, looksLikeEmail } = require('../../utils/data/player-login-id.util');
@@ -168,7 +167,7 @@ class AuthenticationService {
       }
 
       // MED-1: refuse a locked account before spending a password comparison.
-      const lockout = getLockoutState(user);
+      const lockout = checkLockout(user);
       if (lockout.isLocked) {
         this.logger.warn('Login failed: Account locked', {
           userId: user._id,
@@ -183,7 +182,7 @@ class AuthenticationService {
       const isPasswordValid = await this.verifyPassword(user, password);
 
       if (!isPasswordValid) {
-        const next = registerFailedAttempt(user, lockoutPolicy());
+        const next = nextFailedAttempt(user);
 
         await this.persistLockoutState(sanitizedUserType, user._id, {
           loginAttempts: next.loginAttempts,

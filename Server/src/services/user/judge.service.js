@@ -43,8 +43,6 @@ const {
   competitionsFor,
 } = require('../../utils/data/judge-assignment.util');
 const {
-  getLockoutState,
-  registerFailedAttempt,
   clearedLockoutState,
   lockoutMessage,
 } = require('../../utils/security/account-lockout.util');
@@ -53,7 +51,8 @@ const {
 // of each purely because judges authenticate against a different collection.
 const {
   equalizeFailedLoginTiming,
-  lockoutPolicy,
+  checkLockout,
+  nextFailedAttempt,
 } = require('../../utils/security/login-security.util');
 
 /** Shape one assignment for the client. */
@@ -143,7 +142,7 @@ class JudgeService extends UserService {
       }
 
       // MED-1: refuse a locked account before spending a comparison.
-      const lockout = getLockoutState(account);
+      const lockout = checkLockout(account);
       if (lockout.isLocked) {
         this.logger.warn('Judge login failed: Account locked', {
           judgeAccountId: account._id,
@@ -157,7 +156,7 @@ class JudgeService extends UserService {
       const isPasswordValid = await bcrypt.compare(password || '', account.password || '');
 
       if (!isPasswordValid) {
-        const next = registerFailedAttempt(account, lockoutPolicy());
+        const next = nextFailedAttempt(account);
 
         await this.persistJudgeLockoutState(account._id, {
           loginAttempts: next.loginAttempts,

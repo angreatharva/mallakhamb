@@ -68,6 +68,43 @@ const DEFAULT_LOCKOUT_MINUTES = 15;
 const DEFAULT_BCRYPT_ROUNDS = 12;
 
 /**
+ * Is the five-strike account lockout on? It shares ACCOUNT_RATE_LIMIT_ENABLED
+ * with the per-account limiters: one switch for "slow down guessing on an
+ * account". OFF by default everywhere since 2026-10-31 (owner decision D6:
+ * no rate limits or lockouts, production included, for now). While off, a
+ * lock already stored on an account is ignored too, so nobody stays shut out.
+ *
+ * Read like securitySetting: the config singleton when it is loaded, the raw
+ * env var when it is not (unit tests build services without config.load()).
+ * @returns {boolean}
+ */
+function lockoutEnabled() {
+  try {
+    const value = require('../../config/config-manager').get('security.accountRateLimitEnabled');
+    if (typeof value === 'boolean') return value;
+  } catch {
+    // fall through to the env var
+  }
+  return String(process.env.ACCOUNT_RATE_LIMIT_ENABLED || '').toLowerCase() === 'true';
+}
+
+const NOT_LOCKED = Object.freeze({ isLocked: false, remainingMinutes: 0, lockUntil: null });
+
+/** getLockoutState, or "not locked" while the lockout is switched off. */
+function checkLockout(user) {
+  const { getLockoutState } = require('./account-lockout.util');
+  return lockoutEnabled() ? getLockoutState(user) : NOT_LOCKED;
+}
+
+/** registerFailedAttempt under the configured policy, or a cleared counter while off. */
+function nextFailedAttempt(user) {
+  const { registerFailedAttempt } = require('./account-lockout.util');
+  return lockoutEnabled()
+    ? registerFailedAttempt(user, lockoutPolicy())
+    : { loginAttempts: 0, lockUntil: null, isLocked: false, remainingMinutes: 0 };
+}
+
+/**
  * The configured lockout policy, as `account-lockout.util` expects it.
  * @returns {{maxAttempts: number, lockoutMinutes: number}}
  */
@@ -79,6 +116,9 @@ function lockoutPolicy() {
 }
 
 module.exports = {
+  lockoutEnabled,
+  checkLockout,
+  nextFailedAttempt,
   DUMMY_PASSWORD_HASH,
   DEFAULT_MAX_LOGIN_ATTEMPTS,
   DEFAULT_LOCKOUT_MINUTES,
