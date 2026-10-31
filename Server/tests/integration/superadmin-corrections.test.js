@@ -198,3 +198,102 @@ describe('Phase 3 — accounts', () => {
     expect(await col('sessionrevocations').findOne({ _id: String(ids.p2) })).toBeTruthy();
   });
 });
+
+describe('Phase 4 — teams, coaches, transfers', () => {
+  it('renames a team (undoable), deletes and restores it', async () => {
+    const ids = await seed();
+    const path = `/api/superadmin/fix/teams/${ids.teamA}`;
+    expect((await as(ids.owner).send('put', path, { name: 'Alpha Mallakhamb Club', reason: REASON })).status).toBe(200);
+    const row = (await history(ids.owner, '?entity=team')).rows[0];
+    expect(row).toMatchObject({ action: 'TEAM_UPDATED', undoable: true });
+    expect((await as(ids.owner).send('post', `/api/superadmin/history/${row._id}/undo`, { reason: 'Old name was right' })).status).toBe(200);
+    expect((await col('teams').findOne({ _id: ids.teamA })).name).toBe('Alpha Club');
+
+    expect((await as(ids.owner).send('post', `${path}/delete`, { reason: REASON })).status).toBe(200);
+    expect((await col('teams').findOne({ _id: ids.teamA })).isActive).toBe(false);
+    expect((await as(ids.owner).send('post', `${path}/restore`, { reason: REASON })).status).toBe(200);
+    expect((await col('teams').findOne({ _id: ids.teamA })).isActive).toBe(true);
+  });
+
+  it('changes the coach: entries follow the team, the old coach stays as co-coach and works for it', async () => {
+    const ids = await seed();
+    const res = await as(ids.owner).send('post', `/api/superadmin/fix/teams/${ids.teamA}/change-coach`, { coachId: String(ids.coachB), oldCoach: 'cocoach', reason: REASON });
+    expect(res.status).toBe(200);
+    const team = await col('teams').findOne({ _id: ids.teamA });
+    expect(String(team.coach)).toBe(String(ids.coachB));
+    expect(team.coCoaches.map(String)).toEqual([String(ids.coachA)]);
+    const meet = await col('competitions').findOne({ _id: ids.meet });
+    expect(String(meet.registeredTeams[0].coach)).toBe(String(ids.coachB));
+    expect((await col('coaches').findOne({ _id: ids.coachA })).team).toBeNull();
+
+    // The co-coach acts for the team's main coach, and sees who leads it.
+    const view = await as(ids.coachA, 'coach').get('/api/coaches/co-coaches');
+    expect(view.status).toBe(200);
+    expect(view.body.data).toMatchObject({ isMain: false });
+    expect(view.body.data.teams[0].mainCoach.name).toBe('Coach Beta');
+    const teamsSeen = await as(ids.coachA, 'coach').get('/api/coaches/teams');
+    expect(JSON.stringify(teamsSeen.body)).toContain('Alpha Club');
+
+    // A co-coach cannot remove anyone; the main coach can.
+    expect((await as(ids.coachA, 'coach').send('post', `/api/coaches/co-coaches/${ids.coachA}/remove`, {})).status).toBe(403);
+    const removed = await as(ids.coachB, 'coach').send('post', `/api/coaches/co-coaches/${ids.coachA}/remove`, {});
+    expect(removed.status).toBe(200);
+    expect((await col('teams').findOne({ _id: ids.teamA })).coCoaches).toEqual([]);
+    const after = await as(ids.coachA, 'coach').get('/api/coaches/co-coaches');
+    expect(after.body.data.teams).toEqual([]);
+  });
+
+  it('changes the coach and removes the old one', async () => {
+    const ids = await seed();
+    expect((await as(ids.owner).send('post', `/api/superadmin/fix/teams/${ids.teamA}/change-coach`, { coachId: String(ids.coachB), oldCoach: 'remove', reason: REASON })).status).toBe(200);
+    expect((await col('teams').findOne({ _id: ids.teamA })).coCoaches).toEqual([]);
+  });
+
+  it('moves a player in one step: squad, team at level, and scores follow', async () => {
+    const ids = await seed();
+    await col('scores').insertOne({
+      competition: ids.meet, teamId: ids.teamA, gender: 'Female', ageGroup: 'Under14', competitionType: 'Competition I', isLocked: true,
+      playerScores: [
+        { playerId: ids.p1, playerName: 'Riya Mane', apparatus: 'pole', finalScore: 8.5 },
+        { playerId: ids.p2, playerName: 'Asha Rao', apparatus: 'pole', finalScore: 8.1 },
+      ],
+    });
+    const preview = await as(ids.owner).get(`/api/superadmin/fix/transfer/preview?playerId=${ids.p1}&toTeamId=${ids.teamB}&level=district`);
+    expect(preview.status).toBe(200);
+    expect(preview.body.data.competitions).toHaveLength(1);
+    expect(preview.body.data.competitions[0]).toMatchObject({ targetEntered: false });
+
+    const res = await as(ids.owner).send('post', '/api/superadmin/fix/transfer', { playerId: String(ids.p1), toTeamId: String(ids.teamB), level: 'district', reason: REASON });
+    expect(res.status).toBe(200);
+    expect(res.body.data.moved[0]).toMatchObject({ createdRegistration: true, scoresMoved: 1 });
+
+    const meet = await col('competitions').findOne({ _id: ids.meet });
+    const regA = meet.registeredTeams.find((r) => String(r.team) === String(ids.teamA));
+    const regB = meet.registeredTeams.find((r) => String(r.team) === String(ids.teamB));
+    expect(regA.players.map((p) => String(p.player))).toEqual([String(ids.p2)]);
+    expect(regB).toMatchObject({ isSubmitted: true, paymentStatus: 'completed' });
+    expect(regB.players[0]).toMatchObject({ ageGroup: 'Under14', apparatus: { competition_1: ['pole'] } });
+    expect(String(regB.coach)).toBe(String(ids.coachB));
+
+    const player = await col('players').findOne({ _id: ids.p1 });
+    expect(String(player.levelTeams.find((l) => l.level === 'district').team)).toBe(String(ids.teamB));
+    const sheetB = await col('scores').findOne({ competition: ids.meet, teamId: ids.teamB });
+    expect(sheetB.playerScores.map((r) => r.finalScore)).toEqual([8.5]);
+    const sheetA = await col('scores').findOne({ competition: ids.meet, teamId: ids.teamA });
+    expect(sheetA.playerScores.map((r) => String(r.playerId))).toEqual([String(ids.p2)]);
+    expect((await history(ids.owner, '?entity=player')).rows.some((r) => r.action === 'PLAYER_TRANSFERRED')).toBe(true);
+  });
+
+  it('refuses a full squad unless told to allow it', async () => {
+    const ids = await seed();
+    await col('competitions').updateOne({ _id: ids.meet }, {
+      $set: { maxTeamSize: 4 },
+      $push: { registeredTeams: { _id: oid(), team: ids.teamB, coach: ids.coachB, isSubmitted: true, paymentStatus: 'completed',
+        players: [1, 2, 3, 4].map(() => ({ _id: oid(), player: oid(), gender: 'Female', ageGroup: 'Under14' })) } },
+    });
+    const body = { playerId: String(ids.p1), toTeamId: String(ids.teamB), level: 'district', reason: REASON };
+    const refused = await as(ids.owner).send('post', '/api/superadmin/fix/transfer', body);
+    expect(refused.status).toBe(422);
+    expect((await as(ids.owner).send('post', '/api/superadmin/fix/transfer', { ...body, overrideLimit: true })).status).toBe(200);
+  });
+});

@@ -391,6 +391,20 @@ function bootstrap() {
     }
     return service;
   }, 'singleton');
+  // Phase 4: teams, coaches, co-coaches and transfers.
+  container.register('teamAdminService', (c) => {
+    const TeamAdminService = require('../services/superadmin/team-admin.service');
+    const service = new TeamAdminService({
+      correctionService: c.resolve('correctionService'),
+      playerTeamAdminService: c.resolve('playerTeamAdminService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      logger: c.resolve('logger'),
+    });
+    // Resolved on first use: the finals service reads scores, so not a constructor dependency.
+    Object.defineProperty(service, '_qualification', { get: () => c.resolve('qualificationService'), configurable: true });
+    c.resolve('correctionService').registerUndo('team', (actor, id, values, reason) => service.undoFields(actor, id, values, reason));
+    return service;
+  }, 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({

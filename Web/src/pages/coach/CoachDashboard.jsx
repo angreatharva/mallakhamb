@@ -19,6 +19,7 @@ import PerformancePanel from '@/components/performance/PerformancePanel';
 import QualifiedFinals from '@/components/finals/QualifiedFinals';
 import AccountRequestsPanel from '@/components/account/AccountRequestsPanel';
 import RegisterPlayerDialog from '@/pages/coach/RegisterPlayerDialog';
+import CoCoachesPanel from '@/components/coach/CoCoachesPanel';
 import {
   Button, Dialog, EmptyState, Heading, IconButton, Input, Notice, Panel, SpecList, Stat, StatusTag, Tag,
 } from '@/components/ui';
@@ -545,6 +546,9 @@ const CoachDashboard = () => {
 
         {/* Players with no email who need their coach: resets and email additions. Only when there are any. */}
         <AccountRequestsPanel api={coachAPI.accountRequests} hideWhenEmpty />
+
+        {/* Co-coaches of this team, or whose team this co-coach works on. Only when there are any. */}
+        <CoCoachesPanel />
 
         {/* Team header */}
         <Panel className="grid gap-4">

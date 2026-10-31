@@ -7,6 +7,9 @@ export const coachAPI = {
   getStatus: () => api.get('/coaches/status'),
   createTeam: (data) => api.post('/coaches/team', data),
   getTeams: () => api.get('/coaches/teams'),
+  // Co-coaches of the coach's team; only the main coach removes one.
+  getCoCoaches: () => api.get('/coaches/co-coaches'),
+  removeCoCoach: (coachId) => api.post(`/coaches/co-coaches/${coachId}/remove`),
   getOpenCompetitions: () => api.get('/coaches/competitions/open'),
   selectCompetition: (data) => api.post('/coaches/select-competition', data),
   registerTeamForCompetition: (teamId, competitionId) => api.post(`/coaches/team/${teamId}/register-competition`, { competitionId }),

@@ -79,6 +79,37 @@ function mountCorrectionRoutes(router, container) {
     res.json({ success: true, data });
   }));
 
+  // ── Phase 4: teams, coaches, transfers ──────────────────────────────────
+  const teams = svc(container, 'teamAdminService');
+  const teamId = id('teamId');
+  router.get('/fix/teams', asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().search(req.query) });
+  }));
+  router.get('/fix/teams/:teamId', teamId, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().detail(req.params.teamId) });
+  }));
+  router.put('/fix/teams/:teamId', teamId, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().update(actorOf(req), req.params.teamId, req.body || {}) });
+  }));
+  router.post('/fix/teams/:teamId/delete', teamId, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().setDeleted(actorOf(req), req.params.teamId, { ...req.body, deleted: true }) });
+  }));
+  router.post('/fix/teams/:teamId/restore', teamId, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().setDeleted(actorOf(req), req.params.teamId, { ...req.body, deleted: false }) });
+  }));
+  router.post('/fix/teams/:teamId/change-coach', teamId, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().changeCoach(actorOf(req), req.params.teamId, req.body || {}), message: 'Coach changed.' });
+  }));
+  router.post('/fix/teams/:teamId/co-coaches/:coachId/remove', teamId, id('coachId'), asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().removeCoCoach(actorOf(req), req.params.teamId, req.params.coachId, req.body || {}) });
+  }));
+  router.get('/fix/transfer/preview', asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().previewTransfer(req.query) });
+  }));
+  router.post('/fix/transfer', asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await teams().transfer(actorOf(req), req.body || {}), message: 'Player moved.' });
+  }));
+
   return router;
 }
 

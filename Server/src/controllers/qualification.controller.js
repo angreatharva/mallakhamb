@@ -6,6 +6,7 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { teamCoachOf } = require('../utils/auth/team-coach.util');
 
 const actorOf = (req) => ({ id: req.user._id, userType: req.userType });
 
@@ -29,7 +30,7 @@ function createQualificationController(container) {
     draw: asyncHandler(async (req, res) => ok(res, await service().recordAllRoundDraw(actorOf(req), req.params.finalId, { ...req.body, competitionId: req.competitionId }), 'Draw recorded')),
 
     /** Coach: their own qualifiers in the meet in context. */
-    forCoach: asyncHandler(async (req, res) => ok(res, { finals: await service().forCoach(req.user._id, req.competitionId) })),
+    forCoach: asyncHandler(async (req, res) => ok(res, { finals: await service().forCoach(teamCoachOf(req), req.competitionId) })),
     /** Player: the finals they are in. */
     forPlayer: asyncHandler(async (req, res) => ok(res, { finals: await service().forPlayer(req.user._id) })),
     /** Public: the qualifier lists of a meet. */

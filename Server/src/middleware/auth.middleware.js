@@ -15,6 +15,7 @@
 
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
+const { resolveTeamCoach } = require('../utils/auth/team-coach.util');
 const { COOKIE_NAMES, isProductionLike, setAccessTokenCookie } = require('../utils/security/cookie.util');
 const {
   loadAssignments,
@@ -249,6 +250,17 @@ function createAuthMiddleware(container) {
       // Attach competition context if present in token
       if (decoded.competitionId) {
         req.user.currentCompetition = decoded.competitionId;
+      }
+
+      // A co-coach works as their team's main coach (utils/auth/team-coach.util).
+      if (decoded.userType === 'coach') {
+        try {
+          const seat = await resolveTeamCoach(user._id);
+          req.teamCoachId = seat.teamCoachId;
+          req.coCoachOf = seat.coCoachOf;
+        } catch (error) {
+          logger.warn('Could not resolve the team this coach works for', { error: error.message });
+        }
       }
 
       /**
