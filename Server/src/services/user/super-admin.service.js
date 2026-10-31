@@ -7,6 +7,7 @@ const { applyApparatusByGender } = require('../../utils/data/competition-apparat
 const { hasRoomInSquad, isValidTeamSize, TEAM_SIZES } = require('../../utils/scoring/team-championship.util');
 const { assertAgeGroup } = require('../../utils/data/age-eligibility.util');
 
+const ONLY_ONE_OWNER = 'There is only one Super Admin. Hand ownership over on the server with scripts/createSuperAdmin.js --transfer-to <email>.';
 const TEAM_SIZE_MESSAGE = `Max team size must be ${TEAM_SIZES.join(' or ')} players per age group`;
 const {
   RAZORPAY_CURRENCY,
@@ -199,7 +200,11 @@ class SuperAdminService {
     const admins = await this.adminRepository.find({}, { sort: { createdAt: -1 } });
     return admins.map(stripSensitiveFields);
   }
-  async createAdmin(payload) { return this.authenticationService.register(payload, 'admin'); }
+  /** A new admin is always an admin: there is one Super Admin, the owner (Phase 1). */
+  async createAdmin(payload = {}) {
+    if (payload.role !== undefined && payload.role !== 'admin') throw new ValidationError(ONLY_ONE_OWNER);
+    return this.authenticationService.register({ ...payload, role: 'admin' }, 'admin');
+  }
   /**
    * Edit an admin. An allow-list, not the request body (security audit
    * 2026-10-31, L3): the body used to be written as-is, so any field on the
@@ -211,13 +216,17 @@ class SuperAdminService {
     const updates = {};
     if (payload.name !== undefined) updates.name = String(payload.name).trim();
     if (payload.email !== undefined) updates.email = String(payload.email).trim().toLowerCase();
-    if (payload.role !== undefined) {
-      if (!['admin', 'superadmin'].includes(payload.role)) {
-        throw new ValidationError('Role must be admin or superadmin');
-      }
-      updates.role = payload.role;
+    const target = await this.adminRepository.findById(adminId);
+    if (!target) throw new NotFoundError('Admin');
+    const isOwner = target.role === 'superadmin';
+    if (payload.role !== undefined && payload.role !== target.role) {
+      // Nobody is promoted to, or demoted from, Super Admin over HTTP.
+      throw new ValidationError(ONLY_ONE_OWNER);
     }
-    if (payload.isActive !== undefined) updates.isActive = payload.isActive === true || payload.isActive === 'true';
+    if (payload.isActive !== undefined) {
+      updates.isActive = payload.isActive === true || payload.isActive === 'true';
+      if (isOwner && !updates.isActive) throw new ValidationError('The Super Admin account cannot be deactivated');
+    }
     if (payload.password !== undefined && payload.password !== '') {
       if (String(payload.password).length < 8) {
         throw new ValidationError('Password must be at least 8 characters long');
@@ -227,7 +236,12 @@ class SuperAdminService {
     const updated = await this.adminRepository.updateById(adminId, updates);
     return updated ? stripSensitiveFields(updated) : updated;
   }
-  async deleteAdmin(adminId) { return this.adminRepository.deleteById(adminId); }
+  async deleteAdmin(adminId) {
+    const target = await this.adminRepository.findById(adminId);
+    if (!target) throw new NotFoundError('Admin');
+    if (target.role === 'superadmin') throw new ValidationError('The Super Admin account cannot be deleted');
+    return this.adminRepository.deleteById(adminId);
+  }
 
   /**
    * Every coach, for the superadmin's management table.

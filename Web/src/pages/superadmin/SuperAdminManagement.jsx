@@ -484,7 +484,8 @@ const SuperAdminManagement = () => {
   const handleAddAdmin = async (e) => {
     e.preventDefault();
     try {
-      await superAdminAPI.createAdmin({ ...formData, role: formData.role.value });
+      // Always an admin: there is one Super Admin, the owner (the server refuses others).
+      await superAdminAPI.createAdmin({ name: formData.name, email: formData.email, password: formData.password });
       toast.success('Admin created');
       setShowAddAdminModal(false);
       setFormData({ name: '', email: '', password: '', role: { value: 'admin', label: 'Admin' } });
@@ -495,7 +496,11 @@ const SuperAdminManagement = () => {
   const handleUpdateAdmin = async (e) => {
     e.preventDefault();
     try {
-      await superAdminAPI.updateAdmin(editingAdmin._id, { name: formData.name, email: formData.email, role: formData.role.value, isActive: formData.isActive });
+      await superAdminAPI.updateAdmin(editingAdmin._id, {
+        name: formData.name,
+        email: formData.email,
+        ...(editingAdmin.role === 'superadmin' ? {} : { isActive: formData.isActive }),
+      });
       toast.success('Admin updated');
       setEditingAdmin(null);
       setFormData({ name: '', email: '', password: '', role: { value: 'admin', label: 'Admin' } });
@@ -978,9 +983,13 @@ const SuperAdminManagement = () => {
                         <button onClick={() => openEditModal(admin)} className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-info-fg" title="Edit" aria-label="Edit">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openDeleteAdminConfirmation(admin)} className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-danger-fg" title="Delete" aria-label="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {admin.role === 'superadmin' ? (
+                          <span className="type-tag self-center text-fg-muted" title="The one Super Admin cannot be demoted, deactivated or deleted">Owner</span>
+                        ) : (
+                          <button onClick={() => openDeleteAdminConfirmation(admin)} className="p-1.5 rounded-lg hover:bg-ink/10 tap-safe mouse:min-h-[32px] mouse:min-w-[32px] flex items-center justify-center text-danger-fg" title="Delete" aria-label="Delete">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </DarkTr>
@@ -1065,17 +1074,7 @@ const SuperAdminManagement = () => {
             <DarkInput label="Password" required type="password" placeholder="Password" value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
           )}
-          <Dropdown 
-            label="Role" 
-            options={[
-              { value: 'admin', label: 'Admin' },
-              { value: 'superadmin', label: 'Super Admin' }
-            ]}
-            value={formData.role}
-            onChange={(option) => setFormData({ ...formData, role: option })}
-            placeholder="Select role"
-          />
-          {editingAdmin && (
+          {editingAdmin && editingAdmin.role !== 'superadmin' && (
             <label className="flex items-center gap-3 cursor-pointer">
               <div className="relative">
                 <input type="checkbox" className="sr-only" checked={formData.isActive || false}

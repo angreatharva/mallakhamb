@@ -261,6 +261,9 @@ class AuthenticationService {
       if (sanitizedUserType === 'player') {
         preparePlayerRegistration(sanitizedData);
       }
+      // An admin registered over HTTP is always an admin. The one Super Admin
+      // is created on the server only (scripts/createSuperAdmin.js).
+      if (sanitizedUserType === 'admin') sanitizedData.role = 'admin';
 
       // Normalize email
       const email = sanitizedData.email || normalizeEmail(userData.email);

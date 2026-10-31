@@ -103,6 +103,15 @@ adminSchema.pre('save', async function(next) {
   }
 });
 
+// At most ONE Super Admin: the owner (docs/superadmin-control-plan.md, Phase 1).
+// The API refuses to create or promote one; this index is the backstop. If a
+// database already holds two, the startup index report lists it as failed and
+// nothing else changes: hand one over with scripts/createSuperAdmin.js.
+adminSchema.index(
+  { role: 1 },
+  { unique: true, partialFilterExpression: { role: 'superadmin' }, name: 'admin_single_superadmin' }
+);
+
 // Compare password method
 adminSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
