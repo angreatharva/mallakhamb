@@ -4,6 +4,7 @@ import { Heading, Spinner, Tabs, TabPanel } from '@/components/ui';
 const AccountsSection = lazy(() => import('./fix/AccountsSection'));
 const TeamsSection = lazy(() => import('./fix/TeamsSection'));
 const TransferSection = lazy(() => import('./fix/TransferSection'));
+const ScoresSection = lazy(() => import('./fix/ScoresSection'));
 const RestoreSection = lazy(() => import('./fix/RestoreSection'));
 
 const ID = 'sa-fix';
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: 'accounts', label: 'Accounts', Component: AccountsSection },
   { id: 'teams', label: 'Teams & coaches', Component: TeamsSection },
   { id: 'transfer', label: 'Move a player', Component: TransferSection },
+  { id: 'scores', label: 'Scores', Component: ScoresSection },
   { id: 'restore', label: 'Restore', Component: RestoreSection },
 ];
 

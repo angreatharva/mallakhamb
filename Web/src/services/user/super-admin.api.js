@@ -73,6 +73,8 @@ export const superAdminAPI = {
     removeCoCoach: (id, coachId, reason) => api.post(`/superadmin/fix/teams/${id}/co-coaches/${coachId}/remove`, { reason }),
     previewTransfer: (params) => api.get('/superadmin/fix/transfer/preview', { params }),
     transfer: (data) => api.post('/superadmin/fix/transfer', data),
+    listScores: (params) => api.get('/superadmin/fix/scores', { params }),
+    correctScore: (scoreId, rowId, data) => api.post(`/superadmin/fix/scores/${scoreId}/rows/${rowId}`, data),
   },
   createPlayerPaymentOrder: (data) => api.post('/superadmin/players/payment/create', data),
   verifyPlayerPaymentAndAdd: (data) => {

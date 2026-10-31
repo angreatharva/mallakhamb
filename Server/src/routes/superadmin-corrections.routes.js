@@ -110,6 +110,15 @@ function mountCorrectionRoutes(router, container) {
     res.json({ success: true, data: await teams().transfer(actorOf(req), req.body || {}), message: 'Player moved.' });
   }));
 
+  // ── Phase 5: scores ─────────────────────────────────────────────────────
+  const scores = svc(container, 'scoreCorrectionService');
+  router.get('/fix/scores', asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await scores().list(req.query) });
+  }));
+  router.post('/fix/scores/:scoreId/rows/:rowId', id('scoreId'), id('rowId'), asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await scores().correct(actorOf(req), req.params.scoreId, req.params.rowId, req.body || {}), message: 'Score corrected.' });
+  }));
+
   return router;
 }
 

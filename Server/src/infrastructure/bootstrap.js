@@ -405,6 +405,18 @@ function bootstrap() {
     c.resolve('correctionService').registerUndo('team', (actor, id, values, reason) => service.undoFields(actor, id, values, reason));
     return service;
   }, 'singleton');
+  // Phase 5: the owner corrects a score.
+  container.register('scoreCorrectionService', (c) => {
+    const ScoreCorrectionService = require('../services/superadmin/score-correction.service');
+    const service = new ScoreCorrectionService({
+      correctionService: c.resolve('correctionService'),
+      calculationService: c.resolve('calculationService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      logger: c.resolve('logger'),
+    });
+    Object.defineProperty(service, '_qualification', { get: () => c.resolve('qualificationService'), configurable: true });
+    return service;
+  }, 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({
@@ -581,6 +593,8 @@ function initializeSocketIO(httpServer) {
     // `broadcast()` no-ops on a null socketManager and the save still succeeds,
     // so the only symptom is judges quietly seeing a stale running order.
     'performanceOrderService',
+    // A Super Admin score correction refreshes open score screens.
+    'scoreCorrectionService',
   ];
 
   for (const serviceName of servicesNeedingSocket) {

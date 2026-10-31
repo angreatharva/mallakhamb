@@ -297,3 +297,57 @@ describe('Phase 4 — teams, coaches, transfers', () => {
     expect((await as(ids.owner).send('post', '/api/superadmin/fix/transfer', { ...body, overrideLimit: true })).status).toBe(200);
   });
 });
+
+describe('Phase 5 — score corrections', () => {
+  const slip = (judgeRole, d, c, e) => ({ judgeRole, difficultyScore: d, combinationScore: c, executionScore: e, bonusScore: 0, total: Number((d + c + e).toFixed(2)) });
+
+  async function seedScore(ids, { finished = false } = {}) {
+    if (finished) {
+      await col('competitions').updateOne({ _id: ids.meet }, { $set: { startDate: new Date(Date.now() - 9 * 86400000), endDate: new Date(Date.now() - 7 * 86400000) } });
+    }
+    const slips = [slip('SR_JUDGE', 3, 1.5, 4), slip('J1', 3, 1.5, 3.5), slip('J2', 3, 1.5, 3.7), slip('J3', 3, 1.5, 3.9), slip('J4', 3, 1.5, 4.1)];
+    const judgeScores = { seniorJudge: 8.5, judge1: 8, judge2: 8.2, judge3: 8.4, judge4: 8.6 };
+    const rowId = oid();
+    const scoreId = oid();
+    await col('scores').insertOne({
+      _id: scoreId, competition: ids.meet, teamId: ids.teamA, gender: 'Female', ageGroup: 'Under14', competitionType: 'Competition I', isLocked: true,
+      playerScores: [{ _id: rowId, playerId: ids.p1, playerName: 'Riya Mane', apparatus: 'Pole Mallakhamb', panelSize: 5, judgeScores, judgeSlips: slips, deduction: 0, otherDeduction: 0, finalScore: 8.3 }],
+    });
+    return { scoreId, rowId };
+  }
+
+  it('recomputes the final with the competition-day engine and records before/after', async () => {
+    const ids = await seed();
+    const { scoreId, rowId } = await seedScore(ids, { finished: true });
+    const list = await as(ids.owner).get(`/api/superadmin/fix/scores?competitionId=${ids.meet}`);
+    expect(list.status).toBe(200);
+    expect(list.body.data[0]).toMatchObject({ playerName: 'Riya Mane', finalScore: 8.3 });
+
+    const path = `/api/superadmin/fix/scores/${scoreId}/rows/${rowId}`;
+    expect((await as(ids.owner).send('post', path, { slips: [{ judgeRole: 'J4', executionScore: 3.6 }] })).status).toBe(400);
+    const res = await as(ids.owner).send('post', path, { slips: [{ judgeRole: 'J4', executionScore: 3.6 }], deduction: 0.1, reason: 'J4 slip was misread' });
+    expect(res.status).toBe(200);
+
+    const { calculateIndividualScore } = require('../../src/utils/scoring/calculation.util');
+    const cop = calculateIndividualScore({ seniorJudge: 8.5, judge1: 8, judge2: 8.2, judge3: 8.4, judge4: 8.1 }, 5);
+    const expected = Number(Math.max(0, cop.averageMarks - 0.1).toFixed(3));
+    const stored = (await col('scores').findOne({ _id: scoreId })).playerScores[0];
+    expect(stored.judgeScores.judge4).toBe(8.1);
+    expect(stored.judgeSlips.find((x) => x.judgeRole === 'J4').total).toBe(8.1);
+    expect(stored.finalScore).toBe(expected);
+    expect(res.body.data.row.finalScore).toBe(expected);
+
+    const row = (await history(ids.owner, '?entity=score')).rows[0];
+    expect(row).toMatchObject({ action: 'SCORE_CORRECTED', reason: 'J4 slip was misread', competition: String(ids.meet) });
+    expect(row.changes.find((c) => c.field === 'finalScore')).toMatchObject({ from: 8.3, to: expected });
+  });
+
+  it('refuses a judge total that bypasses its slip, and out-of-range values', async () => {
+    const ids = await seed();
+    const { scoreId, rowId } = await seedScore(ids);
+    const path = `/api/superadmin/fix/scores/${scoreId}/rows/${rowId}`;
+    expect((await as(ids.owner).send('post', path, { judgeScores: { judge1: 9 }, reason: REASON })).status).toBe(400);
+    expect((await as(ids.owner).send('post', path, { slips: [{ judgeRole: 'J1', executionScore: 5 }], reason: REASON })).status).toBe(400);
+    expect((await as(ids.owner).send('post', path, { slips: [{ judgeRole: 'J1', executionScore: 3.53 }], reason: REASON })).status).toBe(400);
+  });
+});
