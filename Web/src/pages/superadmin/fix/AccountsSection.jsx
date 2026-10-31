@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { KeyRound, LogOut, Power, Save, Search } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
+import { levelLabel } from '@/utils/competition/levels';
 import {
   Button, EmptyState, Field, Heading, Input, Notice, Panel, Select, Spinner, StatusTag, Tag,
 } from '@/components/ui';
@@ -181,7 +182,7 @@ const AccountDetail = ({ type, id, onBack }) => {
               <ul className="m-0 p-0 list-none grid gap-1">
                 {account.entries.map((e) => (
                   <li key={`${e.competition._id}-${e.team}`} className="type-body-s">
-                    <strong>{e.competition.name}</strong> · {e.gender} {group(e.ageGroup)}
+                    <strong>{e.competition.name}</strong>{e.competition.level ? ` (${levelLabel(e.competition.level)})` : ''} · {e.gender} {group(e.ageGroup)}
                     {e.scored && <span className="text-fg-muted"> · scored</span>}
                     {!e.ageOk && (
                       <span className="ui-field__error type-caption"> · age {e.age} is not allowed in {group(e.ageGroup)}{e.suggestion ? ` (lowest open: ${group(e.suggestion)})` : ''}{e.scored ? ' — already scored, correct it in Scores' : ''}</span>
@@ -250,7 +251,7 @@ const AccountsSection = () => {
         <Field id={`${ID}-type`} label="Who">
           <Select value={type} onChange={(e) => setType(e.target.value)}>
             <option value="">Anyone</option>
-            {Object.entries(TYPE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}s</option>)}
+            {[['player', 'Players'], ['coach', 'Coaches'], ['judge', 'Judges'], ['admin', 'Admins']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
         </Field>
         <Field id={`${ID}-q`} label="Name, email or Player ID">

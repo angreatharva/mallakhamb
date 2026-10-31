@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Search } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
-import { Button, EmptyState, Field, Input, Notice, Panel, Select, Spinner, StatusTag } from '@/components/ui';
+import { levelLabel } from '@/utils/competition/levels';
+import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
 
 const ID = 'sa-scores';
@@ -22,7 +23,6 @@ const RowEditor = ({ row, onSaved, onCancel }) => {
   const [otherDeduction, setOtherDeduction] = useState(String(row.otherDeduction ?? 0));
   const [time, setTime] = useState(row.time === null || row.time === undefined ? '' : String(row.time));
   const [confirming, setConfirming] = useState(false);
-  const [result, setResult] = useState(null);
 
   const slipRoles = (row.slips || []).map((s) => s.role).filter((r) => r !== 'CHIEF');
   const seatsWithSlip = new Set(slipRoles.map((r) => ({ SR_JUDGE: 'seniorJudge', J1: 'judge1', J2: 'judge2', J3: 'judge3', J4: 'judge4' }[r])));
@@ -52,9 +52,12 @@ const RowEditor = ({ row, onSaved, onCancel }) => {
   const save = async (reason) => {
     try {
       const res = await superAdminAPI.fix.correctScore(row.scoreId, row.rowId, { ...body, reason });
-      setResult(res.data?.data);
       setConfirming(false);
-      toast.success(`Final score now ${fmt(res.data?.data?.row?.finalScore, 3)}`);
+      toast.success(`${row.playerName}: final score now ${fmt(res.data?.data?.row?.finalScore, 3)}`);
+      const held = res.data?.data?.finals?.held || [];
+      if (held.length) {
+        toast(`${held.length} final(s) for this category are already finalized or started and kept their qualifiers. Reopen them in Finals if this should change who qualifies.`, { icon: '⚠️', duration: 9000 });
+      }
       onSaved();
     } catch (error) {
       toast.error(errorOf(error, 'Could not correct the score'));
@@ -126,11 +129,6 @@ const RowEditor = ({ row, onSaved, onCancel }) => {
 
       <Button className="justify-self-start" disabled={Object.keys(body).length === 0} onClick={() => setConfirming(true)}>Correct score</Button>
 
-      {result?.finals?.held?.length > 0 && (
-        <Notice tone="warning" title="Some finals did not change">
-          {result.finals.held.length} final(s) for this category are already finalized or started, so their qualifier lists were kept. Reopen them in Finals if the correction should change who qualifies.
-        </Notice>
-      )}
 
       <ReasonDialog open={confirming} title={`Correct ${row.playerName}'s ${row.apparatus} score?`} confirmText="Correct score" onClose={() => setConfirming(false)} onConfirm={save}>
         <p className="type-body-s m-0">The final score and rankings are recalculated{row.competitionType === 'Competition I' ? ', and the finals this category feeds are re-run' : ''}.</p>
@@ -171,14 +169,15 @@ const ScoresSection = () => {
   };
   useEffect(() => { if (competitionId) load(); }, [competitionId, gender]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (editing) return <RowEditor row={editing} onSaved={load} onCancel={() => { setEditing(null); load(); }} />;
+  const back = () => { setEditing(null); load(); };
+  if (editing) return <RowEditor row={editing} onSaved={back} onCancel={back} />;
   return (
     <div className="grid gap-4">
       <form className="grid gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,8rem)_1fr_auto] sm:items-end" onSubmit={load}>
         <Field id={`${ID}-comp`} label="Competition">
           <Select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)}>
             <option value="" disabled>Choose a competition</option>
-            {competitions.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.year})</option>)}
+            {competitions.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.year}) — {c.place}{c.level ? ` · ${levelLabel(c.level)}` : ''}</option>)}
           </Select>
         </Field>
         <Field id={`${ID}-gender`} label="Gender">

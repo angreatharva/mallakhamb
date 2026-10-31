@@ -56,6 +56,9 @@ const ACTION = {
   PLAYER_TEAM_CONFLICT_RESOLVED: 'Conflict resolved',
 };
 
+/** Any other code on record, in plain words: SCORE_UPDATED → "Score updated". */
+const actionLabel = (code) => ACTION[code] || String(code || '').toLowerCase().replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+
 const show = (value) => {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'yes' : 'no';
@@ -169,7 +172,7 @@ const SuperAdminHistory = () => {
                 <li key={r._id} className="grid gap-1 py-3 border-b border-line">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="type-body-s">
-                      <StatusTag status={!r.undoneAt && r.reason ? 'warning' : 'info'}>{ACTION[r.action] || r.action}</StatusTag>{' '}
+                      <StatusTag status={!r.undoneAt && r.reason ? 'warning' : 'info'}>{actionLabel(r.action)}</StatusTag>{' '}
                       {r.label && <strong>{r.label}</strong>}
                       {r.entity && <Tag className="ml-1">{r.entity}</Tag>}
                       {r.undoneAt && <span className="type-caption text-fg-muted"> · undone</span>}
@@ -198,7 +201,7 @@ const SuperAdminHistory = () => {
       <ReasonDialog open={!!undoing} title="Undo this change?" confirmText="Undo" onClose={() => setUndoing(null)} onConfirm={undo}>
         {undoing && (
           <>
-            <p className="type-body-s m-0">{ACTION[undoing.action] || undoing.action}{undoing.label ? ` — ${undoing.label}` : ''}. These values go back:</p>
+            <p className="type-body-s m-0">{actionLabel(undoing.action)}{undoing.label ? ` — ${undoing.label}` : ''}. These values go back:</p>
             <Changes changes={(undoing.changes || []).map((c) => ({ ...c, from: c.to, to: c.from }))} />
           </>
         )}

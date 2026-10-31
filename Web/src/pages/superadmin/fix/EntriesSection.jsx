@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
+import { levelLabel } from '@/utils/competition/levels';
 import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag, Tag } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
 
@@ -276,7 +277,7 @@ const EntriesSection = () => {
       <Field id={`${ID}-comp`} label="Competition" className="max-w-lg">
         <Select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)}>
           <option value="" disabled>Choose a competition</option>
-          {competitions.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.year})</option>)}
+          {competitions.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.year}) — {c.place}{c.level ? ` · ${levelLabel(c.level)}` : ''}</option>)}
         </Select>
       </Field>
       {!competitionId ? <EmptyState tag="Choose a competition">Its entered teams are listed here.</EmptyState>
