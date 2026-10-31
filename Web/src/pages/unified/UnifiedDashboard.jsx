@@ -21,6 +21,8 @@ const WalkInDesk = lazy(() => import('../desk/WalkInDesk'));
 const AdminJudgeFairness = lazy(() => import('../admin/AdminJudgeFairness'));
 const SuperAdminManagement = lazy(() => import('../superadmin/SuperAdminManagement'));
 const SuperAdminPlayerTeams = lazy(() => import('../superadmin/SuperAdminPlayerTeams'));
+const SuperAdminFix = lazy(() => import('../superadmin/SuperAdminFix'));
+const SuperAdminHistory = lazy(() => import('../superadmin/SuperAdminHistory'));
 const AdminFinals = lazy(() => import('../admin/AdminFinals'));
 import { useAgeGroupValues } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
@@ -240,6 +242,10 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'player-teams', label: 'Players' },
     // Competition-day registration from a paper form (pages/desk).
     { id: 'desk', label: 'Walk-in' },
+    // The owner's correction tools and the record of every change
+    // (docs/superadmin-control-plan.md).
+    { id: 'fix', label: 'Fix' },
+    { id: 'history', label: 'History' },
   ] : [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'teams', label: 'Teams' },
@@ -583,6 +589,10 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           return <AdminJudgeFairness isSuperAdmin competitionId={selectedCompetition || null} />;
         case 'player-teams':
           return <SuperAdminPlayerTeams />;
+        case 'fix':
+          return <SuperAdminFix />;
+        case 'history':
+          return <SuperAdminHistory />;
         case 'finals':
           return (
             <AdminFinals isSuperAdmin competitionId={selectedCompetition || null}

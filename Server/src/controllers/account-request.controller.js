@@ -7,17 +7,18 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { teamCoachOf } = require('../utils/auth/team-coach.util');
 
 function createAccountRequestController(container) {
   const service = () => container.resolve('accountRequestService');
 
   /** Who is deciding: a coach, or a super admin (an Admin account with that role). */
-  const approverOf = (req, userType) => ({ userId: req.user._id, userType });
+  const approverOf = (req, userType) => ({ userId: userType === 'coach' ? teamCoachOf(req) : req.user._id, userType });
 
   const decide = (userType) => ({
     list: asyncHandler(async (req, res) => {
       const data = userType === 'coach'
-        ? await service().listForCoach(req.user._id)
+        ? await service().listForCoach(teamCoachOf(req))
         : await service().listForSuperAdmin();
       res.json({ success: true, data });
     }),

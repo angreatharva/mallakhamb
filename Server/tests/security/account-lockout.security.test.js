@@ -46,7 +46,39 @@ function readCounters(email) {
   return Coach.findOne({ email }).select('+loginAttempts +lockUntil');
 }
 
+/*
+ * The lockout is OFF by default since 2026-10-31 (owner decision D6); these
+ * blocks prove it still works when ACCOUNT_RATE_LIMIT_ENABLED turns it on.
+ */
+const lockoutOn = () => {
+  beforeAll(() => { process.env.ACCOUNT_RATE_LIMIT_ENABLED = 'true'; });
+  afterAll(() => { delete process.env.ACCOUNT_RATE_LIMIT_ENABLED; });
+};
+
+describe('D6 — lockout is OFF by default', () => {
+  beforeEach(async () => {
+    delete process.env.ACCOUNT_RATE_LIMIT_ENABLED;
+    await Coach.create({ firstName: 'Lockout', lastName: 'Coach', email: EMAIL, password: PASSWORD });
+  });
+
+  test('ten wrong passwords never lock, and the right one still signs in', async () => {
+    const auth = buildAuthService();
+    for (let i = 0; i < 10; i += 1) {
+      await expect(auth.login(EMAIL, WRONG, 'coach')).rejects.toThrow(/Invalid credentials/);
+    }
+    const counters = await readCounters(EMAIL);
+    expect(counters.lockUntil).toBeFalsy();
+    await expect(auth.login(EMAIL, PASSWORD, 'coach')).resolves.toBeTruthy();
+  });
+
+  test('a lock stored before the switch went off is ignored', async () => {
+    await Coach.updateOne({ email: EMAIL }, { $set: { loginAttempts: 5, lockUntil: new Date(Date.now() + 3600000) } });
+    await expect(buildAuthService().login(EMAIL, PASSWORD, 'coach')).resolves.toBeTruthy();
+  });
+});
+
 describe('MED-1 — account lockout is enforced (FIXED)', () => {
+  lockoutOn();
   let auth;
 
   beforeEach(async () => {
@@ -122,6 +154,7 @@ describe('MED-1 — account lockout is enforced (FIXED)', () => {
 });
 
 describe('MED-1 — judge login is covered too', () => {
+  lockoutOn();
   let judgeService;
   const EMAIL = 'lockjudge1@club.in';
 

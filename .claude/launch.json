@@ -155,6 +155,17 @@
       "cwd": "Server",
       "port": 5000,
       "//": "Port 5000 on the local e2e chain database (mallakhamb_local_e2e), to look at a fully seeded season in the browser."
+    },
+    {
+      "name": "api-sa-check",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.MONGODB_URI='mongodb://127.0.0.1:27017/mallakhamb_sa_check';process.env.EMAIL_PROVIDER='none';process.env.NODE_ENV='development';process.env.MIGRATE_ON_START='false';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "Throwaway LOCAL clone of mallakhamb_local_e2e for the Super Admin Fix/History browser check (docs/superadmin-control-plan.md). Owner sign-in is in Server/sa-check.local (git-ignored)."
     }
   ]
 }

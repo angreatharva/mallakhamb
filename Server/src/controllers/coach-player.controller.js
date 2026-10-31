@@ -6,6 +6,7 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { teamCoachOf } = require('../utils/auth/team-coach.util');
 
 function createCoachPlayerController(container) {
   const service = () => container.resolve('coachPlayerService');
@@ -13,7 +14,7 @@ function createCoachPlayerController(container) {
   return {
     /** @route GET /api/coaches/player-default-password */
     getDefaultPassword: asyncHandler(async (req, res) => {
-      const data = await service().getDefaultPassword(req.user._id);
+      const data = await service().getDefaultPassword(teamCoachOf(req));
       // It is a password in the clear: never cached anywhere along the way.
       res.set('Cache-Control', 'no-store');
       res.json({ success: true, data });
@@ -22,7 +23,7 @@ function createCoachPlayerController(container) {
     /** @route PUT /api/coaches/player-default-password */
     setDefaultPassword: asyncHandler(async (req, res) => {
       const { password, currentPassword } = req.body;
-      const data = await service().setDefaultPassword(req.user._id, { password, currentPassword });
+      const data = await service().setDefaultPassword(teamCoachOf(req), { password, currentPassword });
       res.set('Cache-Control', 'no-store');
       res.json({
         success: true,
@@ -36,7 +37,7 @@ function createCoachPlayerController(container) {
       // The meet the coach is working in, so the player is this team's at its
       // level from the start (the token's meet wins, as everywhere else).
       const competitionId = req.user?.currentCompetition || req.headers['x-competition-id'] || null;
-      const data = await service().registerPlayer(req.user._id, req.body, { competitionId });
+      const data = await service().registerPlayer(teamCoachOf(req), req.body, { competitionId });
       res.status(201).json({
         success: true,
         data,

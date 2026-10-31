@@ -9,6 +9,7 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { teamCoachOf } = require('../utils/auth/team-coach.util');
 
 function createTeamController(container) {
   const teamService = container.resolve('teamService');
@@ -17,7 +18,7 @@ function createTeamController(container) {
   return {
     /** @route GET /api/teams */
     getAllTeams: asyncHandler(async (req, res) => {
-      const teams = await teamService.getTeamsByCoach(req.user._id);
+      const teams = await teamService.getTeamsByCoach(teamCoachOf(req));
       const payload = { success: true, data: teams };
       if (req.originalUrl) payload.teams = teams;
       res.json(payload);
@@ -44,7 +45,7 @@ function createTeamController(container) {
 
     /** @route PUT /api/teams/:id */
     updateTeam: asyncHandler(async (req, res) => {
-      const team = await teamService.updateTeam(req.params.id, req.user._id, req.body);
+      const team = await teamService.updateTeam(req.params.id, teamCoachOf(req), req.body);
       const payload = { success: true, data: team, message: 'Team updated successfully' };
       if (req.originalUrl) payload.team = team;
       res.json(payload);
@@ -58,7 +59,7 @@ function createTeamController(container) {
 
     /** @route POST /api/teams/:id/players */
     addPlayer: asyncHandler(async (req, res) => {
-      const team = await teamService.addPlayer(req.params.id, req.body.playerId, req.user._id);
+      const team = await teamService.addPlayer(req.params.id, req.body.playerId, teamCoachOf(req));
       const payload = { success: true, data: team, message: 'Player added to team successfully' };
       if (req.originalUrl) payload.team = team;
       res.json(payload);
@@ -66,7 +67,7 @@ function createTeamController(container) {
 
     /** @route DELETE /api/teams/:id/players */
     removePlayer: asyncHandler(async (req, res) => {
-      const team = await teamService.removePlayer(req.params.id, req.body.playerId, req.user._id);
+      const team = await teamService.removePlayer(req.params.id, req.body.playerId, teamCoachOf(req));
       const payload = { success: true, data: team, message: 'Player removed from team successfully' };
       if (req.originalUrl) payload.team = team;
       res.json(payload);

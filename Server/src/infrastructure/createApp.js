@@ -189,11 +189,16 @@ function createApp(container) {
     });
   }
 
-  // Per-account guessing limits: their own switch, on even where the per-IP
-  // limiters above are off (see createAccountGuessLimiters).
+  // Per-account guessing limits and the five-strike lockout: their own
+  // switch, OFF by default (owner decision D6, 2026-10-31).
   const accountLimiters = appConfig.get('security.accountRateLimitEnabled')
     ? createAccountGuessLimiters(container)
     : undefined;
+  if (!accountLimiters) {
+    logger.warn('Account lockout and per-account limits are DISABLED', {
+      hint: 'Set ACCOUNT_RATE_LIMIT_ENABLED=true to turn them back on.',
+    });
+  }
 
   loadRoutes(app, container, { authLimiter, userLimiter, judgeLoginLimiter, accountLimiters });
 

@@ -11,6 +11,7 @@
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendLoginResponse } = require('../utils/security/login-response.util');
 const { isProductionLike } = require('../utils/security/cookie.util');
+const { teamCoachOf } = require('../utils/auth/team-coach.util');
 
 function createCoachController(container) {
   const coachService = container.resolve('coachService');
@@ -53,7 +54,7 @@ function createCoachController(container) {
      * @route GET /api/coach/status
      */
     getCoachStatus: asyncHandler(async (req, res) => {
-      const status = await coachService.getCoachStatus(req.user._id);
+      const status = await coachService.getCoachStatus(teamCoachOf(req));
       res.json({ success: true, data: status });
     }),
 
@@ -71,7 +72,7 @@ function createCoachController(container) {
 
     /** @route GET /api/coach/teams */
     getCoachTeams: asyncHandler(async (req, res) => {
-      const teams = await coachService.getCoachTeams(req.user._id);
+      const teams = await coachService.getCoachTeams(teamCoachOf(req));
       res.json({ success: true, data: teams });
     }),
 
@@ -82,13 +83,13 @@ function createCoachController(container) {
         competitionId: req.competitionId?.toString(),
         userType: req.userType
       });
-      const dashboard = await coachService.getTeamDashboard(req.user._id, req.competitionId);
+      const dashboard = await coachService.getTeamDashboard(teamCoachOf(req), req.competitionId);
       res.json({ success: true, data: dashboard });
     }),
 
     /** @route GET /api/coach/team/status */
     getTeamStatus: asyncHandler(async (req, res) => {
-      const status = await coachService.getTeamStatus(req.user._id, req.competitionId);
+      const status = await coachService.getTeamStatus(teamCoachOf(req), req.competitionId);
       res.json({ success: true, data: status });
     }),
 
@@ -105,7 +106,7 @@ function createCoachController(container) {
       const result = await coachService.registerTeamForCompetition(
         req.params.teamId,
         req.body.competitionId,
-        req.user._id
+        teamCoachOf(req)
       );
       res.json({
         success: true,
@@ -120,7 +121,7 @@ function createCoachController(container) {
      */
     selectCompetitionForTeam: asyncHandler(async (req, res) => {
       const result = await coachService.selectCompetitionForTeam(
-        req.user._id,
+        teamCoachOf(req),
         req.body.competitionId
       );
       res.json({
@@ -135,7 +136,7 @@ function createCoachController(container) {
     /** @route GET /api/coach/players/search */
     searchPlayers: asyncHandler(async (req, res) => {
       const players = await coachService.searchPlayers(
-        req.user._id,
+        teamCoachOf(req),
         req.competitionId,
         req.query.query
       );
@@ -144,14 +145,14 @@ function createCoachController(container) {
 
     /** @route POST /api/coach/team/players */
     addPlayerToAgeGroup: asyncHandler(async (req, res) => {
-      await coachService.addPlayerToAgeGroup(req.user._id, req.competitionId, req.body);
+      await coachService.addPlayerToAgeGroup(teamCoachOf(req), req.competitionId, req.body);
       res.json({ success: true, message: 'Player added to team successfully.' });
     }),
 
     /** @route DELETE /api/coach/team/players/:playerId */
     removePlayerFromAgeGroup: asyncHandler(async (req, res) => {
       await coachService.removePlayerFromAgeGroup(
-        req.user._id,
+        teamCoachOf(req),
         req.competitionId,
         req.params.playerId
       );
@@ -162,14 +163,14 @@ function createCoachController(container) {
 
     /** @route POST /api/coach/team/payment/order */
     createTeamPaymentOrder: asyncHandler(async (req, res) => {
-      const order = await coachService.createTeamPaymentOrder(req.user._id, req.competitionId);
+      const order = await coachService.createTeamPaymentOrder(teamCoachOf(req), req.competitionId);
       res.json({ success: true, data: order });
     }),
 
     /** @route POST /api/coaches/payments/discount/validate */
     validateDiscountCode: asyncHandler(async (req, res) => {
       const quote = await coachService.quoteTeamPaymentWithDiscount(
-        req.user._id,
+        teamCoachOf(req),
         req.competitionId,
         req.body?.discountCode
       );
@@ -179,7 +180,7 @@ function createCoachController(container) {
     /** @route POST /api/coaches/payments/discount/redeem */
     redeemDiscountAndSubmit: asyncHandler(async (req, res) => {
       const result = await coachService.redeemDiscountAndSubmit(
-        req.user._id,
+        teamCoachOf(req),
         req.competitionId,
         req.body?.discountCode
       );
@@ -193,7 +194,7 @@ function createCoachController(container) {
     /** @route POST /api/coach/team/payment/verify */
     verifyTeamPaymentAndSubmit: asyncHandler(async (req, res) => {
       const result = await coachService.verifyTeamPaymentAndSubmit(
-        req.user._id,
+        teamCoachOf(req),
         req.competitionId,
         req.body
       );

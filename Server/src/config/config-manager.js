@@ -121,16 +121,15 @@ class ConfigManager {
         ),
         /**
          * Per-ACCOUNT guessing limits on sign-in and password reset
-         * (security.middleware.js createAccountGuessLimiters). Separate from
-         * RATE_LIMIT_ENABLED, which governs the per-IP limiters production runs
-         * without: these never key on an address, so they cannot throttle a
-         * venue, and they count only failed attempts. On everywhere but the
-         * test runner.
+         * (security.middleware.js createAccountGuessLimiters) AND the
+         * five-strike account lockout (login-security.util lockoutEnabled).
+         * Separate from RATE_LIMIT_ENABLED, which governs the per-IP limiters.
+         *
+         * OFF by default everywhere, production included (owner decision D6,
+         * 2026-10-31: no rate limits or lockouts for now). Set
+         * ACCOUNT_RATE_LIMIT_ENABLED=true to turn both back on.
          */
-        accountRateLimitEnabled: this.getBoolean(
-          'ACCOUNT_RATE_LIMIT_ENABLED',
-          this.getString('NODE_ENV', 'development') !== 'test'
-        )
+        accountRateLimitEnabled: this.getBoolean('ACCOUNT_RATE_LIMIT_ENABLED', false)
       },
       razorpay: {
         keyId: this.getString('RAZORPAY_KEY_ID', ''),

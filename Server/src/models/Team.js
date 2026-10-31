@@ -18,6 +18,16 @@ const teamSchema = new mongoose.Schema({
     ref: 'Coach',
     required: [true, 'Team must have a coach']
   },
+  /**
+   * Co-coaches (docs/superadmin-control-plan.md, Phase 4, D5): coaches who
+   * work AS the main coach for this team (utils/auth/team-coach.util). Set
+   * when the Super Admin changes the coach and keeps the old one; removed by
+   * the main coach or the Super Admin.
+   */
+  coCoaches: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Coach'
+  }],
   description: {
     type: String,
     trim: true
@@ -53,5 +63,7 @@ const teamSchema = new mongoose.Schema({
 // Unique team name per coach
 teamSchema.index({ name: 1, coach: 1 }, { unique: true });
 teamSchema.index({ coach: 1 });
+// "Which team does this co-coach work for?" — read on every coach request.
+teamSchema.index({ coCoaches: 1 });
 
 module.exports = mongoose.model('Team', teamSchema);

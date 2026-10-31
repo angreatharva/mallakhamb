@@ -9,6 +9,7 @@
  */
 
 const { asyncHandler } = require('../middleware/error.middleware');
+const { teamCoachOf } = require('../utils/auth/team-coach.util');
 
 function createCompetitionController(container) {
   const competitionService = container.resolve('competitionService');
@@ -115,7 +116,7 @@ function createCompetitionController(container) {
       // coach enter another coach's team (security audit 2026-10-31, H2).
       const { teamId } = req.body;
       const registration = await registrationService.registerTeam(
-        req.params.competitionId, teamId, req.user._id
+        req.params.competitionId, teamId, teamCoachOf(req)
       );
       res.json({ success: true, data: registration, message: 'Team registered successfully' });
     }),
@@ -123,7 +124,7 @@ function createCompetitionController(container) {
     /** @route DELETE /api/competitions/:competitionId/register/:teamId */
     unregisterTeam: asyncHandler(async (req, res) => {
       await registrationService.unregisterTeam(
-        req.params.competitionId, req.params.teamId, req.user._id
+        req.params.competitionId, req.params.teamId, teamCoachOf(req)
       );
       res.json({ success: true, message: 'Team unregistered successfully' });
     }),
@@ -153,7 +154,7 @@ function createCompetitionController(container) {
     getTeamRegistration: asyncHandler(async (req, res) => {
       const registration = await registrationService.getTeamRegistration(
         req.params.competitionId, req.params.teamId,
-        { id: req.user._id, type: req.userType, user: req.user }
+        { id: teamCoachOf(req), type: req.userType, user: req.user }
       );
       res.json({ success: true, data: registration });
     }),
@@ -165,7 +166,7 @@ function createCompetitionController(container) {
       const { playerId, ageGroup, gender } = req.body;
       const registration = await registrationService.addPlayerToRegistration(
         req.params.competitionId, req.params.teamId, playerId, ageGroup, gender,
-        { id: req.user._id, type: req.userType || 'coach' }
+        { id: teamCoachOf(req), type: req.userType || 'coach' }
       );
       res.json({ success: true, data: registration, message: 'Player added to team successfully' });
     }),
@@ -174,7 +175,7 @@ function createCompetitionController(container) {
     removePlayerFromTeam: asyncHandler(async (req, res) => {
       await registrationService.removePlayerFromRegistration(
         req.params.competitionId, req.params.teamId, req.params.playerId,
-        { id: req.user._id, type: req.userType || 'coach' }
+        { id: teamCoachOf(req), type: req.userType || 'coach' }
       );
       res.json({ success: true, message: 'Player removed from team successfully' });
     }),

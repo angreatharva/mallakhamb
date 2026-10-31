@@ -15,7 +15,7 @@
  */
 
 const express = require('express');
-const { body } = require('express-validator');
+const { body, param } = require('express-validator');
 const { phone } = require('../validators/common.validator');
 const { APPARATUS, AGE_GROUPS, GENDERS } = require('../config/cop-rules');
 const createAuthMiddleware = require('../middleware/auth.middleware');
@@ -185,6 +185,24 @@ function createCoachRoutes(container) {
    * @note    No competition context needed
    */
   router.get('/teams', authMiddleware, coachAuth, coachController.getCoachTeams);
+
+  /**
+   * Co-coaches of the coach's team (docs/superadmin-control-plan.md, D5).
+   * Everyone on the team sees the list; only the main coach removes.
+   */
+  const teamAdmin = () => container.resolve('teamAdminService');
+  router.get('/co-coaches', authMiddleware, coachAuth, async (req, res, next) => {
+    try {
+      res.json({ success: true, data: await teamAdmin().coCoachesFor(req.user._id, req.coCoachOf || null) });
+    } catch (error) { next(error); }
+  });
+  router.post('/co-coaches/:coachId/remove', authMiddleware, coachAuth, param('coachId').isMongoId(), handleValidationErrors, async (req, res, next) => {
+    try {
+      if (req.coCoachOf) return res.status(403).json({ success: false, error: { message: 'Only the team’s main coach can remove a co-coach' } });
+      const actor = { id: String(req.user._id), name: [req.user.firstName, req.user.lastName].filter(Boolean).join(' ') };
+      res.json({ success: true, data: await teamAdmin().removeOwnCoCoach(actor, req.params.coachId, req.body?.reason) });
+    } catch (error) { next(error); }
+  });
 
   /**
    * @route   GET /api/coaches/competitions/open

@@ -34,8 +34,40 @@ const createSuperAdmin = async () => {
       isActive: true
     };
 
-    // Check if super admin already exists
-    const existingSuperAdmin = await Admin.findOne({ email: superAdminData.email });
+    // There is exactly ONE Super Admin, the owner (docs/superadmin-control-plan.md).
+    //   --transfer-to <email>  hands ownership to an existing ADMIN account; the
+    //                          current owner becomes a plain admin.
+    const transferIdx = process.argv.indexOf('--transfer-to');
+    const owner = await Admin.findOne({ role: 'superadmin' });
+
+    if (transferIdx !== -1) {
+      const to = String(process.argv[transferIdx + 1] || '').trim().toLowerCase();
+      const heir = to && await Admin.findOne({ email: to });
+      if (!heir) {
+        console.error(`❌ No admin account with email ${to || '(missing)'}. Create it as an admin first.`);
+        await mongoose.disconnect();
+        process.exit(1);
+      }
+      if (owner && String(owner._id) === String(heir._id)) {
+        console.log(`✅ ${to} is already the Super Admin.`);
+      } else {
+        // Demote first: the single-owner index allows one superadmin at a time.
+        if (owner) await Admin.updateOne({ _id: owner._id }, { $set: { role: 'admin' } });
+        await Admin.updateOne({ _id: heir._id }, { $set: { role: 'superadmin', isActive: true } });
+        console.log(`✅ Ownership moved${owner ? ` from ${owner.email}` : ''} to ${to}.`);
+      }
+      await mongoose.disconnect();
+      process.exit(0);
+    }
+
+    if (owner && owner.email !== superAdminData.email.toLowerCase()) {
+      console.error(`❌ A Super Admin already exists (${owner.email}). There can be only one.`);
+      console.error('   To hand ownership over: node scripts/createSuperAdmin.js --transfer-to <admin email>');
+      await mongoose.disconnect();
+      process.exit(1);
+    }
+
+    const existingSuperAdmin = owner;
 
     if (existingSuperAdmin) {
       console.log('⚠️  Super Admin already exists with email:', superAdminData.email);

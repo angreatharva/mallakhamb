@@ -12,6 +12,7 @@ const TeamRepository = require('../repositories/team.repository');
 const ScoreRepository = require('../repositories/score.repository');
 const TransactionRepository = require('../repositories/transaction.repository');
 const AuditLogRepository = require('../repositories/audit-log.repository');
+const CorrectionService = require('../services/superadmin/correction.service');
 const PerformanceOrderRepository = require('../repositories/performance-order.repository');
 const TieBreakDrawRepository = require('../repositories/tie-break-draw.repository');
 const WalkInRegistrationRepository = require('../repositories/walk-in-registration.repository');
@@ -94,6 +95,13 @@ const { setTokenInvalidationService } = require('../utils/security/token-invalid
  * construction so the services' signatures (and every test that builds them
  * by hand) stay as they were; a service built without it skips the rule.
  */
+/** Admin edits made from Management can be undone from History. */
+function withSuperAdminUndo(c, service) {
+  c.resolve('correctionService').registerUndo('admin', (actor, id, values, reason) =>
+    service.updateAdmin(id, { ...values, reason }, actor.id));
+  return service;
+}
+
 function withPlayerTeams(c, service) {
   service.playerTeamService = c.resolve('playerTeamService');
   return service;
@@ -348,7 +356,14 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('logger')
   ), 'singleton');
-  container.register('superAdminService', (c) => withPlayerTeams(c, new SuperAdminService({
+  // The owner's correction record + History (docs/superadmin-control-plan.md).
+  container.register('correctionService', (c) => new CorrectionService({
+    auditLogRepository: c.resolve('auditLogRepository'),
+    adminRepository: c.resolve('adminRepository'),
+    logger: c.resolve('logger'),
+  }), 'singleton');
+  container.register('superAdminService', (c) => withSuperAdminUndo(c, withPlayerTeams(c, new SuperAdminService({
+    correctionService: c.resolve('correctionService'),
     authenticationService: c.resolve('authenticationService'),
     adminRepository: c.resolve('adminRepository'),
     coachRepository: c.resolve('coachRepository'),
@@ -360,7 +375,58 @@ function bootstrap() {
     playerRepository: c.resolve('playerRepository'),
     logger: c.resolve('logger'),
     config: c.resolve('config'),
-  })), 'singleton');
+  }))), 'singleton');
+  // Phase 3: the owner edits any account (docs/superadmin-control-plan.md).
+  container.register('accountsAdminService', (c) => {
+    const AccountsAdminService = require('../services/superadmin/accounts-admin.service');
+    const service = new AccountsAdminService({
+      correctionService: c.resolve('correctionService'),
+      superAdminService: c.resolve('superAdminService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      tokenService: c.resolve('tokenService'),
+      logger: c.resolve('logger'),
+    });
+    for (const type of ['player', 'coach', 'judge']) {
+      c.resolve('correctionService').registerUndo(type, (actor, id, values, reason) => service.undoFields(actor, type, id, values, reason));
+    }
+    return service;
+  }, 'singleton');
+  // Phase 4: teams, coaches, co-coaches and transfers.
+  container.register('teamAdminService', (c) => {
+    const TeamAdminService = require('../services/superadmin/team-admin.service');
+    const service = new TeamAdminService({
+      correctionService: c.resolve('correctionService'),
+      playerTeamAdminService: c.resolve('playerTeamAdminService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      logger: c.resolve('logger'),
+    });
+    // Resolved on first use: the finals service reads scores, so not a constructor dependency.
+    Object.defineProperty(service, '_qualification', { get: () => c.resolve('qualificationService'), configurable: true });
+    c.resolve('correctionService').registerUndo('team', (actor, id, values, reason) => service.undoFields(actor, id, values, reason));
+    return service;
+  }, 'singleton');
+  // Phase 5: the owner corrects a score.
+  container.register('scoreCorrectionService', (c) => {
+    const ScoreCorrectionService = require('../services/superadmin/score-correction.service');
+    const service = new ScoreCorrectionService({
+      correctionService: c.resolve('correctionService'),
+      calculationService: c.resolve('calculationService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      logger: c.resolve('logger'),
+    });
+    Object.defineProperty(service, '_qualification', { get: () => c.resolve('qualificationService'), configurable: true });
+    return service;
+  }, 'singleton');
+  // Phase 6: competition entries and manual payments.
+  container.register('entriesAdminService', (c) => {
+    const EntriesAdminService = require('../services/superadmin/entries-admin.service');
+    return new EntriesAdminService({
+      correctionService: c.resolve('correctionService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      transactionRepository: c.resolve('transactionRepository'),
+      logger: c.resolve('logger'),
+    });
+  }, 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({
@@ -537,6 +603,8 @@ function initializeSocketIO(httpServer) {
     // `broadcast()` no-ops on a null socketManager and the save still succeeds,
     // so the only symptom is judges quietly seeing a stale running order.
     'performanceOrderService',
+    // A Super Admin score correction refreshes open score screens.
+    'scoreCorrectionService',
   ];
 
   for (const serviceName of servicesNeedingSocket) {
