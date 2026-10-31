@@ -75,6 +75,13 @@ export const superAdminAPI = {
     transfer: (data) => api.post('/superadmin/fix/transfer', data),
     listScores: (params) => api.get('/superadmin/fix/scores', { params }),
     correctScore: (scoreId, rowId, data) => api.post(`/superadmin/fix/scores/${scoreId}/rows/${rowId}`, data),
+    entryTeams: (competitionId) => api.get(`/superadmin/fix/entries/${competitionId}`),
+    getEntry: (competitionId, teamId) => api.get(`/superadmin/fix/entries/${competitionId}/${teamId}`),
+    addEntryPlayer: (competitionId, teamId, data) => api.post(`/superadmin/fix/entries/${competitionId}/${teamId}/players`, data),
+    updateEntryPlayer: (competitionId, teamId, playerId, data) => api.put(`/superadmin/fix/entries/${competitionId}/${teamId}/players/${playerId}`, data),
+    removeEntryPlayer: (competitionId, teamId, playerId, reason) => api.post(`/superadmin/fix/entries/${competitionId}/${teamId}/players/${playerId}/remove`, { reason }),
+    setEntryStatus: (competitionId, teamId, data) => api.post(`/superadmin/fix/entries/${competitionId}/${teamId}/status`, data),
+    recordMoney: (competitionId, teamId, data) => api.post(`/superadmin/fix/entries/${competitionId}/${teamId}/money`, data),
   },
   createPlayerPaymentOrder: (data) => api.post('/superadmin/players/payment/create', data),
   verifyPlayerPaymentAndAdd: (data) => {

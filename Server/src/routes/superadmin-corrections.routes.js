@@ -119,6 +119,31 @@ function mountCorrectionRoutes(router, container) {
     res.json({ success: true, data: await scores().correct(actorOf(req), req.params.scoreId, req.params.rowId, req.body || {}), message: 'Score corrected.' });
   }));
 
+  // ── Phase 6: entries and manual payments ────────────────────────────────
+  const entries = svc(container, 'entriesAdminService');
+  const meetTeam = [...id('competitionId'), ...id('teamId')];
+  router.get('/fix/entries/:competitionId', id('competitionId'), asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await entries().teams(req.params.competitionId) });
+  }));
+  router.get('/fix/entries/:competitionId/:teamId', meetTeam, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await entries().entry(req.params.competitionId, req.params.teamId) });
+  }));
+  router.post('/fix/entries/:competitionId/:teamId/players', meetTeam, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await entries().addPlayer(actorOf(req), req.params.competitionId, req.params.teamId, req.body || {}) });
+  }));
+  router.put('/fix/entries/:competitionId/:teamId/players/:playerId', meetTeam, id('playerId'), asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await entries().updatePlayer(actorOf(req), req.params.competitionId, req.params.teamId, req.params.playerId, req.body || {}) });
+  }));
+  router.post('/fix/entries/:competitionId/:teamId/players/:playerId/remove', meetTeam, id('playerId'), asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await entries().removePlayer(actorOf(req), req.params.competitionId, req.params.teamId, req.params.playerId, req.body || {}) });
+  }));
+  router.post('/fix/entries/:competitionId/:teamId/status', meetTeam, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await entries().setStatus(actorOf(req), req.params.competitionId, req.params.teamId, req.body || {}) });
+  }));
+  router.post('/fix/entries/:competitionId/:teamId/money', meetTeam, asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await entries().recordMoney(actorOf(req), req.params.competitionId, req.params.teamId, req.body || {}) });
+  }));
+
   return router;
 }
 

@@ -78,8 +78,8 @@ async function seed() {
     registeredTeams: [{
       _id: oid(), team: ids.teamA, coach: ids.coachA, gender: 'Female', isSubmitted: true, paymentStatus: 'completed',
       players: [
-        { _id: oid(), player: ids.p1, gender: 'Female', ageGroup: 'Under14', apparatus: { competition_1: ['pole'] } },
-        { _id: oid(), player: ids.p2, gender: 'Female', ageGroup: 'Under14', apparatus: { competition_1: ['pole'] } },
+        { _id: oid(), player: ids.p1, gender: 'Female', ageGroup: 'Under14', apparatus: { competition_1: ['Pole Mallakhamb'] } },
+        { _id: oid(), player: ids.p2, gender: 'Female', ageGroup: 'Under14', apparatus: { competition_1: ['Pole Mallakhamb'] } },
       ],
     }],
   });
@@ -272,7 +272,7 @@ describe('Phase 4 — teams, coaches, transfers', () => {
     const regB = meet.registeredTeams.find((r) => String(r.team) === String(ids.teamB));
     expect(regA.players.map((p) => String(p.player))).toEqual([String(ids.p2)]);
     expect(regB).toMatchObject({ isSubmitted: true, paymentStatus: 'completed' });
-    expect(regB.players[0]).toMatchObject({ ageGroup: 'Under14', apparatus: { competition_1: ['pole'] } });
+    expect(regB.players[0]).toMatchObject({ ageGroup: 'Under14', apparatus: { competition_1: ['Pole Mallakhamb'] } });
     expect(String(regB.coach)).toBe(String(ids.coachB));
 
     const player = await col('players').findOne({ _id: ids.p1 });
@@ -349,5 +349,48 @@ describe('Phase 5 — score corrections', () => {
     expect((await as(ids.owner).send('post', path, { judgeScores: { judge1: 9 }, reason: REASON })).status).toBe(400);
     expect((await as(ids.owner).send('post', path, { slips: [{ judgeRole: 'J1', executionScore: 5 }], reason: REASON })).status).toBe(400);
     expect((await as(ids.owner).send('post', path, { slips: [{ judgeRole: 'J1', executionScore: 3.53 }], reason: REASON })).status).toBe(400);
+  });
+});
+
+describe('Phase 6 — entries and manual payments', () => {
+  const base = (ids) => `/api/superadmin/fix/entries/${ids.meet}/${ids.teamA}`;
+
+  it('adds an athlete under the age rule, refuses outside it unless overridden', async () => {
+    const ids = await seed();
+    const body = { playerId: String(ids.p3), gender: 'Female', ageGroup: 'Under14', apparatus: ['Pole Mallakhamb'], reason: REASON };
+    const ok = await as(ids.owner).send('post', `${base(ids)}/players`, body);
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.players.map((p) => p.name)).toContain('Mira Joshi');
+    const meet = await col('competitions').findOne({ _id: ids.meet });
+    expect(meet.registeredTeams[0].players.find((p) => String(p.player) === String(ids.p3)).apparatus).toEqual({ competition_1: ['Pole Mallakhamb'] });
+
+    // Born 2012: too old for Under 10.
+    await col('competitions').updateOne({ _id: ids.meet }, { $push: { ageGroups: { gender: 'Female', ageGroup: 'Under10' } } });
+    const moveDown = await as(ids.owner).send('put', `${base(ids)}/players/${ids.p2}`, { ageGroup: 'Under10', reason: REASON });
+    expect(moveDown.status).toBe(422);
+    expect((await as(ids.owner).send('put', `${base(ids)}/players/${ids.p2}`, { ageGroup: 'Under10', overrideAge: true, reason: REASON })).status).toBe(200);
+    const row = (await history(ids.owner, '?entity=entry')).rows[0];
+    expect(row).toMatchObject({ action: 'ENTRY_PLAYER_UPDATED' });
+  });
+
+  it('will not add an athlete already entered, nor remove one who has scores', async () => {
+    const ids = await seed();
+    expect((await as(ids.owner).send('post', `${base(ids)}/players`, { playerId: String(ids.p1), gender: 'Female', ageGroup: 'Under14', reason: REASON })).status).toBe(422);
+    await col('scores').insertOne({ competition: ids.meet, teamId: ids.teamA, gender: 'Female', ageGroup: 'Under14', competitionType: 'Competition I', playerScores: [{ playerId: ids.p1, finalScore: 8 }] });
+    expect((await as(ids.owner).send('post', `${base(ids)}/players/${ids.p1}/remove`, { reason: REASON })).status).toBe(422);
+    expect((await as(ids.owner).send('post', `${base(ids)}/players/${ids.p2}/remove`, { reason: REASON })).status).toBe(200);
+  });
+
+  it('corrects the registration status and records a manual payment and a refund', async () => {
+    const ids = await seed();
+    expect((await as(ids.owner).send('post', `${base(ids)}/status`, { paymentStatus: 'pending', reason: REASON })).status).toBe(200);
+    expect((await col('competitions').findOne({ _id: ids.meet })).registeredTeams[0].paymentStatus).toBe('pending');
+    expect((await as(ids.owner).send('post', `${base(ids)}/money`, { kind: 'payment', amount: 1000, method: 'cash', reason: 'Paid at the desk' })).status).toBe(200);
+    const refund = await as(ids.owner).send('post', `${base(ids)}/money`, { kind: 'refund', amount: 500, method: 'UPI', reason: 'Athlete withdrew' });
+    expect(refund.status).toBe(200);
+    const ledger = await col('transactions').find({ competition: ids.meet }).sort({ createdAt: 1 }).toArray();
+    expect(ledger.map((t) => t.amount)).toEqual([1000, -500]);
+    expect(ledger[1]).toMatchObject({ source: 'superadmin', type: 'other', metadata: expect.objectContaining({ kind: 'refund' }) });
+    expect(refund.body.data.transactions).toHaveLength(2);
   });
 });

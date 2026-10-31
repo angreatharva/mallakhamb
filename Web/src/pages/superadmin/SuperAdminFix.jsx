@@ -5,6 +5,7 @@ const AccountsSection = lazy(() => import('./fix/AccountsSection'));
 const TeamsSection = lazy(() => import('./fix/TeamsSection'));
 const TransferSection = lazy(() => import('./fix/TransferSection'));
 const ScoresSection = lazy(() => import('./fix/ScoresSection'));
+const EntriesSection = lazy(() => import('./fix/EntriesSection'));
 const RestoreSection = lazy(() => import('./fix/RestoreSection'));
 
 const ID = 'sa-fix';
@@ -19,6 +20,7 @@ const SECTIONS = [
   { id: 'teams', label: 'Teams & coaches', Component: TeamsSection },
   { id: 'transfer', label: 'Move a player', Component: TransferSection },
   { id: 'scores', label: 'Scores', Component: ScoresSection },
+  { id: 'entries', label: 'Entries & payments', Component: EntriesSection },
   { id: 'restore', label: 'Restore', Component: RestoreSection },
 ];
 

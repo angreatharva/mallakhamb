@@ -417,6 +417,16 @@ function bootstrap() {
     Object.defineProperty(service, '_qualification', { get: () => c.resolve('qualificationService'), configurable: true });
     return service;
   }, 'singleton');
+  // Phase 6: competition entries and manual payments.
+  container.register('entriesAdminService', (c) => {
+    const EntriesAdminService = require('../services/superadmin/entries-admin.service');
+    return new EntriesAdminService({
+      correctionService: c.resolve('correctionService'),
+      competitionRepository: c.resolve('competitionRepository'),
+      transactionRepository: c.resolve('transactionRepository'),
+      logger: c.resolve('logger'),
+    });
+  }, 'singleton');
   container.register('judgeService', (c) => {
     const JudgeService = require('../services/user/judge.service');
     return new JudgeService({
