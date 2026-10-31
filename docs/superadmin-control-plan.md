@@ -1,7 +1,18 @@
 # Super Admin control: one owner, every correction
 
-Status: PLAN (2026-10-31). Nothing built yet. Studied against master 28b4de1,
-on the code and on staging (`app-137-23-63-84.sslip.io`, read-only walk).
+Status: BUILT (2026-10-31) on branch `feature/superadmin-control`, one commit
+per phase (52a3108 … 899383e), NOT merged or deployed. Server 1227/1227 and
+Web 598/598 tests green; browser-checked on a throwaway local clone
+(`api-sa-check` in .claude/launch.json). Studied against master 28b4de1.
+
+Where it lives: Super Admin → **Fix** (Accounts, Teams & coaches, Move a
+player, Scores, Entries & payments, Restore) and **History**. Server:
+`src/services/superadmin/*`, `src/routes/superadmin-corrections.routes.js`,
+co-coach resolution in `src/utils/auth/team-coach.util.js`.
+
+Before deploying: if a database already holds TWO superadmins, the new
+single-owner index is reported as failed at startup (nothing else breaks) —
+run `node scripts/createSuperAdmin.js --transfer-to <owner email>` there.
 
 ## Goal
 
