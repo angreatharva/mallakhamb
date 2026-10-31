@@ -1,6 +1,8 @@
 const AuthenticationService = require('../../../../src/services/auth/authentication.service');
 const { ValidationError } = require('../../../../src/errors');
-const { INVALID_CODE_MESSAGE } = require('../../../../src/services/auth/otp.service');
+const { INVALID_CODE_MESSAGE, hashResetCode } = require('../../../../src/services/auth/otp.service');
+
+const STORED_CODE_HASH = hashResetCode('123456');
 
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({
@@ -49,8 +51,10 @@ describe('AuthenticationService - Password Reset', () => {
     );
 
     // Override the generic findUserAcrossTypes for testing convenience
+    // The account as the reset flow loads it: with the STORED code, which is
+    // the code's SHA-256 since the security audit of 2026-10-31 (H3).
     authService.findUserAcrossTypes = jest.fn().mockResolvedValue({
-      user: { _id: 'user123', email: 'test@example.com' },
+      user: { _id: 'user123', email: 'test@example.com', resetPasswordToken: STORED_CODE_HASH },
       userType: 'player'
     });
   });
@@ -67,8 +71,10 @@ describe('AuthenticationService - Password Reset', () => {
       await authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!');
 
       expect(mockOtpService.verifyOTP).toHaveBeenCalled();
+      // Matched on the stored hash that verifyOTP just checked, never the
+      // plain code (which is never stored).
       expect(mockPlayerRepo.model.findOneAndUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({ _id: 'user123', resetPasswordToken: '123456' }),
+        expect.objectContaining({ _id: 'user123', resetPasswordToken: STORED_CODE_HASH }),
         expect.any(Object),
         { new: true }
       );
@@ -139,7 +145,10 @@ describe('AuthenticationService - Password Reset', () => {
       mockOtpService.verifyOTP.mockResolvedValue(true);
       mockPlayerRepo.model.findOneAndUpdate.mockResolvedValue({ _id: 'user123' });
       await authService.resetPasswordWithOTP('test@example.com', '123456', 'StrongPass1!', 'player');
-      expect(authService.findUserAcrossTypes).toHaveBeenCalledWith('test@example.com', 'player');
+      // Plus the opt-in for the reset-code fields, which are select:false (H3).
+      expect(authService.findUserAcrossTypes).toHaveBeenCalledWith(
+        'test@example.com', 'player', { select: '+resetPasswordToken +resetPasswordExpires' }
+      );
     });
 
     it('should reject passwords shorter than 8 characters', async () => {

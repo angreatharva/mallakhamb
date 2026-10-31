@@ -484,9 +484,13 @@ class CompetitionService {
       }
 
       if (search) {
+        // A literal substring match: the term is escaped and capped, so a
+        // caller cannot hand MongoDB a pattern to run (security audit
+        // 2026-10-31, L4). Behaviour for ordinary words is unchanged.
+        const term = String(search).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         criteria.$or = [
-          { name: { $regex: search, $options: 'i' } },
-          { place: { $regex: search, $options: 'i' } }
+          { name: { $regex: term, $options: 'i' } },
+          { place: { $regex: term, $options: 'i' } }
         ];
       }
 

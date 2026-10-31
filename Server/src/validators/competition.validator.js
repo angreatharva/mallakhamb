@@ -277,10 +277,11 @@ const registerTeam = () => {
         }
         return true;
       }),
+    // Optional and IGNORED: the coach is the signed-in caller. Still validated
+    // when sent, so an old client's request keeps the same shape.
     body('coachId')
+      .optional()
       .trim()
-      .notEmpty()
-      .withMessage('Coach ID is required')
       .custom((value) => {
         const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(value)) {

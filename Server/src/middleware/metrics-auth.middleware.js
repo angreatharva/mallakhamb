@@ -67,4 +67,24 @@ function createMetricsAuthMiddleware(tokens) {
   };
 }
 
-module.exports = { createMetricsAuthMiddleware, presentedToken };
+/**
+ * Does this request carry one of the metrics tokens? The same constant-time
+ * check as the middleware, as a predicate — the detailed health report uses
+ * it to decide between the full body and the public summary.
+ * @param {import('express').Request} req
+ * @param {string[]} tokens
+ * @returns {boolean}
+ */
+function hasMetricsToken(req, tokens) {
+  const accepted = (tokens || []).filter(Boolean);
+  const presented = presentedToken(req?.headers?.authorization);
+  if (!presented || accepted.length === 0) return false;
+  const candidate = digest(presented);
+  let ok = false;
+  for (const token of accepted) {
+    if (crypto.timingSafeEqual(candidate, digest(token))) ok = true;
+  }
+  return ok;
+}
+
+module.exports = { createMetricsAuthMiddleware, presentedToken, hasMetricsToken };

@@ -72,7 +72,8 @@ function createAuthController(container) {
       const result = await authenticationService.setCompetitionContext(
         req.user._id,
         req.userType,
-        competitionId
+        competitionId,
+        req.authTime
       );
 
       // Set the new access token (with competition context) as cookie

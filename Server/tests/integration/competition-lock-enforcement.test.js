@@ -297,20 +297,24 @@ describe('a closed competition refuses writes through the real router', () => {
     expect(response.status).toBe(200);
   });
 
+  /*
+   * Editing the competition RECORD is a super admin act since the security
+   * audit of 2026-10-31 (H1): `requireAdmin` here let an admin of one meet edit,
+   * re-status or delete any other. A meet admin is now refused before the lock
+   * is consulted — 403 on a closed meet and on a live one alike — so these
+   * three cases, which used to pin the lock for admins, pin the stronger rule.
+   */
   it('refuses an admin editing the competition record itself', async () => {
-    // Resolved from the ROUTE PARAM here, not the payload — a different branch
-    // of the guard, on a different router.
     const response = await request(app)
       .put(`/api/competitions/${CLOSED}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ name: 'Renamed After The Fact' });
 
-    expect(response.status).toBe(423);
+    expect(response.status).toBe(403);
+    expect((await Competition.findById(CLOSED).lean()).name).not.toBe('Renamed After The Fact');
   });
 
   it('will not let an admin reach a closed meet by id while holding a live token', async () => {
-    // The param has to win over the token's competition claim, or the lock is
-    // bypassable by anyone with a session on any open meet.
     const liveToken = tokenFor(await Admin.findOne({ email: 'lock-admin@test.dev' }), 'admin');
 
     const response = await request(app)
@@ -319,13 +323,19 @@ describe('a closed competition refuses writes through the real router', () => {
       .set('x-competition-id', String(LIVE))
       .send({ name: 'Renamed Via Header' });
 
-    expect(response.status).toBe(423);
+    expect(response.status).toBe(403);
   });
 
-  it('still lets an admin edit the live meet', async () => {
-    const response = await request(app)
+  it('refuses a meet admin editing even the live meet record; the super admin can', async () => {
+    const refused = await request(app)
       .put(`/api/competitions/${LIVE}`)
       .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Renamed While Open' });
+    expect(refused.status).toBe(403);
+
+    const response = await request(app)
+      .put(`/api/competitions/${LIVE}`)
+      .set('Authorization', `Bearer ${superAdminToken}`)
       .send({ name: 'Renamed While Open' });
 
     expect(response.status).toBe(200);

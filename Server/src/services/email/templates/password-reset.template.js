@@ -11,6 +11,14 @@
  * @param {string} data.resetLink - Password reset link (optional)
  * @returns {Object} Email content with subject, text, and html
  */
+/** HTML-escape a user-entered value for the HTML part (security audit 2026-10-31, L11). */
+const esc = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 function generatePasswordResetEmail(data) {
   const { userName, resetLink } = data;
 
@@ -68,15 +76,15 @@ Mallakhamb Competition Team
 <body>
   <div class="container">
     <h2>Password Reset Confirmation</h2>
-    <p>Hello ${userName || 'User'},</p>
-    
+    <p>Hello ${esc(userName || 'User')},</p>
+
     <div class="alert-box">
       <p><strong>Your password has been successfully reset.</strong></p>
     </div>
     
     ${resetLink ? `
     <p>If you did not make this change, please reset your password immediately:</p>
-    <a href="${resetLink}" class="button">Reset Password</a>
+    <a href="${esc(resetLink)}" class="button">Reset Password</a>
     ` : `
     <p>If you did not make this change, please contact support immediately.</p>
     `}

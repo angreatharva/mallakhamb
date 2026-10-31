@@ -127,7 +127,22 @@ function bootstrap() {
   // --- Redis + Token Invalidation (Phase 2A, Item 2.4) ---
   container.register('redisClient', (c) => new RedisClient(c.resolve('config'), c.resolve('logger')), 'singleton');
   container.register('tokenInvalidationService', (c) => {
-    const svc = new TokenInvalidationService(c.resolve('redisClient'), c.resolve('logger'));
+    // Logouts are written through to MongoDB and reloaded on start, so a
+    // restart, deploy or failover no longer forgets them (security audit
+    // 2026-10-31, M4). Required lazily so importing bootstrap never touches it.
+    const SessionRevocation = require('../models/SessionRevocation');
+    const store = {
+      load: async (now) => {
+        await SessionRevocation.deleteMany({ expiresAt: { $lte: now } });
+        return SessionRevocation.find({ expiresAt: { $gt: now } }).lean();
+      },
+      save: (id, revokedAt, expiresAt) => SessionRevocation.updateOne(
+        { _id: id },
+        { $max: { revokedAt }, $set: { expiresAt } },
+        { upsert: true }
+      ),
+    };
+    const svc = new TokenInvalidationService(c.resolve('redisClient'), c.resolve('logger'), store);
     // Wire the shim so existing sync callers get the service
     setTokenInvalidationService(svc);
     return svc;
@@ -433,7 +448,16 @@ function bootstrap() {
 
   container.register('competitionController', (c) => createCompetitionController(c), 'singleton');
   container.register('teamController', (c) => createTeamController(c), 'singleton');
-  container.register('healthController', (c) => new HealthController(c.resolve('healthMonitor'), c.resolve('logger')), 'singleton');
+  // The detailed health report is for the operator (metrics bearer token);
+  // anonymous callers get statuses only (security audit 2026-10-31, M6).
+  container.register('healthController', (c) => {
+    const { hasMetricsToken } = require('../middleware/metrics-auth.middleware');
+    return new HealthController(
+      c.resolve('healthMonitor'),
+      c.resolve('logger'),
+      (req) => hasMetricsToken(req, c.resolve('config').get('observability.metricsTokens'))
+    );
+  }, 'singleton');
   container.register('coachController', (c) => createCoachController(c), 'singleton');
   container.register('adminController', (c) => createAdminController(c), 'singleton');
   container.register('publicController', (c) => createPublicController(c), 'singleton');
@@ -485,6 +509,11 @@ function initializeSocketIO(httpServer) {
       c.resolve('logger'),
       c.resolve('metrics')
     );
+
+    // Lets the handshake refuse a deactivated or deleted account, as every
+    // HTTP request already does (security audit 2026-10-31, L5).
+    manager.loadUser = (userType, userId) =>
+      c.resolve('authenticationService').getRepositoryByType(userType).findById(userId);
     
     // Initialize the Socket.IO server
     manager.initialize();

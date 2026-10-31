@@ -523,9 +523,10 @@ const AdminScoring = () => {
                 teamId: selectedTeam._id, teamName: selectedTeam.name, coachName: selectedTeam.coach?.name, coachEmail: selectedTeam.coach?.email,
                 gender: selectedGender.value, ageGroup: selectedAgeGroup.value, competitionType, timeKeeper, scorer, remarks, isLocked: shouldLock,
                 playerScores: playerScoresFor(players, scores, panelAverage, calculateFinalScore),
-                // Judges hold accounts now: the panel record keeps the
-                // person's address, not the old slot-derived username.
-                judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType, email: j.email }))
+                // Who sat, by name and seat. No email: this record is served
+                // by the anonymous results feed, and a judge's email is their
+                // login (security audit 2026-10-31, M1).
+                judgeDetails: judges.map(j => ({ judgeId: j._id, judgeName: j.name, judgeType: j.judgeType }))
             };
             
             // Add competition ID for superadmin

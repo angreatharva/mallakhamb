@@ -14,6 +14,19 @@
  * @param {string} data.actionText - Action button text (optional)
  * @returns {Object} Email content with subject, text, and html
  */
+/**
+ * HTML-escape a value for the HTML part (security audit 2026-10-31, L11). Names
+ * and team names are user-entered; the plain-text part needs no escaping.
+ * @param {*} value
+ * @returns {string}
+ */
+const esc = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 function generateNotificationEmail(data) {
   const { userName, title, message, actionUrl, actionText } = data;
 
@@ -71,15 +84,15 @@ Mallakhamb Competition Team
 </head>
 <body>
   <div class="container">
-    <h2>${title}</h2>
-    <p>Hello ${userName || 'User'},</p>
-    
+    <h2>${esc(title)}</h2>
+    <p>Hello ${esc(userName || 'User')},</p>
+
     <div class="notification-box">
-      <p>${String(message).replace(/\n/g, '<br>')}</p>
+      <p>${esc(message).replace(/\n/g, '<br>')}</p>
     </div>
-    
+
     ${actionUrl ? `
-    <a href="${actionUrl}" class="button">${actionText || 'View Details'}</a>
+    <a href="${esc(actionUrl)}" class="button">${esc(actionText || 'View Details')}</a>
     ` : ''}
     
     <div class="footer">

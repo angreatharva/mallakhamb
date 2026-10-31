@@ -241,6 +241,10 @@ function createAuthMiddleware(container) {
       // Attach user and userType to request
       req.user = user;
       req.userType = decoded.userType;
+      // When this session signed in (seconds), so a token re-issued from it —
+      // a competition switch — keeps the session's absolute end instead of
+      // starting a new one (token.service MAX_SESSION_MS).
+      req.authTime = decoded.auth_time || decoded.iat;
 
       // Attach competition context if present in token
       if (decoded.competitionId) {

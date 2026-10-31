@@ -87,7 +87,43 @@ const validateCompetitionContext = (req, res, next) => {
   next();
 };
 
+/**
+ * Guard for routes that name their meet in the PATH (`/competitions/:id/...`).
+ *
+ * `validateCompetitionContext` deliberately prefers the token's competition,
+ * which is right for routes that act "in the meet you are signed into" — and
+ * wrong for a route whose URL names a different one: an admin signed into meet
+ * A would pass the check for A and then act on the B in the path. This checks
+ * the id the handler will actually use (security audit 2026-10-31, H1/M9).
+ *
+ * Super admins pass everywhere; admins only for meets they are assigned to.
+ * Other roles are not competition-scoped here and are left to the route's own
+ * role guard, exactly as `mayActOnCompetition` already decides.
+ *
+ * @param {{param?: string, query?: string}} source - where the id lives
+ * @returns {import('express').RequestHandler}
+ */
+function requireCompetitionAccess({ param, query } = {}) {
+  return (req, res, next) => {
+    const competitionId = (param && req.params?.[param]) || (query && req.query?.[query]) || null;
+    if (!competitionId) {
+      return next();
+    }
+    if (!mayActOnCompetition(req.user, req.userType, competitionId)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          message: 'You are not assigned to this competition.',
+          code: 'COMPETITION_ACCESS_DENIED'
+        }
+      });
+    }
+    return next();
+  };
+}
+
 module.exports = {
   validateCompetitionContext,
+  requireCompetitionAccess,
   judgeHoldsSeatAt,
 };

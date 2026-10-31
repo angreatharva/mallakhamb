@@ -119,7 +119,8 @@ function createJudgeController(container) {
     setCompetitionContext: asyncHandler(async (req, res) => {
       const result = await judgeService.setCompetitionContext(
         req.user._id,
-        req.params.competitionId
+        req.params.competitionId,
+        req.authTime
       );
 
       if (result.token) {

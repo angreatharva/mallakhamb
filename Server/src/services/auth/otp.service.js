@@ -22,6 +22,17 @@ const INVALID_CODE_MESSAGE = 'That code is invalid or has expired. Check your la
 // rate limit alone doesn't stop guesses spread across many IPs.
 const DEFAULT_MAX_OTP_ATTEMPTS = 5;
 
+/**
+ * SHA-256 of a reset code, as stored. A six-digit code has only a million
+ * values, so the hash is not what stops a guess — the attempt cap and expiry
+ * do. It stops the code being USABLE by anyone who reads the account document
+ * (an admin screen that projected too much, a backup), which is what leaked.
+ * @param {string|number} code
+ * @returns {string} hex digest
+ */
+const hashResetCode = (code) => crypto.createHash('sha256').update(String(code ?? '')).digest('hex');
+const isHashedResetCode = (stored) => /^[0-9a-f]{64}$/.test(String(stored ?? ''));
+
 class OTPService {
   /**
    * Create an OTP service
@@ -88,8 +99,10 @@ class OTPService {
 
     try {
       const repository = this.getRepositoryByType(userType);
+      // Only the code's hash is stored (security audit 2026-10-31, H3): the
+      // plain code goes out in the email and nowhere else.
       await repository.updateById(user._id, {
-        resetPasswordToken: otp,
+        resetPasswordToken: hashResetCode(otp),
         resetPasswordExpires: expiresAt,
         resetPasswordAttempts: 0
       });
@@ -417,8 +430,11 @@ class OTPService {
    * @private
    */
   _codesMatch(stored, given) {
+    // A code issued before codes were hashed is still plain for the rest of its
+    // ten minutes; compare it as it was stored rather than failing the user.
+    const candidate = isHashedResetCode(stored) ? hashResetCode(given) : String(given ?? '');
     const a = Buffer.from(String(stored));
-    const b = Buffer.from(String(given ?? ''));
+    const b = Buffer.from(candidate);
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   }
 
@@ -496,3 +512,4 @@ class OTPService {
 
 module.exports = OTPService;
 module.exports.INVALID_CODE_MESSAGE = INVALID_CODE_MESSAGE;
+module.exports.hashResetCode = hashResetCode;

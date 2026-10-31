@@ -76,6 +76,17 @@ const refreshTokenSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    /**
+     * When the person actually signed in — carried unchanged through every
+     * rotation of the family, so a session has an absolute end however often
+     * it is refreshed (security audit 2026-10-31, M4). Absent on families
+     * started before this field existed; those fall back to `createdAt`.
+     */
+    authTime: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true, // createdAt, updatedAt

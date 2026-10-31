@@ -151,6 +151,64 @@ async function fetchPaymentDetails(config, paymentId) {
  * @param {Object} paymentDetails
  * @returns {boolean}
  */
+/**
+ * Fetch the ORDER a payment was made against.
+ *
+ * The order carries the notes WE wrote when we created it (which meet, which
+ * team, which coach). A payment's signature only proves "this payment paid
+ * this order"; it says nothing about which registration the order was for, so
+ * without reading the order back a captured payment for one registration could
+ * be presented again for another of the same price (security audit
+ * 2026-10-31, M5).
+ * @param {Object} config
+ * @param {string} orderId
+ * @returns {Promise<Object>} the Razorpay order entity
+ */
+async function fetchOrder(config, orderId) {
+  const razorpay = razorpayClient(config, 'Payment verification failed: Configuration error');
+  try {
+    return await razorpay.orders.fetch(orderId);
+  } catch (error) {
+    throw new ValidationError('Payment verification failed: Unable to verify the order');
+  }
+}
+
+/**
+ * Refuse an order whose notes name a different registration. Every key in
+ * `expected` must equal the note of the same name.
+ * @param {Object} order - Razorpay order entity
+ * @param {Object<string, *>} expected - e.g. `{ competitionId, coachId }`
+ * @throws {ValidationError}
+ */
+function assertOrderIsFor(order, expected) {
+  const notes = order?.notes || {};
+  const mismatched = Object.entries(expected)
+    .filter(([key, value]) => String(notes[key] ?? '') !== String(value ?? ''));
+  if (mismatched.length > 0) {
+    throw new ValidationError('Payment verification failed: this payment was made for a different registration');
+  }
+}
+
+/**
+ * Refuse a payment id that has already paid for something — a registration or
+ * a recorded transaction (security audit 2026-10-31, M5). Runs BEFORE anything
+ * is written; the unique index on transactions only fired after the
+ * registration had already been marked paid, and its error was swallowed.
+ * @param {{competitionRepository: Object, transactionRepository?: Object}} repos
+ * @param {string} paymentId
+ * @throws {ValidationError}
+ */
+async function assertPaymentNotUsed({ competitionRepository, transactionRepository }, paymentId) {
+  const id = String(paymentId);
+  const [onRegistration, onTransaction] = await Promise.all([
+    competitionRepository?.findOne?.({ 'registeredTeams.paymentId': id }, { select: '_id' }),
+    transactionRepository?.findOne?.({ 'metadata.razorpay_payment_id': id }, { select: '_id' }),
+  ]);
+  if (onRegistration || onTransaction) {
+    throw new ValidationError('Payment verification failed: this payment has already been used');
+  }
+}
+
 function isPaymentSuccessful(paymentDetails) {
   return SUCCESSFUL_PAYMENT_STATUSES.includes(paymentDetails?.status);
 }
@@ -178,6 +236,9 @@ module.exports = {
   buildReceipt,
   verifyPaymentSignature,
   fetchPaymentDetails,
+  fetchOrder,
+  assertOrderIsFor,
+  assertPaymentNotUsed,
   isPaymentSuccessful,
   paidAtFrom,
 };

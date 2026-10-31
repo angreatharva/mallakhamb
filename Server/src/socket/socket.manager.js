@@ -53,9 +53,28 @@ class SocketManager {
 
     // Get CORS origins from config
     const allowedOrigins = this.config.get('server.corsOrigins') || [];
+    const nodeEnv = this.config.get('server.nodeEnv');
+    const strictOrigin = (nodeEnv === 'production' || nodeEnv === 'staging') && allowedOrigins.length > 0;
 
     // Initialize Socket.IO server with CORS
     this.io = new Server(this.httpServer, {
+      /*
+       * The Origin check the `cors` option does NOT do (security audit
+       * 2026-10-31, L5). `cors` only governs HTTP long-polling; a WebSocket
+       * upgrade is never subject to CORS, and the access-token cookie is
+       * SameSite=None, so any web page could otherwise open an authenticated
+       * socket as its visitor. Same rule as the HTTP CORS middleware: strict in
+       * production and staging, open in development; a request with no Origin
+       * (a script, the load harness) is not a browser page and is allowed.
+       */
+      allowRequest: (req, callback) => {
+        const origin = req.headers.origin;
+        if (!strictOrigin || !origin || allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        this.logger.warn('Socket connection refused: origin not allowed', { origin });
+        return callback('Origin not allowed', false);
+      },
       cors: {
         origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
         methods: ['GET', 'POST'],
@@ -133,6 +152,19 @@ class SocketManager {
             userId: decoded.userId
           });
           return next(new Error('Session ended. Please log in again.'));
+        }
+
+        // A deactivated or deleted account is refused here exactly as the HTTP
+        // auth middleware refuses it.
+        if (typeof this.loadUser === 'function' && decoded.userId != null) {
+          const user = await this.loadUser(decoded.userType, decoded.userId);
+          if (!user || user.isActive === false) {
+            this.logger.warn('Socket connection rejected: account missing or inactive', {
+              socketId: socket.id,
+              userId: decoded.userId
+            });
+            return next(new Error('Account is inactive'));
+          }
         }
 
         // Attach user info to socket

@@ -15,6 +15,7 @@ const {
   AuthorizationError
 } = require('../../errors');
 const { pageMeta } = require('../../utils/data/pagination.util');
+const { mayActOnCompetition } = require('../../utils/security/competition-access.util');
 const { assertAgeGroup } = require('../../utils/data/age-eligibility.util');
 
 class RegistrationService {
@@ -356,7 +357,7 @@ class RegistrationService {
    * @throws {NotFoundError} If competition or registration not found
    * @throws {BusinessRuleError} If validation fails
    */
-  async removePlayerFromRegistration(competitionId, teamId, playerId) {
+  async removePlayerFromRegistration(competitionId, teamId, playerId, actor = null) {
     try {
       // Validate competition exists
       const competition = await this.competitionRepository.findById(competitionId);
@@ -377,6 +378,13 @@ class RegistrationService {
       // Check if registration is already submitted
       if (registration.isSubmitted) {
         throw new BusinessRuleError('Cannot modify submitted registration');
+      }
+
+      // A coach edits only their own team's squad — the same rule as the add
+      // path. Missing here, any coach (self-registration is open) could strip
+      // athletes out of another coach's draft (security audit 2026-10-31, H2).
+      if (actor?.type === 'coach' && String(registration.coach) !== String(actor.id)) {
+        throw new AuthorizationError("You can only change your own team's squad");
       }
 
       // Through the repository for the same reason as the add path above: the
@@ -400,7 +408,8 @@ class RegistrationService {
       // Re-read, as in the add path: the local copy predates the write.
       return this.competitionRepository.findById(competitionId);
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof BusinessRuleError) {
+      if (error instanceof NotFoundError || error instanceof BusinessRuleError
+          || error instanceof AuthorizationError) {
         throw error;
       }
       this.logger.error('Remove player from registration error', {
@@ -507,13 +516,16 @@ class RegistrationService {
    * @returns {Promise<Object>} Registration details
    * @throws {NotFoundError} If competition or registration not found
    */
-  async getTeamRegistration(competitionId, teamId) {
+  async getTeamRegistration(competitionId, teamId, actor = null) {
     try {
+      // Names, age group and gender only: no email for the coach or for the
+      // athletes, most of whom are minors (security audit 2026-10-31, M3 — the
+      // CRIT-4 leak class). `name` is not a stored field any more; the halves are.
       const competition = await this.competitionRepository.findById(competitionId, {
         populate: [
           { path: 'registeredTeams.team', select: 'name' },
-          { path: 'registeredTeams.coach', select: 'name email' },
-          { path: 'registeredTeams.players.player', select: 'name email ageGroup gender' }
+          { path: 'registeredTeams.coach', select: 'firstName lastName' },
+          { path: 'registeredTeams.players.player', select: 'firstName lastName ageGroup gender' }
         ]
       });
 
@@ -529,9 +541,22 @@ class RegistrationService {
         throw new NotFoundError('Team registration');
       }
 
+      // Only the team's own coach, or an admin who may act on this meet. Any
+      // signed-in account could read any team's entry before.
+      if (actor) {
+        const coachId = registration.coach?._id || registration.coach;
+        const allowed = actor.type === 'coach'
+          ? String(coachId) === String(actor.id)
+          : ['admin', 'superadmin'].includes(actor.type)
+            && mayActOnCompetition(actor.user, actor.type, competitionId);
+        if (!allowed) {
+          throw new AuthorizationError('You cannot view this team registration');
+        }
+      }
+
       return registration;
     } catch (error) {
-      if (error instanceof NotFoundError) {
+      if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
       this.logger.error('Get team registration error', {

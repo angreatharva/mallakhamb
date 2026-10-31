@@ -1924,59 +1924,6 @@ function buildPaths() {
     responses: { 200: ok('Order set', ref('RunningOrder')), ...VALIDATION_ERROR },
   }));
 
-  // ===================== Scoring (generic CRUD) =====================
-
-  add('/api/scoring', 'post', op({
-    tag: 'Scores', roles: 'judge', operationId: 'submitScore',
-    summary: 'Create a score document',
-    requestBody: jsonBody(ref('Score')),
-    responses: { 201: ok('Created', ref('Score')), ...VALIDATION_ERROR },
-  }));
-
-  add('/api/scoring/{scoreId}', 'get', op({
-    tag: 'Scores', operationId: 'getScore',
-    summary: 'Score document by id',
-    parameters: [pathParam('scoreId', 'Score document id')],
-    responses: { 200: ok('Score', ref('Score')), ...NOT_FOUND },
-  }));
-
-  add('/api/scoring/{scoreId}', 'put', op({
-    tag: 'Scores', roles: 'judge', operationId: 'updateScoreDoc',
-    summary: 'Update a score document',
-    parameters: [pathParam('scoreId', 'Score document id')],
-    requestBody: jsonBody(ref('Score')),
-    responses: { 200: ok('Updated', ref('Score')), ...VALIDATION_ERROR, ...NOT_FOUND },
-  }));
-
-  add('/api/scoring/{scoreId}', 'delete', op({
-    tag: 'Scores', roles: 'admin, superadmin', operationId: 'deleteScore',
-    summary: 'Delete a score document',
-    parameters: [pathParam('scoreId', 'Score document id')],
-    responses: { 200: ok('Deleted'), ...NOT_FOUND },
-  }));
-
-  add('/api/scoring/{scoreId}/lock', 'patch', op({
-    tag: 'Scores', roles: 'admin, superadmin', operationId: 'lockScoreDoc',
-    summary: 'Lock a score document',
-    parameters: [pathParam('scoreId', 'Score document id')],
-    responses: { 200: ok('Locked', ref('Score')), ...NOT_FOUND },
-  }));
-
-  add('/api/scoring/{scoreId}/unlock', 'patch', op({
-    tag: 'Scores', roles: 'admin, superadmin', operationId: 'unlockScoreDoc',
-    summary: 'Unlock a score document',
-    parameters: [pathParam('scoreId', 'Score document id')],
-    responses: { 200: ok('Unlocked', ref('Score')), ...NOT_FOUND },
-  }));
-
-  add('/api/scoring/competition/{competitionId}', 'get', op({
-    tag: 'Scores', operationId: 'scoresByCompetition',
-    summary: 'Every score document in a competition',
-    description: 'Unpaginated. Cost grows linearly with the number of score sheets written.',
-    parameters: [pathParam('competitionId', 'Competition id'), ...CATEGORY_QUERY],
-    responses: { 200: ok('Scores', { type: 'array', items: ref('Score') }), ...VALIDATION_ERROR },
-  }));
-
   // ===================== Public =====================
 
   add('/api/public/competitions', 'get', op({
