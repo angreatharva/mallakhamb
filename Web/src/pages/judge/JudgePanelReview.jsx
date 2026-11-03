@@ -20,6 +20,8 @@ import { useCompetition } from '../../contexts/CompetitionContext';
 import { FG } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { apparatusKey } from '@/utils/scoring/apparatus';
+import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import {
   getCombinationChecklist,
   getDifficultyRequirement,
@@ -39,6 +41,8 @@ const JudgePanelReview = () => {
   const { logout } = useAuth();
   const { clearCompetitionContext } = useCompetition();
   const reduced = useReducedMotion();
+  // A finished competition is view-only: no edits, no Final Submit (the server refuses them with 423 too).
+  const { locked: competitionLocked } = useCompetitionLock();
 
   const session = useJudgeSession(location.state);
   const {
@@ -92,7 +96,7 @@ const JudgePanelReview = () => {
 
   const combinationChecklist = getCombinationChecklist(selectedApparatus);
   const panelMismatch = analyzePanelMismatches(panelScores, effectivePanelSize);
-  const canFinalSubmit = !finalized && allPanelSubmitted && isSeniorJudge;
+  const canFinalSubmit = !finalized && !competitionLocked && allPanelSubmitted && isSeniorJudge;
 
   // Two separate blocks, each with its own alert. A slip mismatch means the
   // panel recorded different routines; a tolerance breach means they recorded
@@ -404,6 +408,7 @@ const JudgePanelReview = () => {
       />
 
       <main className="relative z-10 max-w-[1400px] mx-auto px-3 sm:px-6 py-4 sm:py-5" id="main-content">
+        <CompetitionLockBanner className="mb-4" />
         <div className="space-y-5 pb-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -415,7 +420,7 @@ const JudgePanelReview = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {!finalized && (
+              {!finalized && !competitionLocked && (
                 <button
                   type="button"
                   onClick={goBackToScoring}
@@ -514,7 +519,7 @@ const JudgePanelReview = () => {
                       <div className="text-2xl font-black" style={{ color: isYou ? 'rgb(var(--accent-fg))' : FG.ink }}>
                         {Number(data.score).toFixed(2)}
                       </div>
-                      {isSeniorJudge && !isYou && !finalized && (
+                      {isSeniorJudge && !isYou && !finalized && !competitionLocked && (
                         <button type="button" onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }} className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center border flex-shrink-0" style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))', background: 'rgb(var(--accent) / 0.08)' }} title={`Edit ${judge} score`} aria-label={`Edit ${judge} score`}>
                           <Pencil className="w-3.5 h-3.5" />
                         </button>

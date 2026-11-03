@@ -21,6 +21,7 @@ import { useCompetition } from '../../contexts/CompetitionContext';
 import { FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/admin/AdminKit';
 import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { ageMatches } from '@/hooks/useAgeGroups';
 
 const JudgeTeamPlayers = () => {
@@ -391,6 +392,8 @@ const JudgeTeamPlayers = () => {
       />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
+        {/* A finished competition: slips open read-only from here. */}
+        <CompetitionLockBanner className="mb-6" />
         <FadeIn delay={0}>
           <div className="rounded-2xl border p-5 mb-6"
             style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>

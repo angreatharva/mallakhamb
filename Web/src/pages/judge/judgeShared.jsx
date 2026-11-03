@@ -5,7 +5,7 @@
  * the panel review page (JudgePanelReview). Extracted so the two routes can be
  * separate files without duplicating this markup.
  */
-import { useState, useEffect, forwardRef } from 'react';
+import { useState, useEffect, forwardRef, createContext, useContext } from 'react';
 import PropTypes from 'prop-types';
 import { AlertTriangle, ArrowLeft, CheckCircle, LogOut, Save, X } from 'lucide-react';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
@@ -113,7 +113,15 @@ export const EASE_OUT = [0.25, 0.46, 0.45, 0.94];
 
 const PICKER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
+/**
+ * True while a slip is view-only (its competition has finished). The slip's
+ * controls read it and disable themselves, so the marks stay visible but can't
+ * change — the server refuses the write anyway (423).
+ */
+export const SlipReadOnly = createContext(false);
+
 export const DifficultyPicker = ({ cls, value, count, onChange, compact = false }) => {
+  const readOnly = useContext(SlipReadOnly);
   const name = `${cls} - Class - ${value.toFixed(2)}`;
   const n = Number(count) || 0;
   // Compact (the Senior Judge's edit dialog) only with a mouse. On touch it is the slip's own size: at h-9 the
@@ -140,6 +148,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
                 type="button"
                 aria-label={`${name}: ${num}`}
                 aria-pressed={selected}
+                disabled={readOnly}
                 onClick={() => { if (!selected) onChange(num); }}
                 className={`${cell} rounded-xl border font-black tabular-nums select-none transition-[background-color,border-color,color,transform] duration-150 active:scale-95`}
                 style={{
@@ -159,7 +168,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
         {/* − on top, the count, + below — as drawn */}
         <div className={`${compact ? 'w-14 mouse:w-12' : 'w-14'} flex-shrink-0 flex flex-col rounded-xl border overflow-hidden`}
           style={{ borderColor: 'rgb(var(--ink) / 0.12)', background: 'rgb(var(--ink) / 0.04)' }}>
-          <button type="button" aria-label={`Decrease ${name}`} disabled={n <= 0}
+          <button type="button" aria-label={`Decrease ${name}`} disabled={readOnly || n <= 0}
             onClick={() => onChange(Math.max(0, n - 1))}
             className="relative flex-1 flex items-center justify-center text-lg font-black select-none disabled:cursor-not-allowed active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:top-0 before:-bottom-[16px]"
             style={{ color: n <= 0 ? 'rgb(var(--ink) / 0.15)' : 'rgb(var(--accent-fg))', borderBottom: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>
@@ -168,7 +177,7 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
           <span className="flex items-center justify-center py-1 text-xl font-black tabular-nums text-ink select-none">
             {n}
           </span>
-          <button type="button" aria-label={`Increase ${name}`}
+          <button type="button" aria-label={`Increase ${name}`} disabled={readOnly}
             onClick={() => onChange(n + 1)}
             className="relative flex-1 flex items-center justify-center text-lg font-black select-none active:bg-ink/10 before:content-[''] before:absolute before:inset-x-0 before:bottom-0 before:-top-[16px]"
             style={{ color: 'rgb(var(--accent-fg))', borderTop: '1px solid rgb(var(--ink) / 0.08)', touchAction: 'manipulation' }}>

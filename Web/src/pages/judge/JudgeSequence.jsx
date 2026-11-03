@@ -12,6 +12,8 @@ import SortableList from '@/components/ordering/SortableList';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
 import { FG, alpha } from '@/styles/tokens';
 import { J, JudgeHeader } from './judgeShared';
+import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 
 /** Judge roles allowed to set a panel's running order. Mirrors the server's
  *  `SEQUENCE_JUDGE_TYPES` and `requireSequenceManager`; this copy only decides
@@ -53,6 +55,8 @@ const OrderBadge = ({ lotNo, position, accent }) => (
  */
 const JudgeSequence = () => {
   const navigate = useNavigate();
+  // A finished competition shows the order it ran in, read-only (the server refuses the writes with 423).
+  const { locked: competitionLocked } = useCompetitionLock();
 
   const [judgeInfo, setJudgeInfo] = useState(null);
   const [roster, setRoster] = useState(null);
@@ -224,6 +228,7 @@ const JudgeSequence = () => {
       />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
+        <CompetitionLockBanner className="mb-6" />
         <div className="rounded-2xl border p-5 mb-6"
           style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
           <p className="type-tag mb-2 text-fg-secondary">Category</p>
@@ -271,6 +276,7 @@ const JudgeSequence = () => {
               onReorder={setTeamsTracked}
               onCommit={() => persistTeamOrder(teamsRef.current)}
               accent={J.purple}
+              disabled={competitionLocked}
               renderItem={(team, index) => {
                 const isExpanded = String(expandedTeamId) === String(team._id);
                 return (
@@ -307,6 +313,7 @@ const JudgeSequence = () => {
                             onReorder={(next) => handlePlayersReorder(team._id, next)}
                             onCommit={() => persistPlayerOrder(team._id, currentPlayersOf(team._id))}
                             accent={J.green}
+                            disabled={competitionLocked}
                             emptyMessage="No athletes in this category for this team."
                             renderItem={(player, playerIndex) => (
                               <div className="flex items-center gap-3">
@@ -329,11 +336,13 @@ const JudgeSequence = () => {
               }}
             />
 
+            {!competitionLocked && (
             <div className="flex justify-end">
               <button onClick={() => persistTeamOrder(teamsRef.current)} disabled={saving} className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-on-accent min-h-[48px] disabled:opacity-50" style={{ background: 'rgb(var(--accent))' }}>
                 <Save className="w-4 h-4" /> Save Order
               </button>
             </div>
+            )}
           </div>
         )}
       </main>

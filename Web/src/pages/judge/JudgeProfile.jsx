@@ -1,8 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Camera, Save, Scale } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 
 import { judgeAPI } from '@/services/public/judge.api';
 import { accountAPI } from '@/services/api';
@@ -10,13 +10,20 @@ import { EmailSection, PasswordSection, SectionHeading } from '@/pages/shared/ac
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { logger } from '@/infrastructure/logger';
 
-import AppearanceMenu from '@/components/layout/AppearanceMenu';
-import {
-  Button, Field, Heading, Input, Panel, Select, TabPanel, Tabs, Tag, TextLink,
-} from '@/components/ui';
+import { AppHeader } from '@/components/shell';
+import { Button, Field, Input, Panel, Select, TabPanel, Tabs, TextLink } from '@/components/ui';
+import JudgeIdentity from './JudgeIdentity';
+import JudgePanelHistory from './JudgePanelHistory';
+import { useJudgeLogout } from './useJudgeLogout';
 
 // "Marking insights" (docs/stats-plan.md §5c), loaded only when opened.
 const JudgeStats = lazy(() => import('./JudgeStats'));
+
+const TABS = [
+  { id: 'profile', label: 'Profile' },
+  { id: 'panels', label: 'Panels' },
+  { id: 'stats', label: 'Marking insights' },
+];
 
 const CERTIFICATION_LEVELS = [
   { value: 'International', label: 'International' },
@@ -26,52 +33,20 @@ const CERTIFICATION_LEVELS = [
 ];
 
 /**
- * Downscale a chosen image before it is sent.
+ * JudgeProfile — the judge's own account, in the same shell as every other
+ * role's (AccountProfile): masthead, identity, then tabs.
  *
- * Photos are stored inline on the account (there is no object storage in this
- * project and the deployment disk is ephemeral), so the client is responsible
- * for keeping them small — a phone photo would otherwise blow past the API's
- * body limit.
- *
- * @param {File} file
- * @param {number} size - Longest edge, in pixels
- * @returns {Promise<string>} JPEG data URL
- */
-const downscaleImage = (file, size = 256) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read that image'));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () => reject(new Error('That file is not an image'));
-      image.onload = () => {
-        const scale = Math.min(size / image.width, size / image.height, 1);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(image.width * scale);
-        canvas.height = Math.round(image.height * scale);
-        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      image.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-
-/**
- * JudgeProfile — the judge's own account.
- *
- * Judges register themselves and own their credentials now; this is where they
- * manage them. The panels they sit on are shown on the dashboard instead —
- * that is the first thing a judge needs on opening the app, and it is not
- * something they can change from here in any case.
+ * Profile is where they manage their details and credentials. Panels lists
+ * every seat they hold, finished competitions included — read-only, since
+ * seats are given by organisers; choosing a category to judge stays on the
+ * dashboard. Marking insights compares their marks with the rest of each panel.
  */
 const JudgeProfile = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const photoInputRef = useRef(null);
+  const handleLogout = useJudgeLogout();
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'stats' ? 'stats' : 'profile';
-  const setTab = (next) => setParams(next === 'stats' ? { tab: 'stats' } : {});
+  const tab = TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'profile';
+  const setTab = (next) => setParams(next === 'profile' ? {} : { tab: next });
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -157,87 +132,33 @@ const JudgeProfile = () => {
     }
   };
 
-  const onChangePhoto = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-
-    try {
-      const dataUrl = await downscaleImage(file);
-      await judgeAPI.updateProfile({ photo: dataUrl });
-      setPhoto(dataUrl);
-      toast.success('Photo updated');
-    } catch (error) {
-      logger.error('Could not update judge photo', error);
-      toast.error(error.response?.data?.message || error.message || 'Could not update your photo');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center bg-bg">
-        <p className="type-body-s text-fg-muted flex items-center gap-3 m-0">
-          <span className="ui-spinner" aria-hidden="true" />
-          Loading your profile…
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-dvh px-[var(--pad)] py-8 bg-bg text-fg">
-      <div className={`${tab === 'stats' ? 'max-w-6xl' : 'max-w-3xl'} mx-auto space-y-6`}>
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <TextLink as="button" type="button" className="ui-link--quiet" onClick={() => navigate('/judge/dashboard')}>
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            Dashboard
-          </TextLink>
-          <AppearanceMenu />
-        </div>
+    <>
+      <AppHeader fixed role="judge" segment={profile?.name || null} homeTo="/judge/dashboard" profileTo="/judge/profile" onLogout={handleLogout} />
+      <main id="main-content" className="pt-16 bg-bg text-fg min-h-dvh">
+      <div className={`${tab === 'profile' ? 'max-w-3xl' : 'max-w-6xl'} mx-auto px-[var(--pad)] py-8 space-y-6`}>
+        <TextLink as={Link} to="/judge/dashboard" className="ui-link--quiet">
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+          Dashboard
+        </TextLink>
 
-        {/* Identity */}
-        <Panel variant="feature">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative">
-              <div className="w-20 h-20 overflow-hidden flex items-center justify-center bg-surface-raised rounded-[var(--radius-panel)]">
-                {photo
-                  ? <img src={photo} alt="" className="w-full h-full object-cover" />
-                  : <Scale className="w-9 h-9 text-accent-fg" aria-hidden="true" />}
-              </div>
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="ui-btn ui-btn--solid ui-icon-btn absolute -bottom-2 -right-2"
-                aria-label="Change photo"
-              >
-                <span className="ui-btn__label" style={{ display: 'contents' }}>
-                  <Camera aria-hidden="true" />
-                </span>
-              </button>
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={onChangePhoto}
-              />
-            </div>
+        {loading && (
+          <p className="type-body-s text-fg-muted flex items-center gap-3 m-0" role="status">
+            <span className="ui-spinner" aria-hidden="true" />
+            Loading your profile…
+          </p>
+        )}
 
-            <div className="min-w-0 grid gap-1">
-              <Tag tone="ident">Judge</Tag>
-              <Heading level={1} step="display-m" asIs className="truncate">{profile?.name}</Heading>
-              <p className="text-fg-muted type-body-s truncate m-0">{profile?.email}</p>
-            </div>
-          </div>
-        </Panel>
+        {!loading && (
+        <>
+        <JudgeIdentity profile={profile} photo={photo} onPhotoChange={setPhoto} />
 
         <Tabs
           label="Profile sections"
           idBase="judge-profile"
           value={tab}
           onChange={setTab}
-          tabs={[{ id: 'profile', label: 'Profile' }, { id: 'stats', label: 'Marking insights' }]}
+          tabs={TABS}
         />
 
         {tab === 'stats' && (
@@ -248,12 +169,18 @@ const JudgeProfile = () => {
           </TabPanel>
         )}
 
+        {tab === 'panels' && (
+          <TabPanel idBase="judge-profile" tabId="panels" className="outline-none">
+            <JudgePanelHistory assignments={profile?.assignments || []} title="Panels you sit on" />
+          </TabPanel>
+        )}
+
         {tab === 'profile' && (
         <div role="tabpanel" id="judge-profile-panel-profile" aria-labelledby="judge-profile-tab-profile" className="space-y-6">
         {/* Account details */}
         <Panel>
           <SectionHeading hint="Your details, and the credentials organisers see when staffing a panel.">
-            Account
+            My profile
           </SectionHeading>
 
           <form onSubmit={handleProfileSubmit(onSaveProfile)} noValidate className="grid gap-5">
@@ -326,8 +253,11 @@ const JudgeProfile = () => {
         )}
         </div>
         )}
+        </>
+        )}
       </div>
-    </div>
+      </main>
+    </>
   );
 };
 

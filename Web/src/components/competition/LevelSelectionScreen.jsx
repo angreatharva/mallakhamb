@@ -144,6 +144,18 @@ const LevelSelectionScreen = ({ userType }) => {
     return () => { cancelled = true; };
   }, [userType]);
 
+  /*
+   * A judge on no panel anywhere has nothing to choose here — every level would
+   * read 0 — so send them home, where the dashboard explains the wait. A failed
+   * fetch also leaves the list empty, but there the dashboard's own live
+   * assignment check decides, so nobody seated is stranded.
+   */
+  const judgeHasNoSeats = userType === 'judge' && !scopedLoading
+    && Array.isArray(scopedCompetitions) && scopedCompetitions.length === 0;
+  useEffect(() => {
+    if (judgeHasNoSeats) navigate('/judge/dashboard', { replace: true });
+  }, [judgeHasNoSeats, navigate]);
+
   const sourceCompetitions = scopedCompetitions ?? assignedCompetitions;
   const counts = useMemo(() => countByLevel(sourceCompetitions), [sourceCompetitions]);
 

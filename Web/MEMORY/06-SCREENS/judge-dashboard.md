@@ -166,3 +166,33 @@ a mixed legacy/specific seat set before assuming it's a bug.
   their age group in the All-ages final); search covers players and teams.
 - Age group labels come from `ageGroupMapping` ("Under 10", "All ages"); entry
   filters use `ageMatches`.
+
+## Since the last pass (2026-11-03, judge home + view-only meets)
+
+- **No seat → `JudgeHome.jsx`.** Where the old `!hasSeats` empty block was,
+  the dashboard now returns `<JudgeHome />` (after every hook). It is the
+  coach/player-style home: fixed `AppHeader`, `PageHeader` "Welcome back",
+  an EmptyState with **Check for a panel** (live `getAssignments()`; seats →
+  `/judge/select-level`, whose competition step re-scopes the token — no
+  sign-out needed) and **Complete your profile** (only while certification /
+  state / MFI no. are missing), a `Fact` row, Profile information, "What
+  happens next", and a marking-insights strip only when `statsAPI.judge()`
+  has published marks. `Fact`/`InfoRow` now live in `components/shell/Facts.jsx`
+  (PlayerDashboard uses them too).
+- **Routing:** `UnifiedLogin` sends a judge whose login response has
+  `competitions: []` to `/judge/dashboard` (registration already did);
+  `LevelSelectionScreen` redirects a judge with zero seats anywhere there too.
+  Seated judges: unchanged (level → competition → category picker).
+- **Masthead:** the seated dashboard uses the shared `AppHeader`, not
+  `JudgeHeader`; the seat for the chosen category is a Tag under the name.
+  Scoring / panel review / sequence / time keeper keep `JudgeHeader` (no
+  Account menu there — nothing may take a judge off a slip).
+- **Finished meet = view only** (`useCompetitionLock`): dashboard hides Set
+  Sequence and the strip reads "Completed — view only"; `JudgeScoring` wraps
+  the slip in `SlipReadOnly` (judgeShared) so DifficultyPicker, CheckRow,
+  SelectAllRow and the mark inputs disable themselves (tabs still switch);
+  `JudgePanelReview` drops Edit My Score / Sr edit / Final Submit;
+  `JudgeSequence` disables drag and hides Save; team players, sequence and
+  panel review show `CompetitionLockBanner`. The server already refuses all of
+  these with 423. Tests: `JudgeDashboard.role.test.jsx`,
+  `JudgeScoring.viewOnly.test.jsx`, `JudgeHome.test.jsx`, `PostLoginFlow.test.jsx`.

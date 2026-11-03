@@ -83,6 +83,21 @@ describe('Level chooser — counting', () => {
   });
 });
 
+describe('Level chooser — a judge on no panel', () => {
+  it('goes to the judge home instead of six empty levels', async () => {
+    h.judgeList = reply([]);
+    render(<LevelSelectionScreen userType="judge" />);
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/judge/dashboard', { replace: true }));
+  });
+
+  it('a judge with a seat stays on the chooser', async () => {
+    h.judgeList = reply([meet('c1')]);
+    render(<LevelSelectionScreen userType="judge" />);
+    await screen.findByText('1 competition');
+    expect(h.navigate).not.toHaveBeenCalled();
+  });
+});
+
 describe('Level chooser — where a player goes next', () => {
   const pickDistrictAndContinue = async () => {
     h.playerList = reply([meet('c1')]);

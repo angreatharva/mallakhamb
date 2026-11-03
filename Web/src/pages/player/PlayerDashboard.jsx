@@ -15,24 +15,7 @@ import { levelLabel } from '@/utils/competition/levels';
 import {
   Dialog, EmptyState, Heading, IconButton, Panel, RunningOrder, RunningOrderItem, StatusTag, Tag,
 } from '@/components/ui';
-import { PageHeader } from '@/components/shell';
-
-// ─── Key fact ─────────────────────────────────────────────────────────────────
-/** One fact at the top of the dashboard: a tag label over a value (or a control). */
-const Fact = ({ label, value, children }) => (
-  <Panel className="grid gap-2 content-start">
-    <p className="type-tag text-fg-muted m-0">{label}</p>
-    {children || <p className="m-0 text-fg font-bold text-lg leading-tight truncate">{value || '—'}</p>}
-  </Panel>
-);
-
-// ─── Info row ─────────────────────────────────────────────────────────────────
-const InfoRow = ({ label, value, last = false }) => (
-  <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1 ${!last ? 'border-b border-line' : ''}`}>
-    <span className="text-fg-muted type-body-s">{label}</span>
-    <span className="text-fg type-body-s font-semibold sm:text-right break-all">{value || '—'}</span>
-  </div>
-);
+import { Fact, InfoRow, PageHeader } from '@/components/shell';
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 const STATUS = { Submitted: 'success', Active: 'info' };

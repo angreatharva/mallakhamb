@@ -225,7 +225,7 @@ const UnifiedLogin = () => {
         // builds, so this was never a production leak — but it bypassed the
         // project's own logger and there is no reason to print credentials at
         // all. Log presence, not payload, and route it through the logger.
-        const { token, judge, competition } = response.data.data;
+        const { token, judge, competition, competitions } = response.data.data;
         logger.log('Judge login response received', {
           hasToken: !!token,
           hasJudge: !!judge,
@@ -271,8 +271,14 @@ const UnifiedLogin = () => {
          * the dashboard. Login still reports the meet the server picked, but a
          * judge seated at more than one had no way to reach the others from
          * here — the first seat simply won.
+         *
+         * Except a judge on no panel at all: every level would read 0 and the
+         * chooser would end at "Nothing at this level". Their home is the
+         * dashboard, which explains the wait (where registration sends a new
+         * judge too).
          */
-        navigate('/judge/select-level');
+        const seatedSomewhere = !Array.isArray(competitions) || competitions.length > 0;
+        navigate(seatedSomewhere ? '/judge/select-level' : '/judge/dashboard');
         return;
       }
       

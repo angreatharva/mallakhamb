@@ -3,7 +3,7 @@ import apiConfig from '@/config/api.config';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
-  Scale, Users, Trophy, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered, UserCircle,
+  Users, Trophy, CheckCircle, Search, ChevronRight, X, Filter, ListOrdered,
   CalendarDays, Loader2, ClipboardList, Timer
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
@@ -19,8 +19,11 @@ import { FG, alpha } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { FadeIn } from '@/components/admin/AdminKit';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
-import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
-import { AccountMenu } from '@/components/shell';
+import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import { J, JudgeAmbience } from './judgeShared';
+import { AppHeader } from '@/components/shell';
+import { Tag } from '@/components/ui';
+import JudgeHome from './JudgeHome';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -95,6 +98,9 @@ const JudgeDashboard = () => {
     () => sessionStorage.getItem('judge_selected_competition') || ''
   );
   const [activeCompetition, setActiveCompetition] = useState(storedCompetition);
+  // A finished meet (past 23:59 UTC on its end date) is view-only for judges:
+  // the server refuses every write with 423, and the screens say so up front.
+  const { locked: competitionLocked } = useCompetitionLock({ competition: activeCompetition });
   const [switchingCompetition, setSwitchingCompetition] = useState(false);
   const [selectedCompetitionType, setSelectedCompetitionType] = useState(() => sessionStorage.getItem('judge_selected_comp_type') || '');
   const [selectedGender, setSelectedGender] = useState(() => sessionStorage.getItem('judge_selected_gender') || '');
@@ -728,7 +734,8 @@ const JudgeDashboard = () => {
   const roleChosen = needsRoleChoice && RECORDER_ROLES.includes(chosenRole);
   const myJudgeType = needsRoleChoice ? (roleChosen ? chosenRole : null) : mySeat?.judgeType;
 
-  const canSequence = SEQUENCE_JUDGE_TYPES.includes(myJudgeType);
+  // Setting the order is a write; a finished meet only shows the order it ran in.
+  const canSequence = SEQUENCE_JUDGE_TYPES.includes(myJudgeType) && !competitionLocked;
   // The category is settled but the role is not (e.g. after a refresh that lost
   // it): the team list waits behind the role popup.
   const awaitingRole = needsRoleChoice && !roleChosen;
@@ -738,6 +745,11 @@ const JudgeDashboard = () => {
   // team to score, so the picker is suppressed in favour of an explanation.
   const hasSeats = assignmentsLoading || assignments.length > 0
     || (judgeInfo.allAssignments?.length ?? 0) > 0;
+
+  // Registered, but on no panel yet: their home is the dashboard the other
+  // roles get, not an empty picker (JudgeHome). Every hook above has run, so
+  // returning here keeps the hook order stable when a seat appears.
+  if (!hasSeats) return <JudgeHome fallbackName={judgeInfo.name} />;
 
   // Running order first, then the search filter — filtering first would be
   // equivalent here but sorting the full list keeps the positions shown next to
@@ -816,14 +828,10 @@ const JudgeDashboard = () => {
     <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
       <JudgeAmbience />
 
-      <JudgeHeader
-        title={judgeInfo.name}
-        subtitle={myJudgeType}
-        onLogout={handleLogout}
-        // The account menu every role has. Only here, not on the scoring
-        // screens: nothing new should be able to take a judge off a slip.
-        actions={<AccountMenu profileTo="/judge/profile" />}
-      />
+      {/* The masthead every signed-in role has (the judge home and profile
+          too). Only here, not on the scoring screens: those keep JudgeHeader,
+          so nothing in the bar can take a judge off a slip. */}
+      <AppHeader role="judge" segment={judgeInfo.name} homeTo="/judge/dashboard" profileTo="/judge/profile" onLogout={handleLogout} />
 
       <main className="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 py-8 flex flex-col" id="main-content">
 
@@ -839,6 +847,8 @@ const JudgeDashboard = () => {
             <div>
               <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
               <h1 className="text-2xl font-black text-ink">{judgeInfo.name}</h1>
+              {/* The seat for the chosen category (it used to sit under the name in the bar). */}
+              {myJudgeType && <Tag tone="accent" className="mt-2">{myJudgeType}</Tag>}
             </div>
             
             {!showModal && selectedCompetitionType && (
@@ -876,7 +886,7 @@ const JudgeDashboard = () => {
               style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 flex-shrink-0 text-fg-secondary" aria-hidden="true" />
-                <span className="type-tag text-fg-secondary">Current Assignment</span>
+                <span className="type-tag text-fg-secondary">{competitionLocked ? 'Completed — view only' : 'Current Assignment'}</span>
               </div>
               <div className="flex flex-wrap gap-4 sm:ml-auto">
                 {[
@@ -904,29 +914,6 @@ const JudgeDashboard = () => {
             </div>
           )}
         </FadeIn>
-
-        {/* Every panel this judge sits on */}
-
-        {/* Registered, but on no panel yet */}
-        {!hasSeats && (
-          <FadeIn delay={0.1}>
-            <div className="text-center py-16 flex flex-col items-center rounded-2xl border border-ink/5 bg-ink/5">
-              <Scale className="w-12 h-12 mb-4 text-ink/20" />
-              <p className="text-lg font-bold text-ink/70">No panel assignments yet</p>
-              <p className="text-sm text-fg-muted mt-2 max-w-sm">
-                Your account is ready. An organiser adds you to a competition panel — the
-                categories you are judging will appear here once they do. Sign in again after
-                that to start scoring.
-              </p>
-              <button
-                onClick={() => navigate('/judge/profile')}
-                className="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-raised hover:bg-surface-raised border border-line-strong text-accent-fg text-sm font-bold transition-colors min-h-[44px]">
-                <UserCircle className="w-4 h-4" />
-                View your profile
-              </button>
-            </div>
-          </FadeIn>
-        )}
 
         {/* Search & Team List — waits for the role when there is one to choose */}
         {!showModal && selectedCompetitionType && !awaitingRole && (

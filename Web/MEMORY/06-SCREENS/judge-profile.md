@@ -68,3 +68,16 @@ you add a new editable field here that other screens read off
 - Loads `judgeAPI.getProfile()` and `accountAPI.get()` together; `#password`
   / `#email` in the URL scroll to those sections (the account menu's targets).
   See [account-and-player-identity.md](account-and-player-identity.md).
+
+## Since the last pass (2026-11-03, judge home + profile redesign)
+
+- Same shell as `AccountProfile`: a fixed `AppHeader` (role judge, name as
+  segment, Account menu, Light/Dark, Logout, phone drawer) replaces the bare
+  back link + corner `AppearanceMenu`. The hero is `JudgeIdentity.jsx` (photo
+  upload + `downscaleImage` moved there, unchanged), shared with nothing else
+  yet.
+- Tabs **Profile | Panels | Marking insights** (`?tab=panels`, `?tab=stats`).
+  Panels = `JudgePanelHistory.jsx` over `profile.assignments` (already in
+  `GET /judge/profile`), grouped by meet; a finished meet
+  (`isCompetitionLocked`) is tagged "Completed · view only". The form heading
+  is now "My profile". Tests: `JudgeProfile.test.jsx`.

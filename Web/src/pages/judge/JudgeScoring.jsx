@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect, useRef, useId, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, Send, BookOpen, X, Minus
 } from 'lucide-react';
@@ -24,7 +24,7 @@ import {
 } from '@/utils/scoring/copRules';
 import ScorerScoring from './ScorerScoring'; // Import scorer component
 import TimeKeeperScoring from './TimeKeeperScoring';
-import { J, JudgeAmbience, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES, JudgeHeader, ScoringFor } from './judgeShared';
+import { J, JudgeAmbience, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES, JudgeHeader, ScoringFor, SlipReadOnly } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
@@ -73,6 +73,7 @@ const CopPdfModal = ({ isOpen, onClose }) => {
 };
 
 const ScoreInput = ({ label, value, onChange, hint }) => {
+  const readOnly = useContext(SlipReadOnly);
   const [focused, setFocused] = useState(false);
   // The label was visible but not linked, so the mark field had no name for a
   // screen reader ("edit text" — for Execution or Originality alike).
@@ -98,6 +99,7 @@ const ScoreInput = ({ label, value, onChange, hint }) => {
           id={inputId}
           value={value}
           onValueChange={onChange}
+          readOnly={readOnly}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           className="w-full px-4 py-3 text-2xl font-black text-center bg-transparent no-spinners"
@@ -118,8 +120,10 @@ const ScoreRow = ({ label, value, max, color = 'var(--fg)' }) => (
   </div>
 );
 
-const CheckRow = ({ checked, onChange, label, penalty }) => (
-  <label className="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px]"
+const CheckRow = ({ checked, onChange, label, penalty }) => {
+  const readOnly = useContext(SlipReadOnly);
+  return (
+  <label className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 min-h-[52px] ${readOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
     style={{
       background: checked ? 'rgb(var(--success-fg) / 0.08)' : 'rgb(var(--ink) / 0.03)',
       borderColor: checked ? 'rgb(var(--success-fg) / 0.3)' : 'rgb(var(--ink) / 0.07)',
@@ -128,11 +132,12 @@ const CheckRow = ({ checked, onChange, label, penalty }) => (
       style={{ borderColor: checked ? J.green : 'rgb(var(--ink) / 0.2)', background: checked ? J.green : 'transparent' }}>
       {checked && <CheckCircle className="w-3.5 h-3.5 text-ink" aria-hidden="true" />}
     </div>
-    <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+    <input type="checkbox" checked={checked} onChange={onChange} disabled={readOnly} className="sr-only" />
     <span className="text-sm font-medium" style={{ color: checked ? FG.ink : 'rgb(var(--ink) / 0.5)' }}>{label}</span>
     {!checked && <span className="ml-auto text-xs font-bold text-fg-muted">{penalty.toFixed(2)}</span>}
   </label>
-);
+  );
+};
 
 /**
  * Ticks every combination requirement at once, or clears them all when every
@@ -140,6 +145,7 @@ const CheckRow = ({ checked, onChange, label, penalty }) => (
  * nearly everything is one tap to select all and one to untick the misses.
  */
 const SelectAllRow = ({ metCount, itemCount, onChange, className = '' }) => {
+  const readOnly = useContext(SlipReadOnly);
   const all = itemCount > 0 && metCount === itemCount;
   const some = metCount > 0 && !all;
   const inputRef = useRef(null);
@@ -148,7 +154,7 @@ const SelectAllRow = ({ metCount, itemCount, onChange, className = '' }) => {
     if (inputRef.current) inputRef.current.indeterminate = some;
   }, [some]);
   return (
-    <label className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all duration-200 min-h-[52px] ${className}`}
+    <label className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 min-h-[52px] ${readOnly ? 'cursor-not-allowed' : 'cursor-pointer'} ${className}`}
       style={{
         background: all ? 'rgb(var(--success-fg) / 0.08)' : 'rgb(var(--accent) / 0.08)',
         borderColor: all ? 'rgb(var(--success-fg) / 0.3)' : 'rgb(var(--accent) / 0.3)',
@@ -158,7 +164,7 @@ const SelectAllRow = ({ metCount, itemCount, onChange, className = '' }) => {
         {all && <CheckCircle className="w-3.5 h-3.5 text-ink" aria-hidden="true" />}
         {some && <Minus className="w-3.5 h-3.5 text-success-fg" aria-hidden="true" />}
       </div>
-      <input ref={inputRef} type="checkbox" checked={all} onChange={onChange} className="sr-only" />
+      <input ref={inputRef} type="checkbox" checked={all} onChange={onChange} disabled={readOnly} className="sr-only" />
       <span className="text-sm font-bold text-ink">Select all</span>
       <span className="ml-auto text-xs font-bold text-fg-muted">{metCount} / {itemCount}</span>
     </label>
@@ -678,6 +684,9 @@ const JudgeSlip = () => {
       />
 
       <main className="relative z-10 max-w-[1400px] mx-auto px-3 sm:px-6 py-4 sm:py-5" id="main-content">
+        {/* A finished competition: every mark control below reads this and
+            disables itself, so the slip is view-only, not just unsubmittable. */}
+        <SlipReadOnly.Provider value={competitionLocked}>
         {/* Before the sheet, not beside the button: the point is that the judge
             sees it BEFORE marking a routine. Submit is disabled to match. */}
         <CompetitionLockBanner className="mb-4" />
@@ -834,6 +843,7 @@ const JudgeSlip = () => {
                                 const active = Math.abs((scores.bonus || 0) - val) < 1e-6;
                                 return (
                                   <button key={label} type="button"
+                                    disabled={competitionLocked}
                                     onClick={() => setScores({ ...scores, bonus: val })}
                                     className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[46px]"
                                     style={{
@@ -899,7 +909,8 @@ const JudgeSlip = () => {
                             const active = Math.abs((scores.bonus || 0) - val) < 1e-6;
                             return (
                               <button key={label} type="button"
-                                onClick={() => setScores({ ...scores, bonus: val })}
+                                disabled={competitionLocked}
+                                    onClick={() => setScores({ ...scores, bonus: val })}
                                 className="py-3 rounded-xl border font-bold text-sm transition-all duration-200 min-h-[44px]"
                                 style={{
                                   background: active ? 'rgb(var(--accent) / 0.15)' : 'rgb(var(--ink) / 0.03)',
@@ -1035,6 +1046,7 @@ const JudgeSlip = () => {
 
 
         </div>
+        </SlipReadOnly.Provider>
       </main>
 
       {/* Modals */}

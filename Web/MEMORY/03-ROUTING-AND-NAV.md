@@ -203,3 +203,11 @@ signed in" just closes it).
   check whether it belongs inside the existing `dashboard/:tab` tab
   system instead (see previous section) — several large screens already
   work this way rather than as standalone routes.
+
+## Judge with no panel seat (2026-11-03)
+
+Login (`UnifiedLogin`, `competitions: []`), registration, and a zero-seat
+visit to `/judge/select-level` all land on `/judge/dashboard`, which renders
+`JudgeHome` for an unseated judge. Seated judges still go level → competition
+→ category. See [06-SCREENS/judge-dashboard.md](06-SCREENS/judge-dashboard.md).
+
