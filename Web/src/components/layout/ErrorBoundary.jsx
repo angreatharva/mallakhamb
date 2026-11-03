@@ -83,14 +83,18 @@ class ErrorBoundary extends React.Component {
                   {homeLabel}
                 </a>
               )}
-              {import.meta.env.MODE === 'development' && (
+              {/* Shown in production too: production builds drop every
+                  console call, so this is the only place a person reporting
+                  a crash can read what actually broke. */}
+              {this.state.error && (
                 <details className="mt-6 text-left">
                   <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-900">
-                    Error Details (Dev Only)
+                    Technical details
                   </summary>
-                  <pre className="mt-2 p-4 bg-gray-100 rounded text-xs overflow-auto max-h-64">
-                    {this.state.error && this.state.error.toString()}
-                    {this.state.errorInfo && this.state.errorInfo.componentStack}
+                  <pre className="mt-2 p-4 bg-gray-100 rounded text-xs overflow-auto max-h-64 whitespace-pre-wrap break-words" data-testid="error-details">
+                    {String(this.state.error)}
+                    {this.state.errorInfo?.componentStack
+                      && `\n${this.state.errorInfo.componentStack.trim().split('\n').slice(0, 8).join('\n')}`}
                   </pre>
                 </details>
               )}

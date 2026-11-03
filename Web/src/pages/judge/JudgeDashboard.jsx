@@ -758,7 +758,8 @@ const JudgeDashboard = () => {
     key: (team) => String(team._id),
     name: (team) => team.name,
   }).filter(team =>
-    team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    // A team saved without a name must not take the whole screen down.
+    (team.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (team.coach?.name && team.coach.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   
