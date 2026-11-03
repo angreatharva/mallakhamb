@@ -193,3 +193,15 @@ describe('JudgeDashboard — a finished competition', () => {
     expect(screen.queryByText('Set Sequence')).not.toBeInTheDocument();
   });
 });
+
+describe('JudgeDashboard — which competition', () => {
+  it('names the meet even when the judge is seated at only one', async () => {
+    h.seats = [seat('Scorer')];
+    storeCategory();
+    renderDashboard();
+
+    expect(await screen.findByTestId('judge-current-meet')).toHaveTextContent('SGAM-TRIALS-1');
+    expect(screen.getByText('Meet')).toBeInTheDocument();
+  });
+});
+

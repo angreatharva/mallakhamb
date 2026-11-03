@@ -825,6 +825,16 @@ const JudgeDashboard = () => {
   const competitionName = (id) =>
     availableCompetitions.find((c) => String(c._id) === String(id))?.name || 'Selected meet';
 
+  // The meet this session is judging, named under the greeting at all times —
+  // a judge seated at only one meet was never told which one it was. The
+  // stored competition is the full document; the seats' copy is the fallback.
+  const currentMeet = (activeCompetition && String(activeCompetition._id) === String(selectedCompetitionId)
+    ? activeCompetition
+    : availableCompetitions.find((c) => String(c._id) === String(selectedCompetitionId))) || activeCompetition;
+  const currentMeetMeta = currentMeet
+    ? [currentMeet.place, currentMeet.level && `${levelLabel(currentMeet.level)} level`].filter(Boolean).join(' · ')
+    : '';
+
   return (
     <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
       <JudgeAmbience />
@@ -849,6 +859,13 @@ const JudgeDashboard = () => {
               <p className="text-fg-muted text-xs tracking-widest uppercase mb-1">Welcome back</p>
               <h1 className="text-2xl font-black text-ink">{judgeInfo.name}</h1>
               {/* The seat for the chosen category (it used to sit under the name in the bar). */}
+              {currentMeet?.name && (
+                <p className="mt-1 mb-0 flex items-center gap-2 type-body-s text-fg-secondary" data-testid="judge-current-meet">
+                  <CalendarDays className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                  <span className="font-semibold text-fg">{currentMeet.name}</span>
+                  {currentMeetMeta && <span className="text-fg-muted">· {currentMeetMeta}</span>}
+                </p>
+              )}
               {myJudgeType && <Tag tone="accent" className="mt-2">{myJudgeType}</Tag>}
             </div>
             
@@ -891,11 +908,9 @@ const JudgeDashboard = () => {
               </div>
               <div className="flex flex-wrap gap-4 sm:ml-auto">
                 {[
-                  // Only worth the space when there is more than one meet to be
-                  // confused between.
-                  ...(availableCompetitions.length > 1
-                    ? [{ label: 'Meet', value: competitionName(selectedCompetitionId) }]
-                    : []),
+                  // Always named: a judge seated at one meet needs to see which
+                  // one too, not only one choosing between several.
+                  { label: 'Meet', value: currentMeet?.name || competitionName(selectedCompetitionId) },
                   { label: 'Gender', value: selectedGender || judgeInfo.gender },
                   { label: 'Age Group', value: ageGroupMapping[selectedAgeGroup || judgeInfo.ageGroup]?.label || selectedAgeGroup || judgeInfo.ageGroup },
                   { label: 'Competition', value: getCompLabel(selectedCompetitionType) },
