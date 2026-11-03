@@ -2,6 +2,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { logger } from '@/infrastructure/logger';
+import { isStaleChunkError, reloadOnceForNewDeploy } from '@/utils/ui/staleChunk';
 
 /**
  * HIGH-W2: this used to be mounted exactly once, around the entire app, so any
@@ -29,6 +30,9 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    // A screen file from before a deploy: the fix is the new files, not this
+    // screen. (Backstop for the `vite:preloadError` handler in main.jsx.)
+    if (isStaleChunkError(error) && reloadOnceForNewDeploy()) return;
     logger.error('Error caught by boundary:', error, errorInfo);
     this.setState({ error, errorInfo });
   }
