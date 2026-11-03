@@ -510,6 +510,19 @@ describe('paper form for a coach (their own team, their own drafts)', () => {
     expect((await service.view(actor, draft._id)).status).toBe('paid');
   });
 
+  test('a form opened before paying takes no more rows once the squad is paid', async () => {
+    const { service, competition, actor } = await coachSetup();
+    const draft = await service.openDraft(actor, { competitionId: competition._id });
+    expect(await service.coachPaperForm(actor, competition._id)).toMatchObject({ squadSubmitted: false });
+
+    await Competition.updateOne({ _id: competition._id }, { $set: { 'registeredTeams.0.isSubmitted': true } });
+    expect(await service.coachPaperForm(actor, competition._id)).toMatchObject({ squadSubmitted: true });
+    await expect(service.saveRows(actor, draft._id, { guardianConsent: true, rows: [row()] }))
+      .rejects.toMatchObject({ statusCode: 409 });
+    await expect(service.scanPage(actor, draft._id, Buffer.from('photo')))
+      .rejects.toMatchObject({ statusCode: 409 });
+  });
+
   test('a coach never sees guesses about other teams\' children, and cannot register a second ID over a held child', async () => {
     const { service, competition, actor } = await coachSetup();
     const otherCoach = await Coach.create({ firstName: 'Other', lastName: 'Coach', email: `oc${Math.random()}@example.com`, phone: '9000000002', password: 'CoachPass1' });

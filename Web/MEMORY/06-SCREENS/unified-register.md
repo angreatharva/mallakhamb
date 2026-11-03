@@ -31,8 +31,8 @@ rows — generic pairing logic, not per-role hardcoded layout.
 
 **Role-specific extra fields**, rendered outside the generic table:
 player gets a required `gender` select (Male/Female, `:690-727`); judge
-gets an optional `certificationLevel` select (National/State/District/
-Club, `:730-751`). Both share generic Password + Confirm Password
+gets an optional `certificationLevel` select (International/National/
+State/District, `:730-751`). Both share generic Password + Confirm Password
 fields (`:754-855`) with a cross-field `validate: (value) => value ===
 passwordValue` check via `watch('password')` (`:370`).
 

@@ -19,10 +19,10 @@ import {
 const JudgeStats = lazy(() => import('./JudgeStats'));
 
 const CERTIFICATION_LEVELS = [
+  { value: 'International', label: 'International' },
   { value: 'National', label: 'National' },
   { value: 'State', label: 'State' },
   { value: 'District', label: 'District' },
-  { value: 'Club', label: 'Club' },
 ];
 
 /**
@@ -306,6 +306,10 @@ const JudgeProfile = () => {
                 {CERTIFICATION_LEVELS.map((level) => (
                   <option key={level.value} value={level.value}>{level.label}</option>
                 ))}
+                {/* A level no longer offered (Club) stays shown until the judge picks another. */}
+                {profile?.certificationLevel && !CERTIFICATION_LEVELS.some((l) => l.value === profile.certificationLevel) && (
+                  <option value={profile.certificationLevel}>{profile.certificationLevel}</option>
+                )}
               </Select>
             </Field>
 

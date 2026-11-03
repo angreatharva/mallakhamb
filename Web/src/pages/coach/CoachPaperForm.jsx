@@ -28,12 +28,18 @@ const CoachPaperForm = () => {
   const [printing, setPrinting] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [blocked, setBlocked] = useState(null);
+  // Paid squad: nothing more can join it, so the page offers no scanning.
+  const [squadSubmitted, setSquadSubmitted] = useState(false);
 
   useEffect(() => {
     if (!currentCompetition?._id) return;
     setDraft(undefined);
+    setSquadSubmitted(false);
     paperFormAPI.current()
-      .then((res) => setDraft(res.data?.data?.draft || null))
+      .then((res) => {
+        setSquadSubmitted(Boolean(res.data?.data?.squadSubmitted));
+        setDraft(res.data?.data?.draft || null);
+      })
       .catch((error) => { setDraft(null); setBlocked(errorText(error, 'Could not load your form')); });
     paperFormAPI.ocrStatus().then((res) => setOcr(res.data?.data)).catch(() => setOcr({ enabled: false, healthy: false }));
   }, [currentCompetition?._id]);
@@ -90,7 +96,14 @@ const CoachPaperForm = () => {
 
         {draft === undefined && <div className="py-12 flex justify-center"><Spinner label="Loading your form" /></div>}
 
-        {draft === null && (
+        {squadSubmitted && (!draft || draft.status === 'draft') && (
+          <Notice tone="warning" title="Squad already submitted">
+            Your squad for this competition is submitted and paid, so no more players can be scanned onto it.
+            Contact the competition office to add players.
+          </Notice>
+        )}
+
+        {draft === null && !squadSubmitted && (
           <Panel className="grid gap-4 p-5">
             <Heading level={2} step="display-s">How it works</Heading>
             <ol className="m-0 pl-5 grid gap-1 type-body-s list-decimal">
@@ -106,7 +119,7 @@ const CoachPaperForm = () => {
           </Panel>
         )}
 
-        {draft && draft.status === 'draft' && (
+        {draft && draft.status === 'draft' && !squadSubmitted && (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Button variant="line" size="sm" icon={FileDown} loading={printing} onClick={printForm}>Print blank form</Button>

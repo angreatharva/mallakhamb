@@ -85,7 +85,8 @@ const judgeAccountSchema = new mongoose.Schema({
   },
   certificationLevel: {
     type: String,
-    enum: ['National', 'State', 'District', 'Club', null],
+    // 'Club' is no longer offered; kept so judges who chose it still save.
+    enum: ['International', 'National', 'State', 'District', 'Club', null],
     default: null
   },
 

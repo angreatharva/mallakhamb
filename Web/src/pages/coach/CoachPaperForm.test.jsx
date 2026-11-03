@@ -41,6 +41,14 @@ describe('CoachPaperForm', () => {
     expect(paperFormAPI.open).not.toHaveBeenCalled();
   });
 
+  it('a paid squad offers no scanning, even for a form opened before paying', async () => {
+    paperFormAPI.current.mockResolvedValue({ data: { data: { draft, squadSubmitted: true } } });
+    render(<MemoryRouter><CoachPaperForm /></MemoryRouter>);
+    expect(await screen.findByText('Squad already submitted')).toBeInTheDocument();
+    expect(screen.queryByText('form step for coach')).not.toBeInTheDocument();
+    expect(screen.queryByText('Start a form')).not.toBeInTheDocument();
+  });
+
   it('a submitted squad says why the form is unavailable', async () => {
     paperFormAPI.current.mockResolvedValue({ data: { data: { draft: null } } });
     paperFormAPI.open.mockRejectedValue({ response: { data: { error: { message: 'Your squad for this competition is already submitted.' } } } });

@@ -371,6 +371,31 @@ class WalkInService {
     return open ? this.view(actor, open._id) : null;
   }
 
+  /**
+   * The paper-form page's load: the coach's unfinished form, and whether their
+   * squad is already submitted (paid) — then the page offers no scanning.
+   */
+  async coachPaperForm(actor, competitionId) {
+    const competition = await this._meetFor(actor, competitionId, { write: false });
+    return {
+      draft: await this.currentDraft(actor, competitionId),
+      squadSubmitted: this._squadSubmitted(competition, actor.id),
+    };
+  }
+
+  _squadSubmitted(competition, coachId) {
+    const registration = (competition.registeredTeams || []).find((rt) => sameId(rt.coach, coachId));
+    return Boolean(registration?.isSubmitted);
+  }
+
+  /** Once the squad is paid nothing more can join it, so a form stops taking rows. */
+  _refuseIfSquadSubmitted(actor, draft, competition) {
+    if (!this._squadSubmitted(competition, draft.coach)) return;
+    throw new ConflictError(this._isCoach(actor)
+      ? 'Your squad for this competition is already submitted. Contact the competition office to add players to it.'
+      : 'This coach\'s team is already submitted for this competition.');
+  }
+
   /** Every unfinished draft at a meet, newest first — the desk's resume list. */
   async listDrafts(actor, competitionId) {
     const competition = await this._meetFor(actor, competitionId, { write: false });
@@ -427,6 +452,7 @@ class WalkInService {
   async scanPage(actor, draftId, image, { pageHint } = {}) {
     const { draft, competition } = await this._draftFor(actor, draftId);
     if (draft.status !== 'draft') throw new BusinessRuleError('This form is already submitted.');
+    this._refuseIfSquadSubmitted(actor, draft, competition);
     if (!Buffer.isBuffer(image) || image.length === 0) throw new ValidationError('Attach a photo of the form page');
 
     const layout = buildFormLayout();
@@ -505,8 +531,9 @@ class WalkInService {
    * exists are kept exactly as they are — the grid shows them read-only.
    */
   async saveRows(actor, draftId, { rows, guardianConsent }) {
-    const { draft } = await this._draftFor(actor, draftId);
+    const { draft, competition } = await this._draftFor(actor, draftId);
     if (draft.status !== 'draft') throw new BusinessRuleError('This form is already submitted.');
+    this._refuseIfSquadSubmitted(actor, draft, competition);
     if (!Array.isArray(rows) || rows.length > MAX_ROWS) throw new ValidationError(`Send between 0 and ${MAX_ROWS} rows`);
 
     const locked = new Map(draft.rows.filter((r) => r.player).map((r) => [String(r._id), r]));

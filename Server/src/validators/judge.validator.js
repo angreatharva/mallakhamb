@@ -9,7 +9,7 @@
 const { body, param, query } = require('express-validator');
 const { email, mongoId, password, phone } = require('./common.validator');
 
-const CERTIFICATION_LEVELS = ['National', 'State', 'District', 'Club'];
+const CERTIFICATION_LEVELS = ['International', 'National', 'State', 'District'];
 
 /**
  * Validate judge login.

@@ -48,7 +48,7 @@ function createWalkInController(container) {
     }),
 
     // The coach's own form for the competition in their session (paper form).
-    coachCurrentDraft: asyncHandler(async (req, res) => ok(res, { draft: await service().currentDraft(actorOf(req), req.competitionId) })),
+    coachCurrentDraft: asyncHandler(async (req, res) => ok(res, await service().coachPaperForm(actorOf(req), req.competitionId))),
 
     coachOpenDraft: asyncHandler(async (req, res) => ok(res, await service().openDraft(actorOf(req), { competitionId: req.competitionId, coachId: teamCoachOf(req) }), undefined, 201)),
 

@@ -40,7 +40,7 @@ export const JUDGES_PATH = resolve(HERE, '../../../Server/scripts/seed/judges.js
  * @property {string} lastName
  * @property {string} phone     10-digit Indian mobile, leading 6-9
  * @property {string} [stateUnit]
- * @property {'National'|'State'|'District'|'Club'} [certificationLevel]
+ * @property {'International'|'National'|'State'|'District'} [certificationLevel]
  */
 
 /** Applied to every entry that does not override them. */

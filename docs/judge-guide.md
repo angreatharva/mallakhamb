@@ -54,7 +54,7 @@ Register once with your email; an organiser then adds you to a panel.
 | Phone number | Yes | |
 | State / Unit | No | |
 | MFI Reg. No. | No | |
-| Certification level | No | National, State, District or Club. |
+| Certification level | No | International, National, State or District. |
 | Password, Confirm password | Yes | At least 8 characters, with uppercase, lowercase and a number. |
 
 Click **Create Account**. You land on the judge dashboard; until you are seated it has nothing to judge.

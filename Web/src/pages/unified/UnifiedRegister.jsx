@@ -577,10 +577,10 @@ const UnifiedRegister = () => {
           <Field id="judge-reg-certificationLevel" label="Certification Level">
             <Select {...register('certificationLevel')}>
               <option value="" disabled>Select level (optional)</option>
+              <option value="International">International</option>
               <option value="National">National</option>
               <option value="State">State</option>
               <option value="District">District</option>
-              <option value="Club">Club</option>
             </Select>
           </Field>
         )}
