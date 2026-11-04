@@ -585,7 +585,13 @@ const UnifiedRegister = () => {
           </Field>
         )}
 
-        <Field id={`${role}-reg-password`} label="Password" required error={errors.password?.message}>
+        <Field
+          id={`${role}-reg-password`}
+          label="Password"
+          required
+          help={`Uppercase, lowercase and a number. Example: ${role.charAt(0).toUpperCase()}${role.slice(1)}@${new Date().getFullYear()}`}
+          error={errors.password?.message}
+        >
           <PasswordInput
             placeholder="Min. 8 characters"
             autoComplete="new-password"
