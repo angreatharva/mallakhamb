@@ -7,9 +7,10 @@ import { Grain } from '@/components/ui/Stage';
 import './home/home.css';
 import sectionsRaw from './home/sections.html?raw';
 import footerHtml from './home/footer.html?raw';
-import { HERO_IMAGE } from './home/preload';
+import { HERO_IMAGE, HERO_IMAGE_TALL, PORTRAIT } from './home/preload';
 import { fillImages } from './home/images';
 import { useDesktopViewport } from './home/desktopViewport';
+import { useMediaQuery } from '@/hooks/useResponsive';
 
 const sectionsHtml = fillImages(sectionsRaw);
 
@@ -58,6 +59,10 @@ const Home = () => {
   const footerRef = useRef(null);
   const navigate = useNavigate();
   useDesktopViewport();
+  // Upright screens get the tall hero (home.css explains). Chosen here rather than by a <picture>
+  // source: React sets an <img>'s src before its <picture> exists, and WebKit starts that download
+  // at once, so iPhones fetched both photos. The first render already reads the orientation.
+  const heroImage = useMediaQuery(PORTRAIT) ? HERO_IMAGE_TALL : HERO_IMAGE;
 
   // The motion runtime: fetched once the browser is idle after the first paint.
   useEffect(() => {
@@ -121,9 +126,9 @@ const Home = () => {
         <section className="hero" aria-labelledby="hero-title">
           <img
             className="hero__img"
-            src={HERO_IMAGE.src}
-            width={HERO_IMAGE.width}
-            height={HERO_IMAGE.height}
+            src={heroImage.src}
+            width={heroImage.width}
+            height={heroImage.height}
             fetchPriority="high"
             decoding="async"
             alt="Performers balance on the tops of several poles on a dark stage under spotlight beams, a large moon projected behind them."

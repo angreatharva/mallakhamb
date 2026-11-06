@@ -3,6 +3,10 @@ import { HOME_IMAGES } from './images';
 
 /** The landing page's hero photograph (its largest paint): a local file, see home/images.js. */
 export const HERO_IMAGE = { src: HOME_IMAGES.hero, width: 570, height: 250 };
+/** Upright screens' hero: the same photo with the stage extended upward (home.css explains). */
+export const HERO_IMAGE_TALL = { src: HOME_IMAGES.heroTall, width: 570, height: 500 };
+export const PORTRAIT = '(orientation: portrait)';
+const LANDSCAPE = '(orientation: landscape)'; // exactly "not portrait"; WebKit ignores `not all and …` on a preload
 
 /**
  * Called from main.jsx before React renders, on "/" only: start the Home chunk, the hero photo and
@@ -13,11 +17,15 @@ export function preloadHome() {
   // The same two files every prime-time first screen preloads, through the same
   // once-per-page set, so App's loadLookFonts('prime-time') adds no duplicates.
   preloadFirstPaintFonts();
-  const hero = document.createElement('link');
-  hero.rel = 'preload';
-  hero.as = 'image';
-  hero.href = HERO_IMAGE.src;
-  hero.setAttribute('fetchpriority', 'high');
-  document.head.appendChild(hero);
+  // One preload per screen shape, so each device fetches only the hero its <picture> will show.
+  [[HERO_IMAGE.src, LANDSCAPE], [HERO_IMAGE_TALL.src, PORTRAIT]].forEach(([href, media]) => {
+    const hero = document.createElement('link');
+    hero.rel = 'preload';
+    hero.as = 'image';
+    hero.href = href;
+    hero.media = media;
+    hero.setAttribute('fetchpriority', 'high');
+    document.head.appendChild(hero);
+  });
   import('@/pages/public/Home');
 }

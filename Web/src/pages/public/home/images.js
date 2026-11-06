@@ -6,12 +6,15 @@
  * as a placeholder instead, src="%img:<key>%", and fillImages() swaps in the bundled URL.
  */
 import hero from '../../../../assets/images/China-Main.jpg';
+// The hero for upright screens (see home.css): China-Main with the stage outpainted upward to
+// 570x500 (Weave, Flux Pro Fill, 2026-11-07); a stray AI halo near the top-left beam was toned out by hand.
+import heroTall from '../../../../assets/images/China-Main-tall.jpg';
 import pole from '../../../../assets/images/veerbadrasana-III.jpg';
 import hanging from '../../../../assets/images/Hanging-Mallakhamb.jpg';
 import rope from '../../../../assets/images/wadi.jpg';
 import live from '../../../../assets/images/Mallakhamba-Mumbai-1.jpg';
 
-export const HOME_IMAGES = { hero, pole, hanging, rope, live };
+export const HOME_IMAGES = { hero, heroTall, pole, hanging, rope, live };
 
 export function fillImages(html) {
   return html.replace(/%img:(\w+)%/g, (match, key) => {

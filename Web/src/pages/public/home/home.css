@@ -81,15 +81,21 @@
   linear-gradient(to top,#000 0%,rgba(0,0,0,.9) 24%,rgba(0,0,0,.5) 50%,rgba(0,0,0,.12) 72%,rgba(0,0,0,.5) 100%),
   linear-gradient(to right,rgba(0,0,0,.72) 0%,rgba(0,0,0,.25) 45%,rgba(0,0,0,0) 70%)}
 /* Portrait screens (phones, tablets held upright) still lay the page out 1280px wide, so the hero is
-   about 1280x2200: covering that with the 570x250 photo would show a ninefold-blown-up slice of the
-   middle performer. There the whole photo is shown across the width instead, at a laptop's sharpness,
-   in the open stage above the title, its top and bottom edges faded into the black. The mask only
-   reads alpha; the scrim keeps just the dark floor under the title and the portal. */
+   about 1280x1700-2800: covering that with the 570x250 photo would show a ninefold-blown-up slice of
+   the middle performer. Home.jsx gives them China-Main-tall.jpg instead (matchMedia, orientation:
+   portrait): the same photo with the stage extended upward to its spotlight rigs (570x500, AI
+   outpainted). It spans the width at a laptop's sharpness and stands on the title, as the laptop
+   hero's performers do: its foot sits at the top of the title lockup, which is a fixed ~560px above
+   the hero's bottom on every upright screen (the portal plus the title block). Taller screens show
+   more of the photo's own dark sky above the rigs. The mask only reads alpha; the scrim keeps the
+   masthead legible and a short dark floor under the title and portal. */
 @media (orientation:portrait){
-  .mk-home .hero__img{inset:22% 0 auto;height:auto;aspect-ratio:570/250;object-position:50% 50%;
-    -webkit-mask-image:linear-gradient(to bottom,transparent,var(--stage) 14%,var(--stage) 80%,transparent);
-    mask-image:linear-gradient(to bottom,transparent,var(--stage) 14%,var(--stage) 80%,transparent)}
-  .mk-home .hero__scrim{background:linear-gradient(to top,var(--stage) 0%,rgb(var(--bg) / .85) 22%,rgb(var(--bg) / 0) 40%)}
+  .mk-home .hero__img{inset:auto 0 560px;height:auto;aspect-ratio:570/500;object-position:50% 50%;
+    -webkit-mask-image:linear-gradient(to bottom,transparent,var(--stage) 10%,var(--stage) 82%,transparent);
+    mask-image:linear-gradient(to bottom,transparent,var(--stage) 10%,var(--stage) 82%,transparent)}
+  .mk-home .hero__scrim{background:
+    linear-gradient(to bottom,rgb(var(--bg) / .55) 0,rgb(var(--bg) / 0) 9%),
+    linear-gradient(to top,var(--stage) 0%,rgb(var(--bg) / .8) 14%,rgb(var(--bg) / 0) 26%)}
 }
 .mk-home .hero__copy{align-self:end;padding:104px var(--pad) clamp(18px,3.4svh,40px)}
 .mk-home .lockup{position:relative;width:max-content;max-width:100%}
