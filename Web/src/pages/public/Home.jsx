@@ -14,6 +14,17 @@ import { useDesktopViewport } from './home/desktopViewport';
 const sectionsHtml = fillImages(sectionsRaw);
 
 /*
+ * Phones get the laptop layout scaled down to about a third (see home/desktopViewport.js), so the
+ * page's small print becomes hard to read. Media queries cannot tell them apart (the layout is
+ * 1280px wide everywhere), but `screen` still reports the device's own size: a short side under
+ * 600 CSS px is a phone; tablets start at 744 and laptops never qualify, whatever their window
+ * size. home.css raises only the small text under [data-device="phone"]; the layout is untouched.
+ * Read once at module load, so the first paint and the motion runtime already see the final sizes.
+ */
+const IS_PHONE = typeof window !== 'undefined' && window.screen
+  && Math.min(window.screen.width, window.screen.height) < 600;
+
+/*
  * Mallakhamb India: the landing page.
  *
  * The first screen (masthead, hero and role portal) is plain React: real <Link>s to every login and
@@ -85,7 +96,7 @@ const Home = () => {
   }, [navigate]);
 
   return (
-    <div className="mk-home" data-look="prime-time" data-appearance="dark" ref={pageRef}>
+    <div className="mk-home" data-look="prime-time" data-appearance="dark" data-device={IS_PHONE ? 'phone' : undefined} ref={pageRef}>
       <a className="skip" href="#main">Skip to content</a>
       <Grain />
 
