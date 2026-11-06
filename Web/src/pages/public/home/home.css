@@ -80,6 +80,17 @@
 .mk-home .hero__scrim{position:absolute;inset:0;z-index:-1;background:
   linear-gradient(to top,#000 0%,rgba(0,0,0,.9) 24%,rgba(0,0,0,.5) 50%,rgba(0,0,0,.12) 72%,rgba(0,0,0,.5) 100%),
   linear-gradient(to right,rgba(0,0,0,.72) 0%,rgba(0,0,0,.25) 45%,rgba(0,0,0,0) 70%)}
+/* Portrait screens (phones, tablets held upright) still lay the page out 1280px wide, so the hero is
+   about 1280x2200: covering that with the 570x250 photo would show a ninefold-blown-up slice of the
+   middle performer. There the whole photo is shown across the width instead, at a laptop's sharpness,
+   in the open stage above the title, its top and bottom edges faded into the black. The mask only
+   reads alpha; the scrim keeps just the dark floor under the title and the portal. */
+@media (orientation:portrait){
+  .mk-home .hero__img{inset:22% 0 auto;height:auto;aspect-ratio:570/250;object-position:50% 50%;
+    -webkit-mask-image:linear-gradient(to bottom,transparent,var(--stage) 14%,var(--stage) 80%,transparent);
+    mask-image:linear-gradient(to bottom,transparent,var(--stage) 14%,var(--stage) 80%,transparent)}
+  .mk-home .hero__scrim{background:linear-gradient(to top,var(--stage) 0%,rgb(var(--bg) / .85) 22%,rgb(var(--bg) / 0) 40%)}
+}
 .mk-home .hero__copy{align-self:end;padding:104px var(--pad) clamp(18px,3.4svh,40px)}
 .mk-home .lockup{position:relative;width:max-content;max-width:100%}
 .mk-home .hero__title{display:grid;justify-items:end;font:600 min(16.6vw,25.5svh)/.8 var(--display);text-transform:uppercase;letter-spacing:.004em;color:var(--chalk);white-space:nowrap}
@@ -776,14 +787,21 @@
    short side is under 600px (laptops and tablets never are). Only the small print and the body
    copy grow here: no widths, spacing, colours or headings change, so the page keeps its
    desktop composition and lines simply wrap a little sooner. --pz scales the small print, --pb
-   the body copy; every size is the laptop value it replaces, times one of them.
+   the body copy, --pt the few spots boxed in by a fixed width (the portal's buttons, which must
+   stay side by side, and the hero tagline, which must stay clear of the title above it); every
+   size is the laptop value it replaces, times one of them.
    ============================================================ */
-.mk-home[data-device="phone"]{--pz:1.3;--pb:1.12;
-  --type-tag-size:calc(12px * var(--pz));--type-button-size:calc(14.5px * var(--pz))}
+.mk-home[data-device="phone"]{--pz:1.45;--pb:1.2;--pt:1.3;
+  --type-tag-size:calc(12px * var(--pz));--type-button-size:calc(14.5px * var(--pt))}
 /* first screen */
 .mk-home[data-device="phone"] .brand{font-size:calc(13px * var(--pz))}
 .mk-home[data-device="phone"] .masthead__links a{font-size:calc(14.5px * var(--pz))}
-.mk-home[data-device="phone"] .hero__tag{font-size:calc(14.7px * var(--pz))}
+.mk-home[data-device="phone"] .hero__tag{font-size:calc(14.7px * var(--pt))}
+/* Held sideways the hero is only ~550px tall: a third line of tagline would lift मल्लखांब into
+   the title. Landscape scales the page by ~0.67, not ~0.3, so the laptop size reads fine there. */
+@media (orientation:landscape){.mk-home[data-device="phone"] .hero__tag{font-size:clamp(14.5px,1.15vw,17px)}}
+/* ...and the pinned stopwatch scene must fit that short frame whole: sideways, the boost is a step smaller. */
+@media (orientation:landscape){.mk-home[data-device="phone"]{--pz:1.3;--pb:1.12}}
 .mk-home[data-device="phone"] .role__desc,
 .mk-home[data-device="phone"] .portal__tab p{font-size:calc(13.5px * var(--pz))}
 /* 01 the name, 02 origins */
