@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { EmptyState, Heading, Panel, StatusTag, Tag } from '@/components/ui';
+import { EmptyState, Heading, Panel, SearchField, StatusTag, Tag } from '@/components/ui';
+import { matchesSearch } from '@/utils/ui/search';
 import { levelLabel } from '@/utils/competition/levels';
 import { isCompetitionLocked } from '@/utils/scoring/competitionLock';
 import { ageGroupMapping } from '@/hooks/useAgeGroups';
@@ -66,6 +68,10 @@ SeatLine.propTypes = { seat: PropTypes.object.isRequired };
  */
 const JudgePanelHistory = ({ assignments = [], title = 'Your panels', headingLevel = 2 }) => {
   const groups = groupSeatsByMeet(assignments);
+  const [query, setQuery] = useState('');
+  const shown = groups.filter(({ competition }) => matchesSearch(
+    query, competition?.name, competition?.place, competition?.year, competition?.level && levelLabel(competition.level),
+  ));
 
   return (
     <section aria-labelledby="judge-panels-title" className="grid gap-4">
@@ -75,8 +81,11 @@ const JudgePanelHistory = ({ assignments = [], title = 'Your panels', headingLev
           You haven&apos;t sat on a panel yet. Competitions you judge will be listed here, including finished ones.
         </EmptyState>
       ) : (
+        <>
+        <SearchField value={query} onChange={setQuery} placeholder="Search competitions by name, place or level…" label="Search competitions" />
+        {shown.length === 0 && <p className="type-body-s text-fg-muted m-0">No competitions match &quot;{query}&quot;.</p>}
         <ul className="grid gap-4 m-0 p-0 list-none" data-testid="judge-panel-history">
-          {groups.map(({ id, competition, seats }) => {
+          {shown.map(({ id, competition, seats }) => {
             const finished = competition ? isCompetitionLocked(competition) : false;
             const meta = [
               competition?.level ? `${levelLabel(competition.level)} level` : null,
@@ -105,6 +114,7 @@ const JudgePanelHistory = ({ assignments = [], title = 'Your panels', headingLev
             );
           })}
         </ul>
+        </>
       )}
     </section>
   );

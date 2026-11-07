@@ -13,8 +13,9 @@ import PerformancePanel from '@/components/performance/PerformancePanel';
 import QualifiedFinals from '@/components/finals/QualifiedFinals';
 import { levelLabel } from '@/utils/competition/levels';
 import {
-  Dialog, EmptyState, Heading, IconButton, Panel, RunningOrder, RunningOrderItem, StatusTag, Tag,
+  Dialog, EmptyState, Heading, IconButton, Panel, RunningOrder, RunningOrderItem, SearchField, StatusTag, Tag,
 } from '@/components/ui';
+import { matchesSearch } from '@/utils/ui/search';
 import { Fact, InfoRow, PageHeader } from '@/components/shell';
 
 // ─── Status ───────────────────────────────────────────────────────────────────
@@ -41,6 +42,7 @@ const PlayerDashboard = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [updatingTeam, setUpdatingTeam] = useState(false);
   const [showCompetitionModal, setShowCompetitionModal] = useState(false);
+  const [competitionQuery, setCompetitionQuery] = useState('');
   const urlCompetitionHandledRef = useRef(false);
 
 
@@ -233,9 +235,13 @@ const PlayerDashboard = () => {
     );
   }
 
+  const shownCompetitions = (assignedCompetitions || [])
+    .filter((c) => matchesSearch(competitionQuery, c.name, c.place, c.level && levelLabel(c.level), c.year));
+
   const teamPicker = (placeholder) => (
     <Dropdown
       options={teams}
+      searchable
       value={selectedTeam}
       onChange={handleTeamSelect}
       placeholder={placeholder}
@@ -351,9 +357,19 @@ const PlayerDashboard = () => {
         <p className="type-body-s text-fg-muted mt-0 mb-4">
           You&apos;re registered for multiple competitions. Please select one to continue.
         </p>
+        <SearchField
+          className="mb-4"
+          value={competitionQuery}
+          onChange={setCompetitionQuery}
+          placeholder="Search by name, place, level or year…"
+          label="Search competitions"
+        />
         <div className="max-h-96 overflow-y-auto">
+          {shownCompetitions.length === 0 && (
+            <p className="type-body-s text-fg-muted text-center py-8 m-0">No competitions match &quot;{competitionQuery}&quot;.</p>
+          )}
           <RunningOrder label="Competitions">
-            {(assignedCompetitions || []).map((competition, i) => (
+            {shownCompetitions.map((competition, i) => (
               <RunningOrderItem
                 key={competition._id}
                 index={i + 1}

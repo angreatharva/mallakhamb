@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Select } from '@/components/ui';
+import { SearchSelect } from '@/components/ui';
 import { APPARATUS, apparatusLabel, shortDate, viz } from '@/components/charts/chartTheme';
 
 /**
@@ -9,24 +9,28 @@ import { APPARATUS, apparatusLabel, shortDate, viz } from '@/components/charts/c
  */
 const StatsFilters = ({ meets, meet, onMeet, apparatus = null, selected = new Set(), onToggleApparatus = null, teams = null, team = 'all', onTeam = null, allLabel = 'All competitions' }) => (
   <div className="flex flex-wrap items-end gap-x-6 gap-y-3" role="group" aria-label="Filters">
-    <label className="grid gap-1 min-w-[min(100%,260px)]">
-      <span className="type-tag text-fg-secondary">Competition</span>
-      <Select value={meet} onChange={(e) => onMeet(e.target.value)}>
-        <option value="all">{allLabel}</option>
-        {meets.map((m) => (
-          <option key={m.id} value={m.id}>{m.name}{m.date ? ` · ${shortDate(m.date)}` : ''}</option>
-        ))}
-      </Select>
-    </label>
+    <SearchSelect
+      label="Competition"
+      className="grid gap-1 min-w-[min(100%,260px)]"
+      value={meet}
+      onChange={onMeet}
+      options={[
+        { value: 'all', label: allLabel },
+        ...meets.map((m) => ({ value: String(m.id), label: `${m.name}${m.date ? ` · ${shortDate(m.date)}` : ''}` })),
+      ]}
+    />
 
     {teams && teams.length > 1 && (
-      <label className="grid gap-1 min-w-[min(100%,200px)]">
-        <span className="type-tag text-fg-secondary">Team</span>
-        <Select value={team} onChange={(e) => onTeam(e.target.value)}>
-          <option value="all">All my teams</option>
-          {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </Select>
-      </label>
+      <SearchSelect
+        label="Team"
+        className="grid gap-1 min-w-[min(100%,200px)]"
+        value={team}
+        onChange={onTeam}
+        options={[
+          { value: 'all', label: 'All my teams' },
+          ...teams.map((t) => ({ value: String(t.id), label: t.name })),
+        ]}
+      />
     )}
 
     {apparatus && apparatus.length > 1 && onToggleApparatus && (

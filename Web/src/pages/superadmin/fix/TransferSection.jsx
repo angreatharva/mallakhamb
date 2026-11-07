@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { ArrowRight, Search } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
 import { COMPETITION_LEVELS, levelLabel } from '@/utils/competition/levels';
-import { Button, Field, Input, Notice, Panel, Select, Spinner } from '@/components/ui';
+import { Button, Field, Input, Notice, Panel, Select, Spinner, SearchSelect } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
 
 const ID = 'sa-transfer';
@@ -124,12 +124,13 @@ const TransferSection = () => {
                 {COMPETITION_LEVELS.map((l) => <option key={l} value={l}>{levelLabel(l)}</option>)}
               </Select>
             </Field>
-            <Field id={`${ID}-to`} label="Move to team">
-              <Select value={toTeamId} onChange={(e) => setToTeamId(e.target.value)}>
-                <option value="" disabled>Choose a team</option>
-                {teams.map((t) => <option key={t._id} value={t._id}>{t.name} — {t.coach?.name || 'no coach'}</option>)}
-              </Select>
-            </Field>
+            <SearchSelect
+              label="Move to team"
+              value={toTeamId}
+              onChange={setToTeamId}
+              placeholder="Choose a team"
+              options={teams.map((t) => ({ value: String(t._id), label: `${t.name} — ${t.coach?.name || 'no coach'}` }))}
+            />
           </div>
 
           {loadingPreview && <Spinner label="Checking the move" />}

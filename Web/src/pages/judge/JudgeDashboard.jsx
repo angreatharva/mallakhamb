@@ -22,7 +22,8 @@ import CompetitionLockBanner from '@/components/competition/CompetitionLockBanne
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { J, JudgeAmbience } from './judgeShared';
 import { AppHeader } from '@/components/shell';
-import { Tag } from '@/components/ui';
+import { SearchField, Tag } from '@/components/ui';
+import { matchesSearch } from '@/utils/ui/search';
 import JudgeHome from './JudgeHome';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
@@ -121,6 +122,7 @@ const JudgeDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [competitionQuery, setCompetitionQuery] = useState('');
   // Lookup maps from the category's running order. Empty until it loads, at
   // which point every team without a stored position falls back to name order —
   // which is what this list used to be, so nothing regresses when no lots have
@@ -1089,8 +1091,22 @@ const JudgeDashboard = () => {
                 {availableCompetitions.length > 1 && (
                   <div>
                     <p className="type-tag text-accent-fg mb-3 ml-1">Competition</p>
+                    <SearchField
+                      className="mb-3"
+                      value={competitionQuery}
+                      onChange={setCompetitionQuery}
+                      placeholder="Search competitions by name, place or level…"
+                      label="Search competitions"
+                    />
+                    {!availableCompetitions.some((c) => matchesSearch(competitionQuery, c.name, c.place, c.level && levelLabel(c.level))) && (
+                      <p className="text-sm text-fg-muted ml-1 mb-3">No competitions match &quot;{competitionQuery}&quot;.</p>
+                    )}
                     <div className="grid grid-cols-1 gap-3">
-                      {availableCompetitions.map(comp => (
+                      {availableCompetitions
+                        .filter((c) => matchesSearch(competitionQuery, c.name, c.place, c.level && levelLabel(c.level))
+                          // The chosen meet stays on screen whatever the search says.
+                          || String(selectedCompetitionId) === String(c._id))
+                        .map(comp => (
                         <SelectBtn
                           key={comp._id}
                           selected={String(selectedCompetitionId) === String(comp._id)}

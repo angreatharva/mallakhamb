@@ -427,6 +427,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <Dropdown
             label="Competition"
             options={competitionOptions}
+            searchable
             value={selectedCompetition}
             onChange={(option) => {
               setSelectedCompetition(option);
@@ -458,6 +459,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
           <Dropdown
             label="Team"
             options={teamOptions}
+            searchable
             value={selectedTeam}
             onChange={setSelectedTeam}
             placeholder={loadingTeams ? "Loading teams..." : "Select team"}

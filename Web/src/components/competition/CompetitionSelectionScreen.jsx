@@ -670,7 +670,7 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
           </header>
 
           {/* Search */}
-          {competitions.length > 3 && (
+          {competitions.length > 0 && (
             <div className="mb-6 shrink-0 relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none z-10" aria-hidden="true" />
               <Input

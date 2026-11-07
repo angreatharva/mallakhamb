@@ -529,6 +529,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
           </div>
           <div className="md:w-64">
             <Dropdown
+              searchable
               options={competitions.map(comp => ({
                 value: comp._id,
                 label: `${comp.name} (${comp.year}) — ${comp.place}`
@@ -598,6 +599,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
             <AdminFinals isSuperAdmin competitionId={selectedCompetition || null}
               meetPicker={(
                 <Dropdown
+                  searchable
                   label="Competition"
                   options={competitions.map((comp) => ({ value: comp._id, label: `${comp.name} (${comp.year}) — ${comp.place}` }))}
                   value={selectedCompetition ? (() => {

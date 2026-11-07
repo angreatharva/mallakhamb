@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { Search } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
 import { levelLabel } from '@/utils/competition/levels';
-import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag } from '@/components/ui';
+import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag, SearchSelect } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
 
 const ID = 'sa-scores';
@@ -174,12 +174,13 @@ const ScoresSection = () => {
   return (
     <div className="grid gap-4">
       <form className="grid gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,8rem)_1fr_auto] sm:items-end" onSubmit={load}>
-        <Field id={`${ID}-comp`} label="Competition">
-          <Select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)}>
-            <option value="" disabled>Choose a competition</option>
-            {competitions.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.year}) — {c.place}{c.level ? ` · ${levelLabel(c.level)}` : ''}</option>)}
-          </Select>
-        </Field>
+        <SearchSelect
+          label="Competition"
+          value={competitionId}
+          onChange={setCompetitionId}
+          placeholder="Choose a competition"
+          options={competitions.map((c) => ({ value: String(c._id), label: `${c.name} (${c.year}) — ${c.place}${c.level ? ` · ${levelLabel(c.level)}` : ''}` }))}
+        />
         <Field id={`${ID}-gender`} label="Gender">
           <Select value={gender} onChange={(e) => setGender(e.target.value)}>
             <option value="">Both</option>

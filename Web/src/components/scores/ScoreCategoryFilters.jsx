@@ -64,6 +64,7 @@ const ScoreCategoryFilters = ({
         <FilterLabel primary>Competition *</FilterLabel>
         <Dropdown
           options={competitionOptions}
+          searchable
           value={selectedCompetition}
           onChange={onCompetitionChange}
           placeholder={loadingCompetitions ? 'Loading competitions...' : 'Select competition...'}

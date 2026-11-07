@@ -9,6 +9,8 @@ import { useAgeGroups, withAllAges, typesForAgeGroup } from '../../hooks/useAgeG
 import Dropdown from '@/components/auth/Dropdown';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import SortableList from '@/components/ordering/SortableList';
+import { SearchField } from '@/components/ui';
+import { matchesSearch } from '@/utils/ui/search';
 import { logger } from '@/infrastructure/logger';
 import { FG, alpha } from '../../styles/tokens';
 import { DarkCard, EmptyState } from '@/components/admin/AdminKit';
@@ -71,6 +73,9 @@ const AdminLots = () => {
 
   const [roster, setRoster] = useState(null);
   const [teams, setTeams] = useState([]);
+  // The team search over the running order. While it holds text the list is a
+  // subset, so dragging pauses: a partial list must never be saved as the order.
+  const [teamQuery, setTeamQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedTeamId, setExpandedTeamId] = useState(null);
@@ -262,7 +267,7 @@ const AdminLots = () => {
               <label className="block type-tag mb-2 text-accent-fg">
                 Competition <span className="text-danger-fg">*</span>
               </label>
-              <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
+              <Dropdown searchable options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder="Select a competition first" />
             </div>
           )}
@@ -325,18 +330,30 @@ const AdminLots = () => {
               </p>
             </div>
 
+            <SearchField
+              value={teamQuery}
+              onChange={setTeamQuery}
+              placeholder="Search teams by name or coach…"
+              label="Search teams"
+            />
+            {teamQuery && (
+              <p className="text-xs text-fg-muted px-1 m-0">Clear the search to drag teams into a new order.</p>
+            )}
+
             <SortableList
-              items={teams}
+              items={teamQuery ? teams.filter((t) => matchesSearch(teamQuery, t.name, t.coachName)) : teams}
+              emptyMessage={`No teams match "${teamQuery}".`}
               getKey={(team) => String(team._id)}
               onReorder={setTeamsTracked}
               onCommit={() => persistTeamOrder(teamsRef.current)}
               accent={'rgb(var(--accent))'}
+              disabled={Boolean(teamQuery)}
               renderItem={(team, index) => {
                 const isExpanded = String(expandedTeamId) === String(team._id);
                 return (
                   <div>
                     <div className="flex items-center gap-3">
-                      <LotBadge lotNo={team.lotNo} position={index} />
+                      <LotBadge lotNo={team.lotNo} position={teamQuery ? teams.indexOf(team) : index} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-ink text-sm truncate">{team.name}</p>
                         <p className="text-xs text-fg-muted truncate">

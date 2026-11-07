@@ -22,7 +22,8 @@ import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 import { TEAM_SIZE_OPTIONS } from '@/utils/scoring/teamSize';
 import { COMPETITION_LEVELS, levelLabel } from '@/utils/competition/levels';
-import { DarkCard, FadeIn, EmptyState, LoadingState, DarkBtn } from '@/components/admin/AdminKit';
+import { DarkCard, FadeIn, EmptyState, LoadingState, DarkBtn, DarkSearch } from '@/components/admin/AdminKit';
+import { matchesSearch } from '@/utils/ui/search';
 
 /*
  * The three field wrappers below each drew a visible <label> that was never
@@ -376,6 +377,7 @@ const SuperAdminManagement = () => {
   const [showCompetitionModal, setShowCompetitionModal] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState(null);
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [competitionSearchQuery, setCompetitionSearchQuery] = useState('');
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
@@ -796,6 +798,10 @@ const SuperAdminManagement = () => {
     }
   };
 
+  const filteredCompetitions = (competitions || []).filter((c) => matchesSearch(
+    competitionSearchQuery, c.name, c.place, c.year, c.status, c.level, c.level && levelLabel(c.level),
+  ));
+
   const filteredAdmins = (admins || []).filter(a => a.role !== 'superadmin').filter(a => {
     if (!adminSearchQuery) return true;
     const q = adminSearchQuery.toLowerCase();
@@ -849,11 +855,18 @@ const SuperAdminManagement = () => {
                 <Plus className="w-4 h-4" /> Create
               </DarkBtn>
             </div>
+            {competitions.length > 0 && (
+              <div className="mb-4">
+                <DarkSearch value={competitionSearchQuery} onChange={setCompetitionSearchQuery} placeholder="Search competitions by name, place, level, year or status…" />
+              </div>
+            )}
             {loading ? <LoadingState /> : competitions.length === 0 ? (
               <EmptyState icon={Trophy} title="No competitions yet" desc="Create your first competition to get started." />
+            ) : filteredCompetitions.length === 0 ? (
+              <EmptyState icon={Trophy} title="No competitions match" desc={`Nothing matches "${competitionSearchQuery}".`} />
             ) : (
               <DarkTable label="Competitions" headers={['Name','Types','Level','Place','Per player','Fee window','Dates','Status','Admins','Actions']}>
-                {competitions.map((comp, i) => (
+                {filteredCompetitions.map((comp, i) => (
                   <DarkTr key={comp._id} delay={i * 0.03}>
                     <Td className="font-bold text-ink">{comp.name}</Td>
                     <Td>

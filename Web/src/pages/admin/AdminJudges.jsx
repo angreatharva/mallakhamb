@@ -746,7 +746,7 @@ const Judges = () => {
               <label className="block type-tag mb-2 text-accent-fg">
                 Competition <span className="text-danger-fg">*</span>
               </label>
-              <Dropdown options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
+              <Dropdown searchable options={competitionOptions} value={selectedCompetition} onChange={setSelectedCompetition}
                 placeholder={loadingCompetitions ? 'Loading…' : 'Select a competition first'} disabled={loadingCompetitions} />
               {!selectedCompetition && <p className="text-xs mt-2 text-accent-fg">Select a competition to enable filters.</p>}
             </div>

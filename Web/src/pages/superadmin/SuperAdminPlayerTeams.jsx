@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
 import { levelLabel, COMPETITION_LEVELS } from '@/utils/competition/levels';
 import {
-  Button, ConfirmDialog, EmptyState, Field, Heading, Input, Notice, Panel, Select, Spinner, StatusTag, Tabs, TabPanel, Tag, Textarea,
+  Button, ConfirmDialog, EmptyState, Field, Heading, Input, Notice, Panel, Select, Spinner, StatusTag, Tabs, TabPanel, Tag, Textarea, SearchSelect,
 } from '@/components/ui';
 
 const ID = 'player-teams';
@@ -93,14 +93,13 @@ const LevelRow = ({ player, row, teams, onChanged }) => {
       </div>
       {editing && (
         <div className="grid gap-3 p-3 rounded-lg border border-line">
-          <Field id={`${ID}-${row.level}-team`} label={`${row.label} team`} required>
-            <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-              <option value="" disabled>Choose a team</option>
-              {teams.filter((t) => String(t._id) !== String(row.team?._id)).map((t) => (
-                <option key={t._id} value={t._id}>{t.name}</option>
-              ))}
-            </Select>
-          </Field>
+          <SearchSelect
+            label={`${row.label} team *`}
+            value={teamId}
+            onChange={setTeamId}
+            placeholder="Choose a team"
+            options={teams.filter((t) => String(t._id) !== String(row.team?._id)).map((t) => ({ value: String(t._id), label: t.name }))}
+          />
           <Field id={`${ID}-${row.level}-reason`} label="Reason (kept in the history)" required>
             <Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
           </Field>

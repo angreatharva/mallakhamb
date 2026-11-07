@@ -8,7 +8,8 @@ import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
 import { AnimatePresence } from 'framer-motion';
 import Dropdown from '@/components/auth/Dropdown';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
-import { DarkCard, FadeIn } from '@/components/admin/AdminKit';
+import { DarkCard, FadeIn, DarkSearch } from '@/components/admin/AdminKit';
+import { matchesSearch } from '@/utils/ui/search';
 
 const statusStyle = (status) => {
   const map = {
@@ -66,6 +67,7 @@ const AdminTransactions = () => {
   const api = isSuperAdmin ? superAdminAPI : adminAPI;
 
   const [transactions, setTransactions] = useState([]);
+  const [txQuery, setTxQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [competitions, setCompetitions] = useState([]);
   const [selectedCompetition, setSelectedCompetition] = useState(null);
@@ -112,6 +114,10 @@ const AdminTransactions = () => {
   const formatDateTime = (value) => { try { return value ? new Date(value).toLocaleString() : '-'; } catch { return '-'; } };
 
   const typeLabel = (t) => ({ team_submission: 'Team Submission', player_add: 'Player Added' }[t] || 'Other');
+  const shownTransactions = transactions.filter((tx) => {
+    const row = deriveTransactionRow(tx);
+    return matchesSearch(txQuery, tx.team?.name, row.coachName, row.competitionLabel, row.razorpayOrderId, row.razorpayPaymentId);
+  });
   const sourceLabel = (s) => ({ coach: 'Coach', superadmin: 'Super Admin' }[s] || s);
 
   const openPlayersModal = (players) => {
@@ -145,6 +151,7 @@ const AdminTransactions = () => {
                   Competition <span className="text-danger-fg">*</span>
                 </label>
                 <Dropdown
+                  searchable
                   options={competitions.map(c => ({
                     value: c._id,
                     label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`
@@ -179,6 +186,12 @@ const AdminTransactions = () => {
             </div>
           ) : (
             <>
+            <div className="mb-4">
+              <DarkSearch value={txQuery} onChange={setTxQuery} placeholder="Search by team, coach, competition or Razorpay ID…" />
+            </div>
+            {shownTransactions.length === 0 && (
+              <p className="text-fg-muted text-sm text-center py-8">No transactions match &quot;{txQuery}&quot;.</p>
+            )}
             {/*
               * Cards below `md`, the table from `md` up.
               *
@@ -191,7 +204,7 @@ const AdminTransactions = () => {
               * is untouched, so the desktop view is exactly as it was.
               */}
             <div className="flex flex-col gap-3 mouse:hidden">
-              {transactions.map((tx) => {
+              {shownTransactions.map((tx) => {
                 const row = deriveTransactionRow(tx);
                 const { bg, color } = statusStyle(tx.paymentStatus);
                 return (
@@ -262,7 +275,7 @@ const AdminTransactions = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((tx, i) => {
+                  {shownTransactions.map((tx, i) => {
                     const { competitionLabel, coachName, razorpayOrderId, razorpayPaymentId, players, playerCount } =
                       deriveTransactionRow(tx);
                     const { bg, color } = statusStyle(tx.paymentStatus);

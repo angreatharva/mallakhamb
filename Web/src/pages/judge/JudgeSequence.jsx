@@ -9,6 +9,8 @@ import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat } from './useJudgePanelData';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import SortableList from '@/components/ordering/SortableList';
+import { SearchField } from '@/components/ui';
+import { matchesSearch } from '@/utils/ui/search';
 import { eventMatchesCategory } from '@/utils/ordering/performanceOrder';
 import { FG, alpha } from '@/styles/tokens';
 import { J, JudgeHeader } from './judgeShared';
@@ -61,6 +63,9 @@ const JudgeSequence = () => {
   const [judgeInfo, setJudgeInfo] = useState(null);
   const [roster, setRoster] = useState(null);
   const [teams, setTeams] = useState([]);
+  // The team search over the running order. While it holds text the list is a
+  // subset, so dragging pauses: a partial list must never be saved as the order.
+  const [teamQuery, setTeamQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedTeamId, setExpandedTeamId] = useState(null);
@@ -270,19 +275,30 @@ const JudgeSequence = () => {
           </div>
         ) : (
           <div className="space-y-4 pb-12">
+            <SearchField
+              value={teamQuery}
+              onChange={setTeamQuery}
+              placeholder="Search teams by name or coach…"
+              label="Search teams"
+            />
+            {teamQuery && (
+              <p className="text-xs text-fg-muted px-1 m-0">Clear the search to drag teams into a new order.</p>
+            )}
+
             <SortableList
-              items={teams}
+              items={teamQuery ? teams.filter((t) => matchesSearch(teamQuery, t.name, t.coachName)) : teams}
+              emptyMessage={`No teams match "${teamQuery}".`}
               getKey={(team) => String(team._id)}
               onReorder={setTeamsTracked}
               onCommit={() => persistTeamOrder(teamsRef.current)}
               accent={J.purple}
-              disabled={competitionLocked}
+              disabled={competitionLocked || Boolean(teamQuery)}
               renderItem={(team, index) => {
                 const isExpanded = String(expandedTeamId) === String(team._id);
                 return (
                   <div>
                     <div className="flex items-center gap-3">
-                      <OrderBadge lotNo={team.lotNo} position={index} accent={'rgb(var(--accent-fg))'} />
+                      <OrderBadge lotNo={team.lotNo} position={teamQuery ? teams.indexOf(team) : index} accent={'rgb(var(--accent-fg))'} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-ink text-sm truncate">{team.name}</p>
                         <p className="text-xs text-fg-muted truncate">

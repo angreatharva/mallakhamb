@@ -5,7 +5,7 @@ import { deskAPI } from '@/services/user/desk.api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
 import {
-  Button, ConfirmDialog, EmptyState, Field, Heading, Notice, Panel, Select, Spinner, StatusTag,
+  Button, ConfirmDialog, EmptyState, Heading, Notice, Panel, SearchSelect, Spinner, StatusTag,
 } from '@/components/ui';
 import DeskCoachStep from './DeskCoachStep';
 import DeskFormStep from './DeskFormStep';
@@ -132,14 +132,14 @@ const WalkInDesk = () => {
       ) : (
         <Panel className="grid gap-4 p-5">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-            <Field id="desk-meet" label="Competition">
-              <Select value={meetId} disabled={Boolean(draft)} onChange={(e) => { setMeetId(e.target.value); setDraft(null); }}>
-                <option value="" disabled>Choose a competition</option>
-                {meets.map((m) => (
-                  <option key={m._id} value={m._id}>{m.name}{m.isLate ? ' · late fee' : ''}</option>
-                ))}
-              </Select>
-            </Field>
+            <SearchSelect
+              label="Competition"
+              value={meetId}
+              disabled={Boolean(draft)}
+              onChange={(v) => { setMeetId(v); setDraft(null); }}
+              placeholder="Choose a competition"
+              options={meets.map((m) => ({ value: String(m._id), label: `${m.name}${m.isLate ? ' · late fee' : ''}` }))}
+            />
             <Button variant="line" icon={FileDown} loading={printing} onClick={printForm}>Print blank form</Button>
           </div>
           {meet && (

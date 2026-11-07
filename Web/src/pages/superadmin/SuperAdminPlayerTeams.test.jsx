@@ -42,7 +42,9 @@ describe('SuperAdminPlayerTeams', () => {
 
     const district = await screen.findByTestId('level-district');
     fireEvent.click(district.querySelector('button'));
-    fireEvent.change(screen.getByLabelText(/District team/), { target: { value: 't2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a team' }));
+    fireEvent.change(screen.getByLabelText('Search options'), { target: { value: 'right' } });
+    fireEvent.click(screen.getByRole('option', { name: 'Right Club' }));
     fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'Paper form misread' } });
     fireEvent.click(screen.getByText('Save correction'));
 

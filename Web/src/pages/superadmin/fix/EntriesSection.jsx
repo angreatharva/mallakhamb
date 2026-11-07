@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
 import { levelLabel } from '@/utils/competition/levels';
-import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag, Tag } from '@/components/ui';
+import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag, Tag, SearchSelect } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
 
 const ID = 'sa-entries';
@@ -274,12 +274,14 @@ const EntriesSection = () => {
   if (picked) return <EntryDetail competitionId={competitionId} teamId={picked} onBack={() => setPicked(null)} />;
   return (
     <div className="grid gap-4">
-      <Field id={`${ID}-comp`} label="Competition" className="max-w-lg">
-        <Select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)}>
-          <option value="" disabled>Choose a competition</option>
-          {competitions.map((c) => <option key={c._id} value={c._id}>{c.name} ({c.year}) — {c.place}{c.level ? ` · ${levelLabel(c.level)}` : ''}</option>)}
-        </Select>
-      </Field>
+      <SearchSelect
+        label="Competition"
+        className="max-w-lg"
+        value={competitionId}
+        onChange={setCompetitionId}
+        placeholder="Choose a competition"
+        options={competitions.map((c) => ({ value: String(c._id), label: `${c.name} (${c.year}) — ${c.place}${c.level ? ` · ${levelLabel(c.level)}` : ''}` }))}
+      />
       {!competitionId ? <EmptyState tag="Choose a competition">Its entered teams are listed here.</EmptyState>
         : teams === null ? <div className="py-8 flex justify-center"><Spinner label="Loading teams" /></div>
           : teams.length === 0 ? <EmptyState tag="No teams entered">No team has an entry here yet.</EmptyState> : (

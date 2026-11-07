@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, Home, Scale, Users, X } from 'lucide-react
 import { statsAPI } from '@/services/api';
 import { logger } from '@/infrastructure/logger';
 import {
-  Button, DataTable, EmptyState, ErrorState, Heading, IconButton, Notice, Panel, Select, Tag,
+  Button, DataTable, EmptyState, ErrorState, Heading, IconButton, Notice, Panel, SearchSelect, Tag,
 } from '@/components/ui';
 import { ChartCard, Heatmap, LeanRows, StatTile, fmt, signed, vizToken } from '@/components/charts';
 import { deviationWords, leanDetail, leanSentence, styleWord } from '@/pages/shared/stats/statsModel';
@@ -132,14 +132,17 @@ const AdminJudgeFairness = ({ competitionId = null, isSuperAdmin = false }) => {
           <Heading level={2} step="display-m" className="m-0">Judge fairness</Heading>
         </div>
         {isSuperAdmin && (meetOptions.length > 1 || meet !== 'all') && (
-          <label className="grid gap-1 min-w-[min(100%,260px)]">
-            <span className="type-tag text-fg-secondary">Competition</span>
-            <Select value={meet} onChange={(e) => setMeet(e.target.value)}>
-              <option value="all">All competitions</option>
-              {meetOptions.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              {meet !== 'all' && !meetOptions.some((m) => m.id === meet) && <option value={meet}>Selected competition</option>}
-            </Select>
-          </label>
+          <SearchSelect
+            label="Competition"
+            className="grid gap-1 min-w-[min(100%,260px)]"
+            value={meet}
+            onChange={setMeet}
+            options={[
+              { value: 'all', label: 'All competitions' },
+              ...meetOptions.map((m) => ({ value: String(m.id), label: m.name })),
+              ...(meet !== 'all' && !meetOptions.some((m) => m.id === meet) ? [{ value: meet, label: 'Selected competition' }] : []),
+            ]}
+          />
         )}
       </div>
       <p className="type-body text-fg-secondary m-0 max-w-[70ch]">

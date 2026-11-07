@@ -59,7 +59,7 @@ const Dropdown = ({
   };
 
   const filteredOptions = searchable
-    ? options.filter(o => o.label.toLowerCase().includes(searchTerm.toLowerCase()))
+    ? options.filter(o => String(o.label ?? '').toLowerCase().includes(searchTerm.toLowerCase().trim()))
     : options;
 
   return (

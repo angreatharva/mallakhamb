@@ -8,7 +8,8 @@
  * preview builds) for every primitive in every state.
  */
 export { default as Button, IconButton } from './Button';
-export { Field, Input, Textarea, Select, PasswordInput } from './Field';
+export { Field, Input, Textarea, Select, PasswordInput, SearchField } from './Field';
+export { default as SearchSelect } from './SearchSelect';
 export { Panel, Heading, Tag, StatusTag, Stat, SpecList, TextLink } from './Text';
 export { Notice } from './Notice';
 export { RunningOrder, RunningOrderItem } from './RunningOrder';

@@ -1,6 +1,6 @@
 import { Children, cloneElement, forwardRef, isValidElement, useId, useState } from 'react';
 import PropTypes from 'prop-types';
-import { ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff, Search, X } from 'lucide-react';
 import '@/styles/look-fonts';
 import { cx } from './cx';
 import { IconButton } from './Button';
@@ -89,3 +89,38 @@ export const PasswordInput = forwardRef(function PasswordInput({ className = '',
   );
 });
 PasswordInput.propTypes = { className: PropTypes.string };
+
+/**
+ * The search box that sits above every team and competition list: a search
+ * mark, the field, and a clear button once something is typed. Controlled —
+ * the caller filters with `matchesSearch` (utils/ui/search.js).
+ */
+export const SearchField = ({ value, onChange, placeholder = 'Search…', label = null, className = '', ...rest }) => (
+  <div className={cx('relative', className)}>
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-fg-muted z-10" aria-hidden="true" />
+    <input
+      type="text"
+      role="searchbox"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      aria-label={label || placeholder}
+      autoComplete="off"
+      className={cx('ui-input pl-10', value ? 'pr-11' : 'pr-4')}
+      {...rest}
+    />
+    {value && (
+      <button type="button" onClick={(e) => { e.stopPropagation(); onChange(''); }} className="ui-popover__clear" aria-label="Clear search">
+        <X className="w-3.5 h-3.5" aria-hidden="true" />
+      </button>
+    )}
+  </div>
+);
+SearchField.propTypes = {
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+  placeholder: PropTypes.string,
+  /** The accessible name when the placeholder is not enough. */
+  label: PropTypes.string,
+  className: PropTypes.string,
+};
