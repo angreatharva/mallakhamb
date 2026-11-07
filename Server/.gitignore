@@ -67,3 +67,9 @@ old_config/
 # the machine that drew it would let a second machine seat a 4-judge panel and
 # score it as a 5, which produces a believable number rather than an error.
 *.generated.json
+
+# The demo seed (scripts/seedDemo.js): the drawn plan and the cheat sheet of
+# demo logins. Reproduced from --seed in seconds; never committed.
+scripts/seed/demo/
+# Credentials for the demo targets (DEMO_MONGODB_URI etc.).
+.env.demo
