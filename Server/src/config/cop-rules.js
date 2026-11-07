@@ -384,12 +384,27 @@ function toCompetitionTypeSlug(competitionType) {
 }
 
 /**
- * Resolve difficulty point value using strict C→B→A cascade (v2 §3.2.1).
- * When element counts differ from requirements, excess C cascades to B,
- * excess B cascades to A. A is the floor of the hierarchy.
- * @param {Object} counts - { A: number, B: number, C: number } executed elements
- * @param {Object} required - { A: number, B: number, C: number } required mix
- * @returns {{ C: number, B: number, A: number, total: number, shortfall_flag: boolean }}
+ * Resolve the difficulty value from the A/B/C element counts (§3.2.1).
+ *
+ * ONE ELEMENT FILLS ONE SLOT, AND SCORES THAT SLOT'S VALUE (user rule
+ * 2026-11-08). Each class has a required number of slots (the mix for the
+ * competition type). Elements fill their own class first; an extra higher
+ * element may then fill ONE empty lower slot — C into B, else into A; B into
+ * A — and is worth what that slot is worth:
+ *
+ *   C in a B slot = 0.40,  C in an A slot = 0.20,  B in an A slot = 0.20.
+ *
+ * A C element is never split across slots (0.60 is not three A's) and never
+ * keeps its own 0.60 in a lower slot. This reverses the earlier "each element
+ * keeps its ORIGINAL class value" reading. Extras beyond the empty slots score
+ * nothing, so the total can never pass the required mix (3.80 for
+ * Competition I).
+ *
+ * Example, Competition I (A4 B6 C1): A2 B6 C3 → C slot 0.60, B slots 2.40,
+ * A slots: 2 A + 2 extra C = 4 × 0.20 = 0.80 → 3.80.
+ * * @param {Object} counts - { A, B, C } elements executed
+ * @param {Object} required - { A, B, C } required mix
+ * @returns {{ C: number, B: number, A: number, total: number, shortfallFlag: boolean, counts: Object, excess: Object }}
  */
 function resolveDifficultyValue(counts, required) {
   const cCount = counts.C || 0;
@@ -399,40 +414,43 @@ function resolveDifficultyValue(counts, required) {
   const bReq = required.B || 0;
   const aReq = required.A || 0;
 
-  // Step 1: Fill C slots with C elements
+  // Step 1: C slots take C elements.
   const cInC = Math.min(cCount, cReq);
   let cExcess = cCount - cInC;
 
-  // Step 2: Fill B slots — original B first, then excess C (keeps C value)
+  // Step 2: B slots take B elements, then one extra C per empty slot.
   const bInB = Math.min(bCount, bReq);
-  const bSlotsLeft = bReq - bInB;
-  const cInB = Math.min(cExcess, bSlotsLeft);
+  const cInB = Math.min(cExcess, bReq - bInB);
   cExcess -= cInB;
-  const bExcess = bCount - bInB;          // original B that didn't fit
+  const bExcess = bCount - bInB;
 
-  // Step 3: Fill A slots — original A first, then excess C, then excess B
+  // Step 3: A slots take A elements, then one extra C, then one extra B, per
+  // empty slot.
   const aInA = Math.min(aCount, aReq);
   let aSlotsLeft = aReq - aInA;
   const cInA = Math.min(cExcess, aSlotsLeft);
+  cExcess -= cInA;
   aSlotsLeft -= cInA;
   const bInA = Math.min(bExcess, aSlotsLeft);
 
-  // Points — each element scored at its ORIGINAL class value
-  const cPoints = (cInC + cInB + cInA) * ELEMENT_CLASS_VALUES.C;
-  const bPoints = (bInB + bInA) * ELEMENT_CLASS_VALUES.B;
-  const aPoints = aInA * ELEMENT_CLASS_VALUES.A;
-
+  const cSlotsFilled = cInC;
   const bSlotsFilled = bInB + cInB;
   const aSlotsFilled = aInA + cInA + bInA;
+
+  // Points — each filled slot at ITS OWN class value, whatever filled it.
+  const cPoints = cSlotsFilled * ELEMENT_CLASS_VALUES.C;
+  const bPoints = bSlotsFilled * ELEMENT_CLASS_VALUES.B;
+  const aPoints = aSlotsFilled * ELEMENT_CLASS_VALUES.A;
 
   return {
     C: Number(cPoints.toFixed(2)),
     B: Number(bPoints.toFixed(2)),
     A: Number(aPoints.toFixed(2)),
     total: Math.min(Number((cPoints + bPoints + aPoints).toFixed(2)), POINT_CEILINGS.difficulty),
-    shortfallFlag: (cInC < cReq) || (bSlotsFilled < bReq) || (aSlotsFilled < aReq),
-    counts: { C: cInC + cInB + cInA, B: bInB + bInA, A: aInA },
-    excess: { C: cExcess, cascadedToB: cInB, cascadedToA: cInA + bInA }
+    shortfallFlag: (cSlotsFilled < cReq) || (bSlotsFilled < bReq) || (aSlotsFilled < aReq),
+    // Filled SLOTS per class (what is scored), not elements per class.
+    counts: { C: cSlotsFilled, B: bSlotsFilled, A: aSlotsFilled },
+    excess: { C: cExcess, cascadedToB: cInB, cascadedToA: cInA + bInA },
   };
 }
 

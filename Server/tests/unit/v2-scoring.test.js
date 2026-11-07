@@ -222,21 +222,22 @@ describe('Time Deduction Table', () => {
 // 6. Difficulty Cascade (v2 §3.2.1 worked example)
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Difficulty Cascade (C→B→A)', () => {
-  test('Competition I: {A:0, B:5, C:2} → total 3.20 (C keeps 0.60 value when filling B slot)', () => {
+  test('Competition I: {A:0, B:5, C:2} → total 3.00 (a C in a B slot scores 0.40)', () => {
     // Required: A:4, B:6, C:1
     // Step 1 — C: required 1, executed 2. cInC=1, cExcess=1
-    // Step 2 — B: 5 orig B fill 5 of 6 slots, 1 excess C fills 1 more → bSlotsFilled=6
+    // Step 2 — B: 5 orig B fill 5 of 6 slots, 1 excess C fills 1 more → 6 B slots
     // Step 3 — A: 0 orig A → shortfall=TRUE
-    // Points: C=(1+1)*0.60=1.20, B=5*0.40=2.00, A=0 → total=3.20
+    // Points (each slot at its own value, user rule 2026-11-08):
+    //   C=1*0.60, B=6*0.40=2.40, A=0 → total=3.00
     const result = resolveDifficultyValue(
       { A: 0, B: 5, C: 2 },
       { A: 4, B: 6, C: 1 }
     );
 
-    expect(result.C).toBeCloseTo(1.20, 2);
-    expect(result.B).toBeCloseTo(2.00, 2);
+    expect(result.C).toBeCloseTo(0.60, 2);
+    expect(result.B).toBeCloseTo(2.40, 2);
     expect(result.A).toBeCloseTo(0.00, 2);
-    expect(result.total).toBeCloseTo(3.20, 2);
+    expect(result.total).toBeCloseTo(3.00, 2);
     expect(result.shortfallFlag).toBe(true);
   });
 
@@ -260,22 +261,43 @@ describe('Difficulty Cascade (C→B→A)', () => {
     expect(result.shortfallFlag).toBe(false);
   });
 
-  test('excess C cascades to B then A, keeping C value — capped at 3.80', () => {
+  test('excess C cascades to B then A, one slot each, at the slot value', () => {
     // Competition II/III required: A:1, B:6, C:2
     // Executed: A:0, B:4, C:5
     // cInC=2, cExcess=3. bInB=4, cInB=2 (fills 2 empty B slots), cExcess=1.
-    // aInA=0, cInA=1 (fills 1 of 1 A slot).
-    // C=(2+2+1)*0.60=3.00, B=4*0.40=1.60, A=0 → raw=4.60, capped to 3.80
+    // aInA=0, cInA=1 (fills the 1 A slot).
+    // C=2*0.60=1.20, B=6*0.40=2.40, A=1*0.20=0.20 → 3.80
     const result = resolveDifficultyValue(
       { A: 0, B: 4, C: 5 },
       { A: 1, B: 6, C: 2 }
     );
 
-    expect(result.C).toBeCloseTo(3.00, 2);
-    expect(result.B).toBeCloseTo(1.60, 2);
-    expect(result.A).toBeCloseTo(0.00, 2);
+    expect(result.C).toBeCloseTo(1.20, 2);
+    expect(result.B).toBeCloseTo(2.40, 2);
+    expect(result.A).toBeCloseTo(0.20, 2);
     expect(result.total).toBeCloseTo(3.80, 2);
     expect(result.shortfallFlag).toBe(false);
+  });
+
+  // User rule 2026-11-08: an extra C filling a missing A slot replaces ONE A
+  // and is worth 0.20 — never its own 0.60, never split across three A's.
+  test('Competition I {A:2, B:6, C:2}: the extra C fills ONE missing A at 0.20 → 3.60', () => {
+    // C slot 0.60; B slots 6 × 0.40 = 2.40; A slots: 2 A + 1 extra C = 3 × 0.20 = 0.60
+    // (the old rule kept the C at 0.60 → 4.00, capped to 3.80). One A slot stays empty.
+    const result = resolveDifficultyValue({ A: 2, B: 6, C: 2 }, { A: 4, B: 6, C: 1 });
+    expect(result.C).toBeCloseTo(0.60, 2);
+    expect(result.B).toBeCloseTo(2.40, 2);
+    expect(result.A).toBeCloseTo(0.60, 2);
+    expect(result.total).toBeCloseTo(3.60, 2);
+    expect(result.shortfallFlag).toBe(true);
+    expect(result.counts).toEqual({ C: 1, B: 6, A: 3 });
+  });
+
+  test('an extra B filling a missing A slot is worth 0.20', () => {
+    // Competition I: A3 B7 C1 → A slots 3 A + 1 extra B = 4 × 0.20.
+    const result = resolveDifficultyValue({ A: 3, B: 7, C: 1 }, { A: 4, B: 6, C: 1 });
+    expect(result.A).toBeCloseTo(0.80, 2);
+    expect(result.total).toBeCloseTo(3.80, 2);
   });
 });
 

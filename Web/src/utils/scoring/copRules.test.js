@@ -132,17 +132,16 @@ describe('copRules — gender apparatus rule', () => {
 });
 
 describe('copRules — difficulty cascade (v2 §3.2.1)', () => {
-  it('cascades excess C to B, keeping C value (0.60)', () => {
+  it('an extra C fills one B slot and scores 0.40 there', () => {
     // Competition I required: A4 B6 C1; executed: A0 B5 C2
     const required = getDifficultyRequirement('competition_1');
     const result = resolveDifficultyValue({ A: 0, B: 5, C: 2 }, required);
-    // C: 2 elements × 0.60 = 1.20 (1 in C slot, 1 filling B slot)
-    // B: 5 elements × 0.40 = 2.00
-    // A: 0
-    expect(result.C).toBe(1.20);
-    expect(result.B).toBe(2.00);
+    // C slot: 0.60. B slots: 5 B + the extra C = 6 × 0.40 = 2.40 (user rule
+    // 2026-11-08: a filled slot scores ITS value, not the element's). A: 0.
+    expect(result.C).toBe(0.60);
+    expect(result.B).toBe(2.40);
     expect(result.A).toBe(0.00);
-    expect(result.total).toBe(3.20);
+    expect(result.total).toBe(3.00);
     expect(result.shortfallFlag).toBe(true);
   });
 
@@ -153,14 +152,25 @@ describe('copRules — difficulty cascade (v2 §3.2.1)', () => {
     expect(result.shortfallFlag).toBe(false);
   });
 
-  it('caps via cascade — A4 B4 C2 for Comp I gives 3.60, not 3.40', () => {
+  it('A4 B4 C2 for Comp I gives 3.40 — the extra C is one more B', () => {
     const required = getDifficultyRequirement('competition_1');
     const result = resolveDifficultyValue({ A: 4, B: 4, C: 2 }, required);
-    // C: 2 × 0.60 = 1.20 (1 in C, 1 fills B), B: 4 × 0.40 = 1.60, A: 4 × 0.20 = 0.80
-    expect(result.C).toBe(1.20);
-    expect(result.B).toBe(1.60);
+    // C slot 0.60; B slots: 4 B + 1 extra C = 5 × 0.40 = 2.00; A: 4 × 0.20 = 0.80
+    expect(result.C).toBe(0.60);
+    expect(result.B).toBe(2.00);
     expect(result.A).toBe(0.80);
+    expect(result.total).toBe(3.40);
+  });
+
+  it('an extra C fills ONE missing A at 0.20, never 0.60 or three A\'s', () => {
+    // Competition I: A2 B6 C2 — C is extra, A is missing two.
+    const required = getDifficultyRequirement('competition_1');
+    const result = resolveDifficultyValue({ A: 2, B: 6, C: 2 }, required);
+    // C slot 0.60; B slots 2.40; A slots: 2 A + 1 C = 3 × 0.20 = 0.60.
+    expect(result.A).toBe(0.60);
     expect(result.total).toBe(3.60);
+    expect(result.counts).toEqual({ C: 1, B: 6, A: 3 });
+    expect(result.shortfallFlag).toBe(true);
   });
 
   it('discards excess when all slots are full — A4 B6 C2 stays 3.80', () => {
