@@ -259,8 +259,9 @@ const JudgeSlip = () => {
 
   // Active mobile tab state
   const [activeMobileTab, setActiveMobileTab] = useState('difficulty'); // 'difficulty' | 'combination' | 'exec_orig'
-  const touchStartX = useRef(null);
-  const touchEndX = useRef(null);
+  // Tabs switch ONLY on a tap of the tab itself (user rule 2026-11-07). The
+  // left/right swipe was removed: a judge dragging across the difficulty grid
+  // or the checklist flipped the tab mid-marking. Don't bring it back.
 
   // A new tab opens at its top. Without this the page kept the previous tab's
   // scroll offset, so switching from the bottom of Combination landed the
@@ -272,35 +273,6 @@ const JudgeSlip = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [activeMobileTab]);
 
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.targetTouches[0].clientX;
-  };
-
-  const handleTouchMove = (e) => {
-    touchEndX.current = e.targetTouches[0].clientX;
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current) return;
-    const diffX = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 40;
-    const tabs = ['difficulty', 'combination', 'exec_orig'];
-    const currentIndex = tabs.indexOf(activeMobileTab);
-
-    if (diffX > minSwipeDistance) {
-      // Swiped left -> next tab
-      if (currentIndex < tabs.length - 1) {
-        setActiveMobileTab(tabs[currentIndex + 1]);
-      }
-    } else if (diffX < -minSwipeDistance) {
-      // Swiped right -> prev tab
-      if (currentIndex > 0) {
-        setActiveMobileTab(tabs[currentIndex - 1]);
-      }
-    }
-    touchStartX.current = null;
-    touchEndX.current = null;
-  };
 
   const goBackAfterScoring = () => {
     // Clear cached scores when leaving the scoring page
@@ -764,13 +736,8 @@ const JudgeSlip = () => {
                     </div>
                   </div>
 
-                  {/* 3. Tab Content Area with Touch / Swipe Support */}
-                  <div
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    className="min-h-[300px] pt-1"
-                  >
+                  {/* 3. Tab Content Area — no swipe; tabs change on tap only */}
+                  <div className="min-h-[300px] pt-1" data-testid="mobile-tab-content">
                                 {activeMobileTab === 'difficulty' && (
                         <div key="tab-difficulty" className="rounded-2xl border p-4 space-y-4 bg-surface-sunken border-line">
                           <div className="flex items-center justify-between">

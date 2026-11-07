@@ -216,4 +216,24 @@ describe('JudgeScoring — phone layout pins the score under the header', () => 
       expect(saveScore.mock.calls[0][0].breakdown.execution).toBe(0.1);
     });
   });
+
+  // User rule 2026-11-07: the phone tabs change only on a tap of the tab. A
+  // left/right swipe across the slip must not flip Difficulty → Combination.
+  it('ignores a swipe on the phone tabs; a tap still switches', () => {
+    renderSlip('Pole Mallakhamb');
+    const tab = (name) => screen.getByRole('button', { name });
+    // The phone tab content area (the old swipe target).
+    const area = screen.getByTestId('mobile-tab-content');
+    expect(tab('Difficulty')).toHaveClass('judge-tab--active');
+
+    // A swipe left — the old "next tab" gesture.
+    fireEvent.touchStart(area, { targetTouches: [{ clientX: 300 }] });
+    fireEvent.touchMove(area, { targetTouches: [{ clientX: 50 }] });
+    fireEvent.touchEnd(area);
+    expect(tab('Difficulty')).toHaveClass('judge-tab--active');
+    expect(tab('Combination')).not.toHaveClass('judge-tab--active');
+
+    fireEvent.click(tab('Combination'));
+    expect(tab('Combination')).toHaveClass('judge-tab--active');
+  });
 });
