@@ -514,6 +514,12 @@ function createAdminController(container) {
       // player must not block them. (isScorer / isAdmin are resolved above.)
       scoreData.allowFinalizedEdit = isScorer || isAdmin;
 
+      // A Scorer's save may set the TIME only; the judges' marks and the
+      // deductions stay as stored (user rule 2026-11-08, see
+      // ScoringService.saveScores). Always assigned, so a body cannot carry
+      // its own value; an admin keeps full control of the sheet.
+      scoreData.scorerTimeOnly = isScorer && !isAdmin;
+
       // Handle admin routes, superadmin routes, and judge/scorer routes
       const competitionId = competitionIdFromRequest(req, { fallback: scoreData.competition });
       

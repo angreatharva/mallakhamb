@@ -1313,9 +1313,39 @@ class ScoringService {
         throw new ValidationError(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
+      /*
+       * A SCORER RECORDS THE TIME, NOTHING ELSE (user rule 2026-11-08).
+       *
+       * The Scorer's sheet shows the judges' marks read-only, but it posts the
+       * whole sheet back — marks, averages and deductions included. Taken as
+       * sent, a Scorer (or anything replaying their request) could overwrite a
+       * judge's mark, and a sheet that missed a socket update would quietly
+       * put a judge's old mark back. So for a Scorer only the athlete's
+       * identity and time are read from the payload; the time deduction is
+       * worked out here from the time, and in the merge below every
+       * judge-owned field comes from the stored row, with the average and the
+       * final score recomputed from the stored marks. `scorerTimeOnly` is set
+       * by the controller from the authenticated seat, never from the body.
+       */
+      const scorerTimeOnly = scoreData.scorerTimeOnly === true;
+      const timeDeductionOf = (time) => (
+        time ? Number(this.calculationService.calculateTimeDeduction(time)) || 0 : 0
+      );
+      const incomingRows = scorerTimeOnly
+        ? scoreData.playerScores.map((ps) => ({
+          playerId: ps.playerId,
+          playerName: ps.playerName,
+          apparatus: ps.apparatus,
+          time: ps.time || '',
+          judgeScores: {},
+          deduction: timeDeductionOf(ps.time),
+          otherDeduction: 0,
+        }))
+        : scoreData.playerScores;
+
       // Process each player score through calculation service
       const processedPlayerScores = [];
-      for (const playerScore of scoreData.playerScores) {
+      for (const playerScore of incomingRows) {
         // COP §3.3 — reject a slip whose breakdown exceeds the section ceilings
         // (Difficulty ≤3.80, Combination ≤1.60, Execution ≤4.40, Bonus 0/0.20,
         // total ≤10.00). No-op when no breakdown is supplied.
@@ -1417,6 +1447,23 @@ class ScoringService {
               throw new ValidationError(
                 `Scores for ${existingPlayerScore.playerName || 'this player'} are finalized and locked`
               );
+            }
+
+            // A Scorer's save: the stored row with only the time (and the
+            // deduction the time implies) replaced, re-averaged from the
+            // stored marks. See `scorerTimeOnly` above.
+            if (scorerTimeOnly) {
+              const time = incomingPlayerScore.time || existingPlayerScore.time || '';
+              const row = this.calculationService.calculateCompletePlayerScore(
+                { ...existingPlayerScore, time, deduction: timeDeductionOf(time) },
+                { panelSize: existingPlayerScore.panelSize || scoreData.panelSize }
+              );
+              row.finalScore = Number(Math.max(
+                0,
+                (Number(row.averageMarks) || 0) - (Number(row.deduction) || 0) - (Number(row.otherDeduction) || 0)
+              ).toFixed(3));
+              mergedPlayerScores[existingPlayerIndex] = row;
+              continue;
             }
 
             // Merge judgeSlips by role (upsert per judge)

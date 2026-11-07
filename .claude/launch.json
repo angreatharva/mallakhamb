@@ -199,6 +199,17 @@
       "cwd": "Server",
       "port": 5003,
       "//": "The demo seed's API against the staging database through the SSH tunnel (127.0.0.1:27018). Reads Server/.env.demo (git-ignored): DEMO_MONGODB_URI, DEMO_SUPERADMIN_EMAIL, DEMO_SUPERADMIN_PASSWORD, DEMO_DISCOUNT_CODE. No mail is sent from it."
+    },
+    {
+      "name": "api-scorer-check",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.MONGODB_URI='mongodb://127.0.0.1:27017/mallakhamb_scorer_check';process.env.EMAIL_PROVIDER='none';process.env.NODE_ENV='development';process.env.MIGRATE_ON_START='false';process.env.RATE_LIMIT_ENABLED='false';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "Throwaway LOCAL copy of mallakhamb_local_e2e for the Scorer view-only / time-lock / tolerance and Senior Judge mismatch-detail browser check."
     }
   ]
 }

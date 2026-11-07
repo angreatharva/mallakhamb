@@ -652,6 +652,7 @@ const JudgePanelReview = () => {
         isSeniorJudge={isSeniorJudge}
         myJudgeType={myJudgeType}
         judgeNameMap={judgeNameMap}
+        combinationChecklist={combinationChecklist}
       />
       <ToleranceModal
         isOpen={showToleranceModal && shouldSeeTolerance}

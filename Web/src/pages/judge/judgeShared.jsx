@@ -22,7 +22,7 @@ import {
 } from '@/utils/scoring/scoringPropTypes';
 import { PANEL_TYPES } from '@/utils/scoring/judgePanel';
 import toast from 'react-hot-toast';
-import { roundExecution, isExecutionEntered, EXECUTION_TOO_LOW_MESSAGE } from '@/utils/scoring/copRules';
+import { roundExecution, isExecutionEntered, EXECUTION_TOO_LOW_MESSAGE, describeSlipDifferences } from '@/utils/scoring/copRules';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 export const SCORING_PATH = '/judge/scoring';
@@ -261,8 +261,58 @@ DecimalInput.propTypes = {
 // gets its own dialog below, so a judge is never shown one alert that mixes
 // "you recorded a different element mix" with "your execution mark is an
 // outlier".
-export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, judgeNameMap }) => {
+export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, judgeNameMap, combinationChecklist }) => {
   if (!isOpen) return null;
+  const short = (jt) => (jt === 'Senior Judge' ? 'SR' : jt.replace('Judge ', 'J'));
+  const who = (jt) => `${short(jt)}${judgeNameMap?.[jt] ? ` · ${judgeNameMap[jt]}` : ''}`;
+  const signed = (v) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${Math.abs(v).toFixed(2)}`;
+
+  /*
+   * WHAT exactly differs (user rule 2026-11-07), one block per off judge:
+   * the totals and their gap, then each A/B/C count, or each checklist
+   * requirement, the judge marked differently from the Senior Judge. The
+   * Senior Judge sees every off judge; a panel judge sees only their own.
+   */
+  const DiffDetails = ({ jt, section }) => {
+    const senior = panelScores?.['Senior Judge'];
+    const entry = panelScores?.[jt];
+    if (!senior || !entry) return null;
+    const d = describeSlipDifferences(senior, entry, combinationChecklist)[section];
+    const gap = d.judge - d.senior;
+    const youOrThem = isSeniorJudge ? short(jt) : 'You';
+    return (
+      <div className="mt-2 rounded-lg border p-3 text-xs space-y-1.5"
+        style={{ background: 'rgb(var(--danger-fg) / 0.05)', borderColor: 'rgb(var(--danger-fg) / 0.22)' }}
+        data-testid={`mismatch-detail-${section}-${jt}`}>
+        <p className="font-bold text-ink">
+          {isSeniorJudge ? who(jt) : 'Your slip'}: {d.judge.toFixed(2)} vs SR {d.senior.toFixed(2)}
+          <span style={{ color: FG.danger }}> ({signed(gap)})</span>
+        </p>
+        {section === 'difficulty' && d.classes.map((c) => (
+          <p key={c.cls} className="text-fg-secondary">
+            {c.cls}-class elements: {youOrThem} {c.judge}, SR {c.senior}
+          </p>
+        ))}
+        {section === 'combination' && d.notMet.map((item) => (
+          <p key={`n${item.id}`} className="text-fg-secondary">
+            <span className="font-bold" style={{ color: FG.danger }}>Not met</span> by {youOrThem} (SR: met) — {item.rule}
+            {item.penalty ? ` (−${Number(item.penalty).toFixed(2)})` : ''}
+          </p>
+        ))}
+        {section === 'combination' && d.met.map((item) => (
+          <p key={`m${item.id}`} className="text-fg-secondary">
+            <span className="font-bold" style={{ color: FG.danger }}>Met</span> by {youOrThem} (SR: not met) — {item.rule}
+          </p>
+        ))}
+        {!d.detailed && (
+          <p className="text-fg-muted">Element counts and checklist ticks are not available for this slip — totals only.</p>
+        )}
+      </div>
+    );
+  };
+  const offJudges = (section) => PANEL_TYPES.filter(
+    (jt) => jt !== 'Senior Judge' && panelScores?.[jt] && panelMismatch.judgeMismatchDetails?.[jt]?.[section]
+  );
   const red = 'rgb(var(--danger-fg))';
   // Always list judges as Senior Judge, Judge 1, Judge 2, … regardless of the
   // order their slips happened to arrive in.
@@ -275,8 +325,6 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
   // A judge who only sits outside tolerance recorded the same routine and does
   // not belong in this dialog — they are named in the tolerance one.
   const isOff = (jt, section) => !!panelMismatch.judgeMismatchDetails?.[jt]?.[section];
-  const seniorEntry = panelScores?.['Senior Judge'];
-  const myEntry = myJudgeType ? panelScores?.[myJudgeType] : null;
   const myMismatch = myJudgeType ? panelMismatch.judgeMismatchDetails?.[myJudgeType] : null;
   // Senior Judge sees every category any judge disagrees on (their job is to
   // resolve the whole panel); a non-Senior judge only sees the category(ies)
@@ -284,19 +332,6 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
   const showCombinationMismatch = isSeniorJudge ? panelMismatch.combinationMismatch : !!myMismatch?.combination;
   const showDifficultyMismatch = isSeniorJudge ? panelMismatch.difficultyMismatch : !!myMismatch?.difficulty;
 
-  // Non-senior judges are shown the Senior Judge's reference value against
-  // their own — never the rest of the panel, which stays Senior-only.
-  const ReferenceRow = ({ label, seniorValue, myValue }) => (
-    <div className="mt-2 flex flex-wrap gap-2">
-      <span className="text-xs px-2 py-1 rounded-lg bg-success-tint text-success-fg">
-        SR (reference) {label}: {seniorValue}
-      </span>
-      <span className="text-xs px-2 py-1 rounded-lg"
-        style={{ background: 'rgb(var(--danger-fg) / 0.15)', color: FG.danger }}>
-        You {label}: {myValue}
-      </span>
-    </div>
-  );
   return (
     <AnimatePresence>
       {isOpen && (
@@ -344,13 +379,9 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                       ? 'Checklist selections differ between judges. The exact items checked must match across all judges.'
                       : `Totals: ${panelMismatch.combinationValues.map(v => Number(v).toFixed(2)).join(', ')}`}
                   </p>
-                  {!isSeniorJudge && seniorEntry && myEntry && (
-                    <ReferenceRow
-                      label="total"
-                      seniorValue={Number(seniorEntry.breakdown?.combination?.total ?? 0).toFixed(2)}
-                      myValue={Number(myEntry.breakdown?.combination?.total ?? 0).toFixed(2)}
-                    />
-                  )}
+                  {isSeniorJudge
+                    ? offJudges('combination').map((jt) => <DiffDetails key={jt} jt={jt} section="combination" />)
+                    : myJudgeType && <DiffDetails jt={myJudgeType} section="combination" />}
                   {isSeniorJudge && panelMismatch.combinationValues.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {orderedEntries.map(([jt, data]) => (
@@ -379,13 +410,9 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
                   <p className="text-xs text-fg-muted">
                     {`Totals: ${panelMismatch.difficultyValues.map(v => Number(v).toFixed(2)).join(', ')}`}
                   </p>
-                  {!isSeniorJudge && seniorEntry && myEntry && (
-                    <ReferenceRow
-                      label="total"
-                      seniorValue={Number(seniorEntry.breakdown?.difficulty?.total ?? 0).toFixed(2)}
-                      myValue={Number(myEntry.breakdown?.difficulty?.total ?? 0).toFixed(2)}
-                    />
-                  )}
+                  {isSeniorJudge
+                    ? offJudges('difficulty').map((jt) => <DiffDetails key={jt} jt={jt} section="difficulty" />)
+                    : myJudgeType && <DiffDetails jt={myJudgeType} section="difficulty" />}
                   {isSeniorJudge && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {orderedEntries.map(([jt, data]) => (
@@ -446,8 +473,13 @@ export const MismatchModal = ({ isOpen, onClose, panelMismatch, panelScores, isS
 // The Senior Judge may also close the panel as it stands: COP §3.4 scores a
 // breach on the base score, (execution average + Senior) ÷ 2. Once they tap
 // Understood, Panel Review's button reads "Final Submit with Base Score".
-export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, judgeNameMap }) => {
+//
+// `viewer="scorer"` is the Scorer sheet's copy of the same alert (user rule
+// 2026-11-07): it names the athlete, shows the panel totals (the Scorer sees
+// every mark on the sheet anyway) and says the Senior Judge resolves it.
+export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, isSeniorJudge, myJudgeType, judgeNameMap, viewer, athleteName }) => {
   if (!isOpen) return null;
+  const isScorer = viewer === 'scorer';
   const amber = 'rgb(var(--warning-fg))';
   const info = panelMismatch?.toleranceInfo || {};
   const num = (v) => Number(v ?? 0).toFixed(2);
@@ -480,7 +512,9 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                 <div>
                   <p className="text-ink font-black text-base">Tolerance Limit Exceeded</p>
                   <p className="text-xs mt-0.5 text-fg-muted">
-                    {isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your execution mark may need correction'}
+                    {isScorer
+                      ? `Tolerance hit${athleteName ? ` — ${athleteName}` : ''}`
+                      : isSeniorJudge ? 'Panel review required (Senior Judge)' : 'Your execution mark may need correction'}
                   </p>
                 </div>
               </div>
@@ -521,7 +555,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
 
               {/* Who is off the chief's mark. Senior-only, like every other
                   cross-panel figure on this screen. */}
-              {isSeniorJudge && orderedEntries.length > 0 && (
+              {(isSeniorJudge || isScorer) && orderedEntries.length > 0 && (
                 <div
                   className="rounded-xl border p-4"
                   style={{ background: 'rgb(var(--ink) / 0.02)', borderColor: 'rgb(var(--ink) / 0.08)' }}
@@ -546,7 +580,7 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                 </div>
               )}
 
-              {!isSeniorJudge && myJudgeType !== 'Senior Judge' && myScore != null && (
+              {!isSeniorJudge && !isScorer && myJudgeType !== 'Senior Judge' && myScore != null && (
                 <div
                   className="rounded-xl border p-4"
                   style={{ background: 'rgb(var(--warning-fg) / 0.07)', borderColor: 'rgb(var(--warning-fg) / 0.25)' }}
@@ -562,7 +596,9 @@ export const ToleranceModal = ({ isOpen, onClose, panelMismatch, panelScores, is
                 className="rounded-xl border p-3 text-xs"
                 style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: 'rgb(var(--ink) / 0.08)', color: 'var(--fg-muted)' }}
               >
-                {isSeniorJudge
+                {isScorer
+                  ? `The Senior Judge resolves this: a judge corrects their slip, or the panel is final-submitted on the base score ${num(info.baseScore)} — (execution average ${num(info.executionAvg)} + Senior ${num(info.seniorScore)}) ÷ 2. The sheet's Average already uses the base score.`
+                  : isSeniorJudge
                   ? `Adjust a judge's slip with the pencil on their card, or have them resubmit. Or close the panel as it stands: COP §3.4 scores it on the base score ${num(info.baseScore)} — (execution average ${num(info.executionAvg)} + Senior ${num(info.seniorScore)}) ÷ 2. After Understood, the button below reads "Final Submit with Base Score".`
                   : `The Senior Judge will resolve this or final submit on the base score. Re-check your marks, or contact the Senior Judge.`}
               </div>

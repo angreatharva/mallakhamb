@@ -1,3 +1,4 @@
+import { Lock, LockOpen } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
@@ -207,7 +208,45 @@ const ScoreInputCell = ({ value = '', onChange, isLocked, placeholder, type = 'n
   />
 );
 
+// ─── TimeLockButton ───────────────────────────────────────────────────────────
+//
+// The Scorer's per-athlete lock on a recorded time. Locked, the Time field is
+// read-only and nothing — a Time Keeper's late stopwatch, a reload after
+// another device saved — can replace the time the Scorer accepted.
+const TimeLockButton = ({ locked, name, onToggle, disabled }) => {
+  const Icon = locked ? Lock : LockOpen;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      aria-pressed={locked}
+      aria-label={locked ? `Unlock time for ${name}` : `Lock time for ${name}`}
+      title={locked ? 'Time locked — tap to unlock' : 'Lock this time'}
+      className="tap-safe disabled:opacity-40 disabled:cursor-not-allowed"
+      style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+        minHeight: 32, padding: '4px 8px', borderRadius: 'var(--radius-control)',
+        fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+        border: `1px solid ${locked ? 'rgb(var(--success-fg) / 0.45)' : borderMid}`,
+        background: locked ? 'rgb(var(--success-fg) / 0.12)' : 'transparent',
+        color: locked ? FG.success : textSecondary,
+      }}
+    >
+      <Icon aria-hidden="true" style={{ width: 13, height: 13 }} />
+      {locked ? 'Locked' : 'Lock'}
+    </button>
+  );
+};
+
 // ─── ResponsiveScoringTable ───────────────────────────────────────────────────
+//
+// `editableFields` (optional): the only fields this viewer may type in. The
+// Scorer passes ['time'] — judges' marks reach the sheet from their own slips
+// and are view-only there. Left out (the admin sheet), every field is open.
+//
+// `lockedRows` / `onToggleRowLock` (optional): per-athlete time lock, see
+// TimeLockButton. Without `onToggleRowLock` no lock button is drawn.
 export const ResponsiveScoringTable = ({
   players = [],
   scores = {},
@@ -215,9 +254,26 @@ export const ResponsiveScoringTable = ({
   panelSize: seatedPanelSize,
   onScoreChange,
   isLocked = false,
+  editableFields,
+  lockedRows,
+  onToggleRowLock,
   className = '',
   ...props
 }) => {
+  /** Is this cell read-only for this viewer? */
+  const cellLocked = (playerId, field) => (
+    isLocked
+    || (Array.isArray(editableFields) && !editableFields.includes(field))
+    || (field === 'time' && !!lockedRows?.[playerId])
+  );
+  const lockButton = (player) => (onToggleRowLock ? (
+    <TimeLockButton
+      locked={!!lockedRows?.[player.id]}
+      name={player.name}
+      onToggle={() => onToggleRowLock(player.id)}
+      disabled={isLocked}
+    />
+  ) : null);
   /*
    * Cards below 1024, the table from 1024 up. Measured (e2e/responsive-score-
    * sheet.spec.js): at 768 the eleven divided columns leave every field too
@@ -274,14 +330,17 @@ export const ResponsiveScoringTable = ({
                 <label style={{ fontSize: 12, color: textSecondary }}>
                   Time <span className="text-danger-fg">*</span>
                 </label>
-                <ScoreInputCell
-                  value={scores[player.id]?.time}
-                  onChange={val => onScoreChange(player.id, 'time', val)}
-                  label={`${player.name}, Time`}
-                  isLocked={isLocked}
-                  placeholder="00:00"
-                  type="text"
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ScoreInputCell
+                    value={scores[player.id]?.time}
+                    onChange={val => onScoreChange(player.id, 'time', val)}
+                    label={`${player.name}, Time`}
+                    isLocked={cellLocked(player.id, 'time')}
+                    placeholder="00:00"
+                    type="text"
+                  />
+                  {lockButton(player)}
+                </div>
               </div>
 
               {/* Judge scores */}
@@ -302,7 +361,7 @@ export const ResponsiveScoringTable = ({
                       onChange={val => onScoreChange(player.id, field, val)}
                       label={`${player.name}, ${judge.judgeType}`}
                       // The copy is typed once, in the Sr. Judge's own cell.
-                      isLocked={isLocked || !!judge.isChiefCopy}
+                      isLocked={cellLocked(player.id, field) || !!judge.isChiefCopy}
                       placeholder="0.0"
                       type="number"
                     />
@@ -336,7 +395,7 @@ export const ResponsiveScoringTable = ({
                     value={scores[player.id]?.deduction}
                     onChange={val => onScoreChange(player.id, 'deduction', val)}
                     label={`${player.name}, Time deduction`}
-                    isLocked={isLocked}
+                    isLocked={cellLocked(player.id, 'deduction')}
                     placeholder="0.0"
                     type="number"
                   />
@@ -347,7 +406,7 @@ export const ResponsiveScoringTable = ({
                     value={scores[player.id]?.otherDeduction}
                     onChange={val => onScoreChange(player.id, 'otherDeduction', val)}
                     label={`${player.name}, Other deduction`}
-                    isLocked={isLocked}
+                    isLocked={cellLocked(player.id, 'otherDeduction')}
                     placeholder="0.0"
                     type="number"
                   />
@@ -430,15 +489,19 @@ export const ResponsiveScoringTable = ({
                   {player.teamName && <p style={{ fontSize: 11, color: textSecondary }}>{player.teamName}</p>}
                 </td>
                 <td style={{ padding: '12px 8px' }}>
-                  <ScoreInputCell
-                    value={scores[player.id]?.time}
-                    onChange={val => onScoreChange(player.id, 'time', val)}
-                    label={`${player.name}, Time`}
-                    isLocked={isLocked}
-                    placeholder="00:00"
-                    type="text"
-                    fluid
-                  />
+                  {/* Field over button: the column is one equal share wide. */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                    <ScoreInputCell
+                      value={scores[player.id]?.time}
+                      onChange={val => onScoreChange(player.id, 'time', val)}
+                      label={`${player.name}, Time`}
+                      isLocked={cellLocked(player.id, 'time')}
+                      placeholder="00:00"
+                      type="text"
+                      fluid
+                    />
+                    {lockButton(player)}
+                  </div>
                 </td>
                 {judges.map(judge => {
                   const field = fieldOf(judge);
@@ -449,7 +512,7 @@ export const ResponsiveScoringTable = ({
                         onChange={val => onScoreChange(player.id, field, val)}
                         label={`${player.name}, ${judge.judgeType}`}
                         // The copy is typed once, in the Sr. Judge's own cell.
-                        isLocked={isLocked || !!judge.isChiefCopy}
+                        isLocked={cellLocked(player.id, field) || !!judge.isChiefCopy}
                         placeholder="0.0"
                         type="number"
                         fluid
@@ -485,7 +548,7 @@ export const ResponsiveScoringTable = ({
                     value={scores[player.id]?.deduction}
                     onChange={val => onScoreChange(player.id, 'deduction', val)}
                     label={`${player.name}, Time deduction`}
-                    isLocked={isLocked}
+                    isLocked={cellLocked(player.id, 'deduction')}
                     placeholder="0.0"
                     type="number"
                     fluid
@@ -496,7 +559,7 @@ export const ResponsiveScoringTable = ({
                     value={scores[player.id]?.otherDeduction}
                     onChange={val => onScoreChange(player.id, 'otherDeduction', val)}
                     label={`${player.name}, Other deduction`}
-                    isLocked={isLocked}
+                    isLocked={cellLocked(player.id, 'otherDeduction')}
                     placeholder="0.0"
                     type="number"
                     fluid

@@ -8,16 +8,16 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import apiConfig from '@/config/api.config';
 import { StatusTag } from '@/components/ui';
-import { JudgeHeader } from './judgeShared';
+import { JudgeHeader, ToleranceModal } from './judgeShared';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Clock, Save, Lock, Eye, AlertCircle, ListOrdered } from 'lucide-react';
+import { Clock, Save, Lock, Eye, AlertCircle, AlertTriangle, ListOrdered } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createAdminAPI } from '@/services/user/admin.api';
 
 const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
-import { calculateAverageMarks, getTimeDeductionForTime } from '@/utils/scoring/copRules';
+import { analyzePanelMismatches, calculateAverageMarks, getTimeDeductionForTime } from '@/utils/scoring/copRules';
 import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparatus';
 import { mirrorChiefSeat, panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { buildScorerRows } from './scorerRows';
@@ -29,6 +29,41 @@ import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { ageMatches } from '@/hooks/useAgeGroups';
+
+/*
+ * The Scorer types ONE thing: the time. Judges' marks arrive from their own
+ * slips (socket + saved sheet) and are view-only here; the time deduction is
+ * derived from the time. User rule 2026-11-07.
+ */
+const SCORER_EDITABLE_FIELDS = Object.freeze(['time']);
+
+/** Seat type -> the sheet field holding that judge's total. */
+const SEAT_FIELD = Object.freeze({
+  'Senior Judge': 'seniorJudge',
+  'Judge 1': 'judge1',
+  'Judge 2': 'judge2',
+  'Judge 3': 'judge3',
+  'Judge 4': 'judge4',
+});
+
+/** "1:05" or "65" -> seconds. */
+const timeToSeconds = (raw) => {
+  const timeStr = String(raw ?? '').trim();
+  if (timeStr.includes(':')) {
+    const [m, sec] = timeStr.split(':');
+    return (parseInt(m) || 0) * 60 + (parseInt(sec) || 0);
+  }
+  return parseInt(timeStr) || 0;
+};
+
+/** The time deduction cell for a time, as the sheet stores it ('' = none). */
+const deductionForTime = (raw) => {
+  const seconds = timeToSeconds(raw);
+  if (seconds <= 0) return '';
+  // Short of 60 s or over 90 s — the same table both ways.
+  const deduction = getTimeDeductionForTime(seconds);
+  return deduction > 0 ? deduction.toFixed(2) : '';
+};
 
 const ScorerScoring = () => {
   const location = useLocation();
@@ -65,6 +100,44 @@ const ScorerScoring = () => {
    */
   const { selectedTeam, selectedCompetitionType, gender, ageGroup, apparatus: seatApparatus } =
     activeSessionData || {};
+
+  /*
+   * PER-ATHLETE TIME LOCKS (user rule 2026-11-07).
+   *
+   * Once an athlete has performed, the Scorer locks the time they accepted.
+   * A locked time is read-only on the sheet, a late Time Keeper stopwatch for
+   * that athlete is ignored, and a reload of the saved sheet (another device
+   * saving fires one over the socket) cannot replace it. Kept in localStorage
+   * per team + category + apparatus so a refresh keeps the locks; the values
+   * are the locked times themselves, so a reload can put them back.
+   */
+  const timeLockKey = selectedTeam?._id
+    ? ['scorer_time_locks', selectedTeam._id, gender?.value || gender, ageGroup?.value || ageGroup,
+      selectedCompetitionType?.value, seatApparatus || 'all'].join('::')
+    : null;
+  const [timeLocks, setTimeLocks] = useState(() => {
+    if (!timeLockKey) return {};
+    try { return JSON.parse(localStorage.getItem(timeLockKey) || '{}') || {}; } catch { return {}; }
+  });
+  // Read by loadExistingScores, a stable callback that would otherwise see
+  // the locks as they were on the first render.
+  const timeLocksRef = useRef(timeLocks);
+  timeLocksRef.current = timeLocks;
+  useEffect(() => {
+    if (!timeLockKey) return;
+    try { localStorage.setItem(timeLockKey, JSON.stringify(timeLocks)); } catch { /* storage full or blocked */ }
+  }, [timeLocks, timeLockKey]);
+
+  /** Put every locked time (and its deduction) back over a freshly loaded sheet. */
+  const withLockedTimes = (sheet) => {
+    const locks = timeLocksRef.current || {};
+    const next = { ...sheet };
+    Object.entries(locks).forEach(([rowId, time]) => {
+      if (!next[rowId]) return;
+      next[rowId] = { ...next[rowId], time, deduction: deductionForTime(time) };
+    });
+    return next;
+  };
 
   const [socket, setSocket] = useState(null);
   const [judges, setJudges] = useState([]);
@@ -161,7 +234,7 @@ const ScorerScoring = () => {
       const allResponse = await scorerAPI.getTeamScores(scoresParams);
 
       if (!allResponse?.data) {
-        setScores(initialScores);
+        setScores(withLockedTimes(initialScores));
         return;
       }
 
@@ -176,7 +249,7 @@ const ScorerScoring = () => {
 
       if (!teamData || !teamData.scores || teamData.scores.length === 0) {
         toast('Starting fresh session', { icon: 'ℹ️' });
-        setScores(initialScores);
+        setScores(withLockedTimes(initialScores));
         return;
       }
 
@@ -239,12 +312,12 @@ const ScorerScoring = () => {
         }
       });
 
-      setScores(existingScores);
+      setScores(withLockedTimes(existingScores));
       toast.success(scoreMetadata?.isLocked ? 'Found locked scoring session' : 'Found existing scoring session');
     } catch (error) {
       logger.error('Error loading existing scores:', error);
       toast.error('API call failed - starting fresh session');
-      setScores(initialScores);
+      setScores(withLockedTimes(initialScores));
       setIsLocked(false);
       setExistingScoreId(null);
       setCalculatedScores([]);
@@ -317,7 +390,7 @@ const ScorerScoring = () => {
           time: '', seniorJudge: '', judge1: '', judge2: '', judge3: '', judge4: '', deduction: '', otherDeduction: ''
         };
       });
-      setScores(initialScores);
+      setScores(withLockedTimes(initialScores));
       await loadExistingScores(selectedTeam._id, selectedGender.value, selectedAgeGroup.value, initialScores, teamPlayers);
     } catch (error) {
       logger.error('Error fetching scoring data:', error);
@@ -475,6 +548,46 @@ const ScorerScoring = () => {
   const seatedPanelSize = judges.length || undefined;
 
   /*
+   * TOLERANCE HITS (user rule 2026-11-07).
+   *
+   * The Senior Judge gets a popup when a 4- or 5-judge panel's execution
+   * average and the Senior's mark are further apart than COP §3.4 allows; the
+   * Scorer got nothing. Each athlete whose seated panel has all marked and
+   * breaches is a hit, worked out by the same analyzePanelMismatches the
+   * Senior Judge's screen uses. Keyed by the marks, so a corrected-but-still-
+   * breaching panel pops up again after a dismissal.
+   */
+  const toleranceHits = useMemo(() => {
+    if (!seatedPanelSize || seatedPanelSize < 4) return [];
+    return players.flatMap((p) => {
+      const row = scores[p.id] || {};
+      const panel = {};
+      judges.forEach((j) => {
+        const field = SEAT_FIELD[j.judgeType];
+        const value = parseFloat(row[field]);
+        if (field && Number.isFinite(value)) panel[j.judgeType] = { judgeType: j.judgeType, score: value };
+      });
+      const analysis = analyzePanelMismatches(panel, seatedPanelSize);
+      if (!analysis.hasToleranceBreach) return [];
+      const key = `${p.id}|${judges.map((j) => row[SEAT_FIELD[j.judgeType]]).join(',')}`;
+      return [{ rowId: p.id, name: p.name, key, analysis, panel }];
+    });
+  }, [players, scores, judges, seatedPanelSize]);
+  const [dismissedTolerance, setDismissedTolerance] = useState(() => new Set());
+  const [reopenToleranceKey, setReopenToleranceKey] = useState(null);
+  const shownToleranceHit = toleranceHits.find((h) => h.key === reopenToleranceKey)
+    || (readOnly ? null : toleranceHits.find((h) => !dismissedTolerance.has(h.key)))
+    || null;
+  const closeTolerance = () => {
+    if (shownToleranceHit) setDismissedTolerance((prev) => new Set(prev).add(shownToleranceHit.key));
+    setReopenToleranceKey(null);
+  };
+  const judgeNameMap = useMemo(
+    () => Object.fromEntries(judges.filter((j) => j.name).map((j) => [j.judgeType, j.name])),
+    [judges],
+  );
+
+  /*
    * Panel averaging comes from copRules, the same module the judges' own pages
    * and the score table use. This file used to carry a private copy that took
    * the MEDIAN of three execution marks where copRules took the mean, so a
@@ -498,32 +611,41 @@ const ScorerScoring = () => {
       toast.error('Cannot edit scores - this entry is locked');
       return;
     }
+    // Only the time is the Scorer's to change; the table already draws every
+    // other cell read-only, this is the backstop.
+    if (!SCORER_EDITABLE_FIELDS.includes(field)) return;
+    if (timeLocksRef.current?.[playerId] !== undefined) {
+      toast.error('This time is locked. Unlock it to change it.');
+      return;
+    }
 
     setScores(prev => {
-      const updatedPlayer = { ...prev[playerId], [field]: value };
-
-      if (field === 'time') {
-        const timeStr = value.trim();
-        let seconds = 0;
-        if (timeStr.includes(':')) {
-          const [m, s] = timeStr.split(':');
-          seconds = (parseInt(m) || 0) * 60 + (parseInt(s) || 0);
-        } else {
-          seconds = parseInt(timeStr) || 0;
-        }
-
-        if (seconds > 0) {
-          // Short of 60 s or over 90 s — the same table both ways.
-          const deduction = getTimeDeductionForTime(seconds);
-          updatedPlayer.deduction = deduction > 0 ? deduction.toFixed(2) : '';
-        } else if (timeStr === '') {
-          updatedPlayer.deduction = '';
-        }
-      }
-
+      const updatedPlayer = { ...prev[playerId], time: value };
+      const timeStr = String(value).trim();
+      if (timeToSeconds(timeStr) > 0) updatedPlayer.deduction = deductionForTime(timeStr);
+      else if (timeStr === '') updatedPlayer.deduction = '';
       return { ...prev, [playerId]: updatedPlayer };
     });
     setLastUpdated(new Date());
+  };
+
+  /** Lock or unlock one athlete's time. Locking needs a time to lock. */
+  const toggleTimeLock = (rowId) => {
+    if (readOnly) return;
+    const row = players.find(p => p.id === rowId);
+    const name = row?.name || 'this athlete';
+    if (timeLocks[rowId] !== undefined) {
+      setTimeLocks(({ [rowId]: _gone, ...rest }) => rest);
+      toast.success(`Time unlocked for ${name}`);
+      return;
+    }
+    const time = String(scores[rowId]?.time ?? '').trim();
+    if (!time) {
+      toast.error(`Enter a time for ${name} before locking it`);
+      return;
+    }
+    setTimeLocks(prev => ({ ...prev, [rowId]: time }));
+    toast.success(`Time ${time} locked for ${name}`);
   };
 
   /** Put a Time Keeper's time into its athlete's row, as if it were typed. */
@@ -532,6 +654,12 @@ const ScorerScoring = () => {
     const rowId = `${data.playerId}::${apparatusKey(data.apparatus)}`;
     const row = players.find(p => p.id === rowId);
     if (!row) return;
+    // The Scorer locked this athlete's time: a later stopwatch reading for
+    // them is not allowed to replace it.
+    if (timeLocksRef.current?.[rowId] !== undefined) {
+      toast(`${row.name}: time is locked, new time ${data.seconds} s ignored`, { id: `time-locked-${rowId}` });
+      return;
+    }
     handleScoreChange(rowId, 'time', String(data.seconds));
     if (data.timeKeeperName) setTimeKeeper(prev => (prev?.trim() ? prev : data.timeKeeperName));
     toast.success(`Time ${data.seconds} s recorded for ${row.name}`);
@@ -810,6 +938,25 @@ const ScorerScoring = () => {
           </div>
         </div> */}
 
+        {/* Every athlete with a tolerance hit, each re-opening its popup. */}
+        {toleranceHits.length > 0 && (
+          <div className="space-y-2" role="status" aria-live="polite">
+            {toleranceHits.map((hit) => (
+              <button key={hit.key} type="button" onClick={() => setReopenToleranceKey(hit.key)}
+                className="w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border text-left"
+                style={{ background: 'rgb(var(--warning-fg) / 0.09)', borderColor: 'rgb(var(--warning-fg) / 0.35)' }}>
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning-fg" aria-hidden="true" />
+                  <span className="text-sm font-bold text-ink truncate">
+                    Tolerance exceeded — {hit.name}: gap {Number(hit.analysis.toleranceInfo?.difference ?? 0).toFixed(2)} over ±{Number(hit.analysis.toleranceInfo?.tolerance ?? 0).toFixed(2)}
+                  </span>
+                </span>
+                <span className="text-xs font-bold flex-shrink-0 text-warning-fg">View</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {players.length > 0 ? (
           <div className="rounded-2xl border p-6 bg-surface border-line">
             <p className="type-tag mb-4 flex items-center gap-2 text-accent-fg">
@@ -818,7 +965,8 @@ const ScorerScoring = () => {
             {/* `judges` sizes the panel, `sheetSeats` draws it — they differ by
                 the Chief's copy on a 4-judge panel, and the size is what picks
                 the averaging rule. */}
-            <ResponsiveScoringTable players={tableRows} scores={scores} judges={sheetSeats} panelSize={seatedPanelSize} onScoreChange={handleScoreChange} isLocked={readOnly} />
+            <ResponsiveScoringTable players={tableRows} scores={scores} judges={sheetSeats} panelSize={seatedPanelSize} onScoreChange={handleScoreChange} isLocked={readOnly}
+              editableFields={SCORER_EDITABLE_FIELDS} lockedRows={timeLocks} onToggleRowLock={toggleTimeLock} />
           </div>
         ) : (
           <div className="rounded-2xl border p-8 text-center bg-surface border-line">
@@ -864,6 +1012,17 @@ const ScorerScoring = () => {
           </div>
         </div>
       </div>
+
+      <ToleranceModal
+        isOpen={!!shownToleranceHit}
+        onClose={closeTolerance}
+        panelMismatch={shownToleranceHit?.analysis || {}}
+        panelScores={shownToleranceHit?.panel || {}}
+        isSeniorJudge={false}
+        judgeNameMap={judgeNameMap}
+        viewer="scorer"
+        athleteName={shownToleranceHit?.name}
+      />
 
       <ConfirmDialog
         isOpen={showConfirmDialog}

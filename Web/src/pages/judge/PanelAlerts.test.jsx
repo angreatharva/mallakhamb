@@ -9,7 +9,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MismatchModal, ToleranceModal } from './judgeShared';
-import { analyzePanelMismatches } from '@/utils/scoring/copRules';
+import { analyzePanelMismatches, describeSlipDifferences, getCombinationChecklist } from '@/utils/scoring/copRules';
 import { FG } from '@/styles/tokens';
 
 const slip = (judgeType, difficulty, combination, score) => ({
@@ -95,3 +95,82 @@ describe('ToleranceModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+// User rule 2026-11-07: the mismatch dialog says WHAT differs, not only who.
+describe('MismatchModal — exact differences', () => {
+  const POLE = getCombinationChecklist('Pole Mallakhamb');
+  const allMet = Object.fromEntries(POLE.map((item) => [item.id, true]));
+  const detailed = (judgeType, { a, b, c, total, checked, comboTotal }) => ({
+    judgeType,
+    score: 8,
+    breakdown: {
+      difficulty: { aClass: a, bClass: b, cClass: c, total },
+      combination: { checked, total: comboTotal },
+      execution: 2.6,
+      bonus: 0,
+    },
+  });
+  const panelScores = {
+    'Senior Judge': detailed('Senior Judge', { a: 4, b: 6, c: 1, total: 3.8, checked: allMet, comboTotal: 1.6 }),
+    // J1: one C element short, recorded as an extra A.
+    'Judge 1': detailed('Judge 1', { a: 5, b: 6, c: 0, total: 3.4, checked: allMet, comboTotal: 1.6 }),
+    // J2: did not credit requirement 4 (Vertical Hold, 0.20).
+    'Judge 2': detailed('Judge 2', { a: 4, b: 6, c: 1, total: 3.8, checked: { ...allMet, 4: false }, comboTotal: 1.4 }),
+  };
+  const panelMismatch = analyzePanelMismatches(panelScores, 3);
+  const open = (props) => render(
+    <MismatchModal isOpen onClose={() => {}} panelMismatch={panelMismatch} panelScores={panelScores}
+      judgeNameMap={{ 'Judge 1': 'Yatin Nachre' }} combinationChecklist={POLE} {...props} />
+  );
+
+  it('describeSlipDifferences names the differing classes and checklist items', () => {
+    const j1 = describeSlipDifferences(panelScores['Senior Judge'], panelScores['Judge 1'], POLE);
+    expect(j1.difficulty.classes).toEqual([
+      { cls: 'A', senior: 4, judge: 5 },
+      { cls: 'C', senior: 1, judge: 0 },
+    ]);
+    const j2 = describeSlipDifferences(panelScores['Senior Judge'], panelScores['Judge 2'], POLE);
+    expect(j2.combination.notMet.map((i) => i.id)).toEqual([4]);
+    expect(j2.combination.met).toEqual([]);
+  });
+
+  it('shows the Senior Judge each off judge\'s exact difference', () => {
+    open({ isSeniorJudge: true, myJudgeType: 'Senior Judge' });
+
+    const diff = screen.getByTestId('mismatch-detail-difficulty-Judge 1');
+    expect(diff).toHaveTextContent('J1 · Yatin Nachre: 3.40 vs SR 3.80 (−0.40)');
+    expect(diff).toHaveTextContent('A-class elements: J1 5, SR 4');
+    expect(diff).toHaveTextContent('C-class elements: J1 0, SR 1');
+
+    const combo = screen.getByTestId('mismatch-detail-combination-Judge 2');
+    expect(combo).toHaveTextContent('J2: 1.40 vs SR 1.60 (−0.20)');
+    expect(combo).toHaveTextContent(`Not met by J2 (SR: met) — ${POLE[3].rule} (−0.20)`);
+
+    // A judge who agrees with the Senior on a section gets no block there.
+    expect(screen.queryByTestId('mismatch-detail-combination-Judge 1')).toBeNull();
+    expect(screen.queryByTestId('mismatch-detail-difficulty-Judge 2')).toBeNull();
+  });
+
+  it('shows a panel judge only their own difference', () => {
+    open({ isSeniorJudge: false, myJudgeType: 'Judge 2' });
+    const combo = screen.getByTestId('mismatch-detail-combination-Judge 2');
+    expect(combo).toHaveTextContent('Your slip: 1.40 vs SR 1.60');
+    expect(combo).toHaveTextContent('Not met by You (SR: met)');
+    expect(screen.queryByTestId('mismatch-detail-difficulty-Judge 1')).toBeNull();
+  });
+
+  it('falls back to totals for a slip without element detail', () => {
+    const totalsOnly = {
+      ...panelScores,
+      'Judge 1': slip('Judge 1', 3.4, 1.6, 8),
+    };
+    render(
+      <MismatchModal isOpen onClose={() => {}} panelMismatch={analyzePanelMismatches(totalsOnly, 3)}
+        panelScores={totalsOnly} isSeniorJudge myJudgeType="Senior Judge" judgeNameMap={{}} combinationChecklist={POLE} />
+    );
+    const diff = screen.getByTestId('mismatch-detail-difficulty-Judge 1');
+    expect(diff).toHaveTextContent('3.40 vs SR 3.80');
+    expect(diff).toHaveTextContent('totals only');
+  });
+});
+

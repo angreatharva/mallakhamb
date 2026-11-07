@@ -176,3 +176,71 @@ describe('a whole panel scoring one performer', () => {
     expect(doc.scorer).toBe('S. Rao');
   });
 });
+
+// User rule 2026-11-08: a Scorer records the TIME only. The judges' marks and
+// the deductions stay as stored, whatever the Scorer's payload carries, and
+// the average and final are recomputed from the stored marks.
+describe('a Scorer save changes the time only', () => {
+  const tampered = (overrides = {}) => ({
+    ...category,
+    scorerTimeOnly: true,
+    allowFinalizedEdit: true,
+    timeKeeper: 'R. Patil',
+    scorer: 'S. Rao',
+    playerScores: [{
+      playerId: PLAYER,
+      playerName: 'Asha Kulkarni',
+      apparatus: 'Pole Mallakhamb',
+      time: '1:35',
+      judgeScores: { seniorJudge: 10, judge1: 10, judge2: 10 },
+      judgeSlips: [{ judgeRole: 'J1', total: 10 }],
+      deduction: 0,
+      otherDeduction: 1,
+      averageMarks: 9.9,
+      finalScore: 9.9,
+      ...overrides,
+    }],
+  });
+
+  it('keeps every judge mark and re-averages from them', async () => {
+    const service = buildService();
+    await service.saveScores({ ...slipFrom('seniorJudge', 'SR_JUDGE', 8.4), panelSize: 3 });
+    await service.saveScores({ ...slipFrom('judge1', 'J1', 8.0), panelSize: 3 });
+    await service.saveScores({ ...slipFrom('judge2', 'J2', 8.2), panelSize: 3 });
+
+    await service.saveScores(tampered());
+
+    const row = (await stored()).playerScores.find((ps) => String(ps.playerId) === String(PLAYER));
+    expect(row.judgeScores.seniorJudge).toBe(8.4);
+    expect(row.judgeScores.judge1).toBe(8.0);
+    expect(row.judgeScores.judge2).toBe(8.2);
+    expect(row.judgeSlips.find((sl) => sl.judgeRole === 'J1').total).toBe(8.0);
+    // The time is the Scorer's; its deduction is worked out on the server
+    // (95 s is 5 over → 0.30), and the other deduction is not theirs to set.
+    expect(row.time).toBe('1:35');
+    expect(row.deduction).toBe(0.3);
+    expect(Number(row.otherDeduction) || 0).toBe(0);
+    // 3-judge panel: the simple average of the stored marks, less 0.30.
+    expect(row.averageMarks).toBeCloseTo(8.2, 3);
+    expect(row.finalScore).toBeCloseTo(7.9, 3);
+  });
+
+  it('writes no marks when the Scorer saves before any judge', async () => {
+    await buildService().saveScores(tampered({ time: '1:10' }));
+    const row = (await stored()).playerScores[0];
+    expect(row.time).toBe('1:10');
+    expect(row.judgeScores?.judge1 ?? 0).toBe(0);
+    expect(row.judgeScores?.seniorJudge ?? 0).toBe(0);
+    expect(row.finalScore).toBe(0);
+  });
+
+  it('leaves an admin save as it was', async () => {
+    const service = buildService();
+    await service.saveScores({ ...slipFrom('judge1', 'J1', 8.0), panelSize: 3 });
+    await service.saveScores({ ...tampered(), scorerTimeOnly: false });
+    const row = (await stored()).playerScores[0];
+    expect(row.judgeScores.judge1).toBe(10);
+    expect(row.otherDeduction).toBe(1);
+  });
+});
+

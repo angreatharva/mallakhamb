@@ -232,6 +232,41 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect(doc.playerScores[0].judgeSlips[0].executionScore).toBe(0.1);
   });
 
+  // User rule 2026-11-08: the Scorer's sheet posts the whole panel back, but
+  // the server takes only the time from it — not the judges' marks, and not
+  // a body that claims the Scorer may write them.
+  test('a Scorer save keeps the judges\' marks and takes only the time', async () => {
+    const scorer = await createJudge({ judgeNo: 6, judgeType: 'Scorer', name: 'Score Keeper', email: 'sc@club.in' });
+    expect((await post(tokenFor(j1), slip({ score: 8.1 }))).status).toBe(200);
+
+    const res = await post(tokenFor(scorer), {
+      competition: competitionId.toString(),
+      teamId: teamId.toString(),
+      gender: 'Male',
+      ageGroup: 'Under14',
+      competitionType: 'competition_1',
+      timeKeeper: 'T. Keeper',
+      scorer: 'Score Keeper',
+      scorerTimeOnly: false,
+      playerScores: [{
+        playerId: playerId.toString(),
+        playerName: 'Test Performer',
+        apparatus: 'Pole Mallakhamb',
+        time: '1:35',
+        judgeScores: { judge1: 10, seniorJudge: 10 },
+        otherDeduction: 2,
+      }],
+    });
+    expect(res.status).toBe(200);
+
+    const performer = (await Score.findOne({ teamId, competition: competitionId })).playerScores[0];
+    expect(performer.judgeScores.judge1).toBe(8.1);
+    expect(performer.judgeScores.seniorJudge ?? 0).toBe(0);
+    expect(performer.time).toBe('1:35');
+    expect(performer.deduction).toBe(0.3);
+    expect(Number(performer.otherDeduction) || 0).toBe(0);
+  });
+
   test('auth → three slips → finalize → lock, end to end', async () => {
     // --- 1. Anonymous submission is refused before anything exists. --------
     const anon = await request(app).post('/api/public/save-score').send(slip());

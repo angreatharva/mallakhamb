@@ -7,7 +7,7 @@
  *   - The Scorer's sheet no longer lists the judges panel, and no longer
  *     repeats the team and apparatus under every athlete's name.
  */
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const h = vi.hoisted(() => {
@@ -21,7 +21,7 @@ const h = vi.hoisted(() => {
     fire: (event, data) => (handlers[event] || []).forEach((fn) => fn(data)),
     reset: () => { Object.keys(handlers).forEach((k) => delete handlers[k]); },
   };
-  return { socket, navigate: () => {}, state: { location: null, judge: null } };
+  return { socket, navigate: () => {}, state: { location: null, judge: null, judges: null } };
 });
 
 vi.mock('socket.io-client', () => ({ io: () => h.socket }));
@@ -41,7 +41,7 @@ vi.mock('@/hooks/useCompetitionLock', () => ({ useCompetitionLock: () => ({ lock
 vi.mock('@/components/competition/CompetitionLockBanner', () => ({ default: () => null }));
 vi.mock('@/services/user/admin.api', () => ({
   createAdminAPI: () => ({
-    getJudges: () => Promise.resolve({ data: { data: [
+    getJudges: () => Promise.resolve({ data: { data: h.state.judges || [
       { _id: 's1', judgeType: 'Senior Judge', name: 'Ravi Gaikwad', email: 'ravi.g@gmail.com', apparatus: 'Rope Mallakhamb' },
       { _id: 's2', judgeType: 'Judge 1', name: 'Yatin Nachre', email: 'yatin.n@gmail.com', apparatus: 'Rope Mallakhamb' },
       { _id: 's3', judgeType: 'Judge 2', name: 'Swapnil Chaugole', email: 'swapnil.c@gmail.com', apparatus: 'Rope Mallakhamb' },
@@ -83,6 +83,8 @@ beforeEach(() => {
   h.socket.reset();
   h.socket.emit.mockClear();
   sessionStorage.clear();
+  localStorage.clear();
+  h.state.judges = null;
 });
 
 describe('Time Keeper screen', () => {
@@ -269,5 +271,136 @@ describe('one person as both Scorer and Time Keeper', () => {
     render(<TimeKeeperScoring />);
     expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByText('SECONDS')).toBeInTheDocument();
+  });
+});
+
+// User rules 2026-11-07: on the Scorer's sheet the judges' marks are view-only
+// (only the Time is the Scorer's), each athlete's time can be locked once they
+// have performed, and a tolerance hit pops up as it does for the Senior Judge.
+describe('Scorer sheet — view-only marks and time locks', () => {
+  beforeEach(() => {
+    h.state.judge = { name: 'Asha Patil', ...seat('Scorer'), allAssignments: [seat('Scorer')] };
+    h.state.location = { ...SESSION, isScorer: true };
+  });
+
+  const loaded = async () => {
+    render(<ScorerScoring />);
+    await screen.findByText('Riya Mane');
+    await waitFor(() => expect(screen.getByLabelText(/^Scorer/)).toHaveValue('Asha Patil'));
+  };
+  const time = (name) => screen.getByLabelText(`${name}, Time`);
+  const recordTime = (playerId, seconds) => act(() => h.socket.fire('time_recorded', {
+    playerId, teamId: 'team-a', apparatus: 'Rope Mallakhamb', seconds,
+  }));
+
+  it('draws every judge mark and deduction read-only; only the Time is editable', async () => {
+    await loaded();
+    expect(time('Riya Mane')).toBeEnabled();
+    for (const cell of ['Senior Judge', 'Judge 1', 'Judge 2', 'Time deduction', 'Other deduction']) {
+      expect(screen.getByLabelText(`Riya Mane, ${cell}`)).toBeDisabled();
+    }
+  });
+
+  it('still shows a judge\'s mark arriving over the socket', async () => {
+    await loaded();
+    act(() => h.socket.fire('score_updated', {
+      playerId: 'p1', apparatus: 'Rope Mallakhamb', judgeType: 'Judge 1', score: 8.5,
+    }));
+    await waitFor(() => expect(screen.getByLabelText('Riya Mane, Judge 1')).toHaveValue('8.5'));
+  });
+
+  it('a locked time ignores a later Time Keeper reading and survives a reload', async () => {
+    await loaded();
+    recordTime('p1', 75);
+    await waitFor(() => expect(time('Riya Mane')).toHaveValue('75'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock time for Riya Mane' }));
+    expect(screen.getByRole('button', { name: 'Unlock time for Riya Mane' })).toHaveAttribute('aria-pressed', 'true');
+    expect(time('Riya Mane')).toBeDisabled();
+
+    // A late stopwatch reading for her is ignored…
+    recordTime('p1', 95);
+    expect(time('Riya Mane')).toHaveValue('75');
+    // …and so is a reload of the saved sheet (another device saved).
+    act(() => h.socket.fire('scores_saved_notification', {}));
+    await screen.findByText('Riya Mane');
+    await waitFor(() => expect(time('Riya Mane')).toHaveValue('75'));
+
+    // The other athlete is untouched by her lock.
+    recordTime('p2', 84);
+    await waitFor(() => expect(time('Purva Thorat')).toHaveValue('84'));
+  });
+
+  it('keeps the lock across a refresh, and unlocks on a second tap', async () => {
+    await loaded();
+    recordTime('p1', 70);
+    await waitFor(() => expect(time('Riya Mane')).toHaveValue('70'));
+    fireEvent.click(screen.getByRole('button', { name: 'Lock time for Riya Mane' }));
+
+    // A refresh: the page goes away and comes back.
+    cleanup();
+    await loaded();
+    expect(time('Riya Mane')).toHaveValue('70');
+    expect(time('Riya Mane')).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock time for Riya Mane' }));
+    expect(time('Riya Mane')).toBeEnabled();
+  });
+
+  it('will not lock an empty time', async () => {
+    await loaded();
+    fireEvent.click(screen.getByRole('button', { name: 'Lock time for Purva Thorat' }));
+    expect(screen.getByRole('button', { name: 'Lock time for Purva Thorat' })).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
+describe('Scorer sheet — tolerance popup', () => {
+  beforeEach(() => {
+    h.state.judge = { name: 'Asha Patil', ...seat('Scorer'), allAssignments: [seat('Scorer')] };
+    h.state.location = { ...SESSION, isScorer: true };
+    // A 4-judge panel: tolerance applies (COP §3.4 is 4- and 5-judge only).
+    h.state.judges = [
+      { _id: 's1', judgeType: 'Senior Judge', name: 'Ravi Gaikwad', apparatus: 'Rope Mallakhamb' },
+      { _id: 's2', judgeType: 'Judge 1', name: 'Yatin Nachre', apparatus: 'Rope Mallakhamb' },
+      { _id: 's3', judgeType: 'Judge 2', name: 'Swapnil Chaugole', apparatus: 'Rope Mallakhamb' },
+      { _id: 's4', judgeType: 'Judge 3', name: 'Laxman Shinde', apparatus: 'Rope Mallakhamb' },
+    ];
+  });
+
+  const mark = (judgeType, score) => act(() => h.socket.fire('score_updated', {
+    playerId: 'p1', apparatus: 'Rope Mallakhamb', judgeType, score,
+  }));
+
+  it('pops up when the whole panel has marked and the Chief is out of tolerance', async () => {
+    render(<ScorerScoring />);
+    await screen.findByText('Riya Mane');
+
+    // Evaluators 8.40 ×3 against a Chief of 9.40: gap 1.00, far over the band.
+    mark('Senior Judge', 9.4);
+    mark('Judge 1', 8.4);
+    mark('Judge 2', 8.4);
+    // Not yet: one seat has not marked.
+    expect(screen.queryByText('Tolerance Limit Exceeded')).not.toBeInTheDocument();
+
+    mark('Judge 3', 8.4);
+    expect(await screen.findByText('Tolerance Limit Exceeded')).toBeInTheDocument();
+    expect(screen.getByText('Tolerance hit — Riya Mane')).toBeInTheDocument();
+
+    // Dismissed, it stays listed above the sheet and re-opens from there.
+    fireEvent.click(screen.getByRole('button', { name: 'Understood — Dismiss' }));
+    expect(screen.queryByText('Tolerance Limit Exceeded')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Tolerance exceeded — Riya Mane/ }));
+    expect(screen.getByText('Tolerance Limit Exceeded')).toBeInTheDocument();
+  });
+
+  it('stays quiet when the panel is within tolerance', async () => {
+    render(<ScorerScoring />);
+    await screen.findByText('Riya Mane');
+    mark('Senior Judge', 8.5);
+    mark('Judge 1', 8.4);
+    mark('Judge 2', 8.5);
+    mark('Judge 3', 8.6);
+    await waitFor(() => expect(screen.getByLabelText('Riya Mane, Judge 3')).toHaveValue('8.6'));
+    expect(screen.queryByText('Tolerance Limit Exceeded')).not.toBeInTheDocument();
   });
 });

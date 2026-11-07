@@ -484,6 +484,64 @@ export function describeSlipAverage(breakdown) {
  * @param {Object} panelScores - { [judgeType]: { judgeType, score, breakdown } }
  * @param {number} panelSize - Expected panel size (3, 4, or 5)
  */
+/**
+ * Exactly HOW a judge's slip differs from the Senior Judge's (user rule
+ * 2026-11-07): the mismatch dialog used to name only WHICH judge was off.
+ *
+ * Difficulty: both totals, and — when both slips carry element counts — each
+ * A/B/C class whose count differs. Combination: both totals, and — when both
+ * carry checklist selections — the requirements the judge marked differently:
+ * `notMet` = the Senior ticked it as met and the judge did not; `met` = the
+ * judge ticked it and the Senior did not. Totals-only slips (`detailed:
+ * false`, reloaded from the server) report `detailed: false` and totals only.
+ *
+ * @param {Object} senior - the Senior Judge's panel entry ({ breakdown })
+ * @param {Object} entry - the judge's panel entry ({ breakdown })
+ * @param {Array<{id:number, rule:string, penalty:number}>} [checklist]
+ * @returns {{ difficulty: Object, combination: Object }}
+ */
+export function describeSlipDifferences(senior, entry, checklist = []) {
+  const sb = senior?.breakdown || {};
+  const jb = entry?.breakdown || {};
+  const detailed = sb.detailed !== false && jb.detailed !== false;
+  const n = (v) => Number(v ?? 0);
+
+  const classes = detailed
+    ? [['A', 'aClass'], ['B', 'bClass'], ['C', 'cClass']]
+      .map(([cls, key]) => ({ cls, senior: n(sb.difficulty?.[key]), judge: n(jb.difficulty?.[key]) }))
+      .filter((c) => c.senior !== c.judge)
+    : [];
+
+  const sChecked = sb.combination?.checked || {};
+  const jChecked = jb.combination?.checked || {};
+  const notMet = [];
+  const met = [];
+  if (detailed) {
+    (checklist || []).forEach((item) => {
+      const s = !!sChecked[item.id];
+      const j = !!jChecked[item.id];
+      if (s && !j) notMet.push(item);
+      if (!s && j) met.push(item);
+    });
+  }
+
+  return {
+    difficulty: {
+      detailed,
+      senior: n(sb.difficulty?.total),
+      judge: n(jb.difficulty?.total),
+      classes,
+    },
+    combination: {
+      detailed,
+      senior: n(sb.combination?.total),
+      judge: n(jb.combination?.total),
+      notMet,
+      met,
+    },
+  };
+}
+
 export function analyzePanelMismatches(panelScores, panelSize) {
   // Iterate in panel order (Senior Judge, Judge 1…4) so every list this
   // produces reads in the same sequence the panel is numbered in.
