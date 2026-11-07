@@ -19,6 +19,7 @@ import {
   getDifficultyRequirement,
   computeCombinationTotal,
   resolveDifficultyValue,
+  difficultyClassMax,
   roundExecution,
   isExecutionEntered,
   EXECUTION_TOO_LOW_MESSAGE,
@@ -527,6 +528,11 @@ const JudgeSlip = () => {
   };
 
   const req = getDifficultyRequirement(selectedCompetitionType);
+  // What each class scores, and the most it can (shown on each picker row).
+  const difficultyResolved = resolveDifficultyValue(
+    { A: scores.difficulty.aClass, B: scores.difficulty.bClass, C: scores.difficulty.cClass }, req
+  );
+  const difficultyMax = difficultyClassMax(req);
 
   // Difficulty mix warning (COP §4.1) — non-blocking. Fires when any entered
   // count differs from the required mix for this competition type.
@@ -751,6 +757,7 @@ const JudgeSlip = () => {
                           <div className="space-y-5 pt-1">
                             {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
                               <DifficultyPicker key={key} cls={cls} value={value} count={scores.difficulty[key]}
+                                points={difficultyResolved[cls]} max={difficultyMax[cls]}
                                 onChange={v => handleDifficulty(key, v)} />
                             ))}
                           </div>
@@ -939,6 +946,7 @@ const JudgeSlip = () => {
                       <div className="space-y-4">
                         {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
                           <DifficultyPicker key={key} cls={cls} value={value} count={scores.difficulty[key]}
+                                points={difficultyResolved[cls]} max={difficultyMax[cls]}
                             onChange={v => handleDifficulty(key, v)} />
                         ))}
                       </div>

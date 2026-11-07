@@ -6,6 +6,7 @@ import {
   isApparatusAllowedForGender,
   normalizeApparatus,
   resolveDifficultyValue,
+  difficultyClassMax,
   analyzePanelMismatches,
   calculateAverageMarks,
   roundExecution,
@@ -178,6 +179,31 @@ describe('copRules — difficulty cascade (v2 §3.2.1)', () => {
     const result = resolveDifficultyValue({ A: 4, B: 6, C: 2 }, required);
     // 1 C in slot + 0 cascaded (B full, A full) → extra C discarded
     expect(result.total).toBe(3.80);
+  });
+});
+
+// User rule 2026-11-08: the most each class can score.
+describe('copRules — difficulty maximum per class', () => {
+  it('Competition I: A 0.80, B 2.40, C 0.60 (3.80)', () => {
+    expect(difficultyClassMax(getDifficultyRequirement('competition_1'))).toEqual({ A: 0.8, B: 2.4, C: 0.6 });
+  });
+  it('Competition II and III: A 0.20, B 2.40, C 1.20 (3.80)', () => {
+    for (const type of ['competition_2', 'competition_3']) {
+      expect(difficultyClassMax(getDifficultyRequirement(type))).toEqual({ A: 0.2, B: 2.4, C: 1.2 });
+    }
+  });
+  it('no class ever scores above its maximum, whatever the counts', () => {
+    for (const type of ['competition_1', 'competition_2']) {
+      const req = getDifficultyRequirement(type);
+      const max = difficultyClassMax(req);
+      for (let a = 0; a <= 10; a += 1) for (let b = 0; b <= 10; b += 1) for (let c = 0; c <= 10; c += 1) {
+        const r = resolveDifficultyValue({ A: a, B: b, C: c }, req);
+        expect(r.A).toBeLessThanOrEqual(max.A);
+        expect(r.B).toBeLessThanOrEqual(max.B);
+        expect(r.C).toBeLessThanOrEqual(max.C);
+        expect(r.total).toBeLessThanOrEqual(3.8);
+      }
+    }
   });
 });
 

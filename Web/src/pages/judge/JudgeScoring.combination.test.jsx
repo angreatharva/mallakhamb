@@ -236,4 +236,21 @@ describe('JudgeScoring — phone layout pins the score under the header', () => 
     fireEvent.click(tab('Combination'));
     expect(tab('Combination')).toHaveClass('judge-tab--active');
   });
+
+  // User rule 2026-11-08: a Difficulty row shows what the class scores against
+  // its maximum (Competition I: A 0.80, B 2.40, C 0.60) — never "8 × 0.20 = 1.60".
+  it('each Difficulty row stays at its class maximum', () => {
+    renderSlip('Pole Mallakhamb');
+    const points = (cls) => screen.getAllByTestId(`difficulty-${cls}-points`)[0];
+    expect(points('A')).toHaveTextContent('0.00 / max 0.80');
+    expect(points('B')).toHaveTextContent('0.00 / max 2.40');
+    expect(points('C')).toHaveTextContent('0.00 / max 0.60');
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'A - Class - 0.20: 8' })[0]);
+    expect(points('A')).toHaveTextContent('0.80 / max 0.80');
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'B - Class - 0.40: 7' })[0]);
+    expect(points('B')).toHaveTextContent('2.40 / max 2.40');
+  });
 });
+

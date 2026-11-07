@@ -22,7 +22,7 @@ import {
 } from '@/utils/scoring/scoringPropTypes';
 import { PANEL_TYPES } from '@/utils/scoring/judgePanel';
 import toast from 'react-hot-toast';
-import { roundExecution, isExecutionEntered, EXECUTION_TOO_LOW_MESSAGE, describeSlipDifferences } from '@/utils/scoring/copRules';
+import { roundExecution, isExecutionEntered, EXECUTION_TOO_LOW_MESSAGE, describeSlipDifferences, difficultyClassMax } from '@/utils/scoring/copRules';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 export const SCORING_PATH = '/judge/scoring';
@@ -121,7 +121,14 @@ const PICKER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
  */
 export const SlipReadOnly = createContext(false);
 
-export const DifficultyPicker = ({ cls, value, count, onChange, compact = false }) => {
+/*
+ * `points` / `max` (optional): what this class SCORES and the most it can
+ * (user rule 2026-11-08 — Competition I A 0.80 / B 2.40 / C 0.60, II-III
+ * A 0.20 / B 2.40 / C 1.20). The row used to print the raw count × value
+ * ("8 × 0.20 = 1.60"), more than the class can ever be worth. Given them, the
+ * row shows the scored figure, never above its maximum.
+ */
+export const DifficultyPicker = ({ cls, value, count, onChange, compact = false, points, max }) => {
   const readOnly = useContext(SlipReadOnly);
   const name = `${cls} - Class - ${value.toFixed(2)}`;
   const n = Number(count) || 0;
@@ -135,9 +142,16 @@ export const DifficultyPicker = ({ cls, value, count, onChange, compact = false 
         <span className="type-tag text-fg-secondary">
           {cls} - {value.toFixed(2)}
         </span>
-        <span className="text-xs tabular-nums text-fg-muted">
-          {n} × {value.toFixed(2)} = {(n * value).toFixed(2)}
-        </span>
+        {typeof points === 'number' && typeof max === 'number' ? (
+          <span className="text-xs tabular-nums text-fg-muted" data-testid={`difficulty-${cls}-points`}>
+            <span className={points >= max - 1e-9 ? 'font-bold text-success-fg' : 'font-bold text-fg'}>{points.toFixed(2)}</span>
+            {' '}/ max {max.toFixed(2)}
+          </span>
+        ) : (
+          <span className="text-xs tabular-nums text-fg-muted">
+            {n} × {value.toFixed(2)} = {(n * value).toFixed(2)}
+          </span>
+        )}
       </div>
       <div className="flex items-stretch gap-2 sm:gap-3">
         <div className="grid grid-cols-5 gap-1.5 sm:gap-2 flex-1 min-w-0" role="group" aria-label={`${name} count`}>
@@ -196,6 +210,8 @@ DifficultyPicker.propTypes = {
   count: PropTypes.number,
   onChange: PropTypes.func.isRequired,
   compact: PropTypes.bool,
+  points: PropTypes.number,
+  max: PropTypes.number,
 };
 
 /** The three classes, in the order drawn: [stateKey, class letter, value]. */
@@ -645,6 +661,9 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
   if (!isOpen || !editTarget || !editScores) return null;
 
   const req = getDifficultyRequirement(selectedCompetitionType);
+  const editDiff = editScores.difficulty || {};
+  const editResolved = resolveDifficultyValue({ A: editDiff.aClass, B: editDiff.bClass, C: editDiff.cClass }, req);
+  const editMax = difficultyClassMax(req);
 
   const handleDiff = (cls, val) => {
     const n = parseInt(val) || 0;
@@ -705,6 +724,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                 </div>
                 {DIFFICULTY_CLASSES.map(([key, cls, value]) => (
                   <DifficultyPicker key={key} cls={cls} value={value} count={editScores.difficulty[key]}
+                    points={editResolved[cls]} max={editMax[cls]}
                     onChange={(v) => handleDiff(key, v)} compact />
                 ))}
               </div>

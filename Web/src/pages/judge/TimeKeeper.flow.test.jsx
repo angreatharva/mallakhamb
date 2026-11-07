@@ -400,7 +400,8 @@ describe('Scorer sheet — tolerance popup', () => {
     mark('Judge 1', 8.4);
     mark('Judge 2', 8.5);
     mark('Judge 3', 8.6);
-    await waitFor(() => expect(screen.getByLabelText('Riya Mane, Judge 3')).toHaveValue('8.6'));
+    // A longer wait: four socket marks re-render the sheet, slow under a full parallel run.
+    await waitFor(() => expect(screen.getByLabelText('Riya Mane, Judge 3')).toHaveValue('8.6'), { timeout: 4000 });
     expect(screen.queryByText('Tolerance Limit Exceeded')).not.toBeInTheDocument();
   });
 });

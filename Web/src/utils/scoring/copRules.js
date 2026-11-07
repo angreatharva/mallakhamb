@@ -209,6 +209,24 @@ export function computeCombinationTotal(apparatus, checkedById) {
  * Example, Competition I (A4 B6 C1): A2 B6 C3 → C slot 0.60, B slots 2.40,
  * A slots: 2 A + 2 extra C = 4 × 0.20 = 0.80 → 3.80.
  */
+/**
+ * The most each class can score for a competition type (user rule
+ * 2026-11-08): its required slots × its value.
+ *
+ *   Competition I        A 4 × 0.20 = 0.80, B 6 × 0.40 = 2.40, C 1 × 0.60 = 0.60 → 3.80
+ *   Competition II / III A 1 × 0.20 = 0.20, B 6 × 0.40 = 2.40, C 2 × 0.60 = 1.20 → 3.80
+ *
+ * @param {Object} required - { A, B, C } from getDifficultyRequirement
+ * @returns {{A: number, B: number, C: number}}
+ */
+export function difficultyClassMax(required) {
+  return {
+    A: Number(((required?.A || 0) * ELEMENT_CLASS_VALUES.A).toFixed(2)),
+    B: Number(((required?.B || 0) * ELEMENT_CLASS_VALUES.B).toFixed(2)),
+    C: Number(((required?.C || 0) * ELEMENT_CLASS_VALUES.C).toFixed(2)),
+  };
+}
+
 export function resolveDifficultyValue(counts, required) {
   const cCount = counts?.C || 0;
   const bCount = counts?.B || 0;
