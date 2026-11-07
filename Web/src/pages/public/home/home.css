@@ -83,16 +83,17 @@
 /* Portrait screens (phones, tablets held upright) still lay the page out 1280px wide, so the hero is
    about 1280x1700-2800: covering that with the 570x250 photo would show a ninefold-blown-up slice of
    the middle performer. Home.jsx gives them China-Main-tall.jpg instead (matchMedia, orientation:
-   portrait): the same photo with the stage extended upward to its spotlight rigs (570x500, AI
-   outpainted). It spans the width at a laptop's sharpness and stands on the title, as the laptop
-   hero's performers do: its foot sits at the top of the title lockup, which is a fixed ~560px above
-   the hero's bottom on every upright screen (the portal plus the title block). Taller screens show
-   more of the photo's own dark sky above the rigs. The mask only reads alpha; the scrim keeps the
-   masthead legible and a short dark floor under the title and portal. */
+   portrait): the same photo with the stage extended upward to its spotlight rigs and the theatre
+   truss above them (947x1661, AI outpainted). It spans the width and stands on the title, as the
+   laptop hero's performers do: its foot sits at the top of the title lockup, which is a fixed
+   ~560px above the hero's bottom on every upright screen (the portal plus the title block). It is
+   tall enough for a 20:9 phone; shorter screens simply crop more of the truss off the top. The
+   mask only reads alpha (its foot fades over a fixed 200px, whatever the photo's height); the
+   scrim keeps the masthead legible and a short dark floor under the title and portal. */
 @media (orientation:portrait){
-  .mk-home .hero__img{inset:auto 0 560px;height:auto;aspect-ratio:570/500;object-position:50% 50%;
-    -webkit-mask-image:linear-gradient(to bottom,transparent,var(--stage) 10%,var(--stage) 82%,transparent);
-    mask-image:linear-gradient(to bottom,transparent,var(--stage) 10%,var(--stage) 82%,transparent)}
+  .mk-home .hero__img{inset:auto 0 560px;height:auto;aspect-ratio:947/1661;object-position:50% 50%;
+    -webkit-mask-image:linear-gradient(to bottom,transparent,var(--stage) 10%,var(--stage) calc(100% - 200px),transparent);
+    mask-image:linear-gradient(to bottom,transparent,var(--stage) 10%,var(--stage) calc(100% - 200px),transparent)}
   .mk-home .hero__scrim{background:
     linear-gradient(to bottom,rgb(var(--bg) / .55) 0,rgb(var(--bg) / 0) 9%),
     linear-gradient(to top,var(--stage) 0%,rgb(var(--bg) / .8) 14%,rgb(var(--bg) / 0) 26%)}

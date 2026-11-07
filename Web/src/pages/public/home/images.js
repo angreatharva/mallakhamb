@@ -6,8 +6,9 @@
  * as a placeholder instead, src="%img:<key>%", and fillImages() swaps in the bundled URL.
  */
 import hero from '../../../../assets/images/China-Main.jpg';
-// The hero for upright screens (see home.css): China-Main with the stage outpainted upward to
-// 570x500 (Weave, Flux Pro Fill, 2026-11-07); a stray AI halo near the top-left beam was toned out by hand.
+// The hero for upright screens (see home.css): China-Main outpainted upward twice with Weave /
+// Flux Pro Fill (2026-11-07): first to the spotlight rigs (a stray AI halo toned out by hand), then
+// to the theatre truss above them. 947x1661, tall enough for a 20:9 phone.
 import heroTall from '../../../../assets/images/China-Main-tall.jpg';
 import pole from '../../../../assets/images/veerbadrasana-III.jpg';
 import hanging from '../../../../assets/images/Hanging-Mallakhamb.jpg';

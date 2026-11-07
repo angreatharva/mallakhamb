@@ -4,7 +4,7 @@ import { HOME_IMAGES } from './images';
 /** The landing page's hero photograph (its largest paint): a local file, see home/images.js. */
 export const HERO_IMAGE = { src: HOME_IMAGES.hero, width: 570, height: 250 };
 /** Upright screens' hero: the same photo with the stage extended upward (home.css explains). */
-export const HERO_IMAGE_TALL = { src: HOME_IMAGES.heroTall, width: 570, height: 500 };
+export const HERO_IMAGE_TALL = { src: HOME_IMAGES.heroTall, width: 947, height: 1661 };
 export const PORTRAIT = '(orientation: portrait)';
 const LANDSCAPE = '(orientation: landscape)'; // exactly "not portrait"; WebKit ignores `not all and …` on a preload
 
