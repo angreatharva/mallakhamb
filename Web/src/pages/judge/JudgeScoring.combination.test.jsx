@@ -49,6 +49,8 @@ vi.mock('./useJudgePanelData', () => ({
   resolveJudgeSeat: (judgeInfo) => judgeInfo,
 }));
 vi.mock('@/services/public/judge.api', () => ({ judgeAPI: { saveScore } }));
+const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }));
+vi.mock('react-hot-toast', () => ({ default: { error: toastError, success: vi.fn() } }));
 
 import JudgeScoring from './JudgeScoring';
 
@@ -57,6 +59,11 @@ const APPARATUS = ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'];
 const renderSlip = (apparatus) => {
   session.apparatus = apparatus;
   return render(<JudgeScoring />);
+};
+
+/** The desktop Execution field (the phone tab is not open, so it is the only one). */
+const enterExecution = (value) => {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Execution' }), { target: { value } });
 };
 
 /** The desktop card's checkboxes: Select all first, then each requirement. */
@@ -113,6 +120,7 @@ describe('JudgeScoring — combination checklist', () => {
   it('submits the full 1.60 with every requirement ticked', async () => {
     renderSlip('Hanging Mallakhamb');
     fireEvent.click(checkboxes().selectAll);
+    enterExecution('3.00');
     fireEvent.click(screen.getAllByRole('button', { name: /submit score/i })[0]);
 
     await waitFor(() => expect(saveScore).toHaveBeenCalledTimes(1));
@@ -167,5 +175,45 @@ describe('JudgeScoring — phone layout pins the score under the header', () => 
     } finally {
       HTMLElement.prototype.getBoundingClientRect = original;
     }
+  });
+
+  // User rule 2026-11-07: Difficulty and Combination never unlock Submit;
+  // Execution must reach 0.10. Below that the button reads disabled and a tap
+  // only shows the popup.
+  describe('Execution floor of 0.10', () => {
+    beforeEach(() => toastError.mockReset());
+
+    const submitButtons = () => screen.getAllByRole('button', { name: /submit score/i });
+
+    it('stays locked on Combination alone and shows the popup on tap', () => {
+      renderSlip('Pole Mallakhamb');
+      fireEvent.click(checkboxes().selectAll);
+
+      for (const button of submitButtons()) {
+        expect(button).toHaveAttribute('aria-disabled', 'true');
+      }
+      fireEvent.click(submitButtons()[0]);
+      expect(saveScore).not.toHaveBeenCalled();
+      expect(toastError).toHaveBeenCalledWith(
+        expect.stringMatching(/at least 0\.10/),
+        expect.anything(),
+      );
+    });
+
+    it('stays locked at 0.00 and unlocks at 0.10', async () => {
+      renderSlip('Pole Mallakhamb');
+      fireEvent.click(checkboxes().selectAll);
+
+      enterExecution('0');
+      expect(submitButtons()[0]).toHaveAttribute('aria-disabled', 'true');
+
+      enterExecution('0.1');
+      for (const button of submitButtons()) {
+        expect(button).not.toHaveAttribute('aria-disabled');
+      }
+      fireEvent.click(submitButtons()[0]);
+      await waitFor(() => expect(saveScore).toHaveBeenCalledTimes(1));
+      expect(saveScore.mock.calls[0][0].breakdown.execution).toBe(0.1);
+    });
   });
 });

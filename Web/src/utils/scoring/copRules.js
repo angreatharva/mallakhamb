@@ -36,6 +36,20 @@ export function roundExecution(raw) {
   return Math.max(0, Math.min(POINT_CEILINGS.execution, tenths / 10));
 }
 
+/**
+ * Lowest Execution mark a slip may be submitted with (user rule 2026-11-07):
+ * 0.00 is never a real Execution score, so Submit stays locked until the
+ * judge enters at least 0.10.
+ */
+export const MIN_EXECUTION = 0.10;
+
+/** True once an execution mark reaches MIN_EXECUTION (float-safe). */
+export function isExecutionEntered(raw) {
+  return Math.round((parseFloat(raw) || 0) * 100) >= Math.round(MIN_EXECUTION * 100);
+}
+
+export const EXECUTION_TOO_LOW_MESSAGE = 'Enter an Execution score of at least 0.10 before submitting.';
+
 // §3.1 — element class values.
 export const ELEMENT_CLASS_VALUES = Object.freeze({ A: 0.20, B: 0.40, C: 0.60 });
 

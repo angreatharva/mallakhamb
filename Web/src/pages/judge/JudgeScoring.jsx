@@ -20,6 +20,8 @@ import {
   computeCombinationTotal,
   resolveDifficultyValue,
   roundExecution,
+  isExecutionEntered,
+  EXECUTION_TOO_LOW_MESSAGE,
   POINT_CEILINGS,
 } from '@/utils/scoring/copRules';
 import ScorerScoring from './ScorerScoring'; // Import scorer component
@@ -72,7 +74,7 @@ const CopPdfModal = ({ isOpen, onClose }) => {
   );
 };
 
-const ScoreInput = ({ label, value, onChange, hint }) => {
+const ScoreInput = ({ label, ariaLabel, value, onChange, hint }) => {
   const readOnly = useContext(SlipReadOnly);
   const [focused, setFocused] = useState(false);
   // The label was visible but not linked, so the mark field had no name for a
@@ -97,6 +99,7 @@ const ScoreInput = ({ label, value, onChange, hint }) => {
         `}</style>
         <DecimalInput
           id={inputId}
+          aria-label={label ? undefined : ariaLabel}
           value={value}
           onValueChange={onChange}
           readOnly={readOnly}
@@ -568,6 +571,12 @@ const JudgeSlip = () => {
   const submitScore = async () => {
     if (!selectedPlayer) return;
     if (parseFloat(calcFinal()) === 0) { toast.error('Please enter scores'); return; }
+    // Execution 0.00 is never a real mark: the button already reads disabled,
+    // and a tap on it lands here and only shows the popup.
+    if (!isExecutionEntered(scores.execution)) {
+      toast.error(EXECUTION_TOO_LOW_MESSAGE, { id: 'execution-too-low' });
+      return;
+    }
     if (finalized) { toast.error('Panel score is already finalized'); return; }
     if (competitionLocked) {
       toast.error('This competition has closed. Scores can no longer be changed.');
@@ -667,6 +676,10 @@ const JudgeSlip = () => {
   if (!judgeInfo || !selectedPlayer) return null;
 
   const finalScore = parseFloat(calcFinal());
+  // Submit stays locked until Execution reaches 0.10 — Difficulty and
+  // Combination alone never unlock it. Not the native `disabled` attribute:
+  // a disabled button swallows the tap, and the tap must show the popup.
+  const executionMissing = !isExecutionEntered(scores.execution);
   return (
     <div className="min-h-dvh relative pb-24 lg:pb-0 bg-bg text-fg">
       <JudgeAmbience />
@@ -828,7 +841,7 @@ const JudgeSlip = () => {
                               <h3 className="type-display-s text-fg">Execution Score</h3>
                               <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-surface-raised text-fg">Max 4.40</span>
                             </div>
-                            <ScoreInput label="" value={scores.execution}
+                            <ScoreInput label="" ariaLabel="Execution" value={scores.execution}
                               onChange={raw => setScores({ ...scores, execution: roundExecution(raw) })} />
                           </div>
 
@@ -895,7 +908,7 @@ const JudgeSlip = () => {
                           <h3 className="type-tag text-fg-secondary">Execution</h3>
                           <span className="text-xs px-2 py-1 rounded-full bg-surface-raised text-fg">Max 4.40</span>
                         </div>
-                        <ScoreInput label="" value={scores.execution}
+                        <ScoreInput label="" ariaLabel="Execution" value={scores.execution}
                           onChange={raw => setScores({ ...scores, execution: roundExecution(raw) })} />
                       </div>
 
@@ -979,9 +992,12 @@ const JudgeSlip = () => {
 
                     {/* Desktop submit */}
                     <div className="flex flex-col gap-3">
-                      <button onClick={submitScore} disabled={submitting || !isConnected || submitted || competitionLocked} className="w-full py-4 rounded-2xl font-black text-base flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden" style={{
+                      <button onClick={submitScore} disabled={submitting || !isConnected || submitted || competitionLocked}
+                        aria-disabled={executionMissing || undefined}
+                        className="w-full py-4 rounded-2xl font-black text-base flex items-center justify-center gap-3 min-h-[56px] relative overflow-hidden" style={{
                           background: submitted ? 'rgb(var(--success-fill))' : 'rgb(var(--accent))', color: submitted ? 'rgb(var(--success-on))' : 'rgb(var(--on-accent))',
-                          opacity: (!isConnected || submitting) ? 0.6 : 1,
+                          opacity: (!isConnected || submitting || (executionMissing && !submitted)) ? 0.5 : 1,
+                          cursor: executionMissing && !submitted ? 'not-allowed' : undefined,
                         }}>
                         <AnimatePresence mode="wait" initial={false}>
                           {submitting ? (
@@ -1026,9 +1042,12 @@ const JudgeSlip = () => {
                     <p className="type-tag text-fg-secondary m-0">Total</p>
                     <p className={`type-num-m leading-none m-0 ${parseFloat(calcFinal()) >= 10 ? 'text-accent-fg' : 'text-fg'}`}>{calcFinal()}</p>
                   </div>
-                  <button onClick={submitScore} disabled={submitting || !isConnected || submitted || competitionLocked} className="flex-1 py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 min-h-[52px]" style={{
+                  <button onClick={submitScore} disabled={submitting || !isConnected || submitted || competitionLocked}
+                    aria-disabled={executionMissing || undefined}
+                    className="flex-1 py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 min-h-[52px]" style={{
                       background: submitted ? 'rgb(var(--success-fill))' : 'rgb(var(--accent))', color: submitted ? 'rgb(var(--success-on))' : 'rgb(var(--on-accent))',
-                      opacity: (!isConnected || submitting || competitionLocked) ? 0.6 : 1,
+                      opacity: (!isConnected || submitting || competitionLocked || (executionMissing && !submitted)) ? 0.5 : 1,
+                      cursor: executionMissing && !submitted ? 'not-allowed' : undefined,
                     }}>
                     {submitting ? 'Submitting…' : submitted ? (
                       <><CheckCircle className="w-4 h-4" aria-hidden="true" /> Submitted</>

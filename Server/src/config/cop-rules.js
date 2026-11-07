@@ -474,6 +474,35 @@ function validateSlipBreakdown(breakdown) {
   return { valid: true, error: null };
 }
 
+/**
+ * Lowest Execution mark a judge's own slip may carry (user rule 2026-11-07).
+ * 0.00 is never a real Execution score; the slip's Submit stays locked below
+ * this on the web (Web copRules MIN_EXECUTION — keep the two equal).
+ */
+const MIN_EXECUTION = 0.10;
+
+/**
+ * Check a single judge slip's Execution against MIN_EXECUTION.
+ *
+ * Applied to single-slip submissions only (a judge's Submit, a Senior Judge
+ * override). NOT part of validateSlipBreakdown: that one also runs on bulk
+ * panel writes (Final Submit, Scorer, admin), which re-send slips stored
+ * before this rule and must keep saving. A slip with no breakdown has no
+ * Execution at all, so it fails too.
+ *
+ * Compared in whole hundredths so float noise cannot tip 0.10 under the line.
+ *
+ * @param {Object} [breakdown] - { execution, ... }
+ * @returns {{ valid: boolean, error: (string|null) }}
+ */
+function validateExecutionFloor(breakdown) {
+  const execution = Number(breakdown?.execution ?? 0);
+  if (!Number.isFinite(execution) || Math.round(execution * 100) < Math.round(MIN_EXECUTION * 100)) {
+    return { valid: false, error: `Execution must be at least ${MIN_EXECUTION.toFixed(2)}` };
+  }
+  return { valid: true, error: null };
+}
+
 // Note: Sections 3.6–3.8 (minor/major/final-score deductions) are not modeled
 // as separate system entities — all deductions are folded directly into the
 // judge's Execution component per v2 §2 note. These catalogs are retained
@@ -566,5 +595,7 @@ module.exports = {
   toCompetitionTypeDisplay,
   toCompetitionTypeSlug,
   validateSlipBreakdown,
+  MIN_EXECUTION,
+  validateExecutionFloor,
   isApparatusAllowedForGender,
 };

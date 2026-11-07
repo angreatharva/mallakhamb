@@ -206,6 +206,32 @@ describe('judge scoring flow — a full panel sequence', () => {
     j2 = await createJudge({ judgeNo: 3, judgeType: 'Judge 2', name: 'Judge Two', email: 'j2@club.in' });
   });
 
+  // User rule 2026-11-07: a judge's own slip needs Execution ≥ 0.10. The web
+  // slip locks Submit below that; this is the server half, so a request that
+  // goes around the screen is refused too.
+  test('refuses a slip with Execution below 0.10, accepts 0.10', async () => {
+    const withExecution = (execution) => slip({ breakdown: { ...slip().breakdown, execution } });
+
+    for (const execution of [0, 0.05]) {
+      const res = await post(tokenFor(j1), withExecution(execution));
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toMatch(/Execution must be at least 0\.10/);
+    }
+    const noBreakdown = await post(tokenFor(j1), slip({ breakdown: undefined }));
+    expect(noBreakdown.status).toBe(400);
+    expect(await Score.findOne({ teamId })).toBeNull();
+
+    // A Senior Judge override is a single slip too.
+    const override = await post(tokenFor(senior), {
+      ...withExecution(0), judgeType: 'Judge 1', overrideBySenior: true,
+    });
+    expect(override.status).toBe(400);
+
+    expect((await post(tokenFor(j1), withExecution(0.1))).status).toBe(200);
+    const doc = await Score.findOne({ teamId, competition: competitionId });
+    expect(doc.playerScores[0].judgeSlips[0].executionScore).toBe(0.1);
+  });
+
   test('auth → three slips → finalize → lock, end to end', async () => {
     // --- 1. Anonymous submission is refused before anything exists. --------
     const anon = await request(app).post('/api/public/save-score').send(slip());

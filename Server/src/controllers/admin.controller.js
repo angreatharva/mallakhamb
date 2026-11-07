@@ -12,7 +12,7 @@ const mongoose = require('mongoose');
 const { asyncHandler } = require('../middleware/error.middleware');
 const { sendLoginResponse } = require('../utils/security/login-response.util');
 const { isProductionLike } = require('../utils/security/cookie.util');
-const { toCompetitionTypeDisplay } = require('../config/cop-rules');
+const { toCompetitionTypeDisplay, validateExecutionFloor } = require('../config/cop-rules');
 const {
   PANEL_JUDGE_TYPES,
   buildJudgeSlipPlayerScore,
@@ -438,6 +438,20 @@ function createAdminController(container) {
             code: 'FORBIDDEN',
           },
         });
+      }
+
+      // Execution floor (user rule 2026-11-07): a judge's own slip — or a
+      // Senior Judge override of one — can't be submitted with Execution below
+      // 0.10. Single slips only: bulk panel writes (Final Submit, Scorer,
+      // admin) re-send slips stored before the rule and must keep saving.
+      if (isSingleSlipSubmission) {
+        const floor = validateExecutionFloor(req.body.breakdown);
+        if (!floor.valid) {
+          return res.status(400).json({
+            success: false,
+            error: { message: floor.error, code: 'VALIDATION_ERROR' },
+          });
+        }
       }
 
       // If this is a judge submitting a single score (has playerId, judgeType, score)

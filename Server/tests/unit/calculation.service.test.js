@@ -11,6 +11,7 @@
 const { calculateIndividualScore } = require('../../src/utils/scoring/calculation.util');
 const {
   validateSlipBreakdown,
+  validateExecutionFloor,
   getTolerance,
   getTimeDeduction,
   resolveDifficultyValue,
@@ -134,6 +135,23 @@ describe('validateSlipBreakdown — COP §3.3 ceilings', () => {
   it('reads legacy originality key as bonus', () => {
     expect(validateSlipBreakdown({ originality: 0.20 }).valid).toBe(true);
     expect(validateSlipBreakdown({ originality: 0.15 }).valid).toBe(false);
+  });
+});
+
+describe('validateExecutionFloor — Execution of at least 0.10 (user rule 2026-11-07)', () => {
+  it('refuses 0, 0.05 and a missing breakdown', () => {
+    expect(validateExecutionFloor({ execution: 0 }).valid).toBe(false);
+    expect(validateExecutionFloor({ execution: 0.05 }).valid).toBe(false);
+    expect(validateExecutionFloor({}).valid).toBe(false);
+    expect(validateExecutionFloor(undefined).valid).toBe(false);
+    expect(validateExecutionFloor({ execution: 'abc' }).valid).toBe(false);
+  });
+
+  it('accepts 0.10 (float-safe) and above', () => {
+    expect(validateExecutionFloor({ execution: 0.1 }).valid).toBe(true);
+    expect(validateExecutionFloor({ execution: 0.30000000000000004 - 0.2 }).valid).toBe(true);
+    expect(validateExecutionFloor({ execution: '2.5' }).valid).toBe(true);
+    expect(validateExecutionFloor({ execution: 4.4 }).valid).toBe(true);
   });
 });
 

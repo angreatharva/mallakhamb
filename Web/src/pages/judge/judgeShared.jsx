@@ -21,7 +21,8 @@ import {
   pointCeilingsShape,
 } from '@/utils/scoring/scoringPropTypes';
 import { PANEL_TYPES } from '@/utils/scoring/judgePanel';
-import { roundExecution } from '@/utils/scoring/copRules';
+import toast from 'react-hot-toast';
+import { roundExecution, isExecutionEntered, EXECUTION_TOO_LOW_MESSAGE } from '@/utils/scoring/copRules';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 export const SCORING_PATH = '/judge/scoring';
@@ -742,7 +743,23 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                 className="flex-1 py-3 rounded-xl font-bold text-sm border transition-all hover:bg-ink/5"
                 style={{ borderColor: 'rgb(var(--ink) / 0.1)', color: 'var(--fg-muted)' }}
               >Cancel</button>
-              <button onClick={() => onSave(editTarget.judgeType, editScores, calcTotal())} className="flex-1 py-3 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2" style={{ background: 'rgb(var(--success-fill))' }}>
+              {/* Same Execution floor as the judge slip: reads disabled below
+                  0.10, and a tap only shows the popup. */}
+              <button
+                onClick={() => {
+                  if (!isExecutionEntered(editScores.execution)) {
+                    toast.error(EXECUTION_TOO_LOW_MESSAGE, { id: 'execution-too-low' });
+                    return;
+                  }
+                  onSave(editTarget.judgeType, editScores, calcTotal());
+                }}
+                aria-disabled={!isExecutionEntered(editScores.execution) || undefined}
+                className="flex-1 py-3 rounded-xl font-bold text-sm text-ink flex items-center justify-center gap-2"
+                style={{
+                  background: 'rgb(var(--success-fill))',
+                  opacity: isExecutionEntered(editScores.execution) ? 1 : 0.5,
+                  cursor: isExecutionEntered(editScores.execution) ? undefined : 'not-allowed',
+                }}>
                 <Save className="w-4 h-4" /> Save Override
               </button>
             </div>
