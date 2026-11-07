@@ -13,6 +13,7 @@ const {
   BusinessRuleError 
 } = require('../../errors');
 const EventTypes = require('../../socket/events/event-types');
+const { scoringRoomIds } = require('../../utils/data/scoring-room.util');
 const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 const {
   AGE_GROUPS,
@@ -1036,11 +1037,14 @@ class ScoringService {
    * @returns {Promise<Object>} Unlock result
    * @throws {NotFoundError} If score not found
    */
-  async unlockScoreAsAdmin(scoreId, adminId) {
+  async unlockScoreAsAdmin(scoreId, adminId, { competitionId } = {}) {
     try {
       const scoreDoc = await this.scoreRepository.findById(scoreId);
 
-      if (!scoreDoc) {
+      // An admin's unlock is scoped to the meet they are working in; a sheet
+      // from another meet answers as if it did not exist. (The superadmin
+      // route passes no competition and reaches every sheet.)
+      if (!scoreDoc || !this._inCompetition(scoreDoc, competitionId)) {
         throw new NotFoundError('Score');
       }
 
@@ -1049,11 +1053,18 @@ class ScoringService {
         // As in `unlockScore`: the per-apparatus locks are the ones `saveScores`
         // actually tests, so an unlock that left them standing reopens nothing.
         lockedApparatus: [],
+        // And the Senior Judge's Final Submit on every athlete (user rule
+        // 2026-11-08): "unlock" means the JUDGES can change their scores
+        // again, and a finalized athlete refuses every judge's write. Their
+        // published results are withdrawn until the Senior Judge final-submits
+        // again (published-score.util reads `isFinalized`).
+        'playerScores.$[].isFinalized': false,
         unlockedBy: adminId,
         unlockedAt: new Date()
       });
 
       this.logger.info('Score unlocked', { scoreId, adminId });
+      this._broadcastReopened(scoreDoc, scoreDoc.playerScores || []);
       await this._afterScoreChange(scoreDoc);
 
       return {
@@ -1071,6 +1082,102 @@ class ScoringService {
         error: error.message
       });
       throw error;
+    }
+  }
+
+  /**
+   * Reopen ONE athlete's performance for the judges (user rule 2026-11-08).
+   *
+   * After the Senior Judge's Final Submit a judge can no longer change their
+   * slip, and after the Scorer's Lock & Submit nothing on that apparatus can
+   * be written. An admin or superadmin uses this to let the panel correct one
+   * athlete without reopening the rest of the sheet:
+   *
+   *   - the athlete's `isFinalized` is cleared, so judges may resubmit and the
+   *     Senior Judge must Final Submit again (their published result is
+   *     withdrawn meanwhile — published-score.util reads `isFinalized`);
+   *   - the athlete's apparatus leaves `lockedApparatus` (the Scorer re-locks
+   *     it when done), and the admin's whole-sheet freeze is lifted, since
+   *     either one refuses every write to the row.
+   *
+   * Every judge mark, slip and time stays exactly as it was.
+   *
+   * @param {string} scoreId - the Score document
+   * @param {{playerId: string, apparatus?: string}} target - the row
+   * @param {string} actorId - who unlocked it
+   * @param {{competitionId?: string}} [scope] - an admin's meet
+   * @returns {Promise<Object>}
+   */
+  async unlockPlayerForJudges(scoreId, { playerId, apparatus } = {}, actorId, { competitionId } = {}) {
+    const Model = this.scoreRepository.model;
+    const doc = await Model.findById(scoreId);
+    if (!doc || !this._inCompetition(doc, competitionId)) {
+      throw new NotFoundError('Score');
+    }
+
+    const wanted = apparatusKey(apparatus);
+    const row = (doc.playerScores || []).find((ps) => String(ps.playerId) === String(playerId)
+      && (apparatus === undefined || apparatus === null || apparatus === '' || apparatusKey(ps.apparatus) === wanted));
+    if (!row) {
+      throw new NotFoundError('Player score');
+    }
+
+    const rowApparatus = apparatusKey(row.apparatus);
+    row.isFinalized = false;
+    row.finalizedAt = undefined;
+    doc.lockedApparatus = (doc.lockedApparatus || []).filter((a) => apparatusKey(a) !== rowApparatus);
+    doc.isLocked = false;
+    doc.unlockedBy = actorId;
+    doc.unlockedAt = new Date();
+    await doc.save();
+
+    this.logger.info('Athlete reopened for judges', {
+      scoreId: String(scoreId), playerId: String(playerId), apparatus: row.apparatus, actorId: String(actorId),
+    });
+    this._broadcastReopened(doc, [row]);
+    await this._afterScoreChange(doc);
+
+    return {
+      scoreId: String(doc._id),
+      playerId: String(row.playerId),
+      playerName: row.playerName,
+      apparatus: row.apparatus || null,
+      isFinalized: false,
+      isLocked: false,
+      lockedApparatus: doc.lockedApparatus,
+    };
+  }
+
+  /** Does this Score belong to the given meet? No meet given = no restriction. */
+  _inCompetition(doc, competitionId) {
+    if (!competitionId) return true;
+    return String(doc.competition?._id || doc.competition) === String(competitionId);
+  }
+
+  /**
+   * Tell open judge and Scorer screens that rows were reopened, so Panel
+   * Review and the Scorer's sheet re-read instead of showing a stale lock.
+   */
+  _broadcastReopened(doc, rows) {
+    if (!this.socketManager?.emitToRoom) return;
+    try {
+      const slug = toCompetitionTypeSlug(doc.competitionType);
+      for (const room of scoringRoomIds(doc.gender, doc.ageGroup, slug)) {
+        for (const row of rows) {
+          this.socketManager.emitToRoom(room, 'scores_saved_notification', {
+            playerId: row.playerId,
+            playerName: row.playerName,
+            teamId: String(doc.teamId?._id || doc.teamId),
+            apparatus: row.apparatus || null,
+            isFinalized: false,
+            isLocked: false,
+            unlocked: true,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.warn('Unlock not broadcast', { error: error.message });
     }
   }
 

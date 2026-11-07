@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import apiConfig from '@/config/api.config';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Clock, Save, ArrowLeft, Lock, Eye, Trophy, AlertCircle } from 'lucide-react';
+import { Clock, Save, ArrowLeft, Lock, LockOpen, Eye, Trophy, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
@@ -18,7 +18,7 @@ import { PoleMark } from '@/components/brand/Brand';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
-import { apparatusFor, entryGender } from '@/utils/scoring/apparatus';
+import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparatus';
 import { panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { sheetRows, rowFor, playerScoresFor } from '@/utils/scoring/adminSheet';
 import AppearanceMenu from '@/components/layout/AppearanceMenu';
@@ -53,6 +53,11 @@ const AdminScoring = () => {
     const { locked: competitionLocked } = useCompetitionLock();
     const readOnly = isLocked || competitionLocked;
     const [existingScoreId, setExistingScoreId] = useState(null);
+    // The sheet's own locks, kept raw: which athletes the judges are shut out
+    // of is worked out from these plus each row's `isFinalized`.
+    const [sheetLocks, setSheetLocks] = useState({ isLocked: false, lockedApparatus: [] });
+    // The athlete row (or 'sheet') an unlock is waiting to be confirmed for.
+    const [unlockTarget, setUnlockTarget] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [ageGroupStarted, setAgeGroupStarted] = useState(false);
@@ -328,6 +333,7 @@ const AdminScoring = () => {
                 const anyApparatusLocked = (scoreMetadata.lockedApparatus || []).length > 0;
                 logger.info('Setting isLocked to:', scoreMetadata.isLocked, 'lockedApparatus:', scoreMetadata.lockedApparatus);
                 setIsLocked(!!scoreMetadata.isLocked || anyApparatusLocked);
+                setSheetLocks({ isLocked: !!scoreMetadata.isLocked, lockedApparatus: scoreMetadata.lockedApparatus || [] });
                 setExistingScoreId(scoreMetadata._id);
                 if (scoreMetadata.timeKeeper) setTimeKeeper(scoreMetadata.timeKeeper);
                 if (scoreMetadata.scorer) setScorer(scoreMetadata.scorer);
@@ -582,18 +588,54 @@ const AdminScoring = () => {
         }
     };
 
+    /*
+     * UNLOCKING THE JUDGES' SCORES (user rule 2026-11-08).
+     *
+     * Admin and superadmin alike. The whole-sheet unlock also clears the
+     * Senior Judge's Final Submit on every athlete, so the panel can correct
+     * their slips; the per-athlete one reopens a single performance. Neither
+     * is refused once the age group has started any more — that is exactly
+     * when a correction is needed, and the server never enforced it.
+     */
     const handleUnlockScores = async () => {
-        if (ageGroupStarted) { toast.error('Cannot unlock. Age group has been started.'); return; }
         if (!existingScoreId) { toast.error('No existing score record found'); return; }
         try {
             await api.unlockScores(existingScoreId);
             setIsLocked(false);
-            toast.success('Scores unlocked for editing');
+            toast.success('Unlocked — the judges can change their scores again');
             // Reload the scoring data to refresh the UI
             await fetchScoringData();
         } catch (error) {
             logger.error('Error unlocking scores:', error);
             toast.error('Failed to unlock scores');
+        }
+    };
+
+    /** Athletes on this sheet the judges currently cannot write to, and why. */
+    const lockedForJudges = (calculatedScores || []).flatMap((ps) => {
+        const reasons = [];
+        if (ps.isFinalized) reasons.push('Final Submitted');
+        if ((sheetLocks.lockedApparatus || []).some((a) => apparatusKey(a) === apparatusKey(ps.apparatus))) reasons.push('Scorer locked');
+        if (sheetLocks.isLocked) reasons.push('sheet locked');
+        return reasons.length ? [{ ...ps, reasons }] : [];
+    });
+
+    const confirmUnlock = async () => {
+        if (!unlockTarget) return;
+        try {
+            if (unlockTarget === 'sheet') {
+                await handleUnlockScores();
+            } else {
+                await api.unlockPlayerForJudges(existingScoreId, unlockTarget.playerId, unlockTarget.apparatus);
+                toast.success(`${unlockTarget.playerName} reopened — the judges can change their scores`);
+                await fetchScoringData();
+            }
+        } catch (error) {
+            logger.error('Error unlocking for judges:', error);
+            toast.error(error.response?.data?.error?.message || 'Failed to unlock');
+            throw error;
+        } finally {
+            setUnlockTarget(null);
         }
     };
 
@@ -651,20 +693,44 @@ const AdminScoring = () => {
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6">
                 <CompetitionLockBanner />
 
-                {isLocked && routePrefix === '/superadmin' && (
-                    <div className="rounded-2xl border p-4 flex items-center justify-between gap-4 bg-surface-sunken border-line">
+                {(isLocked || lockedForJudges.length > 0) && existingScoreId && (
+                    <div className="rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-sunken border-line">
                         <div className="flex items-center gap-3">
                             <AlertCircle className="w-5 h-5 flex-shrink-0 text-danger-fg"/>
                             <div>
-                                <p className="font-bold text-ink text-sm">Scoring session is locked</p>
-                                <p className="text-xs mt-0.5 text-fg-muted">{ageGroupStarted ? 'Age group started. Scores cannot be modified.' : 'Scores saved and locked. Click Unlock to edit.'}</p>
+                                <p className="font-bold text-ink text-sm">Scores are locked for the judges</p>
+                                <p className="text-xs mt-0.5 text-fg-muted">Unlock the whole sheet, or one athlete below, to let the panel correct their scores.</p>
                             </div>
                         </div>
-                        {!ageGroupStarted && (
-                            <button onClick={handleUnlockScores} className="ui-btn ui-btn--danger ui-btn--sm flex-shrink-0">
-                                <Lock className="w-3.5 h-3.5" /> Unlock
-                            </button>
-                        )}
+                        <button type="button" onClick={() => setUnlockTarget('sheet')} disabled={competitionLocked && routePrefix !== '/superadmin'}
+                            className="ui-btn ui-btn--danger ui-btn--sm flex-shrink-0">
+                            <LockOpen className="w-3.5 h-3.5" aria-hidden="true" /> Unlock all for judges
+                        </button>
+                    </div>
+                )}
+
+                {lockedForJudges.length > 0 && (
+                    <div className="rounded-2xl border p-4 sm:p-5 bg-surface border-line">
+                        <p className="type-tag mb-3 flex items-center gap-2 text-accent-fg">
+                            <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Locked for the judges
+                        </p>
+                        <ul className="divide-y divide-line">
+                            {lockedForJudges.map((ps) => (
+                                <li key={`${ps.playerId}::${ps.apparatus || ''}`} className="flex items-center justify-between gap-3 py-2.5">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-ink truncate">{ps.playerName}</p>
+                                        <p className="text-xs text-fg-muted">{[ps.apparatus, ps.reasons.join(' · ')].filter(Boolean).join(' — ')}</p>
+                                    </div>
+                                    <button type="button"
+                                        onClick={() => setUnlockTarget({ playerId: ps.playerId, playerName: ps.playerName, apparatus: ps.apparatus })}
+                                        disabled={competitionLocked && routePrefix !== '/superadmin'}
+                                        aria-label={`Unlock ${ps.playerName}${ps.apparatus ? `, ${ps.apparatus}` : ''} for the judges`}
+                                        className="ui-btn ui-btn--line ui-btn--sm flex-shrink-0">
+                                        <LockOpen className="w-3.5 h-3.5" aria-hidden="true" /> Unlock
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
 
@@ -769,6 +835,19 @@ const AdminScoring = () => {
                     </div>
                 </div>
             </div>
+
+            <ConfirmDialog
+                isOpen={!!unlockTarget}
+                onClose={() => setUnlockTarget(null)}
+                onConfirm={confirmUnlock}
+                title={unlockTarget === 'sheet' ? 'Unlock all scores for the judges?' : `Unlock ${unlockTarget?.playerName || 'this athlete'} for the judges?`}
+                message={unlockTarget === 'sheet'
+                    ? "Every athlete on this sheet is reopened: the judges can change their scores, and the Senior Judge must Final Submit each one again. Published results are withdrawn until then. No score is changed."
+                    : `The judges can change their scores for ${unlockTarget?.playerName || 'this athlete'}${unlockTarget?.apparatus ? ` (${unlockTarget.apparatus})` : ''}, and the Senior Judge must Final Submit again. The published result is withdrawn until then. No score is changed.`}
+                confirmText="Unlock"
+                cancelText="Cancel"
+                variant="danger"
+            />
 
             {/* Confirm Dialog */}
             <ConfirmDialog

@@ -47,6 +47,9 @@ export const createAdminAPI = (basePath = '/admin') => ({
   startAgeGroup: (data) => api.post(`${basePath}/age-groups/start`, data),
   saveScores: (data) => api.post(`${basePath}/scores/save`, data),
   unlockScores: (scoreId) => api.put(`${basePath}/scores/${scoreId}/unlock`),
+  /** Reopen one athlete (on one apparatus) for the judges. */
+  unlockPlayerForJudges: (scoreId, playerId, apparatus) =>
+    api.put(`${basePath}/scores/${scoreId}/players/${playerId}/unlock`, { apparatus }),
   getTransactions: (params) => api.get(`${basePath}/transactions`, { params }),
   /**
    * Finals: who moved from Competition I into Competition II / III. The engine

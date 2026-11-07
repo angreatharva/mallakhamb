@@ -421,9 +421,9 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
        */
       setPanelScores((prev) => ({ ...prev, ...loadedPanelScores }));
 
-      if (targetPs.isFinalized || scoreDoc.isLocked) {
-        setFinalized(true);
-      }
+      // Both ways: an admin can reopen a finalized athlete for the judges
+      // (user rule 2026-11-08), and a re-read must then open the slip again.
+      setFinalized(!!(targetPs.isFinalized || scoreDoc.isLocked));
     } catch (err) {
       if (isAuthFailure(err)) {
         // Critical: without this the Senior Judge sees an empty panel and may
@@ -563,6 +563,14 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
       // Apparatus-matched for the same reason, and it matters more here: this
       // one locks the slip, so a Rope finalization was closing the Pole panel.
       if (currentPlayerId && String(data.playerId) === currentPlayerId && isForThisPerformance(data)) {
+        // An admin or superadmin reopened this athlete for the judges: the
+        // slip is editable again. Re-read rather than trust the message.
+        if (data.unlocked || data.isFinalized === false) {
+          setFinalized(false);
+          fetchRef.current();
+          if (data.unlocked) toast.success('Reopened by the organisers — you can change your score');
+          return;
+        }
         setFinalized(true);
         toast.success('Panel score finalized and locked');
       }

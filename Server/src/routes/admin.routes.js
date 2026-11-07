@@ -425,6 +425,23 @@ function createAdminRoutes(container) {
   );
 
   /**
+   * @route   PUT /api/admin/scores/:scoreId/players/:playerId/unlock
+   * @desc    Reopen ONE athlete (body: { apparatus }) for the judges: clears the
+   *          Senior Judge's Final Submit and that apparatus's Scorer lock, so
+   *          the panel can correct their slips. Marks are left as they are.
+   * @access  Admin (own meet only), SuperAdmin
+   */
+  router.put(
+    '/scores/:scoreId/players/:playerId/unlock',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    requireUnlockedCompetition(),
+    auditScoreUpdated,
+    adminController.unlockPlayerForJudges
+  );
+
+  /**
    * @route   PUT /api/admin/scores/lock
    * @desc    Lock scores
    * @access  Admin, SuperAdmin

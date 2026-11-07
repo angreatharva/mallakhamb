@@ -33,6 +33,16 @@ function createAdminController(container) {
   const logger = container.resolve('logger');
 
   /**
+   * Which sheets a score-unlock may touch. A superadmin reaches every meet; an
+   * admin only the meet their request is scoped to (validateCompetitionContext
+   * sets `req.competitionId`), so a sheet id from another meet is a 404.
+   */
+  const scoreScope = (req) => {
+    const isSuper = req.userType === 'superadmin' || req.user?.role === 'superadmin';
+    return isSuper ? {} : { competitionId: req.competitionId || null };
+  };
+
+  /**
    * The JudgeAccount a single slip belongs to.
    *
    * A panel judge submitting their own slip is the author. A Senior Judge
@@ -317,7 +327,23 @@ function createAdminController(container) {
     /** @route PUT /api/admin/scores/:scoreId/unlock */
     unlockScores: asyncHandler(async (req, res) => {
       const { scoreId } = req.params;
-      const result = await adminService.unlockScore(scoreId, req.user._id);
+      const result = await adminService.unlockScore(scoreId, req.user._id, scoreScope(req));
+      res.json({ success: true, data: result });
+    }),
+
+    /**
+     * @route PUT /api/admin/scores/:scoreId/players/:playerId/unlock
+     * Reopen one athlete (on one apparatus) for the judges. Body: { apparatus }.
+     */
+    unlockPlayerForJudges: asyncHandler(async (req, res) => {
+      const { scoreId, playerId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(String(scoreId)) || !mongoose.Types.ObjectId.isValid(String(playerId))) {
+        return res.status(400).json({ success: false, error: { message: 'Invalid score or player id', code: 'VALIDATION_ERROR' } });
+      }
+      const apparatus = typeof req.body?.apparatus === 'string' ? req.body.apparatus : undefined;
+      const result = await adminService.unlockPlayerForJudges(
+        scoreId, { playerId, apparatus }, req.user._id, scoreScope(req)
+      );
       res.json({ success: true, data: result });
     }),
 

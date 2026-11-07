@@ -1656,8 +1656,16 @@ class AdminService extends UserService {
    * Unlock a single score, recording who did it.
    * @deprecated Delegates to ScoringService (task 3.1). Prefer scoringService.
    */
-  async unlockScore(scoreId, adminId) {
-    return this.scoring.unlockScoreAsAdmin(scoreId, adminId);
+  async unlockScore(scoreId, adminId, scope) {
+    return this.scoring.unlockScoreAsAdmin(scoreId, adminId, scope);
+  }
+
+  /**
+   * Reopen one athlete for the judges.
+   * @deprecated Delegates to ScoringService. Prefer scoringService.
+   */
+  async unlockPlayerForJudges(scoreId, target, actorId, scope) {
+    return this.scoring.unlockPlayerForJudges(scoreId, target, actorId, scope);
   }
 
   /**

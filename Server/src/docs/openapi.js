@@ -1637,6 +1637,15 @@ function buildPaths() {
     responses: { 200: ok('Unlocked'), ...VALIDATION_ERROR, ...NOT_FOUND },
   }));
 
+  add('/api/admin/scores/{scoreId}/players/{playerId}/unlock', 'put', op({
+    tag: 'Scores', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminUnlockPlayerForJudges',
+    summary: 'Reopen one athlete for the judges',
+    description: "Clears the Senior Judge's Final Submit on that athlete and the Scorer's lock on that apparatus, so the panel can correct their slips. Marks are untouched; the published result is withdrawn until the next Final Submit. An admin can only reach sheets in their own meet.",
+    parameters: [pathParam('scoreId', 'Score document id'), pathParam('playerId', 'Athlete id')],
+    requestBody: jsonBody(inline({ apparatus: { type: 'string' } }, [])),
+    responses: { 200: ok('Reopened'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  }));
+
   add('/api/admin/scores/recalculate', 'post', op({
     tag: 'Scores', roles: 'admin, superadmin', competitionContext: true, operationId: 'adminRecalculateScores',
     summary: 'Recompute every score in an age group',
@@ -2330,6 +2339,13 @@ function buildPaths() {
     operationId: 'superAdminUnlockScore', summary: 'Unlock a score sheet',
     parameters: [pathParam('scoreId', 'Score document id')],
     responses: { 200: ok('Unlocked'), ...NOT_FOUND },
+  });
+
+  sa('/api/superadmin/scores/{scoreId}/players/{playerId}/unlock', 'put', {
+    operationId: 'superAdminUnlockPlayerForJudges', summary: 'Reopen one athlete for the judges',
+    parameters: [pathParam('scoreId', 'Score document id'), pathParam('playerId', 'Athlete id')],
+    requestBody: jsonBody(inline({ apparatus: { type: 'string' } }, [])),
+    responses: { 200: ok('Reopened'), ...NOT_FOUND },
   });
 
   sa('/api/superadmin/age-groups/start', 'post', {
