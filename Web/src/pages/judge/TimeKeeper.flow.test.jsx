@@ -293,12 +293,33 @@ describe('Scorer sheet — view-only marks and time locks', () => {
     playerId, teamId: 'team-a', apparatus: 'Rope Mallakhamb', seconds,
   }));
 
-  it('draws every judge mark and deduction read-only; only the Time is editable', async () => {
+  // User rule 2026-11-08: the Other Deduction is the Scorer's too.
+  it('draws every judge mark and the time deduction read-only; Time and Other Deduction are editable', async () => {
     await loaded();
     expect(time('Riya Mane')).toBeEnabled();
-    for (const cell of ['Senior Judge', 'Judge 1', 'Judge 2', 'Time deduction', 'Other deduction']) {
+    expect(screen.getByLabelText('Riya Mane, Other deduction')).toBeEnabled();
+    for (const cell of ['Senior Judge', 'Judge 1', 'Judge 2', 'Time deduction']) {
       expect(screen.getByLabelText(`Riya Mane, ${cell}`)).toBeDisabled();
     }
+  });
+
+  it('takes an Other Deduction up to 10.00, and locks it with the time', async () => {
+    await loaded();
+    const other = () => screen.getByLabelText('Riya Mane, Other deduction');
+    fireEvent.change(other(), { target: { value: '0.5' } });
+    expect(other()).toHaveValue('0.5');
+    fireEvent.change(other(), { target: { value: '12' } });
+    expect(other()).toHaveValue('0.5');
+
+    recordTime('p1', 75);
+    await waitFor(() => expect(time('Riya Mane')).toHaveValue('75'));
+    fireEvent.click(screen.getByRole('button', { name: 'Lock time for Riya Mane' }));
+    expect(other()).toBeDisabled();
+
+    // A reload of the saved sheet keeps what was locked.
+    act(() => h.socket.fire('scores_saved_notification', {}));
+    await screen.findByText('Riya Mane');
+    await waitFor(() => expect(other()).toHaveValue('0.5'));
   });
 
   it('still shows a judge\'s mark arriving over the socket', async () => {
@@ -391,6 +412,20 @@ describe('Scorer sheet — tolerance popup', () => {
     expect(screen.queryByText('Tolerance Limit Exceeded')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Tolerance exceeded — Riya Mane/ }));
     expect(screen.getByText('Tolerance Limit Exceeded')).toBeInTheDocument();
+  });
+
+  // Bug 2026-11-08: an unmarked seat arrives as 0 from the saved sheet, and
+  // the popup counted it as a mark.
+  it('stays quiet while a seat shows 0, however far the Chief is out', async () => {
+    render(<ScorerScoring />);
+    await screen.findByText('Riya Mane');
+    mark('Senior Judge', 9.4);
+    mark('Judge 1', 8.4);
+    mark('Judge 2', 8.4);
+    mark('Judge 3', 0);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText('Tolerance Limit Exceeded')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('waiting-for-marks').length).toBeGreaterThan(0);
   });
 
   it('stays quiet when the panel is within tolerance', async () => {

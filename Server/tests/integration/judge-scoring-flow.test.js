@@ -264,7 +264,8 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect(performer.judgeScores.seniorJudge ?? 0).toBe(0);
     expect(performer.time).toBe('1:35');
     expect(performer.deduction).toBe(0.3);
-    expect(Number(performer.otherDeduction) || 0).toBe(0);
+    // The Other Deduction is the Scorer's to set (user rule 2026-11-08).
+    expect(performer.otherDeduction).toBe(2);
   });
 
   test('auth → three slips → finalize → lock, end to end', async () => {

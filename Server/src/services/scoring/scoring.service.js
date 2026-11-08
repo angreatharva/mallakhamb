@@ -33,6 +33,7 @@ const {
   panelRecord,
 } = require('../../utils/data/user-projection.util');
 const { enrichPlayerScore, rankPlayerRows } = require('../../utils/scoring/player-row.util');
+const { seatedPanelSize } = require('../../utils/scoring/seated-panel.util');
 const { rankTeamChampionship } = require('../../utils/scoring/team-championship.util');
 const {
   JUDGE_SCORE_FIELDS,
@@ -1405,6 +1406,39 @@ class ScoringService {
   // ==========================================================================
 
   /**
+   * The seated panel size per apparatus for the category being saved.
+   * @param {Object} scoreData - competitionId, gender, ageGroup, competitionType
+   * @param {Array<Object>} rows - the incoming player rows (their apparatus)
+   * @returns {Promise<Map<string, number>>} apparatus ('' = none) -> 3|4|5
+   */
+  async seatedPanelSizes(scoreData, rows) {
+    const sizes = new Map();
+    if (!this.judgeRepository || !scoreData?.competitionId) return sizes;
+    try {
+      const query = {
+        competition: scoreData.competitionId,
+        isActive: true,
+        gender: scoreData.gender,
+        ageGroup: scoreData.ageGroup,
+      };
+      if (scoreData.competitionType) {
+        query.competitionTypes = { $in: [toCompetitionTypeSlug(scoreData.competitionType)] };
+      }
+      const seats = await this.judgeRepository.find(query, { select: 'judgeType apparatus' });
+      const apparatuses = new Set((rows || []).map((row) => String(row?.apparatus || '')));
+      apparatuses.forEach((apparatus) => {
+        const size = seatedPanelSize(seats, apparatus || null);
+        if (size) sizes.set(apparatus, size);
+      });
+    } catch (error) {
+      this.logger.warn('Could not read the seated panel size; using the sent or inferred size', {
+        competitionId: scoreData.competitionId, error: error.message,
+      });
+    }
+    return sizes;
+  }
+
+  /**
    * Bulk save scores (legacy method)
    * @param {Array} scores - Array of score data
    * @param {string} adminId - Admin ID
@@ -1438,6 +1472,13 @@ class ScoringService {
       const timeDeductionOf = (time) => (
         time ? Number(this.calculationService.calculateTimeDeduction(time)) || 0 : 0
       );
+      // The Scorer's Other Deduction (user rule 2026-11-08): 0 to 10.00, two
+      // decimals. Anything else from a Scorer save is not theirs to set.
+      const otherDeductionOf = (value) => {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n < 0) return 0;
+        return Number(Math.min(10, n).toFixed(2));
+      };
       const incomingRows = scorerTimeOnly
         ? scoreData.playerScores.map((ps) => ({
           playerId: ps.playerId,
@@ -1446,9 +1487,21 @@ class ScoringService {
           time: ps.time || '',
           judgeScores: {},
           deduction: timeDeductionOf(ps.time),
-          otherDeduction: 0,
+          otherDeduction: otherDeductionOf(ps.otherDeduction),
         }))
         : scoreData.playerScores;
+
+      /*
+       * THE PANEL SIZE COMES FROM THE SEATS (bug fix 2026-11-08), never from a
+       * client or a count of the marks so far. See seated-panel.util. Falls
+       * back to the old behaviour only when the seats cannot be read.
+       */
+      const seatedSizes = await this.seatedPanelSizes(scoreData, incomingRows);
+      const sizeFor = (row) => seatedSizes.get(String(row?.apparatus || '')) || null;
+      incomingRows.forEach((row) => {
+        const seated = sizeFor(row);
+        if (seated) row.panelSize = seated;
+      });
 
       // Process each player score through calculation service
       const processedPlayerScores = [];
@@ -1461,7 +1514,7 @@ class ScoringService {
           throw new ValidationError(`Invalid score for ${playerScore.playerName || playerScore.playerId}: ${capCheck.error}`);
         }
         const calculatedScore = await this.calculationService.calculateCompletePlayerScore(playerScore, {
-          panelSize: scoreData.panelSize || playerScore.panelSize
+          panelSize: sizeFor(playerScore) || scoreData.panelSize || playerScore.panelSize
         });
         processedPlayerScores.push(calculatedScore);
       }
@@ -1557,13 +1610,17 @@ class ScoringService {
             }
 
             // A Scorer's save: the stored row with only the time (and the
-            // deduction the time implies) replaced, re-averaged from the
-            // stored marks. See `scorerTimeOnly` above.
+            // deduction the time implies) and the Other Deduction replaced,
+            // re-averaged from the stored marks. See `scorerTimeOnly` above.
             if (scorerTimeOnly) {
               const time = incomingPlayerScore.time || existingPlayerScore.time || '';
+              const otherDeduction = incomingPlayerScore.otherDeduction !== undefined
+                ? otherDeductionOf(incomingPlayerScore.otherDeduction)
+                : (Number(existingPlayerScore.otherDeduction) || 0);
+              const panelSize = incomingPlayerScore.panelSize || existingPlayerScore.panelSize || scoreData.panelSize;
               const row = this.calculationService.calculateCompletePlayerScore(
-                { ...existingPlayerScore, time, deduction: timeDeductionOf(time) },
-                { panelSize: existingPlayerScore.panelSize || scoreData.panelSize }
+                { ...existingPlayerScore, time, deduction: timeDeductionOf(time), otherDeduction, panelSize },
+                { panelSize }
               );
               row.finalScore = Number(Math.max(
                 0,

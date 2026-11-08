@@ -177,10 +177,11 @@ describe('a whole panel scoring one performer', () => {
   });
 });
 
-// User rule 2026-11-08: a Scorer records the TIME only. The judges' marks and
-// the deductions stay as stored, whatever the Scorer's payload carries, and
-// the average and final are recomputed from the stored marks.
-describe('a Scorer save changes the time only', () => {
+// User rules 2026-11-08: a Scorer records the TIME and the OTHER DEDUCTION
+// only. The judges' marks and the time deduction stay the server's, whatever
+// the Scorer's payload carries, and the average and final are recomputed from
+// the stored marks.
+describe('a Scorer save changes the time and Other Deduction only', () => {
   const tampered = (overrides = {}) => ({
     ...category,
     scorerTimeOnly: true,
@@ -216,13 +217,27 @@ describe('a Scorer save changes the time only', () => {
     expect(row.judgeScores.judge2).toBe(8.2);
     expect(row.judgeSlips.find((sl) => sl.judgeRole === 'J1').total).toBe(8.0);
     // The time is the Scorer's; its deduction is worked out on the server
-    // (95 s is 5 over → 0.30), and the other deduction is not theirs to set.
+    // (95 s is 5 over → 0.30). The Other Deduction is the Scorer's too.
     expect(row.time).toBe('1:35');
     expect(row.deduction).toBe(0.3);
-    expect(Number(row.otherDeduction) || 0).toBe(0);
-    // 3-judge panel: the simple average of the stored marks, less 0.30.
+    expect(row.otherDeduction).toBe(1);
+    // 3-judge panel: the simple average of the stored marks, less 0.30 and 1.
     expect(row.averageMarks).toBeCloseTo(8.2, 3);
-    expect(row.finalScore).toBeCloseTo(7.9, 3);
+    expect(row.finalScore).toBeCloseTo(6.9, 3);
+  });
+
+  it('keeps the Other Deduction when a judge saves afterwards', async () => {
+    const service = buildService();
+    await service.saveScores({ ...slipFrom('seniorJudge', 'SR_JUDGE', 8.4), panelSize: 3 });
+    await service.saveScores(tampered({ otherDeduction: 0.5 }));
+    await service.saveScores({ ...slipFrom('judge1', 'J1', 8.0), panelSize: 3 });
+    const row = (await stored()).playerScores[0];
+    expect(row.otherDeduction).toBe(0.5);
+  });
+
+  it('clamps a Scorer Other Deduction to 0 to 10.00', async () => {
+    await buildService().saveScores(tampered({ otherDeduction: 25.555 }));
+    expect((await stored()).playerScores[0].otherDeduction).toBe(10);
   });
 
   it('writes no marks when the Scorer saves before any judge', async () => {
@@ -244,3 +259,64 @@ describe('a Scorer save changes the time only', () => {
   });
 });
 
+
+// Bug fix 2026-11-08: the panel size comes from the SEATS, not from whoever
+// sent it or how many marks have arrived. A Scorer's save on a 4-judge panel
+// with one judge still to mark used to be averaged as a 3-judge panel (stored
+// 6.67 while the Scorer's sheet read 7.00).
+describe('the seated panel decides the averaging method', () => {
+  const seat = (judgeType, apparatus = 'Pole Mallakhamb') => ({ judgeType, apparatus });
+  const FOUR = [seat('Senior Judge'), seat('Judge 1'), seat('Judge 2'), seat('Judge 3'), seat('Scorer'),
+    // Another apparatus's panel never counts.
+    seat('Judge 4', 'Rope Mallakhamb')];
+  const withSeats = (find) => new ScoringService(
+    new ScoreRepository(quiet),
+    { findById: async () => ({ _id: COMPETITION }) },
+    playerRepositoryStub,
+    { find },
+    null,
+    quiet,
+    new CalculationService(quiet)
+  );
+  const scorerSave = () => ({
+    ...category, scorerTimeOnly: true,
+    playerScores: [{ playerId: PLAYER, playerName: 'Asha Kulkarni', apparatus: 'Pole Mallakhamb', time: '1:15' }],
+  });
+
+  it('a 4-judge panel with a judge still to mark stores no average', async () => {
+    const service = withSeats(async () => FOUR);
+    await service.saveScores(slipFrom('seniorJudge', 'SR_JUDGE', 8.4));
+    await service.saveScores(slipFrom('judge1', 'J1', 6.8));
+    await service.saveScores(slipFrom('judge2', 'J2', 7.2));
+    await service.saveScores(scorerSave());
+
+    const row = (await stored()).playerScores[0];
+    expect(row.panelSize).toBe(4);
+    expect(row.averageMarks).toBe(0);
+    expect(row.finalScore).toBe(0);
+  });
+
+  it('once all four have marked, scores them by the 4-judge method', async () => {
+    const service = withSeats(async () => FOUR);
+    await service.saveScores(slipFrom('seniorJudge', 'SR_JUDGE', 8.4));
+    await service.saveScores(slipFrom('judge1', 'J1', 6.8));
+    await service.saveScores(slipFrom('judge2', 'J2', 7.2));
+    await service.saveScores(slipFrom('judge3', 'J3', 7.6));
+    await service.saveScores(scorerSave());
+
+    const row = (await stored()).playerScores[0];
+    // Pool 6.8, 7.2, 7.6, 8.4 → middle two 7.2, 7.6 → 7.40; Chief 8.4 is 1.00
+    // away, over the ±0.30 band → base score (7.40 + 8.40) / 2 = 7.90.
+    expect(row.panelSize).toBe(4);
+    expect(row.averageMarks).toBeCloseTo(7.9, 3);
+  });
+
+  it('falls back to the old guess when the seats cannot be read', async () => {
+    const service = withSeats(async () => { throw new Error('db down'); });
+    await service.saveScores(slipFrom('seniorJudge', 'SR_JUDGE', 8.4));
+    await service.saveScores(slipFrom('judge1', 'J1', 6.8));
+    await service.saveScores(slipFrom('judge2', 'J2', 7.2));
+    await service.saveScores(scorerSave());
+    expect((await stored()).playerScores[0].averageMarks).toBeCloseTo(7.467, 3);
+  });
+});

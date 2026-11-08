@@ -459,3 +459,25 @@ describe('copRules — time deduction, short of 60 s as well as over 90 s', () =
     expect(getTimeDeductionForTime(seconds)).toBe(expected);
   });
 });
+
+describe('panelMarksComplete — the server\'s rule for "every seated judge has marked"', () => {
+  it('3 judges: any three marks', async () => {
+    const { panelMarksComplete } = await import('./copRules');
+    expect(panelMarksComplete({ seniorJudge: 8, judge1: 7, judge2: 7.5 }, 3)).toBe(true);
+    expect(panelMarksComplete({ seniorJudge: 8, judge1: 7 }, 3)).toBe(false);
+  });
+
+  it('4 judges: the Senior Judge and three evaluators', async () => {
+    const { panelMarksComplete } = await import('./copRules');
+    expect(panelMarksComplete({ seniorJudge: 8.4, judge1: 6.8, judge2: 7.2, judge4: 0 }, 4)).toBe(false);
+    expect(panelMarksComplete({ judge1: 6.8, judge2: 7.2, judge3: 7.6 }, 4)).toBe(false);
+    expect(panelMarksComplete({ seniorJudge: 8.4, judge1: 6.8, judge2: 7.2, judge3: 7.6 }, 4)).toBe(true);
+  });
+
+  it('5 judges: the Senior Judge and four; unknown size never waits', async () => {
+    const { panelMarksComplete } = await import('./copRules');
+    expect(panelMarksComplete({ seniorJudge: 8, judge1: 7, judge2: 7, judge3: 7 }, 5)).toBe(false);
+    expect(panelMarksComplete({ seniorJudge: 8, judge1: 7, judge2: 7, judge3: 7, judge4: 7 }, 5)).toBe(true);
+    expect(panelMarksComplete({}, undefined)).toBe(true);
+  });
+});

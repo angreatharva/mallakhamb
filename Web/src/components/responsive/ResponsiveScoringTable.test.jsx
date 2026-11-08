@@ -234,3 +234,27 @@ describe('mark cells are plain number-only text fields', () => {
     expect(onScoreChange).toHaveBeenLastCalledWith(PLAYER.id, 'time', '1:35');
   });
 });
+
+// Bug fix 2026-11-08: no average or final until every seated judge has marked
+// — the server stores none either, and a preview disagreed with it (7.00 on
+// the sheet, 6.67 stored).
+describe('the sheet waits for every seated judge', () => {
+  const PART = { ...MARKS, judge3: '' };
+
+  it('shows "Waiting for marks" instead of an average on an incomplete panel', () => {
+    const { container } = sheet(FOUR, PART);
+    expect(screen.getByTestId('waiting-for-marks')).toBeTruthy();
+    expect(container.textContent).not.toMatch(/\d\.\d\d/);
+  });
+
+  it('shows the average once the last judge has marked', () => {
+    sheet(FOUR);
+    expect(screen.queryByTestId('waiting-for-marks')).toBeNull();
+  });
+
+  it('waits on a phone too', () => {
+    responsive.isMobile = true;
+    sheet(FIVE, { ...MARKS, judge4: '' });
+    expect(screen.getByTestId('waiting-for-marks')).toBeTruthy();
+  });
+});

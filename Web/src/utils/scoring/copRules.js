@@ -729,6 +729,31 @@ export function analyzePanelMismatches(panelScores, panelSize) {
  *   known: inferring from how many marks are in yet reads a half-filled
  *   5-judge sheet as a 3-judge panel, which is a different rule entirely.
  */
+/**
+ * Has every seated judge marked? (bug fix 2026-11-08)
+ *
+ * The exact rule the server's calculateIndividualScore applies before it will
+ * produce an average: 3 judges → three marks; 4 → the Senior Judge and three
+ * evaluation judges; 5 → the Senior Judge and four. Until then a sheet that
+ * previews a number disagrees with what the server stores (a Scorer's sheet
+ * read 7.00 while the server stored 6.67), so the sheet waits instead.
+ * An unknown size keeps the old preview behaviour.
+ *
+ * @param {Object} ps - a sheet row: seniorJudge, judge1..judge4
+ * @param {number} [panelSize] - the SEATED size, 3 | 4 | 5
+ * @returns {boolean}
+ */
+export function panelMarksComplete(ps, panelSize) {
+  const row = ps || {};
+  const senior = (parseFloat(row.seniorJudge) || 0) > 0;
+  const evaluators = ['judge1', 'judge2', 'judge3', 'judge4']
+    .filter((key) => (parseFloat(row[key]) || 0) > 0).length;
+  if (panelSize === 3) return (senior ? 1 : 0) + evaluators >= 3;
+  if (panelSize === 4) return senior && evaluators >= 3;
+  if (panelSize === 5) return senior && evaluators >= 4;
+  return true;
+}
+
 export function calculateFinalScore(ps, panelSize) {
     const r = calculateAverageMarks(ps, panelSize);
     return Math.max(0, r.average - (parseFloat(ps.deduction) || 0) - (parseFloat(ps.otherDeduction) || 0)).toFixed(2);

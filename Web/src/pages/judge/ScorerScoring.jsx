@@ -17,7 +17,7 @@ import { createAdminAPI } from '@/services/user/admin.api';
 
 const scorerAPI = createAdminAPI('/judge');
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
-import { analyzePanelMismatches, calculateAverageMarks, getTimeDeductionForTime } from '@/utils/scoring/copRules';
+import { analyzePanelMismatches, calculateAverageMarks, getTimeDeductionForTime, panelMarksComplete } from '@/utils/scoring/copRules';
 import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparatus';
 import { mirrorChiefSeat, panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { buildScorerRows } from './scorerRows';
@@ -31,11 +31,24 @@ import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import { ageMatches } from '@/hooks/useAgeGroups';
 
 /*
- * The Scorer types ONE thing: the time. Judges' marks arrive from their own
- * slips (socket + saved sheet) and are view-only here; the time deduction is
- * derived from the time. User rule 2026-11-07.
+ * The Scorer types the time and the Other Deduction, nothing else. Judges'
+ * marks arrive from their own slips (socket + saved sheet) and are view-only
+ * here; the time deduction is derived from the time. User rules 2026-11-07
+ * (time only) and 2026-11-08 (Other Deduction too).
  */
-const SCORER_EDITABLE_FIELDS = Object.freeze(['time']);
+const SCORER_EDITABLE_FIELDS = Object.freeze(['time', 'otherDeduction']);
+
+/** Other Deduction as typed: up to 10.00, two decimals, digits and a dot only. */
+const OTHER_DEDUCTION_PATTERN = /^\d{0,2}(\.\d{0,2})?$/;
+const OTHER_DEDUCTION_MAX = 10;
+
+/*
+ * A row lock holds what the Scorer accepted for that athlete. Older locks
+ * (before the Other Deduction was editable) stored the time alone as a
+ * string; newer ones store { time, otherDeduction }. Both read the same.
+ */
+const lockedTimeOf = (lock) => (lock && typeof lock === 'object' ? lock.time : lock);
+const lockedOtherOf = (lock) => (lock && typeof lock === 'object' ? lock.otherDeduction : undefined);
 
 /** Seat type -> the sheet field holding that judge's total. */
 const SEAT_FIELD = Object.freeze({
@@ -128,13 +141,20 @@ const ScorerScoring = () => {
     try { localStorage.setItem(timeLockKey, JSON.stringify(timeLocks)); } catch { /* storage full or blocked */ }
   }, [timeLocks, timeLockKey]);
 
-  /** Put every locked time (and its deduction) back over a freshly loaded sheet. */
+  /** Put every locked time, its deduction and Other Deduction back over a freshly loaded sheet. */
   const withLockedTimes = (sheet) => {
     const locks = timeLocksRef.current || {};
     const next = { ...sheet };
-    Object.entries(locks).forEach(([rowId, time]) => {
+    Object.entries(locks).forEach(([rowId, lock]) => {
       if (!next[rowId]) return;
-      next[rowId] = { ...next[rowId], time, deduction: deductionForTime(time) };
+      const time = lockedTimeOf(lock);
+      const other = lockedOtherOf(lock);
+      next[rowId] = {
+        ...next[rowId],
+        time,
+        deduction: deductionForTime(time),
+        ...(other !== undefined ? { otherDeduction: other } : {}),
+      };
     });
     return next;
   };
@@ -561,11 +581,15 @@ const ScorerScoring = () => {
     if (!seatedPanelSize || seatedPanelSize < 4) return [];
     return players.flatMap((p) => {
       const row = scores[p.id] || {};
+      // A seat not yet marked is stored as 0, not left blank: it is not a
+      // mark, and counting it fired the popup on an incomplete panel (bug
+      // 2026-11-08). Wait for every seated judge, by the server's rule.
+      if (!panelMarksComplete(row, seatedPanelSize)) return [];
       const panel = {};
       judges.forEach((j) => {
         const field = SEAT_FIELD[j.judgeType];
         const value = parseFloat(row[field]);
-        if (field && Number.isFinite(value)) panel[j.judgeType] = { judgeType: j.judgeType, score: value };
+        if (field && Number.isFinite(value) && value > 0) panel[j.judgeType] = { judgeType: j.judgeType, score: value };
       });
       const analysis = analyzePanelMismatches(panel, seatedPanelSize);
       if (!analysis.hasToleranceBreach) return [];
@@ -611,11 +635,23 @@ const ScorerScoring = () => {
       toast.error('Cannot edit scores - this entry is locked');
       return;
     }
-    // Only the time is the Scorer's to change; the table already draws every
-    // other cell read-only, this is the backstop.
+    // Only the time and the Other Deduction are the Scorer's to change; the
+    // table already draws every other cell read-only, this is the backstop.
     if (!SCORER_EDITABLE_FIELDS.includes(field)) return;
     if (timeLocksRef.current?.[playerId] !== undefined) {
-      toast.error('This time is locked. Unlock it to change it.');
+      toast.error('This athlete is locked. Unlock to change it.');
+      return;
+    }
+
+    if (field === 'otherDeduction') {
+      const text = String(value ?? '').trim();
+      if (!OTHER_DEDUCTION_PATTERN.test(text)) return;
+      if (text !== '' && text !== '.' && parseFloat(text) > OTHER_DEDUCTION_MAX) {
+        toast.error(`Other Deduction can be at most ${OTHER_DEDUCTION_MAX.toFixed(2)}`, { id: 'other-deduction-max' });
+        return;
+      }
+      setScores(prev => ({ ...prev, [playerId]: { ...prev[playerId], otherDeduction: text } }));
+      setLastUpdated(new Date());
       return;
     }
 
@@ -644,7 +680,10 @@ const ScorerScoring = () => {
       toast.error(`Enter a time for ${name} before locking it`);
       return;
     }
-    setTimeLocks(prev => ({ ...prev, [rowId]: time }));
+    // The Other Deduction is locked with the time: the row is what the
+    // Scorer accepted for this athlete.
+    const otherDeduction = String(scores[rowId]?.otherDeduction ?? '').trim();
+    setTimeLocks(prev => ({ ...prev, [rowId]: { time, otherDeduction } }));
     toast.success(`Time ${time} locked for ${name}`);
   };
 

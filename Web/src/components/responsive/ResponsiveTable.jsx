@@ -2,7 +2,7 @@ import { Lock, LockOpen } from 'lucide-react';
 import { useResponsive } from '../../hooks/useResponsive';
 import { ResponsiveContainer } from './ResponsiveContainer';
 import { DATA_COLORS, FG, alpha } from '../../styles/tokens';
-import { calculateAverageMarks, calculateFinalScore } from '../../utils/scoring/copRules';
+import { calculateAverageMarks, calculateFinalScore, panelMarksComplete } from '../../utils/scoring/copRules';
 
 // ─── Shared token shortcuts ───────────────────────────────────────────────────
 const surface  = 'rgb(var(--surface))';
@@ -264,7 +264,8 @@ export const ResponsiveScoringTable = ({
   const cellLocked = (playerId, field) => (
     isLocked
     || (Array.isArray(editableFields) && !editableFields.includes(field))
-    || (field === 'time' && !!lockedRows?.[playerId])
+    // A locked athlete: the time and the Other Deduction the Scorer accepted.
+    || ((field === 'time' || field === 'otherDeduction') && !!lockedRows?.[playerId])
   );
   const lockButton = (player) => (onToggleRowLock ? (
     <TimeLockButton
@@ -311,6 +312,10 @@ export const ResponsiveScoringTable = ({
    * explicitly; `judges.length` is still the answer for everyone else.
    */
   const panelSize = seatedPanelSize || judges.length || undefined;
+  // Until every seated judge has marked there is no average to show: the
+  // server stores none either (see panelMarksComplete).
+  const marksIn = (playerId) => panelMarksComplete(scores[playerId] || {}, panelSize);
+  const WAITING = '—';
 
   if (useCards) {
     return (
@@ -374,7 +379,9 @@ export const ResponsiveScoringTable = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 12, color: textSecondary }}>Average</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {(() => {
+                    {!marksIn(player.id) ? (
+                      <span style={{ fontSize: 12, color: textMuted }} data-testid="waiting-for-marks">{WAITING} Waiting for marks</span>
+                    ) : (() => {
                       const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                       return (
                         <>
@@ -413,7 +420,7 @@ export const ResponsiveScoringTable = ({
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1px solid ${border}` }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>Final Score</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: FG.success }}>{calculateFinalScore(scores[player.id] || {}, panelSize)}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: FG.success }}>{marksIn(player.id) ? calculateFinalScore(scores[player.id] || {}, panelSize) : WAITING}</span>
                 </div>
               </div>
             </div>
@@ -523,12 +530,15 @@ export const ResponsiveScoringTable = ({
                 <td style={{ padding: '12px 8px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                     <span style={{ background: `${alpha('rgb(var(--info-fg))', 0x18)}`, color: FG.info, borderRadius: 'var(--radius-control)', padding: '4px 8px', fontSize: 13, fontWeight: 600 }}>
-                      {(() => {
-                        const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
-                        return result.average.toFixed(2);
-                      })()}
+                      {marksIn(player.id)
+                        ? calculateAverageMarks(scores[player.id] || {}, panelSize).average.toFixed(2)
+                        : WAITING}
                     </span>
+                    {!marksIn(player.id) && (
+                      <span style={{ fontSize: 9, color: textMuted, lineHeight: 1.3 }} data-testid="waiting-for-marks">Waiting for marks</span>
+                    )}
                     {(() => {
+                      if (!marksIn(player.id)) return null;
                       const result = calculateAverageMarks(scores[player.id] || {}, panelSize);
                       if (result.baseScoreApplied) {
                         return (
@@ -567,7 +577,7 @@ export const ResponsiveScoringTable = ({
                 </td>
                 <td style={{ padding: '12px 8px' }}>
                   <span style={{ background: `${alpha('rgb(var(--success-fg))', 0x18)}`, color: FG.success, borderRadius: 'var(--radius-control)', padding: '4px 8px', fontSize: 14, fontWeight: 700 }}>
-                    {calculateFinalScore(scores[player.id] || {}, panelSize)}
+                    {marksIn(player.id) ? calculateFinalScore(scores[player.id] || {}, panelSize) : WAITING}
                   </span>
                 </td>
               </tr>
