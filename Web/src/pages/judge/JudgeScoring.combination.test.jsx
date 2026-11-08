@@ -45,6 +45,8 @@ vi.mock('./useJudgePanelData', () => ({
     finalized: false,
     socket: null,
     isConnected: true,
+    // The seat the panel hook resolves (bug fix 2026-11-08).
+    mySeat: { judgeType: 'Judge 1', gender: 'Male', ageGroup: 'Under14' }, myJudgeType: 'Judge 1', seatReady: true,
   }),
   resolveJudgeSeat: (judgeInfo) => judgeInfo,
 }));

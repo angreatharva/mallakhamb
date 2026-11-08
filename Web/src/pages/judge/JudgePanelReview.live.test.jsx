@@ -54,6 +54,8 @@ vi.mock('./useJudgePanelData', async () => {
         setFinalized: vi.fn(),
         socket: null,
         isConnected: true,
+        // The seat the panel hook resolves (bug fix 2026-11-08).
+        mySeat: { judgeType: 'Senior Judge', gender: 'Male', ageGroup: 'Under14' }, myJudgeType: 'Senior Judge', seatReady: true,
         panelScoresCount: count,
         effectivePanelSize: size,
         orderedPanelEntries: SEATS.filter((jt) => panelScores[jt]).map((jt) => [jt, panelScores[jt]]),

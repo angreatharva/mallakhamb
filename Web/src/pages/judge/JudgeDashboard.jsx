@@ -13,6 +13,7 @@ import { judgeAPI } from '@/services/public/judge.api';
 import { judgeLotsAPI } from '@/services/ordering/lots.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { resolveJudgeSeat, seatTypesFor } from './useJudgePanelData';
+import { seatsForMeet, judgeAtMeet } from './judgeSeats';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { FG, alpha } from '@/styles/tokens';
@@ -187,21 +188,45 @@ const JudgeDashboard = () => {
     setShowModal(true);
   }, [assignmentsLoading, assignments, judgeInfo]);
 
+  /*
+   * WHO I AM HERE, for routing a team tap and the Scorer/Time Keeper popup:
+   * the server's seat list for the meet on screen, not the stored copy alone
+   * (bug 2026-11-08: the stored copy could be empty, and an empty one routed a
+   * Scorer as an evaluation judge). The stored copy covers a failed fetch.
+   */
+  const seatHolder = useMemo(() => {
+    if (!judgeInfo) return null;
+    const meet = String(selectedCompetitionId || idOf(judgeInfo.competition) || '');
+    const fetchedHere = assignments
+      .filter((seat) => !meet || idOf(seat.competition) === meet)
+      .map((seat) => ({ ...seat, competition: idOf(seat.competition) }));
+    if (fetchedHere.length === 0) return judgeInfo;
+    // Same seats as stored: the same object, so nothing downstream re-runs
+    // just because the fetch answered (it re-opened the role popup mid-tap).
+    const sig = (list) => JSON.stringify((list || []).map((x) => [x._id, x.judgeType]).sort());
+    if (sig(fetchedHere) === sig(judgeInfo.allAssignments)) return judgeInfo;
+    return { ...judgeInfo, allAssignments: fetchedHere };
+  }, [judgeInfo, assignments, selectedCompetitionId]);
+
   // The category is chosen and seats this person as Scorer AND Time Keeper,
   // but no role is on record (first time, or a session that lost it): ask.
   useEffect(() => {
     if (!judgeInfo || showModal || !selectedCompetitionType) return;
     if (!sessionStorage.getItem('judge_category_selected')) return;
-    const both = holdsBothRecorderSeats(seatTypesFor(judgeInfo, {
+    const both = holdsBothRecorderSeats(seatTypesFor(seatHolder, {
       gender: selectedGender || judgeInfo.gender,
       ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
       competitionType: selectedCompetitionType,
       apparatus: selectedApparatus,
     }));
-    if (both && !RECORDER_ROLES.includes(chosenRole)) setShowRoleModal(true);
-  }, [judgeInfo, showModal, selectedCompetitionType, selectedGender, selectedAgeGroup, selectedApparatus, chosenRole]);
+    // The stored answer too: a render that started before the tap still
+    // carries the old `chosenRole`, and must not re-ask what was just answered.
+    const answered = chosenRole || sessionStorage.getItem('judge_selected_role') || '';
+    if (both && !RECORDER_ROLES.includes(answered)) setShowRoleModal(true);
+  }, [judgeInfo, seatHolder, showModal, selectedCompetitionType, selectedGender, selectedAgeGroup, selectedApparatus, chosenRole]);
 
   const competitionTypes = COMPETITION_TYPES;
+
 
   useEffect(() => {
     const storedJudge = secureStorage.getItem('judge_user');
@@ -338,26 +363,20 @@ const JudgeDashboard = () => {
 
     try {
       const response = await judgeAPI.setCompetition(nextId);
-      const { token, competition } = response.data?.data || {};
+      const switchResult = response.data?.data || {};
+      const { token, competition } = switchResult;
       if (!token) throw new Error('No competition-scoped token returned');
 
-      const seatsAtMeet = seats
-        .filter((seat) => idOf(seat.competition) === nextId)
-        // Flattened back to an id, so the stored shape matches what login
-        // writes and `resolveJudgeSeat` keeps reading the same thing.
-        .map((seat) => ({ ...seat, competition: nextId }));
-      const primary = seatsAtMeet[0] || null;
-
-      const nextJudge = {
-        ...judgeInfo,
-        competition: nextId,
-        judgeType: primary?.judgeType || null,
-        judgeNo: primary?.judgeNo ?? null,
-        gender: primary?.gender || null,
-        ageGroup: primary?.ageGroup || null,
-        competitionTypes: primary?.competitionTypes || [],
-        allAssignments: seatsAtMeet,
-      };
+      // Seats from the switch answer itself, never from the list this screen
+      // was still loading: tapping a meet before that list arrived (slow venue
+      // data) used to store an EMPTY seat list (bug 2026-11-08, see judgeSeats).
+      const seatsAtMeet = await seatsForMeet({
+        switchResult,
+        competitionId: nextId,
+        knownSeats: seats,
+        fetchAssignments: judgeAPI.getAssignments,
+      });
+      const nextJudge = judgeAtMeet(judgeInfo, nextId, seatsAtMeet);
 
       login(nextJudge, token, 'judge');
       setJudgeInfo(nextJudge);
@@ -600,7 +619,12 @@ const JudgeDashboard = () => {
     // Decided by the seats held in THIS category — a person can keep time on
     // one panel and judge on another. Someone who is BOTH Scorer and Time
     // Keeper here goes wherever the role popup sent them.
-    const heldHere = seatTypesFor(judgeInfo, {
+    // Not routed on a guess while the seat list is still loading.
+    if (assignmentsLoading && !(judgeInfo?.allAssignments?.length)) {
+      toast('Loading your panel seats… tap again in a moment.');
+      return;
+    }
+    const heldHere = seatTypesFor(seatHolder, {
       gender, ageGroup, competitionType: selectedCompetitionType, apparatus: selectedApparatus,
     });
     // Both seats here: the role chosen in the popup decides — and without one

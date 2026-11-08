@@ -28,7 +28,7 @@ import {
 import ScorerScoring from './ScorerScoring'; // Import scorer component
 import TimeKeeperScoring from './TimeKeeperScoring';
 import { J, JudgeAmbience, PANEL_REVIEW_PATH, ACTIVE_SESSION_KEY, playerIdOf, normalizeBreakdown, DecimalInput, scoringCacheKey, DifficultyPicker, DIFFICULTY_CLASSES, JudgeHeader, ScoringFor, SlipReadOnly } from './judgeShared';
-import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
+import { useJudgeSession, useJudgeInfo, useJudgePanelData } from './useJudgePanelData';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 // ─── COP PDF Modal ────────────────────────────────────────────────────────────
@@ -219,6 +219,7 @@ const JudgeSlip = () => {
   const judgeInfo = useJudgeInfo();
   const {
     panelScores, setPanelScores, finalized, socket, isConnected, loaded: panelLoaded,
+    mySeat: panelMySeat, seatReady,
   } = useJudgePanelData({ judgeInfo, session });
 
   /**
@@ -226,12 +227,10 @@ const JudgeSlip = () => {
    * two panels is a different role in each, so the slip, the panel lookup and
    * the badge all have to follow the category — not the account's first seat.
    */
-  const mySeat = resolveJudgeSeat(judgeInfo, {
-    gender: selectedGender,
-    ageGroup: selectedAgeGroup,
-    competitionType: selectedCompetitionType,
-    apparatus: selectedApparatus,
-  });
+  // From the panel hook: the server's panel first, the stored seats as the
+  // fallback (see useJudgePanelData). Not the stored seats alone — on some
+  // phones they were empty, and the slip then never found its own score.
+  const mySeat = panelMySeat;
   const myJudgeType = mySeat?.judgeType;
 
 
@@ -437,7 +436,7 @@ const JudgeSlip = () => {
   // panel feed is the only place the prior values still exist — but we stay
   // on this page instead of redirecting and leave submitted/editable as-is.
   useEffect(() => {
-    if (!judgeInfo || restoredRef.current) return;
+    if (!judgeInfo || restoredRef.current || !myJudgeType) return;
     const myScore = panelScores[myJudgeType];
     if (!myScore) return;
     restoredRef.current = true;
@@ -463,12 +462,14 @@ const JudgeSlip = () => {
     setSubmitted(true);
     // Replace rather than push so Back still leaves the page.
     navigate(PANEL_REVIEW_PATH, { replace: true, state: activeSessionData });
-  }, [panelScores, judgeInfo, navigate, activeSessionData]);
+  }, [panelScores, judgeInfo, navigate, activeSessionData, myJudgeType]);
 
   // The read settled without a slip of ours (or failed): nothing to wait for.
+  // Not before the seat is known either — until then "no slip of mine" is only
+  // "not looked up yet", and opening the form then showed a blank slip.
   useEffect(() => {
-    if (panelLoaded) setSlipReady(true);
-  }, [panelLoaded]);
+    if (panelLoaded && seatReady) setSlipReady(true);
+  }, [panelLoaded, seatReady]);
 
   // Covers the judge who is re-editing their slip (resumeEditing) at the
   // moment the Senior Judge finalizes elsewhere — the panel score is now

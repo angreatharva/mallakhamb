@@ -323,7 +323,12 @@ class JudgeService extends UserService {
 
       this.logger.info('Competition context set', { judgeAccountId, competitionId });
 
-      return { token, competition };
+      // The judge's seats at this meet travel WITH the token (bug 2026-11-08).
+      // The phone used to fetch them in a second request after switching; on
+      // slow venue data that request was late or dropped, the phone saved an
+      // empty seat list, and the Senior Judge then saw no marks and "Edit my
+      // score" opened blank. One answer, so the two can never disagree.
+      return { token, competition, assignments: assignments.map(toClientAssignment) };
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;

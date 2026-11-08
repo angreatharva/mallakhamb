@@ -33,7 +33,7 @@ import {
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
 import { J, JudgeAmbience, MismatchModal, ToleranceModal, SrEditModal, SCORING_PATH, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey, JudgeHeader, ScoringFor } from './judgeShared';
-import { useJudgeSession, useJudgeInfo, useJudgePanelData, resolveJudgeSeat } from './useJudgePanelData';
+import { useJudgeSession, useJudgeInfo, useJudgePanelData } from './useJudgePanelData';
 
 const JudgePanelReview = () => {
   const navigate = useNavigate();
@@ -62,13 +62,6 @@ const JudgePanelReview = () => {
    * and an evaluation judge on another gets the chief's controls only where
    * they actually are the chief.
    */
-  const mySeat = resolveJudgeSeat(judgeInfo, {
-    gender: selectedGender,
-    ageGroup: selectedAgeGroup,
-    competitionType: selectedCompetitionType,
-    apparatus: selectedApparatus,
-  });
-  const myJudgeType = mySeat?.judgeType;
   const {
     panelScores,
     setPanelScores,
@@ -82,6 +75,10 @@ const JudgePanelReview = () => {
     orderedPanelEntries,
     allPanelSubmitted,
     isSeniorJudge,
+    // The seat from the server's panel for this category, the stored seats as
+    // the fallback (see useJudgePanelData) — never the stored list alone.
+    mySeat,
+    myJudgeType,
   // Re-read every 10 s: the socket is the fast path, this is what guarantees a
   // judge's edited slip replaces their old one here even if a broadcast is lost.
   } = useJudgePanelData({ judgeInfo, session, refreshMs: 10_000 });

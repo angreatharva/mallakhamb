@@ -164,6 +164,13 @@ export function useJudgeSession(locationState) {
  */
 /** Does this seat cover the category? */
 const seatCovers = (seat, category) => {
+  // A seat at ANOTHER meet never covers this one. Login stores the judge's
+  // seats across every meet; matching on the category alone could hand a
+  // Senior Judge here the Judge 2 seat they hold elsewhere.
+  if (category.competition && seat.competition) {
+    const seatMeet = String(seat.competition?._id || seat.competition);
+    if (seatMeet !== String(category.competition)) return false;
+  }
   if (category.gender && seat.gender !== category.gender) return false;
   if (category.ageGroup && seat.ageGroup !== category.ageGroup) return false;
   if (category.competitionType) {
@@ -182,8 +189,15 @@ const allSeats = (judgeInfo) =>
 export function resolveJudgeSeat(judgeInfo, category = {}) {
   if (!judgeInfo) return null;
   const seats = allSeats(judgeInfo);
-  return seats.find((seat) => seatCovers(seat, category)) || seats[0] || null;
+  const meet = judgeInfo.competition?._id || judgeInfo.competition;
+  const scoped = { ...(meet ? { competition: meet } : {}), ...category };
+  return seats.find((seat) => seatCovers(seat, scoped)) || seats[0] || null;
 }
+
+/** The signed-in account's id, whichever field the stored judge carries it in. */
+const accountIdOf = (judgeInfo) => String(
+  judgeInfo?._id || judgeInfo?.id || judgeInfo?.accountId || judgeInfo?.judgeAccount || ''
+);
 
 /**
  * EVERY seat type this judge holds for the category, not just the first.
@@ -265,6 +279,20 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
   const [panelScores, setPanelScores] = useState({});
   const [panelSize, setPanelSize] = useState(null); // 3 | 4 | 5 from assigned judges
   const [judgeNameMap, setJudgeNameMap] = useState({});
+  /*
+   * MY SEAT ON THIS PANEL, from the server (bug fix 2026-11-08).
+   *
+   * Which judge "I" am used to come only from the seat list stored on the
+   * device at login (`allAssignments`). On some phones that list was empty
+   * (the seat fetch failed and an empty list was stored) or held seats from
+   * other meets — and with no seat the Senior Judge saw no other judge's
+   * marks, and "Edit my score" found no slip of theirs and opened blank. The
+   * panel for this exact category is loaded here anyway, and every seat in it
+   * names its account, so the seat is read from that; the stored list is the
+   * fallback while it loads or if it fails.
+   */
+  const [panelSeat, setPanelSeat] = useState(null);
+  const [seatLookupDone, setSeatLookupDone] = useState(false);
   const [finalized, setFinalized] = useState(false);
   // True once the first read of the stored slips has settled, found or not.
   const [loaded, setLoaded] = useState(false);
@@ -307,6 +335,16 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
         const nameMap = {};
         panelJudges.forEach((j) => { nameMap[j.judgeType] = j.name; });
         setJudgeNameMap(nameMap);
+
+        const me = accountIdOf(judgeInfo);
+        const isMine = (seat) => me && String(seat?.judgeAccount?._id || seat?.judgeAccount || seat?.account?._id || '') === me;
+        // An evaluation seat first (what the slip and Panel Review are for),
+        // else any seat of mine on this apparatus's panel (Scorer, Time Keeper).
+        const mine = panelJudges.find(isMine)
+          || judgesData.find((seat) => isMine(seat)
+            && (!selectedApparatus || !seat.apparatus || seat.apparatus === selectedApparatus))
+          || null;
+        setPanelSeat(mine);
       } catch (err) {
         if (isAuthFailure(err)) {
           // The interceptor has already tried a silent refresh and dispatched
@@ -314,6 +352,8 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
           toast.error('Your session expired. Please sign in again.');
         }
         logger.warn('Could not load panel size from judges list', err);
+      } finally {
+        setSeatLookupDone(true);
       }
     };
     loadPanelSize();
@@ -586,6 +626,12 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
 
   const panelScoresCount = Object.keys(panelScores).filter((jt) => PANEL_TYPES.includes(jt)).length;
   const effectivePanelSize = panelSize || panelScoresCount || 0;
+  const mySeat = panelSeat || resolveJudgeSeat(judgeInfo, {
+    gender: selectedGender,
+    ageGroup: selectedAgeGroup,
+    competitionType: selectedCompetitionType,
+    apparatus: selectedApparatus,
+  });
   const orderedPanelEntries = PANEL_TYPES
     .filter((jt) => panelScores[jt])
     .map((jt) => [jt, panelScores[jt]]);
@@ -605,13 +651,14 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
     effectivePanelSize,
     orderedPanelEntries,
     allPanelSubmitted: effectivePanelSize > 0 && panelScoresCount >= effectivePanelSize,
+    // My seat on THIS panel: the server's panel first, the stored list as the
+    // fallback (see `panelSeat`). `seatReady` says the lookup has settled, so
+    // the slip can wait for it before deciding there is no slip of mine.
+    mySeat,
+    myJudgeType: mySeat?.judgeType || null,
+    seatReady: seatLookupDone || !!panelSeat,
     // Senior Judge OF THIS CATEGORY. A judge who chairs one panel and merely
     // scores on another must not get the chief's controls on the second.
-    isSeniorJudge: resolveJudgeSeat(judgeInfo, {
-      gender: selectedGender,
-      ageGroup: selectedAgeGroup,
-      competitionType: selectedCompetitionType,
-      apparatus: selectedApparatus,
-    })?.judgeType === 'Senior Judge',
+    isSeniorJudge: mySeat?.judgeType === 'Senior Judge',
   };
 }

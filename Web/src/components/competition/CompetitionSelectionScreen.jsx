@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { competitionsAtLevel, levelLabel } from '@/utils/competition/levels';
-import { idOf } from '@/pages/judge/judgeCategoryOptions';
+import { seatsForMeet, judgeAtMeet } from '@/pages/judge/judgeSeats';
 import { ArrowRight, Layers, Search, X } from 'lucide-react';
 import {
   Button, Heading, IconButton, Input, RunningOrder, RunningOrderItem, StatusTag, Tag, EmptyState, ErrorState, TextLink,
@@ -286,7 +286,8 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
        * way to check that the judge holds a seat at the meet. This one does.
        */
       const response = await judgeAPI.setCompetition(competitionId);
-      const { token, competition } = response.data?.data || {};
+      const switchResult = response.data?.data || {};
+      const { token, competition } = switchResult;
       if (!token) throw new Error('No competition-scoped token returned');
 
       /*
@@ -308,24 +309,17 @@ const CompetitionSelectionScreen = ({ userType, onCompetitionSelected }) => {
        * meet, and it fails soft: an assignments fetch that does not answer
        * leaves the seat null rather than confidently wrong.
        */
-      const seats = await judgeAPI.getAssignments()
-        .then((assignments) => assignments.data?.data || [])
-        .catch(() => []);
-      const atThisMeet = seats
-        .filter((seat) => idOf(seat.competition) === competitionId)
-        .map((seat) => ({ ...seat, competition: competitionId }));
-      const primary = atThisMeet[0] || null;
-
-      login({
-        ...(user || {}),
-        competition: competitionId,
-        judgeType: primary?.judgeType ?? null,
-        judgeNo: primary?.judgeNo ?? null,
-        gender: primary?.gender ?? null,
-        ageGroup: primary?.ageGroup ?? null,
-        competitionTypes: primary?.competitionTypes || [],
-        allAssignments: atThisMeet,
-      }, token, 'judge');
+      // Seats from the switch answer itself; a second fetch (retried) only
+      // for an older server; the seats already known before an empty list
+      // (bug 2026-11-08: a dropped fetch stored [], the Senior Judge saw no
+      // marks and "Edit my score" opened blank). See judgeSeats.
+      const atThisMeet = await seatsForMeet({
+        switchResult,
+        competitionId,
+        knownSeats: user?.allAssignments,
+        fetchAssignments: judgeAPI.getAssignments,
+      });
+      login(judgeAtMeet(user, competitionId, atThisMeet), token, 'judge');
       secureStorage.setItem('judge_competition_id', competitionId);
       if (competition) {
         secureStorage.setItem('judge_current_competition', JSON.stringify(competition));
