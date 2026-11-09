@@ -41,7 +41,7 @@
  */
 
 const crypto = require('crypto');
-const { crossSiteCookiePolicy, COOKIE_NAMES } = require('../utils/security/cookie.util');
+const { crossSiteCookiePolicy, COOKIE_NAMES, isAuthCookieName } = require('../utils/security/cookie.util');
 
 /** Cookie name used to store the CSRF token */
 const CSRF_COOKIE_NAME = 'csrf-token';
@@ -64,6 +64,8 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * full double-submit check — a signed header alone is not enough.
  */
 const AMBIENT_AUTH_COOKIES = [COOKIE_NAMES.ACCESS_TOKEN, COOKIE_NAMES.REFRESH_TOKEN];
+// Every role's session pair counts too (one session per role, cookie.util).
+const hasAnyRoleSessionCookie = (cookies) => Object.keys(cookies || {}).some((name) => isAuthCookieName(name) && cookies[name]);
 
 /**
  * Per-process fallback for the signing secret. Only reached when JWT_SECRET is
@@ -153,7 +155,7 @@ function verifySignedToken(token, now = Date.now()) {
  */
 function hasAmbientAuthCookie(req) {
   const cookies = req.cookies || {};
-  return AMBIENT_AUTH_COOKIES.some((name) => Boolean(cookies[name]));
+  return AMBIENT_AUTH_COOKIES.some((name) => Boolean(cookies[name])) || hasAnyRoleSessionCookie(cookies);
 }
 
 /**

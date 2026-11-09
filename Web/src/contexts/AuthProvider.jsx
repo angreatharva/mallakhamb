@@ -240,6 +240,9 @@ export default function AuthProvider({ children }) {
             'Content-Type': 'application/json',
             ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            // Sign out THIS role only: the other roles' sessions in other
+            // tabs keep their own cookies.
+            'X-User-Type': roleToLogout,
           },
           credentials: 'include' // Send httpOnly cookies
         }).catch(() => {});

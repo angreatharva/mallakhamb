@@ -55,7 +55,7 @@ async function sendLoginResponse({
     null,
     competitionId ? String(competitionId) : null,
   );
-  setRefreshTokenCookie(res, refreshToken, isProduction);
+  setRefreshTokenCookie(res, refreshToken, isProduction, undefined, userType);
 
   // 3. Send JSON response (still include token in body for backward compat)
   const responseBody = {

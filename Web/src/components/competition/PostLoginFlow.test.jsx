@@ -12,6 +12,7 @@
  */
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { COMPETITION_LEVELS } from '@/utils/competition/levels';
 
 const h = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -74,7 +75,7 @@ describe('Level chooser — counting', () => {
     h.judgeList = new Promise((r) => { resolve = r; });
     render(<LevelSelectionScreen userType="judge" />);
 
-    expect(screen.getAllByText('Counting…')).toHaveLength(6);
+    expect(screen.getAllByText('Counting…')).toHaveLength(COMPETITION_LEVELS.length);
     expect(screen.queryByText('0 competitions')).not.toBeInTheDocument();
 
     await act(async () => resolve({ data: { data: [meet('c1'), meet('c2', 'state')] } }));

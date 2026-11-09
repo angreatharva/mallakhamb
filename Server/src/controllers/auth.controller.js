@@ -16,6 +16,9 @@ const {
   setAccessTokenCookie,
   setRefreshTokenCookie,
   clearAuthCookies,
+  readRefreshCookie,
+  roleOfToken,
+  requestRole,
 } = require('../utils/security/cookie.util');
 
 function createAuthController(container) {
@@ -186,8 +189,9 @@ function createAuthController(container) {
       // Revoke all refresh tokens for the user
       await tokenService.revokeAllRefreshTokens(req.user._id);
 
-      // Clear httpOnly cookies
-      clearAuthCookies(res, isProduction);
+      // Clear THIS role's httpOnly cookies; other roles signed in in other
+      // tabs keep their sessions.
+      clearAuthCookies(res, isProduction, req.userType);
 
       res.json({ success: true, message: 'Logged out successfully.' });
     }),
@@ -201,7 +205,9 @@ function createAuthController(container) {
      * @route POST /api/auth/refresh
      */
     refresh: asyncHandler(async (req, res) => {
-      const refreshTokenValue = req.cookies?.refresh_token;
+      // This role's refresh cookie (X-User-Type from the SPA), so refreshing
+      // the admin tab never hands it the coach's session.
+      const refreshTokenValue = readRefreshCookie(req);
 
       if (!refreshTokenValue) {
         return res.status(401).json({
@@ -220,7 +226,18 @@ function createAuthController(container) {
 
       // Set both new cookies
       setAccessTokenCookie(res, accessToken, isProduction);
-      setRefreshTokenCookie(res, newRefreshToken, isProduction);
+      setRefreshTokenCookie(res, newRefreshToken, isProduction, undefined, roleOfToken(accessToken));
+
+      // Asked for one role, got another: that was an older single-session
+      // refresh cookie. Its new cookies are stored under their own role, but
+      // this tab's role has no session to hand back.
+      const asked = requestRole(req);
+      if (asked && roleOfToken(accessToken) && roleOfToken(accessToken) !== asked) {
+        return res.status(401).json({
+          success: false,
+          error: { message: 'No refresh token provided', code: 'NO_REFRESH_TOKEN' },
+        });
+      }
 
       res.json({
         success: true,

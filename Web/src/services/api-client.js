@@ -91,12 +91,18 @@ async function attemptSilentRefresh() {
     // for exactly the cookie-only client MED-W1 exists to support. Caught by
     // running the app in a browser; no unit test covered this path.
     const csrf = await ensureCsrfToken();
+    // Refresh THIS role's session — without it the server cannot tell the
+    // admin tab's refresh cookie from the coach tab's.
+    const role = getCurrentUserTypeFromURL();
     const response = await axios.post(
       `${apiConfig.getBaseUrl()}/auth/refresh`,
       {},
       {
         withCredentials: true,
-        headers: csrf ? { 'X-CSRF-Token': csrf } : {},
+        headers: {
+          ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
+          ...(role ? { 'X-User-Type': role } : {}),
+        },
       },
     );
     if (response.data?.success) {
@@ -170,6 +176,13 @@ api.interceptors.request.use(
     // continue to work during migration.
     const currentType = getCurrentUserTypeFromURL();
     let token = getToken(currentType);
+
+    // Which role's session this request is for. The server keeps one cookie
+    // per role and reads this to pick it, so an admin tab and a coach tab in
+    // the same browser stay signed in side by side (bug 2026-11-09).
+    if (currentType) {
+      config.headers['X-User-Type'] = currentType;
+    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

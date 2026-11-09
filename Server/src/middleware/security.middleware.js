@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
-const { COOKIE_NAMES } = require('../utils/security/cookie.util');
+const { readAccessCookie } = require('../utils/security/cookie.util');
 const { AuthorizationError } = require('../errors');
 
 /**
@@ -185,7 +185,9 @@ function createCorsMiddleware(container) {
       'X-Correlation-ID',
       'X-Request-ID',
       'X-Competition-ID',
-      'X-CSRF-Token'
+      'X-CSRF-Token',
+      // Which role's session cookie a request uses (one per role).
+      'X-User-Type'
     ],
     exposedHeaders: [
       'X-Correlation-ID',
@@ -296,7 +298,7 @@ function createUserRateLimitMiddleware(container) {
       userId = req.user._id.toString();
     } else if (tokenService) {
       // Priority matches auth.middleware: httpOnly cookie > Authorization header
-      let token = (req.cookies && req.cookies[COOKIE_NAMES.ACCESS_TOKEN]) || null;
+      let token = readAccessCookie(req) || null;
       if (!token) {
         const authHeader = req.header('Authorization') || '';
         if (authHeader.startsWith('Bearer ')) {

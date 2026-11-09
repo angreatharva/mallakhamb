@@ -16,7 +16,7 @@
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
 const { resolveTeamCoach } = require('../utils/auth/team-coach.util');
-const { COOKIE_NAMES, isProductionLike, setAccessTokenCookie } = require('../utils/security/cookie.util');
+const { isProductionLike, setAccessTokenCookie, readAccessCookie } = require('../utils/security/cookie.util');
 const {
   loadAssignments,
   hasAnyRole,
@@ -51,9 +51,12 @@ function createAuthMiddleware(container) {
       let token = null;
       let tokenSource = 'none';
 
-      // 1. Try httpOnly cookie
-      if (req.cookies && req.cookies[COOKIE_NAMES.ACCESS_TOKEN]) {
-        token = req.cookies[COOKIE_NAMES.ACCESS_TOKEN];
+      // 1. Try httpOnly cookie — THIS ROLE's one (see cookie.util, one
+      //    session per role), so another role signed in in another tab is
+      //    not the one this request is read as.
+      const roleCookie = readAccessCookie(req);
+      if (roleCookie) {
+        token = roleCookie;
         tokenSource = 'cookie';
       }
 

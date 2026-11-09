@@ -15,7 +15,9 @@ const { isTokenLoggedOut } = require('../../../src/utils/security/token-invalida
 jest.mock('../../../src/utils/security/cookie.util', () => ({
   COOKIE_NAMES: { ACCESS_TOKEN: 'access_token' },
   isProductionLike: jest.fn(() => false),
-  setAccessTokenCookie: jest.fn()
+  setAccessTokenCookie: jest.fn(),
+  // The real cookie picker: which cookie a request is read as is under test.
+  readAccessCookie: jest.requireActual('../../../src/utils/security/cookie.util').readAccessCookie,
 }));
 
 describe('Auth Middleware', () => {

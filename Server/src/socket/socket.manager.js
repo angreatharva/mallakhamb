@@ -10,7 +10,7 @@
 const { Server } = require('socket.io');
 const { AuthenticationError } = require('../errors');
 const { isTokenLoggedOut } = require('../utils/security/token-invalidation.util');
-const { COOKIE_NAMES } = require('../utils/security/cookie.util');
+const { readAccessCookie, parseCookieHeader } = require('../utils/security/cookie.util');
 const { noopMetrics } = require('../infrastructure/prometheus/registry');
 const {
   assignmentCompetitionTypes,
@@ -123,12 +123,13 @@ class SocketManager {
         let token = socket.handshake.auth.token;
 
         // If not found, check the cookie manually
+        // This role's session cookie (one per role): the client may name it
+        // in `auth.userType`; with one role signed in it is unambiguous.
         if (!token && socket.request.headers.cookie) {
-          const cookieStr = socket.request.headers.cookie;
-          const match = cookieStr.match(new RegExp('(^|;\\s*)' + COOKIE_NAMES.ACCESS_TOKEN + '=([^;]+)'));
-          if (match) {
-            token = decodeURIComponent(match[2]);
-          }
+          token = readAccessCookie(
+            { headers: { 'x-user-type': socket.handshake.auth?.userType } },
+            parseCookieHeader(socket.request.headers.cookie)
+          );
         }
 
         if (!token) {

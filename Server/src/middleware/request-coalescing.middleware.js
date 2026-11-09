@@ -13,7 +13,7 @@
 
 const crypto = require('node:crypto');
 
-const { COOKIE_NAMES } = require('../utils/security/cookie.util');
+const { readAccessCookie, parseCookieHeader } = require('../utils/security/cookie.util');
 
 class RequestCoalescingMiddleware {
   constructor(logger) {
@@ -79,7 +79,9 @@ class RequestCoalescingMiddleware {
      * pays, would stop sharing a key at all.
      */
     const rawCookie = req.headers?.cookie || '';
-    const cookie = new RegExp(`(?:^|;\\s*)${COOKIE_NAMES.ACCESS_TOKEN}=([^;]*)`).exec(rawCookie)?.[1] || '';
+    // The session cookie this request is read as (one per role), so two
+    // roles in two tabs never share a coalesced response.
+    const cookie = readAccessCookie(req, parseCookieHeader(rawCookie)) || '';
     const header = req.headers?.authorization || '';
     if (!cookie && !header) return 'anonymous';
 
