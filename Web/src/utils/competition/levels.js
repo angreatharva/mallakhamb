@@ -23,11 +23,12 @@
  */
 
 /**
- * Every level, in chooser order: the district → international ladder, then the
- * two separate circuits — DSO (District Sports Office, school) and University.
+ * Every level, in chooser order: the district → zonal → state → national →
+ * international ladder, then the two separate circuits — University and DSO
+ * (District Sports Office, school).
  * Mirrors the server enum exactly.
  */
-export const COMPETITION_LEVELS = ['district', 'state', 'national', 'international', 'dso', 'university'];
+export const COMPETITION_LEVELS = ['district', 'zonal', 'state', 'national', 'international', 'university', 'dso'];
 
 /**
  * Display copy per level. The blurb is shown under the title on the level
@@ -38,6 +39,10 @@ export const LEVEL_META = {
   district: {
     label: 'District',
     blurb: 'Meets held at district level.',
+  },
+  zonal: {
+    label: 'Zonal',
+    blurb: 'Zonal meets between district and state.',
   },
   state: {
     label: 'State',

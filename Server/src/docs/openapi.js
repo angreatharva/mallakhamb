@@ -202,7 +202,7 @@ const schemas = {
       name: { type: 'string', example: 'National Mallakhamb Championship' },
       year: { type: 'integer', example: 2026 },
       place: { type: 'string', example: 'Mumbai' },
-      level: { type: 'string', enum: [...COMPETITION_LEVELS], description: 'Stored lowercase. dso = District Sports Office; university = inter-university.' },
+      level: { type: 'string', enum: [...COMPETITION_LEVELS], description: 'Stored lowercase. zonal sits between district and state; dso = District Sports Office; university = inter-university.' },
       status: { type: 'string', enum: ['upcoming', 'open', 'ongoing', 'completed', 'cancelled'] },
       startDate: { type: 'string', format: 'date-time' },
       endDate: { type: 'string', format: 'date-time' },

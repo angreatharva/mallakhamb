@@ -160,12 +160,13 @@ components:
           type: string
           enum:
             - district
+            - zonal
             - state
             - national
             - international
-            - dso
             - university
-          description: Stored lowercase. dso = District Sports Office; university = inter-university.
+            - dso
+          description: Stored lowercase. zonal sits between district and state; dso = District Sports Office; university = inter-university.
         status:
           type: string
           enum:
@@ -8129,6 +8130,94 @@ paths:
       security:
         - bearerAuth: []
         - cookieAuth: []
+  /api/admin/scores/{scoreId}/players/{playerId}/unlock:
+    put:
+      tags:
+        - Scores
+      summary: Reopen one athlete for the judges
+      operationId: adminUnlockPlayerForJudges
+      parameters:
+        - name: X-Competition-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            format: objectid
+          description: Competition context. Required unless the access token already carries one (set via POST /api/auth/set-competition) or the body/query supplies `competitionId`.
+        - name: scoreId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Score document id
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Athlete id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apparatus:
+                  type: string
+      responses:
+        "200":
+          description: Reopened
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data: {}
+                  message:
+                    type: string
+        "400":
+          description: Request failed validation — `error.details` names the field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Missing, invalid, expired or logged-out token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Authenticated, but the principal lacks the required role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unhandled server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      description: |-
+        Clears the Senior Judge's Final Submit on that athlete and the Scorer's lock on that apparatus, so the panel can correct their slips. Marks are untouched; the published result is withdrawn until the next Final Submit. An admin can only reach sheets in their own meet.
+        
+        **Roles:** admin, superadmin
+        
+        **Competition context required** — see the `X-Competition-Id` parameter.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
   /api/admin/scores/recalculate:
     post:
       tags:
@@ -14230,6 +14319,76 @@ paths:
       responses:
         "200":
           description: Unlocked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data: {}
+                  message:
+                    type: string
+        "401":
+          description: Missing, invalid, expired or logged-out token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Authenticated, but the principal lacks the required role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Unhandled server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      description: "**Roles:** superadmin"
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+  /api/superadmin/scores/{scoreId}/players/{playerId}/unlock:
+    put:
+      tags:
+        - Super admin
+      summary: Reopen one athlete for the judges
+      operationId: superAdminUnlockPlayerForJudges
+      parameters:
+        - name: scoreId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Score document id
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Athlete id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apparatus:
+                  type: string
+      responses:
+        "200":
+          description: Reopened
           content:
             application/json:
               schema:

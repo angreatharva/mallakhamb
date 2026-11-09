@@ -185,7 +185,7 @@ Valid genders: `Male`, `Female`
 Valid types: `competition_1`, `competition_2`, `competition_3`
 
 ### Competition Level Validation
-Valid levels: `district`, `state`, `national`, `international`
+Valid levels: `district`, `zonal`, `state`, `national`, `international`, `university`, `dso`
 
 ### User Type Validation
 Valid types: `player`, `coach`, `admin`, `judge`

@@ -8,7 +8,7 @@
  * the server refuses.
  *
  * Stored lowercase. `dso` is a District Sports Office meet; `university` an
- * inter-university one. A level describes the COMPETITION, never a person —
+ * inter-university one; `zonal` sits between district and state. A level describes the COMPETITION, never a person —
  * it is a filter on the level chooser, not a permission.
  *
  * @module config/competition-levels
@@ -16,14 +16,15 @@
 
 const COMPETITION_LEVELS = Object.freeze([
   'district',
+  'zonal',
   'state',
   'national',
   'international',
-  'dso',
   'university',
+  'dso',
 ]);
 
-/** "district, state, … or university" — for validation messages. */
+/** "district, zonal, … or dso" — for validation messages. */
 const LEVELS_SENTENCE = `${COMPETITION_LEVELS.slice(0, -1).join(', ')}, or ${COMPETITION_LEVELS.at(-1)}`;
 
 module.exports = { COMPETITION_LEVELS, LEVELS_SENTENCE };

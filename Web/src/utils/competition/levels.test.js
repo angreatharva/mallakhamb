@@ -25,10 +25,11 @@ describe('competition levels', () => {
     expect(COMPETITION_LEVELS).toEqual([...serverLevels.COMPETITION_LEVELS]);
   });
 
-  it('include DSO and University', () => {
+  it('list the seven levels in ladder order', () => {
     expect(COMPETITION_LEVELS).toEqual(
-      expect.arrayContaining(['dso', 'university'])
+      ['district', 'zonal', 'state', 'national', 'international', 'university', 'dso']
     );
+    expect(levelLabel('zonal')).toBe('Zonal');
   });
 
   it('give every level a label and a blurb for its card', () => {

@@ -18,24 +18,24 @@ async function levelErrors(chain, level) {
 
 describe('competition levels', () => {
   it('lists DSO and University after the district → international ladder', () => {
-    expect(COMPETITION_LEVELS).toEqual(['district', 'state', 'national', 'international', 'dso', 'university']);
+    expect(COMPETITION_LEVELS).toEqual(['district', 'zonal', 'state', 'national', 'international', 'university', 'dso']);
   });
 
   it('is the list the Competition model enforces', () => {
     expect(Competition.schema.path('level').enumValues).toEqual([...COMPETITION_LEVELS]);
   });
 
-  it.each(['dso', 'university'])('the model stores "%s"', (level) => {
+  it.each(['zonal', 'dso', 'university'])('the model stores "%s"', (level) => {
     const doc = new Competition({ name: 'Test Meet', level });
     expect(doc.validateSync()?.errors?.level).toBeUndefined();
   });
 
   it('the model still refuses an unknown level, naming the new ones', () => {
     const err = new Competition({ name: 'Test Meet', level: 'college' }).validateSync().errors.level;
-    expect(err.message).toMatch(/dso, or university/);
+    expect(err.message).toMatch(/university, or dso/);
   });
 
-  it.each(['dso', 'university'])('create and update accept "%s"', async (level) => {
+  it.each(['zonal', 'dso', 'university'])('create and update accept "%s"', async (level) => {
     expect(await levelErrors(validators.createCompetition(), level)).toEqual([]);
     expect(await levelErrors(validators.updateCompetition(), level)).toEqual([]);
   });

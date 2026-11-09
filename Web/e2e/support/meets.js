@@ -30,7 +30,7 @@ export const MEETS_PATH = resolve(HERE, '../../../Server/scripts/seed/meets.json
  * (Server/src/config/competition-levels.js). `dso` and `university` have no
  * seeded meets — they are valid, and empty in the chooser.
  */
-export const LEVELS = ['district', 'state', 'national', 'international', 'dso', 'university'];
+export const LEVELS = ['district', 'zonal', 'state', 'national', 'international', 'university', 'dso'];
 
 const read = () => {
   let file;

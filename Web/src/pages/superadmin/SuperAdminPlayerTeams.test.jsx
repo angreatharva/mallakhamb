@@ -15,7 +15,7 @@ vi.mock('@/services/api', () => ({
   },
 }));
 
-const levels = ['district', 'state', 'national', 'international', 'dso', 'university'].map((level) => ({
+const levels = ['district', 'zonal', 'state', 'national', 'international', 'university', 'dso'].map((level) => ({
   level, label: level === 'dso' ? 'DSO' : level[0].toUpperCase() + level.slice(1),
   team: level === 'district' ? { _id: 't1', name: 'Wrong Club' } : null, via: 'squad-entry', setAt: '2026-10-01',
 }));

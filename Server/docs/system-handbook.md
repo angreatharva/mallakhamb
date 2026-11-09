@@ -361,7 +361,7 @@ Judge (Scoring Level)
 #### Competition Model
 
 **Core Fields:**
-- name, level (district/state/national/international/dso/university), place, year
+- name, level (district/zonal/state/national/international/university/dso), place, year
 - startDate, endDate, status (upcoming/ongoing/completed)
 - description
 
@@ -626,7 +626,7 @@ const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 **Step 2: Create Competition**
 - Endpoint: `POST /api/superadmin/competitions`
 - Required Data:
-  - Name, Level (district/state/national/international/dso/university), Place
+  - Name, Level (district/zonal/state/national/international/university/dso), Place
   - Start Date, End Date, Year
   - Age Groups (Gender + Age Group combinations)
   - Competition Types (Type I, Type II, Type III)
