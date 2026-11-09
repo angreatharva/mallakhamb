@@ -71,7 +71,9 @@ export function getDifficultyRequirement(competitionType) {
 
 // §3.4 — tolerance limit table (display/reference only on the client).
 export function getTolerance(avgScore) {
-  const s = Number(avgScore) || 0;
+  // Rounded to the hundredth first so float noise (8.999999…) cannot drop an
+  // average into the band below.
+  const s = Math.round((Number(avgScore) || 0) * 100) / 100;
   if (s >= 9.00) return 0.10;
   if (s >= 8.00) return 0.20;
   if (s >= 7.00) return 0.30;
@@ -675,7 +677,13 @@ export function analyzePanelMismatches(panelScores, panelSize) {
   // A tolerance breach is only meaningful once the whole panel has marked —
   // an execution average taken over half the slips is not the one the rule
   // §3.4 talks about, and blocking on it would stop a panel mid-way.
-  const hasToleranceBreach = toleranceMismatch && size >= 4 && slips.length >= size;
+  //
+  // Hierarchy (user rule 2026-11-09): a Difficulty / Combination mismatch is
+  // resolved FIRST. While one is open the tolerance breach is not reported at
+  // all — the marks it is computed from are about to change — and it appears
+  // only once the slips agree.
+  const hasSlipMismatch = difficultyMismatch || combinationMismatch;
+  const hasToleranceBreach = toleranceMismatch && size >= 4 && slips.length >= size && !hasSlipMismatch;
 
   // A tolerance breach is a gap between the execution average and the Senior
   // Judge's mark, so the execution judges whose own total differs from the

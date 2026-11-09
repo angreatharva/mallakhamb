@@ -197,7 +197,9 @@ const TOLERANCE_TIERS = Object.freeze([
 const TOLERANCE_BELOW_MINIMUM = 1.00; // below 5.00
 
 function getTolerance(avgScore) {
-  const s = Number(avgScore) || 0;
+  // Rounded to the hundredth first so float noise (8.999999…) cannot drop an
+  // average into the band below.
+  const s = Math.round((Number(avgScore) || 0) * 100) / 100;
   const tier = TOLERANCE_TIERS.find((t) => s >= t.minAverage);
   return tier ? tier.tolerance : TOLERANCE_BELOW_MINIMUM;
 }

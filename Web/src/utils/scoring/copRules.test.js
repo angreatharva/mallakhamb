@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  getTolerance,
   getCombinationChecklist,
   computeCombinationTotal,
   getDifficultyRequirement,
@@ -243,6 +244,39 @@ describe('copRules — tolerance gate (COP §3.4)', () => {
     const result = analyzePanelMismatches(panelOf(3.05, [3.0, 3.0, 3.0, 3.0]), 5);
     expect(result.hasToleranceBreach).toBe(false);
     expect(result.hasBlockingIssue).toBe(false);
+  });
+
+  it('holds the tolerance breach back while a difficulty mismatch is open', () => {
+    // Hierarchy: Difficulty / Combination are resolved first; tolerance only
+    // shows once the slips agree.
+    const panel = panelOf(4.0, [3.0, 3.0, 3.0, 3.0]);
+    panel['Judge 1'].breakdown.difficulty = { aClass: 4, bClass: 5, cClass: 1, total: 3.4 };
+    const result = analyzePanelMismatches(panel, 5);
+    expect(result.hasBlockingMismatch).toBe(true);
+    expect(result.toleranceMismatch).toBe(true);
+    expect(result.hasToleranceBreach).toBe(false);
+  });
+
+  it('holds the tolerance breach back while a combination mismatch is open', () => {
+    const panel = panelOf(4.0, [3.0, 3.0, 3.0, 3.0]);
+    panel['Judge 2'].breakdown.combination = { checked: { 1: false }, total: 1.2 };
+    const result = analyzePanelMismatches(panel, 5);
+    expect(result.combinationMismatch).toBe(true);
+    expect(result.hasToleranceBreach).toBe(false);
+  });
+
+  it('uses the tolerance table 0.10 / 0.20 / 0.30 / 0.40 / 0.50 / 1.00', () => {
+    expect(getTolerance(9.99)).toBe(0.10);
+    expect(getTolerance(9.00)).toBe(0.10);
+    expect(getTolerance(8.99)).toBe(0.20);
+    expect(getTolerance(8.999999999)).toBe(0.10); // float noise rounds to 9.00
+    expect(getTolerance(8.00)).toBe(0.20);
+    expect(getTolerance(7.50)).toBe(0.30);
+    expect(getTolerance(6.00)).toBe(0.40);
+    expect(getTolerance(5.99)).toBe(0.50);
+    expect(getTolerance(5.00)).toBe(0.50);
+    expect(getTolerance(4.99)).toBe(1.00);
+    expect(getTolerance(0)).toBe(1.00);
   });
 
   it('names the judges whose totals sit away from the chief', () => {

@@ -972,7 +972,7 @@ const ScorerScoring = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-fg-muted">
             <p><span className="text-ink/70 font-semibold">Execution Average:</span> From J1–J4. With 4 judges, highest and lowest excluded.</p>
             <p><span className="text-ink/70 font-semibold">Base Score:</span> If diff exceeds tolerance, Base = (Exec + Senior) / 2</p>
-            <p><span className="text-ink/70 font-semibold">Tolerance:</span> 9.0+: ±0.10 · 8.0: ±0.20 · 7.0: ±0.30 · 6.0: ±0.40 · 5.0: ±0.50 · Below 5: ±1.00</p>
+            <p><span className="text-ink/70 font-semibold">Tolerance:</span> 9.00–9.99: 0.10 · 8.00–8.99: 0.20 · 7.00–7.99: 0.30 · 6.00–6.99: 0.40 · 5.00–5.99: 0.50 · Below 4.99: 1.00</p>
             <p><span className="text-ink/70 font-semibold">Final Score:</span> Avg Marks − Time Deduction − Other Deduction</p>
           </div>
         </div> */}
