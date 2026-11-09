@@ -566,6 +566,18 @@ function createAdminController(container) {
       // player must not block them. (isScorer / isAdmin are resolved above.)
       scoreData.allowFinalizedEdit = isScorer || isAdmin;
 
+      // An ADMIN's Lock & Submit publishes the sheet. "Unlock all for judges"
+      // clears every athlete's Final Submit (user rule 2026-11-08), so an
+      // admin who unlocked to correct a time and then locked again left the
+      // whole category off the public board — the e2e corrections step
+      // caught it. Every athlete with marks on the locked sheet is final.
+      if (isAdmin && req.body.isLocked === true && Array.isArray(scoreData.playerScores)) {
+        const hasMarks = (ps) => Object.values(ps.judgeScores || {}).some((v) => Number(v) > 0);
+        scoreData.playerScores = scoreData.playerScores.map((ps) => (hasMarks(ps)
+          ? { ...ps, isFinalized: true, finalizedAt: ps.finalizedAt || new Date() }
+          : ps));
+      }
+
       // A Scorer's save may set the TIME only; the judges' marks and the
       // deductions stay as stored (user rule 2026-11-08, see
       // ScoringService.saveScores). Always assigned, so a body cannot carry

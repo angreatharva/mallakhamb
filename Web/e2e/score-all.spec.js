@@ -13,7 +13,6 @@ import {
 import {
   chooseCategory,
   submitSlip,
-  overrideJudge,
   dismissAnyAlerts,
   MISMATCH_ALERT,
   TOLERANCE_ALERT,
@@ -431,49 +430,45 @@ for (const meet of MEETS) {
               await walkFlight(page, places, (_place, i) => plans[i].evaluatorSlip(seat));
             }
 
-            // ── The Senior Judge: mark, be shown the blocks, resolve, lock ────
+            // ── The Senior Judge marks and is shown the blocks ───────────────
             //
-            // One pass rather than two. The chief's slip is the reference every
-            // comparison is made against, so nothing can be raised until he has
-            // marked — and once he has, that athlete is ready to finalize. There
-            // is nothing to come back for.
-            await asSeat(page, 'Senior Judge', scoped, meet);
-            await walkFlight(
-              page,
-              places,
-              (_place, i) => plans[i].chiefSlip,
-              async (place, i) => {
-                const plan = plans[i];
-                const who = `${place.playerName} (${apparatus}, ${scenarioFor(panel.size, i)})`;
+            // The chief's slip is the reference every comparison is made
+            // against, so nothing can be raised until he has marked. A clean
+            // athlete is finalized straight away; the rest wait for their
+            // judges to correct their own slips — no judge, the chief included,
+            // may edit another judge's score (user rule 2026-11-09).
+            const assertBlocks = async (place, i) => {
+              const plan = plans[i];
+              const who = `${place.playerName} (${apparatus}, ${scenarioFor(panel.size, i)})`;
 
-                /*
-                 * What the chief is SHOWN, asserted before anything is dismissed.
-                 *
-                 * The two alerts QUEUE rather than stack — the second only mounts
-                 * once the first is gone — so only the front one can be checked
-                 * here, and which one that is depends on the scenario: the slip
-                 * mismatch is raised first when there is one, and the tolerance
-                 * breach is in front when it is the only block. The banners
-                 * checked below cover both at once either way.
-                 */
-                if (plan.expectMismatch) {
-                  await expect(
-                    page.getByText(MISMATCH_ALERT, { exact: true }),
-                    `${who}: Judge 1 recorded a different routine, so the chief must be warned`
-                  ).toBeVisible();
-                } else if (plan.expectTolerance) {
-                  await expect(
-                    page.getByText(TOLERANCE_ALERT, { exact: true }),
-                    `${who}: the evaluators are 1.00 off the chief, so the chief must be warned`
-                  ).toBeVisible();
-                }
-                await dismissAnyAlerts(page);
+              /*
+               * HIERARCHY (user rule 2026-11-09): a Difficulty / Combination
+               * mismatch is resolved FIRST. While one is open the tolerance
+               * breach is not reported at all; it appears only once the slips
+               * agree.
+               */
+              if (plan.expectMismatch) {
+                await expect(
+                  page.getByText(MISMATCH_ALERT, { exact: true }),
+                  `${who}: Judge 1 recorded a different routine, so the chief must be warned`
+                ).toBeVisible();
+              } else if (plan.expectTolerance) {
+                await expect(
+                  page.getByText(TOLERANCE_ALERT, { exact: true }),
+                  `${who}: the evaluators are 1.00 off the chief, so the chief must be warned`
+                ).toBeVisible();
+              }
+              await dismissAnyAlerts(page);
 
-                if (plan.expectMismatch) {
-                  await expect(page.getByText(/mismatch detected/)).toBeVisible();
-                } else {
-                  await expect(page.getByText(/mismatch detected/)).toBeHidden();
-                }
+              if (plan.expectMismatch) {
+                await expect(page.getByText(/mismatch detected/)).toBeVisible();
+                await expect(
+                  page.getByText(/Tolerance exceeded/),
+                  `${who}: a tolerance breach waits until the mismatch is resolved`
+                ).toBeHidden();
+                await expect(finalSubmitButton(page)).toBeDisabled();
+              } else {
+                await expect(page.getByText(/mismatch detected/)).toBeHidden();
                 if (plan.expectTolerance) {
                   await expect(
                     page.getByText(/Tolerance exceeded/),
@@ -484,34 +479,65 @@ for (const meet of MEETS) {
                   // the marks are — this is the assertion that proves it.
                   await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
                 }
+              }
+            };
 
-                // A slip mismatch locks Final Submit. A tolerance breach alone
-                // does not — the chief may final submit on the base score.
-                if (plan.expectMismatch) {
-                  await expect(finalSubmitButton(page)).toBeDisabled();
-                }
+            const finalize = async (place, i) => {
+              const plan = plans[i];
+              const who = `${place.playerName} (${apparatus}, ${scenarioFor(panel.size, i)})`;
+              await dismissAnyAlerts(page);
+              await expect(page.getByText(/mismatch detected/)).toBeHidden();
+              await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
+              await expect(
+                finalSubmitButton(page),
+                `${who}: everything is resolved, so the panel must be lockable`
+              ).toBeEnabled();
+              // A corrected slip can re-raise an alert, whose overlay would
+              // swallow this click and leave the athlete silently unfinalized.
+              await clickPastAlerts(page, finalSubmitButton(page));
+              await expect(
+                page.getByText(new RegExp(`Final score ${plan.finalScore} locked for ${place.playerName}`))
+              ).toBeVisible({ timeout: 20_000 });
+            };
 
-                // ── Resolve, as the chief would, from Panel Review ───────────
-                for (const fix of plan.fixes) {
-                  await overrideJudge(page, fix.judgeType, fix.changes);
-                  await dismissAnyAlerts(page);
-                }
-
-                await expect(page.getByText(/mismatch detected/)).toBeHidden();
-                await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
-
-                await expect(
-                  finalSubmitButton(page),
-                  `${who}: everything is resolved, so the panel must be lockable`
-                ).toBeEnabled();
-                // An override can re-raise an alert, whose overlay would swallow
-                // this click and leave the athlete silently unfinalized.
-                await clickPastAlerts(page, finalSubmitButton(page));
-                await expect(
-                  page.getByText(new RegExp(`Final score ${plan.finalScore} locked for ${place.playerName}`))
-                ).toBeVisible({ timeout: 20_000 });
+            await asSeat(page, 'Senior Judge', scoped, meet);
+            await walkFlight(
+              page,
+              places,
+              (_place, i) => plans[i].chiefSlip,
+              async (place, i) => {
+                await assertBlocks(place, i);
+                if (plans[i].fixes.length === 0) await finalize(place, i);
               }
             );
+
+            // ── Each judge corrects their OWN slip (Edit My Score) ───────────
+            for (const seat of evaluators) {
+              const mine = places
+                .map((place, i) => ({ place, i, fix: plans[i].fixes.find((f) => f.judgeType === seat) }))
+                .filter((x) => x.fix);
+              if (mine.length === 0) continue;
+              await asSeat(page, seat, scoped, meet);
+              await walkFlight(
+                page,
+                mine.map((x) => x.place),
+                (_place, j) => ({ ...plans[mine[j].i].evaluatorSlip(seat), ...mine[j].fix.changes })
+              );
+            }
+
+            // ── The Senior Judge locks every athlete that needed a correction ─
+            const pending = places
+              .map((place, i) => ({ place, i }))
+              .filter(({ i }) => plans[i].fixes.length > 0);
+            if (pending.length > 0) {
+              await asSeat(page, 'Senior Judge', scoped, meet);
+              await walkFlight(
+                page,
+                pending.map((x) => x.place),
+                () => null,
+                async (place, j) => finalize(place, pending[j].i)
+              );
+            }
           }
         });
 

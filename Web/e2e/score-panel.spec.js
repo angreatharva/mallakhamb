@@ -8,7 +8,6 @@ import {
   chooseCategory,
   openPlayerSlip,
   submitSlip,
-  overrideJudge,
   dismissAlert,
   dismissAnyAlerts,
   ensureOnSlip,
@@ -181,6 +180,17 @@ const returnToPanel = async (page, seat, panel) => {
   await dismissAnyAlerts(page);
 };
 
+/**
+ * A judge corrects their OWN slip through Edit My Score. No judge, the Senior
+ * Judge included, may edit another judge's score (user rule 2026-11-09), so
+ * this replaced the chief's override from Panel Review.
+ */
+const correctOwnSlip = async (page, seat, panel, slip) => {
+  await asSeat(page, seat, panel.category);
+  await openPlayerSlip(page, { teamName: panel.team, playerName: panel.player });
+  await submitSlip(page, { difficulty: FULL_DIFFICULTY, ...slip });
+};
+
 const finalSubmit = (page) => page.getByRole('button', { name: /^Final Submit$/ });
 
 /**
@@ -224,7 +234,7 @@ test.describe.serial('five-judge panel — mismatch and tolerance, resolved in s
     }
   });
 
-  test('the Senior Judge is shown both alerts and cannot submit', async ({ page }) => {
+  test('the Senior Judge is shown the mismatch first, not the tolerance, and cannot submit', async ({ page }) => {
     test.setTimeout(180_000);
 
     await mark(page, 'Senior Judge', FIVE, { execution: 4.0 });
@@ -234,15 +244,12 @@ test.describe.serial('five-judge panel — mismatch and tolerance, resolved in s
     await expect(page.getByText(/Combination Mismatch/)).toBeVisible();
     await dismissAlert(page);
 
-    // …and the tolerance breach queues behind it rather than stacking on top.
-    // Evaluators [8.40, 8.40, 8.30, 8.40] → drop 8.30 and one 8.40 → 8.40,
-    // against the chief's 9.40, where §3.4 allows ±0.20 at that score.
-    await expect(page.getByText(TOLERANCE_ALERT, { exact: true })).toBeVisible();
-    await expect(page.getByText(/Exec avg 8\.40 − Senior 9\.40\| = 1\.00/)).toBeVisible();
-    await dismissAlert(page);
-
+    // …and the tolerance breach is NOT reported while it is open (user rule
+    // 2026-11-09: Difficulty / Combination first). The marks it would be
+    // computed from are about to change.
+    await expect(page.getByText(TOLERANCE_ALERT, { exact: true })).toBeHidden();
     await expect(page.getByText(/Combination mismatch detected/)).toBeVisible();
-    await expect(page.getByText(/Tolerance exceeded — gap 1\.00 over ±0\.20/)).toBeVisible();
+    await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
     await expectLocked(page, /resolve the Difficulty \/ Combination mismatch/);
   });
 
@@ -262,8 +269,8 @@ test.describe.serial('five-judge panel — mismatch and tolerance, resolved in s
     await expect(page.getByText(`You total: ${short}`)).toBeVisible();
     await dismissAlert(page);
 
-    await expect(page.getByText(TOLERANCE_ALERT, { exact: true })).toBeVisible();
-    await dismissAlert(page);
+    // Mismatch first: no tolerance alert while it is open.
+    await expect(page.getByText(TOLERANCE_ALERT, { exact: true })).toBeHidden();
 
     // Finalizing is the chief's act; nobody else is offered it.
     await expect(finalSubmit(page)).toHaveCount(0);
@@ -271,22 +278,22 @@ test.describe.serial('five-judge panel — mismatch and tolerance, resolved in s
   });
 
   test('tolerance alone unlocks nothing; both resolved unlocks Final Submit', async ({ page }) => {
-    test.setTimeout(240_000);
-
-    await returnToPanel(page, 'Senior Judge', FIVE);
+    test.setTimeout(480_000);
 
     // ── Step 1: close the tolerance gap, leave the mismatch alone ──────────
+    // Each judge raises their OWN execution mark (one of their 3 edits).
     for (const judgeType of ['Judge 1', 'Judge 2', 'Judge 4']) {
-      await overrideJudge(page, judgeType, { execution: 4.0 });
-      await dismissAnyAlerts(page);
+      await correctOwnSlip(page, judgeType, FIVE, { execution: 4.0 });
     }
+    await returnToPanel(page, 'Senior Judge', FIVE);
     await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
     await expect(page.getByText(/Combination mismatch detected/)).toBeVisible();
     await expectLocked(page, /resolve the Difficulty \/ Combination mismatch/);
 
-    // ── Step 2: resolve the mismatch as well ──────────────────────────────
-    await overrideJudge(page, 'Judge 3', { unmet: [] });
-    await dismissAnyAlerts(page);
+    // ── Step 2: Judge 3 corrects the checklist on their own slip ──────────
+    // Execution stays at 3.00: a 4-of-5 panel drops it as the low mark.
+    await correctOwnSlip(page, 'Judge 3', FIVE, { unmet: [], execution: 3.0 });
+    await returnToPanel(page, 'Senior Judge', FIVE);
     await expect(page.getByText(/Combination mismatch detected/)).toBeHidden();
     await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
 
@@ -332,20 +339,18 @@ test.describe.serial('four-judge panel — the chief fills the vacant fourth slo
   });
 
   test('bringing two evaluators up to the chief clears it', async ({ page }) => {
-    test.setTimeout(240_000);
-
-    await returnToPanel(page, 'Senior Judge', FOUR);
+    test.setTimeout(480_000);
 
     // One is not enough: [8.40, 8.60, 9.40, 9.40] → (8.60 + 9.40) / 2 = 9.00,
     // still 0.40 off the chief where ±0.10 is allowed at that score.
-    await overrideJudge(page, 'Judge 1', { execution: 4.0 });
-    await dismissAnyAlerts(page);
+    await correctOwnSlip(page, 'Judge 1', FOUR, { execution: 4.0 });
+    await returnToPanel(page, 'Senior Judge', FOUR);
     await expect(page.getByText(/Tolerance exceeded — gap 0\.40 over ±0\.10/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Final Submit with Base Score 9.20' })).toBeEnabled();
 
     // Two is: [8.60, 9.40, 9.40, 9.40] → drop 8.60 and one 9.40 → 9.40.
-    await overrideJudge(page, 'Judge 2', { execution: 4.0 });
-    await dismissAnyAlerts(page);
+    await correctOwnSlip(page, 'Judge 2', FOUR, { execution: 4.0 });
+    await returnToPanel(page, 'Senior Judge', FOUR);
     await expect(page.getByText(/Tolerance exceeded/)).toBeHidden();
 
     await expect(finalSubmit(page)).toBeEnabled();
@@ -414,9 +419,8 @@ test.describe.serial('three-judge panel — a flat mean, and no tolerance at all
   test('resolving the mismatch unlocks it, and the score is the flat mean', async ({ page }) => {
     test.setTimeout(180_000);
 
+    await correctOwnSlip(page, 'Judge 2', THREE, { unmet: [], execution: 2.7 });
     await returnToPanel(page, 'Senior Judge', THREE);
-    await overrideJudge(page, 'Judge 2', { unmet: [] });
-    await dismissAnyAlerts(page);
     await expect(page.getByText(/mismatch detected/)).toBeHidden();
 
     await expect(finalSubmit(page)).toBeEnabled();

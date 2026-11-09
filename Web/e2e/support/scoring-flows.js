@@ -556,54 +556,6 @@ export const slipTotal = async (page) => {
   return Number(await total.innerText());
 };
 
-/**
- * Senior Judge override of another judge's slip, from Panel Review.
- *
- * The panel-review page has no inputs of its own, so once the modal is open
- * page-level locators unambiguously address it.
- *
- * @param {import('@playwright/test').Page} page - on Panel Review as the chief
- * @param {string} judgeType - e.g. 'Judge 1'
- * @param {{execution?: number, unmet?: number[]}} changes
- */
-export const overrideJudge = async (page, judgeType, { execution, unmet }) => {
-  // Through clickPastAlerts because an override is exactly when an alert is
-  // most likely to be up: the chief is here BECAUSE something was raised.
-  await clickPastAlerts(page, page.locator(`[title="Edit ${judgeType} score"]`));
-  await expect(page.getByText(`Edit Score — ${judgeType}`)).toBeVisible();
-
-  if (unmet) {
-    const boxes = page.locator('input[type="checkbox"]');
-    const itemCount = await boxes.count();
-    for (let i = 0; i < itemCount; i += 1) {
-      const box = boxes.nth(i);
-      const shouldBeMet = !unmet.includes(i + 1);
-      if ((await box.isChecked()) !== shouldBeMet) {
-        await box.locator('xpath=..').click();
-      }
-    }
-  }
-
-  if (execution !== undefined) {
-    // A text field with a decimal keypad, not type="number" — see DecimalInput.
-    await page.locator('input[inputmode="decimal"]').fill(String(execution));
-  }
-
-  /*
-   * Saving is retried until the modal actually closes.
-   *
-   * The modal unmounts on a successful save, so "still open" means the write
-   * has not landed — and the write is a POST plus the panel feed catching up,
-   * which on a full flight outruns the default ten-second expect. Safe to
-   * repeat: the form still holds the values just entered, so a second save
-   * writes the same slip.
-   */
-  await expect(async () => {
-    await page.getByRole('button', { name: /Save Override/ }).click({ timeout: 5_000 });
-    await expect(page.getByText(`Edit Score — ${judgeType}`)).toBeHidden({ timeout: 15_000 });
-  }).toPass({ timeout: 60_000 });
-};
-
 /* ────────────────────────────────────────────────────────────────────────────
  * Working a whole category, rather than one athlete
  *
