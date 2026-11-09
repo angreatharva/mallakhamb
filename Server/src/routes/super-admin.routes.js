@@ -50,6 +50,7 @@ function createSuperAdminRoutes(container) {
   router.post('/scores/save', adminController.saveScores);
   router.put('/scores/:scoreId/unlock', adminController.unlockScores);
   router.put('/scores/:scoreId/players/:playerId/unlock', adminController.unlockPlayerForJudges);
+  router.put('/scores/:scoreId/players/:playerId/restore-edits', adminController.restoreSlipEdits);
   router.put('/scores/:scoreId/lock', adminController.lockScores);
   router.post('/scores/recalculate', adminController.recalculateScores);
   router.get('/judges/summary', adminController.getAllJudgesSummary);

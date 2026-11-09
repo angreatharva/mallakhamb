@@ -50,6 +50,10 @@ export const createAdminAPI = (basePath = '/admin') => ({
   /** Reopen one athlete (on one apparatus) for the judges. */
   unlockPlayerForJudges: (scoreId, playerId, apparatus) =>
     api.put(`${basePath}/scores/${scoreId}/players/${playerId}/unlock`, { apparatus }),
+  // Give a judge (or every seat, with no judgeType) their 3 Edit My Score
+  // changes back on one athlete.
+  restoreSlipEdits: (scoreId, playerId, apparatus, judgeType) =>
+    api.put(`${basePath}/scores/${scoreId}/players/${playerId}/restore-edits`, { apparatus, judgeType }),
   getTransactions: (params) => api.get(`${basePath}/transactions`, { params }),
   /**
    * Finals: who moved from Competition I into Competition II / III. The engine

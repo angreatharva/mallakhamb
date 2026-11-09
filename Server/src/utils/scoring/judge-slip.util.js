@@ -169,7 +169,15 @@ function breakdownForJudge(playerScore, judgeType) {
   return soleMark ? (playerScore.breakdown || null) : null;
 }
 
+/**
+ * How many times a panel judge may change a slip after first submitting it
+ * (user rule 2026-11-09). The same for the Senior Judge. Restored by an admin
+ * or superadmin.
+ */
+const SLIP_EDIT_LIMIT = 3;
+
 module.exports = {
+  SLIP_EDIT_LIMIT,
   JUDGE_ROLE_MAP,
   PANEL_JUDGE_TYPES,
   JUDGE_SCORE_FIELDS,

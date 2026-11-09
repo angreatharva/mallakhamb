@@ -221,11 +221,11 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect(noBreakdown.status).toBe(400);
     expect(await Score.findOne({ teamId })).toBeNull();
 
-    // A Senior Judge override is a single slip too.
+    // A Senior Judge may not write another judge's slip at all (2026-11-09).
     const override = await post(tokenFor(senior), {
       ...withExecution(0), judgeType: 'Judge 1', overrideBySenior: true,
     });
-    expect(override.status).toBe(400);
+    expect(override.status).toBe(403);
 
     expect((await post(tokenFor(j1), withExecution(0.1))).status).toBe(200);
     const doc = await Score.findOne({ teamId, competition: competitionId });
@@ -375,10 +375,10 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect((await post(tokenFor(j1), slip({ score: 8.1 }))).status).toBe(200);
     expect((await post(tokenFor(senior), slip({ score: 8.2 }))).status).toBe(200);
 
-    // The Senior Judge correcting Judge 1's slip writes into Judge 1's seat;
-    // the mark is still Judge 1's, so it stays credited to that account.
+    // The Senior Judge can no longer correct another judge's slip
+    // (user rule 2026-11-09): refused, and Judge 1's mark stays as it was.
     const override = await post(tokenFor(senior), slip({ score: 8.0, judgeType: 'Judge 1', overrideBySenior: true }));
-    expect(override.status).toBe(200);
+    expect(override.status).toBe(403);
 
     const doc = await Score.findOne({ teamId, competition: competitionId }).lean();
     const byRole = Object.fromEntries(doc.playerScores[0].judgeSlips.map((s) => [s.judgeRole, s]));
@@ -387,6 +387,41 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect(byRole.SR_JUDGE.attribution).toBe('recorded');
     expect(String(byRole.J1.judgeAccountId)).toBe(String(j1.account._id));
     expect(byRole.J1.attribution).toBe('recorded');
-    expect(byRole.J1.total).toBe(8.0);
+    expect(byRole.J1.total).toBe(8.1);
+  });
+
+  // User rule 2026-11-09: Edit My Score at most 3 times, every judge alike.
+  test('a judge may edit a slip three times, then is refused until restored', async () => {
+    expect((await post(tokenFor(j1), slip({ score: 8.0 }))).status).toBe(200);
+    for (const score of [8.1, 8.2, 8.3]) {
+      expect((await post(tokenFor(j1), slip({ score }))).status).toBe(200);
+    }
+    const fourth = await post(tokenFor(j1), slip({ score: 8.4 }));
+    expect(fourth.status).toBe(422);
+    expect(JSON.stringify(fourth.body)).toMatch(/edits/i);
+
+    let doc = await Score.findOne({ teamId, competition: competitionId }).lean();
+    const j1Slip = doc.playerScores[0].judgeSlips.find((s) => s.judgeRole === 'J1');
+    expect(j1Slip.total).toBe(8.3);
+    expect(j1Slip.editCount).toBe(3);
+
+    // The Senior Judge is held to the same three.
+    expect((await post(tokenFor(senior), slip({ score: 8.0 }))).status).toBe(200);
+    for (const score of [8.1, 8.2, 8.3]) {
+      expect((await post(tokenFor(senior), slip({ score }))).status).toBe(200);
+    }
+    expect((await post(tokenFor(senior), slip({ score: 8.4 }))).status).toBe(422);
+
+    // An admin restores the allowance; the judge can edit again.
+    const restorer = new ScoringService(
+      new ScoreRepository(noopLogger), null, null, null, null, noopLogger, new CalculationService(noopLogger)
+    );
+    const result = await restorer.restoreSlipEdits(
+      doc._id, { playerId: String(doc.playerScores[0].playerId), judgeType: 'Judge 1' }, new mongoose.Types.ObjectId()
+    );
+    expect(result.slipsRestored).toBe(1);
+    expect((await post(tokenFor(j1), slip({ score: 8.4 }))).status).toBe(200);
+    // Only Judge 1 was restored: the Senior Judge is still out of edits.
+    expect((await post(tokenFor(senior), slip({ score: 8.5 }))).status).toBe(422);
   });
 });

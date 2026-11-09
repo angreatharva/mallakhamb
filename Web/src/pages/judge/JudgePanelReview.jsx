@@ -24,15 +24,11 @@ import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import {
   getCombinationChecklist,
-  getDifficultyRequirement,
-  computeCombinationTotal,
-  resolveDifficultyValue,
-  POINT_CEILINGS,
   analyzePanelMismatches,
   calculateAverageMarks,
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
-import { J, JudgeAmbience, MismatchModal, ToleranceModal, SrEditModal, SCORING_PATH, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey, JudgeHeader, ScoringFor } from './judgeShared';
+import { J, JudgeAmbience, MismatchModal, ToleranceModal, SCORING_PATH, SLIP_EDIT_LIMIT, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey, JudgeHeader, ScoringFor } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData } from './useJudgePanelData';
 
 const JudgePanelReview = () => {
@@ -88,12 +84,16 @@ const JudgePanelReview = () => {
   const [mismatchDismissed, setMismatchDismissed] = useState(false);
   const [showToleranceModal, setShowToleranceModal] = useState(false);
   const [toleranceDismissed, setToleranceDismissed] = useState(false);
-  const [showSrEditModal, setShowSrEditModal] = useState(false);
-  const [srEditTarget, setSrEditTarget] = useState(null);
 
   const combinationChecklist = getCombinationChecklist(selectedApparatus);
   const panelMismatch = analyzePanelMismatches(panelScores, effectivePanelSize);
   const canFinalSubmit = !finalized && !competitionLocked && allPanelSubmitted && isSeniorJudge;
+
+  // Edit My Score: SLIP_EDIT_LIMIT changes per slip for every judge, the
+  // Senior Judge included (user rule 2026-11-09); an admin restores them.
+  const myEditsUsed = Number(panelScores[myJudgeType]?.editCount) || 0;
+  const myEditsLeft = Math.max(0, SLIP_EDIT_LIMIT - myEditsUsed);
+  const outOfEdits = !!panelScores[myJudgeType] && myEditsLeft === 0;
 
   // Two separate blocks, each with its own alert. A slip mismatch means the
   // panel recorded different routines; a tolerance breach means they recorded
@@ -186,6 +186,10 @@ const JudgePanelReview = () => {
       toast.error('Cannot edit — panel score is already finalized');
       return;
     }
+    if (outOfEdits) {
+      toast.error(`You have used all ${SLIP_EDIT_LIMIT} edits for this athlete. Ask the admin to restore your edits.`);
+      return;
+    }
     // Drop any unsaved marks left by an earlier, abandoned edit, so the slip
     // opens on the score actually submitted — which may since have changed.
     try {
@@ -218,66 +222,6 @@ const JudgePanelReview = () => {
     clearCompetitionContext?.();
     await logout(navigate);
     toast.success('Logged out successfully');
-  };
-
-  // SR judge: save an override for another judge's score
-  const handleSrEditSave = async (targetJudgeType, editedScores, newTotal) => {
-    try {
-      const breakdown = {
-        difficulty: editedScores.difficulty,
-        combination: { total: editedScores.combination.total, checked: editedScores.combination.checked },
-        execution: parseFloat(editedScores.execution || 0),
-        originality: parseFloat(editedScores.bonus || 0),
-        bonus: parseFloat(editedScores.bonus || 0),
-      };
-      const scoreData = {
-        playerId: playerIdOf(selectedPlayer),
-        playerName: selectedPlayer.name,
-        judgeType: targetJudgeType,
-        judgeNo: judgeInfo.judgeNo,
-        score: parseFloat(newTotal),
-        teamId: selectedTeam._id,
-        gender: selectedGender || mySeat?.gender,
-        ageGroup: selectedAgeGroup || mySeat?.ageGroup,
-        competitionType: selectedCompetitionType,
-        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
-        apparatus: selectedApparatus,
-        breakdown,
-        overrideBySenior: true,
-      };
-      await judgeAPI.saveScore(scoreData);
-      if (socket?.connected) {
-        socket.emit('score_update', {
-          ...scoreData,
-          roomId: `scoring_${selectedGender || mySeat?.gender}_${selectedAgeGroup || mySeat?.ageGroup}_${selectedCompetitionType}`,
-        });
-      }
-      setPanelScores((prev) => ({
-        ...prev,
-        [targetJudgeType]: {
-          judgeType: targetJudgeType,
-          score: parseFloat(newTotal),
-          breakdown: {
-            difficulty: editedScores.difficulty,
-            combination: editedScores.combination,
-            execution: parseFloat(editedScores.execution || 0),
-            bonus: parseFloat(editedScores.bonus || 0),
-          },
-          timestamp: new Date().toISOString(),
-        },
-      }));
-      toast.success(`Score updated for ${targetJudgeType}: ${newTotal}`);
-      setShowSrEditModal(false);
-      setSrEditTarget(null);
-      // Let both alerts re-evaluate against the corrected slip — an override
-      // that closes a difficulty gap can still leave the marks outside
-      // tolerance, and the Senior Judge needs telling that it did.
-      setMismatchDismissed(false);
-      setToleranceDismissed(false);
-    } catch (error) {
-      logger.error('SR edit save failed:', error);
-      toast.error('Failed to save score override');
-    }
   };
 
   const finalizePanelScore = async () => {
@@ -421,12 +365,22 @@ const JudgePanelReview = () => {
                 <button
                   type="button"
                   onClick={goBackToScoring}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
+                  disabled={outOfEdits}
+                  aria-disabled={outOfEdits}
+                  className="disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
                   style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
                 >
                   <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                   Edit My Score
                 </button>
+              )}
+              {!finalized && !competitionLocked && panelScores[myJudgeType] && (
+                <span
+                  data-testid="edits-left"
+                  className={`text-xs font-bold px-2.5 py-1.5 rounded-full ${outOfEdits ? 'bg-danger-tint text-danger-fg' : 'bg-surface-sunken text-fg-muted'}`}
+                >
+                  {outOfEdits ? 'No edits left — ask the admin' : `${myEditsLeft} of ${SLIP_EDIT_LIMIT} edits left`}
+                </span>
               )}
               {finalized && (
                 <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-success-tint text-success-fg">
@@ -516,11 +470,6 @@ const JudgePanelReview = () => {
                       <div className="text-2xl font-black" style={{ color: isYou ? 'rgb(var(--accent-fg))' : FG.ink }}>
                         {Number(data.score).toFixed(2)}
                       </div>
-                      {isSeniorJudge && !isYou && !finalized && !competitionLocked && (
-                        <button type="button" onClick={() => { setSrEditTarget({ judgeType: judge, score: data.score, breakdown: b }); setShowSrEditModal(true); }} className="w-8 h-8 tap-safe rounded-lg flex items-center justify-center border flex-shrink-0" style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))', background: 'rgb(var(--accent) / 0.08)' }} title={`Edit ${judge} score`} aria-label={`Edit ${judge} score`}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
                     </div>
                   </div>
 
@@ -659,19 +608,6 @@ const JudgePanelReview = () => {
         isSeniorJudge={isSeniorJudge}
         myJudgeType={myJudgeType}
         judgeNameMap={judgeNameMap}
-      />
-      <SrEditModal
-        isOpen={showSrEditModal}
-        onClose={() => { setShowSrEditModal(false); setSrEditTarget(null); }}
-        onSave={handleSrEditSave}
-        editTarget={srEditTarget}
-        combinationChecklist={combinationChecklist}
-        selectedApparatus={selectedApparatus}
-        POINT_CEILINGS={POINT_CEILINGS}
-        resolveDifficultyValue={resolveDifficultyValue}
-        getDifficultyRequirement={getDifficultyRequirement}
-        computeCombinationTotal={computeCombinationTotal}
-        selectedCompetitionType={selectedCompetitionType}
       />
     </div>
   );

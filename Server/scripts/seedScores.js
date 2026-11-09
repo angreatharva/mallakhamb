@@ -603,14 +603,14 @@ async function main(extraArgv = []) {
         });
         slips += 1;
 
-        // 3. The chief resolves whatever blocks him, seat by seat. This is the
-        //    override path — the authority comes from his own assignment, and
-        //    `judgeType` names whose slip he is correcting.
+        // 3. Whatever blocks the chief is resolved seat by seat — each judge
+        //    correcting their OWN slip (Edit My Score, at most 3 per slip).
+        //    No judge, the chief included, writes another's slip (2026-11-09).
         for (const fix of athletePlan.fixes) {
           const corrected = buildSlip(type.slug, spot.apparatus, fix.execution, fix.unmet);
           await call(SLIP_PATH, {
-            method: 'POST', token: tokens[CHIEF], competitionId,
-            body: { ...base, ...corrected, judgeType: fix.seat, overrideBySenior: true },
+            method: 'POST', token: tokens[fix.seat], competitionId,
+            body: { ...base, ...corrected },
           });
           slips += 1;
         }

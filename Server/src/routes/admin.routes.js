@@ -442,6 +442,22 @@ function createAdminRoutes(container) {
   );
 
   /**
+   * @route   PUT /api/admin/scores/:scoreId/players/:playerId/restore-edits
+   * @desc    Restore the judges' Edit My Score allowance (3) on one athlete
+   *          (body: { apparatus, judgeType? }). No mark changes.
+   * @access  Admin (own meet only), SuperAdmin
+   */
+  router.put(
+    '/scores/:scoreId/players/:playerId/restore-edits',
+    authMiddleware,
+    authorize,
+    validateCompetitionContext,
+    requireUnlockedCompetition(),
+    auditScoreUpdated,
+    adminController.restoreSlipEdits
+  );
+
+  /**
    * @route   PUT /api/admin/scores/lock
    * @desc    Lock scores
    * @access  Admin, SuperAdmin

@@ -425,6 +425,8 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
               score: slip.total,
               breakdown: normalizeBreakdown(slipToBreakdown(slip), slip.total),
               timestamp: slip.submittedAt || new Date().toISOString(),
+              // Edit My Score uses so far (limit SLIP_EDIT_LIMIT).
+              editCount: Number(slip.editCount) || 0,
             };
           }
         });
@@ -592,6 +594,8 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
               score: data.score,
               breakdown: keepShown ? shown.breakdown : normalizeBreakdown(data.breakdown, data.score),
               timestamp: data.timestamp || new Date().toISOString(),
+              // The broadcast carries no count; the next re-read brings it.
+              editCount: shown?.editCount ?? 0,
             },
           };
         });
@@ -613,6 +617,13 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
         }
         setFinalized(true);
         toast.success('Panel score finalized and locked');
+      }
+    });
+    // An admin restored the panel's Edit My Score allowance on an athlete.
+    newSocket.on('edits_restored', (data) => {
+      const currentPlayerId = String(playerIdOf(selectedPlayer) || '');
+      if (currentPlayerId && String(data.playerId) === currentPlayerId && isForThisPerformance(data)) {
+        fetchRef.current();
       }
     });
     newSocket.on('scores_saved_error', (error) => {

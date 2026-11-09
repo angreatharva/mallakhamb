@@ -1668,6 +1668,10 @@ class AdminService extends UserService {
     return this.scoring.unlockPlayerForJudges(scoreId, target, actorId, scope);
   }
 
+  async restoreSlipEdits(scoreId, target, actorId, scope) {
+    return this.scoring.restoreSlipEdits(scoreId, target, actorId, scope);
+  }
+
   /**
    * Unlock every score in an age group.
    * @deprecated Delegates to ScoringService (task 3.1). Prefer scoringService.

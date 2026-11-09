@@ -197,6 +197,13 @@ const playerScoreSchema = new mongoose.Schema({
     submittedAt: { type: Date, default: null },
     isChiefPrefilled: { type: Boolean, default: false },
     /**
+     * How many times the judge has changed this slip after first submitting
+     * it ("Edit My Score"). Capped at SLIP_EDIT_LIMIT (3) for every panel
+     * judge, the Senior Judge included; an admin or superadmin puts it back
+     * to 0 (restoreSlipEdits). User rule 2026-11-09.
+     */
+    editCount: { type: Number, min: 0, default: 0 },
+    /**
      * WHO wrote this slip — the JudgeAccount, not the seat.
      *
      * `judgeRole` names a seat ("J2"), and seats are re-assigned between meets,

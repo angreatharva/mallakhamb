@@ -347,6 +347,27 @@ function createAdminController(container) {
       res.json({ success: true, data: result });
     }),
 
+    /**
+     * @route PUT /api/admin/scores/:scoreId/players/:playerId/restore-edits
+     * Give the judges back their Edit My Score allowance on one athlete.
+     * Body: { apparatus?, judgeType? } — no judgeType restores every seat.
+     */
+    restoreSlipEdits: asyncHandler(async (req, res) => {
+      const { scoreId, playerId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(String(scoreId)) || !mongoose.Types.ObjectId.isValid(String(playerId))) {
+        return res.status(400).json({ success: false, error: { message: 'Invalid score or player id', code: 'VALIDATION_ERROR' } });
+      }
+      const apparatus = typeof req.body?.apparatus === 'string' ? req.body.apparatus : undefined;
+      const judgeType = typeof req.body?.judgeType === 'string' ? req.body.judgeType : undefined;
+      if (judgeType && !PANEL_JUDGE_TYPES.includes(judgeType)) {
+        return res.status(400).json({ success: false, error: { message: 'Unknown judge seat', code: 'VALIDATION_ERROR' } });
+      }
+      const result = await adminService.restoreSlipEdits(
+        scoreId, { playerId, apparatus, judgeType }, req.user._id, scoreScope(req)
+      );
+      res.json({ success: true, data: result });
+    }),
+
     /** @route PUT /api/admin/scores/lock */
     lockScores: asyncHandler(async (req, res) => {
       const result = await adminService.lockScores(
@@ -433,19 +454,24 @@ function createAdminController(container) {
       // Resolve the identity a single-slip submission writes to. The body's
       // `judgeType` is an assertion the caller controls, so a panel judge is
       // bound to their OWN slot and any body value is discarded (HIGH-1).
-      //  - Senior Judge override: the chief judge may correct another panel
-      //    member's slip (Web/src/pages/judge/JudgePanelReview.jsx:150-178).
-      //    That power is granted from req.user, never from the body — a
-      //    non-senior judge sending `overrideBySenior` is still bound to self.
+      //  - No judge writes another judge's slip — the Senior Judge included
+      //    (user rule 2026-11-09). An `overrideBySenior` naming another seat
+      //    is refused outright rather than written onto the caller's own slip.
       //  - Admin/SuperAdmin have no judgeType: they record the whole panel on
       //    behalf of the judges, so they keep supplying it in the body.
       //  - Anyone else (anonymous, Scorer) gets no single-slip identity.
       let effectiveJudgeType = null;
       if (isPanelJudge) {
-        effectiveJudgeType =
-          isSeniorJudge && req.body.overrideBySenior && PANEL_JUDGE_TYPES.includes(req.body.judgeType)
-            ? req.body.judgeType
-            : authJudgeType;
+        if (req.body.overrideBySenior && req.body.judgeType && req.body.judgeType !== authJudgeType) {
+          return res.status(403).json({
+            success: false,
+            error: {
+              message: 'A judge can only change their own score, not another judge\'s',
+              code: 'FORBIDDEN',
+            },
+          });
+        }
+        effectiveJudgeType = authJudgeType;
       } else if (isAdmin && PANEL_JUDGE_TYPES.includes(req.body.judgeType)) {
         effectiveJudgeType = req.body.judgeType;
       }
@@ -545,6 +571,11 @@ function createAdminController(container) {
       // ScoringService.saveScores). Always assigned, so a body cannot carry
       // its own value; an admin keeps full control of the sheet.
       scoreData.scorerTimeOnly = isScorer && !isAdmin;
+
+      // "Edit My Score" is limited to SLIP_EDIT_LIMIT per slip for every panel
+      // judge (user rule 2026-11-09). Only their own single-slip saves count;
+      // Final Submit and admin writes re-send slips and must not.
+      scoreData.countSlipEdit = isPanelJudge && !isAdmin && !!isSingleSlipSubmission && !req.body.isFinalSubmit;
 
       // Handle admin routes, superadmin routes, and judge/scorer routes
       const competitionId = competitionIdFromRequest(req, { fallback: scoreData.competition });

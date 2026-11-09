@@ -184,34 +184,28 @@ describe('HIGH-5 — score_update broadcasts (FIXED)', () => {
   test('a non-senior judge cannot override another slip via overrideBySenior', async () => {
     const socket = makeSocket('judge-1');
 
-    await handler.handleScoreUpdate(socket, {
+    await expect(handler.handleScoreUpdate(socket, {
       ...baseUpdate,
       judgeType: 'Judge 3',
       overrideBySenior: true,
-    });
+    })).rejects.toThrow(/own score/);
 
     const scoreUpdates = socket.broadcasts.filter((b) => b.event === EventTypes.SCORE_UPDATED);
-    expect(scoreUpdates.length).toBeGreaterThan(0);
-    for (const { payload } of scoreUpdates) {
-      expect(payload.judgeType).toBe('Judge 1');
-    }
+    expect(scoreUpdates.length).toBe(0);
   });
 
-  test('a genuine Senior Judge may broadcast a correction for another judge', async () => {
-    // Preserves the shipped SrEditModal feature (JudgePanelReview.jsx:180).
+  test('a Senior Judge cannot broadcast a correction for another judge either', async () => {
+    // User rule 2026-11-09: the SrEditModal override is gone.
     const socket = makeSocket('judge-sr');
 
-    await handler.handleScoreUpdate(socket, {
+    await expect(handler.handleScoreUpdate(socket, {
       ...baseUpdate,
       judgeType: 'Judge 2',
       overrideBySenior: true,
-    });
+    })).rejects.toThrow(/own score/);
 
     const scoreUpdates = socket.broadcasts.filter((b) => b.event === EventTypes.SCORE_UPDATED);
-    expect(scoreUpdates.length).toBeGreaterThan(0);
-    for (const { payload } of scoreUpdates) {
-      expect(payload.judgeType).toBe('Judge 2');
-    }
+    expect(scoreUpdates.length).toBe(0);
   });
 
   test('a non-judge cannot broadcast score updates at all', async () => {

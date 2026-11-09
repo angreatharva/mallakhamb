@@ -59,6 +59,14 @@ export const scoringCacheKey = (team, player, judgeInfo) => (
  * Coerce a stored/emitted breakdown into the shape the UI renders, filling in
  * zeros for anything missing.
  */
+/**
+ * Edit My Score allowance per slip — every panel judge, the Senior Judge
+ * included (user rule 2026-11-09). Mirrors SLIP_EDIT_LIMIT in
+ * Server/src/utils/scoring/judge-slip.util.js; an admin or superadmin
+ * restores it.
+ */
+export const SLIP_EDIT_LIMIT = 3;
+
 export const normalizeBreakdown = (breakdown, fallbackScore) => {
   if (!breakdown) {
     return {

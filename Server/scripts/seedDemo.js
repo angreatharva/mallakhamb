@@ -724,7 +724,8 @@ async function judgeMeet(meet, types, { onlyPanels = () => true } = {}) {
           { ...ctx, isChief: seat === 'Senior Judge' });
 
         // About one routine in thirty: Judge 1 misses a checklist item the
-        // others saw, and the chief corrects his slip (Panel Review history).
+        // others saw, then corrects his own slip — one of his three Edit My
+        // Score changes (no judge edits another's slip, 2026-11-09).
         const mismatch = !tie && panel.size >= 4 && storyRng.chance(0.035);
         const extraUnmet = mismatch
           ? (require('../src/config/cop-rules').getCombinationChecklist(spot.apparatus)
@@ -740,9 +741,8 @@ async function judgeMeet(meet, types, { onlyPanels = () => true } = {}) {
         await must(chief, 'POST', SLIP_PATH, { ...base, ...chiefSlip });
         slips += 1;
         if (extraUnmet) {
-          await must(chief, 'POST', SLIP_PATH, {
+          await must(sessions['Judge 1'], 'POST', SLIP_PATH, {
             ...base, ...slipBody(type, spot.apparatus, perf, executionOf('Judge 1')),
-            judgeType: 'Judge 1', overrideBySenior: true,
           });
           slips += 1;
         }

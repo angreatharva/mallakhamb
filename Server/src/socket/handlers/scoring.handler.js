@@ -253,17 +253,14 @@ class ScoringHandler {
 
     // HIGH-5: stamp the role from the SOCKET identity, not the payload —
     // mirroring what Phase 1.2 did for the HTTP path in admin.controller.js.
-    // The one carve-out matches that fix: a genuine Senior Judge may broadcast a
-    // correction to another panel member's slip, because JudgePanelReview's
-    // SrEditModal is a shipped feature (JudgePanelReview.jsx:180). That power
-    // comes from the socket identity; a non-senior sending `overrideBySenior` is
-    // still stamped as themselves.
     const assignedJudgeType =
       (socket.judgeTypeByRoom && socket.judgeTypeByRoom.get(roomId)) || socket.judgeType || null;
-    const isSeniorJudge = assignedJudgeType === 'Senior Judge';
-    const effectiveJudgeType = (isSeniorJudge && data.overrideBySenior && judgeType)
-      ? judgeType
-      : (assignedJudgeType || judgeType);
+    // No judge broadcasts another judge's slip, the Senior Judge included
+    // (user rule 2026-11-09) — the HTTP save refuses it the same way.
+    if (data.overrideBySenior && assignedJudgeType && judgeType && judgeType !== assignedJudgeType) {
+      throw new Error("A judge can only change their own score");
+    }
+    const effectiveJudgeType = assignedJudgeType || judgeType;
 
     const payload = {
       playerId,

@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import apiConfig from '@/config/api.config';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Clock, Save, ArrowLeft, Lock, LockOpen, Eye, Trophy, AlertCircle } from 'lucide-react';
+import { Clock, Save, ArrowLeft, Lock, LockOpen, Eye, Trophy, AlertCircle, RotateCcw } from 'lucide-react';
+import { SLIP_EDIT_LIMIT } from '../judge/judgeShared';
 import toast from 'react-hot-toast';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTable';
@@ -620,6 +621,26 @@ const AdminScoring = () => {
         return reasons.length ? [{ ...ps, reasons }] : [];
     });
 
+    /*
+     * Judges who have used all their Edit My Score changes on an athlete
+     * (3 per slip, user rule 2026-11-09). Restoring gives them 3 again.
+     */
+    const SLIP_SEAT = { SR_JUDGE: 'Senior Judge', CHIEF: 'Senior Judge', J1: 'Judge 1', J2: 'Judge 2', J3: 'Judge 3', J4: 'Judge 4' };
+    const outOfEdits = (calculatedScores || []).flatMap((ps) => (ps.judgeSlips || [])
+        .filter((slip) => (Number(slip.editCount) || 0) >= SLIP_EDIT_LIMIT && SLIP_SEAT[slip.judgeRole])
+        .map((slip) => ({ playerId: ps.playerId, playerName: ps.playerName, apparatus: ps.apparatus, judgeType: SLIP_SEAT[slip.judgeRole] })));
+
+    const restoreEdits = async (target) => {
+        try {
+            await api.restoreSlipEdits(existingScoreId, target.playerId, target.apparatus, target.judgeType);
+            toast.success(`${target.judgeType} has ${SLIP_EDIT_LIMIT} edits again for ${target.playerName}`);
+            await fetchScoringData();
+        } catch (error) {
+            logger.error('Error restoring edits:', error);
+            toast.error(error.response?.data?.error?.message || 'Failed to restore edits');
+        }
+    };
+
     const confirmUnlock = async () => {
         if (!unlockTarget) return;
         try {
@@ -727,6 +748,30 @@ const AdminScoring = () => {
                                         aria-label={`Unlock ${ps.playerName}${ps.apparatus ? `, ${ps.apparatus}` : ''} for the judges`}
                                         className="ui-btn ui-btn--line ui-btn--sm flex-shrink-0">
                                         <LockOpen className="w-3.5 h-3.5" aria-hidden="true" /> Unlock
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {outOfEdits.length > 0 && existingScoreId && (
+                    <div className="rounded-2xl border p-4 sm:p-5 bg-surface border-line" data-testid="out-of-edits">
+                        <p className="type-tag mb-3 flex items-center gap-2 text-accent-fg">
+                            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Out of edits
+                        </p>
+                        <ul className="divide-y divide-line">
+                            {outOfEdits.map((t) => (
+                                <li key={`${t.playerId}::${t.apparatus || ''}::${t.judgeType}`} className="flex items-center justify-between gap-3 py-2.5">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-ink truncate">{t.playerName}</p>
+                                        <p className="text-xs text-fg-muted">{[t.apparatus, `${t.judgeType} used all ${SLIP_EDIT_LIMIT} edits`].filter(Boolean).join(' — ')}</p>
+                                    </div>
+                                    <button type="button" onClick={() => restoreEdits(t)}
+                                        disabled={competitionLocked && routePrefix !== '/superadmin'}
+                                        aria-label={`Restore ${t.judgeType}'s edits for ${t.playerName}`}
+                                        className="ui-btn ui-btn--line ui-btn--sm flex-shrink-0">
+                                        <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Restore {SLIP_EDIT_LIMIT} edits
                                     </button>
                                 </li>
                             ))}

@@ -38,6 +38,7 @@ const { rankTeamChampionship } = require('../../utils/scoring/team-championship.
 const {
   JUDGE_SCORE_FIELDS,
   JUDGE_TYPE_BY_FIELD,
+  SLIP_EDIT_LIMIT,
   breakdownForJudge,
 } = require('../../utils/scoring/judge-slip.util');
 
@@ -1149,6 +1150,73 @@ class ScoringService {
     };
   }
 
+  /**
+   * Restore the judges' Edit My Score allowance on one athlete (user rule
+   * 2026-11-09): each slip's `editCount` goes back to 0, so the judge has
+   * SLIP_EDIT_LIMIT edits again. One seat (`judgeType`) or every seat.
+   * No mark changes. Admin (own meet) and superadmin.
+   */
+  async restoreSlipEdits(scoreId, { playerId, apparatus, judgeType } = {}, actorId, { competitionId } = {}) {
+    const Model = this.scoreRepository.model;
+    const doc = await Model.findById(scoreId);
+    if (!doc || !this._inCompetition(doc, competitionId)) {
+      throw new NotFoundError('Score');
+    }
+    const wanted = apparatusKey(apparatus);
+    const row = (doc.playerScores || []).find((ps) => String(ps.playerId) === String(playerId)
+      && (apparatus === undefined || apparatus === null || apparatus === '' || apparatusKey(ps.apparatus) === wanted));
+    if (!row) {
+      throw new NotFoundError('Player score');
+    }
+    const ROLE_BY_TYPE = {
+      'Senior Judge': ['SR_JUDGE', 'CHIEF'], 'Judge 1': ['J1'], 'Judge 2': ['J2'], 'Judge 3': ['J3'], 'Judge 4': ['J4'],
+    };
+    const roles = judgeType ? (ROLE_BY_TYPE[judgeType] || []) : null;
+    let restored = 0;
+    (row.judgeSlips || []).forEach((slip) => {
+      if (roles && !roles.includes(slip.judgeRole)) return;
+      if ((Number(slip.editCount) || 0) > 0) restored += 1;
+      slip.editCount = 0;
+    });
+    doc.markModified('playerScores');
+    await doc.save();
+
+    this.logger.info('Judge edit allowance restored', {
+      scoreId: String(scoreId), playerId: String(playerId), apparatus: row.apparatus,
+      judgeType: judgeType || 'all', actorId: String(actorId),
+    });
+    this._broadcastEditsRestored(doc, row, judgeType);
+
+    return {
+      scoreId: String(doc._id),
+      playerId: String(row.playerId),
+      playerName: row.playerName,
+      apparatus: row.apparatus || null,
+      judgeType: judgeType || null,
+      slipsRestored: restored,
+      editLimit: SLIP_EDIT_LIMIT,
+    };
+  }
+
+  /** Tell the panel an athlete's edit allowance is back, so Panel Review re-reads. */
+  _broadcastEditsRestored(doc, row, judgeType) {
+    if (!this.socketManager?.emitToRoom) return;
+    try {
+      const slug = toCompetitionTypeSlug(doc.competitionType);
+      for (const room of scoringRoomIds(doc.gender, doc.ageGroup, slug)) {
+        this.socketManager.emitToRoom(room, 'edits_restored', {
+          playerId: row.playerId,
+          teamId: String(doc.teamId?._id || doc.teamId),
+          apparatus: row.apparatus || null,
+          judgeType: judgeType || null,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch (error) {
+      this.logger.warn('Edit restore not broadcast', { error: error.message });
+    }
+  }
+
   /** Does this Score belong to the given meet? No meet given = no restriction. */
   _inCompetition(doc, competitionId) {
     if (!competitionId) return true;
@@ -1469,6 +1537,9 @@ class ScoringService {
        * by the controller from the authenticated seat, never from the body.
        */
       const scorerTimeOnly = scoreData.scorerTimeOnly === true;
+      // A panel judge's own single-slip save: resubmitting a slip already on
+      // file is an "Edit My Score" and counts against SLIP_EDIT_LIMIT.
+      const countSlipEdit = scoreData.countSlipEdit === true;
       const timeDeductionOf = (time) => (
         time ? Number(this.calculationService.calculateTimeDeduction(time)) || 0 : 0
       );
@@ -1639,8 +1710,25 @@ class ScoringService {
               : [];
             for (const slip of incomingSlips) {
               const idx = existingSlips.findIndex(s => s.judgeRole === slip.judgeRole);
-              if (idx >= 0) existingSlips[idx] = { ...existingSlips[idx], ...slip };
-              else existingSlips.push(slip);
+              if (idx >= 0) {
+                const prior = existingSlips[idx];
+                const plain = typeof prior?.toObject === 'function' ? prior.toObject() : prior;
+                // Never taken from a payload: only this counter moves it.
+                let editCount = Number(plain.editCount) || 0;
+                if (countSlipEdit && Number(plain.total) > 0) {
+                  if (editCount >= SLIP_EDIT_LIMIT) {
+                    throw new BusinessRuleError(
+                      `You have used all ${SLIP_EDIT_LIMIT} edits for ${existingPlayerScore.playerName || 'this athlete'}. Ask the admin to restore your edits.`,
+                      { code: 'EDIT_LIMIT_REACHED', limit: SLIP_EDIT_LIMIT }
+                    );
+                  }
+                  editCount += 1;
+                }
+                existingSlips[idx] = { ...plain, ...slip, editCount };
+              } else {
+                const { editCount: _ignored, ...fresh } = slip;
+                existingSlips.push({ ...fresh, editCount: 0 });
+              }
             }
             mergedPlayerScores[existingPlayerIndex] = {
               ...existingPlayerScore,
