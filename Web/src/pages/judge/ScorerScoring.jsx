@@ -21,7 +21,8 @@ import { analyzePanelMismatches, calculateAverageMarks, getTimeDeductionForTime,
 import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparatus';
 import { mirrorChiefSeat, panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
 import { buildScorerRows } from './scorerRows';
-import { seatTypesFor } from './useJudgePanelData';
+import { seatTypesFor, slipToBreakdown } from './useJudgePanelData';
+import { useRunningOrder, useOrderedTeamRows } from './useRunningOrder';
 import { logger } from '@/infrastructure/logger';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { alpha } from '../../styles/tokens';
@@ -141,10 +142,45 @@ const ScorerScoring = () => {
     try { localStorage.setItem(timeLockKey, JSON.stringify(timeLocks)); } catch { /* storage full or blocked */ }
   }, [timeLocks, timeLockKey]);
 
-  /** Put every locked time, its deduction and Other Deduction back over a freshly loaded sheet. */
+  /*
+   * UNSAVED TIMES SURVIVE A RELOAD (bug 2026-11-09).
+   *
+   * A Time Keeper's time — or one typed here — lives only on this sheet until
+   * the Scorer saves. The sheet re-reads the server on every Final Submit
+   * broadcast, and that re-read used to replace every row, so the times of
+   * the athletes timed earlier vanished. Every unsaved Time / Other Deduction
+   * is kept here (and in localStorage, so a refresh keeps it too) and laid
+   * back over each reload until a save writes it.
+   */
+  const draftKey = timeLockKey ? timeLockKey.replace('scorer_time_locks', 'scorer_unsaved_times') : null;
+  const draftsRef = useRef(null);
+  if (draftsRef.current === null) {
+    try { draftsRef.current = (draftKey && JSON.parse(localStorage.getItem(draftKey) || '{}')) || {}; } catch { draftsRef.current = {}; }
+  }
+  const writeDrafts = (next) => {
+    draftsRef.current = next;
+    if (!draftKey) return;
+    try { localStorage.setItem(draftKey, JSON.stringify(next)); } catch { /* storage full or blocked */ }
+  };
+  const recordDraft = (rowId, field, value) => {
+    const prev = draftsRef.current || {};
+    writeDrafts({ ...prev, [rowId]: { ...(prev[rowId] || {}), [field]: value } });
+  };
+
+  /** Put every unsaved and locked time, its deduction and Other Deduction back over a freshly loaded sheet. */
   const withLockedTimes = (sheet) => {
     const locks = timeLocksRef.current || {};
     const next = { ...sheet };
+    Object.entries(draftsRef.current || {}).forEach(([rowId, draft]) => {
+      if (!next[rowId]) return;
+      const row = { ...next[rowId] };
+      if (draft.time !== undefined) {
+        row.time = draft.time;
+        row.deduction = String(draft.time).trim() ? deductionForTime(draft.time) : '';
+      }
+      if (draft.otherDeduction !== undefined) row.otherDeduction = draft.otherDeduction;
+      next[rowId] = row;
+    });
     Object.entries(locks).forEach(([rowId, lock]) => {
       if (!next[rowId]) return;
       const time = lockedTimeOf(lock);
@@ -169,6 +205,13 @@ const ScorerScoring = () => {
   const pendingTimesRef = useRef([]);
   const [players, setPlayers] = useState([]);
   const [scores, setScores] = useState({});
+  /*
+   * Each seat's Difficulty / Combination per row — { [rowId]: { [judgeType]:
+   * breakdown } }. The tolerance popup needs them: a D/C mismatch is resolved
+   * FIRST (user rule 2026-11-09), and from totals alone the Scorer could not
+   * tell one was open, so it showed the tolerance hit over it.
+   */
+  const [slipBreakdowns, setSlipBreakdowns] = useState({});
   const [timeKeeper, setTimeKeeper] = useState('');
   const [scorer, setScorer] = useState('');
   const [remarks, setRemarks] = useState('');
@@ -304,6 +347,8 @@ const ScorerScoring = () => {
       }
 
       const existingScores = { ...initialScores };
+      const loadedBreakdowns = {};
+      const SLIP_ROLE = { SR_JUDGE: 'Senior Judge', SJ: 'Senior Judge', J1: 'Judge 1', J2: 'Judge 2', J3: 'Judge 3', J4: 'Judge 4' };
       teamData.scores.forEach(ps => {
         // Matched on athlete AND apparatus — a stored row belongs to exactly
         // one of this sheet's rows, and matching on the athlete alone would
@@ -318,6 +363,14 @@ const ScorerScoring = () => {
           )?.id;
         }
 
+        if (targetId && Array.isArray(ps.judgeSlips)) {
+          ps.judgeSlips.forEach((slip) => {
+            const jt = SLIP_ROLE[slip.judgeRole] || slip.judgeRole;
+            if (jt && Number(slip.total) > 0) {
+              loadedBreakdowns[targetId] = { ...(loadedBreakdowns[targetId] || {}), [jt]: slipToBreakdown(slip) };
+            }
+          });
+        }
         if (targetId && existingScores[targetId]) {
           existingScores[targetId] = {
             time: ps.time || '',
@@ -333,6 +386,7 @@ const ScorerScoring = () => {
       });
 
       setScores(withLockedTimes(existingScores));
+      setSlipBreakdowns(loadedBreakdowns);
       toast.success(scoreMetadata?.isLocked ? 'Found locked scoring session' : 'Found existing scoring session');
     } catch (error) {
       logger.error('Error loading existing scores:', error);
@@ -489,9 +543,15 @@ const ScorerScoring = () => {
         const row = prev[rowId] || {};
         return { ...prev, [rowId]: { ...row, [fieldName]: data.score.toString() } };
       });
+      if (data.breakdown && data.judgeType) {
+        setSlipBreakdowns(prev => ({ ...prev, [rowId]: { ...(prev[rowId] || {}), [data.judgeType]: data.breakdown } }));
+      }
       setLastUpdated(new Date());
     };
-    const handleScoresSaved = () => {
+    // Another team's Final Submit is not this sheet's business: re-reading
+    // on it only churned the sheet (and used to wipe unsaved times).
+    const handleScoresSaved = (data) => {
+      if (data?.teamId && String(data.teamId) !== String(selectedTeam?._id)) return;
       fetchScoringData();
     };
     /*
@@ -589,14 +649,21 @@ const ScorerScoring = () => {
       judges.forEach((j) => {
         const field = SEAT_FIELD[j.judgeType];
         const value = parseFloat(row[field]);
-        if (field && Number.isFinite(value) && value > 0) panel[j.judgeType] = { judgeType: j.judgeType, score: value };
+        if (field && Number.isFinite(value) && value > 0) {
+          // An unknown breakdown is `detailed: false` with no totals, so it is
+          // skipped by the D/C comparison rather than read as zeros.
+          const breakdown = slipBreakdowns[p.id]?.[j.judgeType] || { detailed: false };
+          panel[j.judgeType] = { judgeType: j.judgeType, score: value, breakdown };
+        }
       });
       const analysis = analyzePanelMismatches(panel, seatedPanelSize);
+      // A Difficulty / Combination mismatch still open hides the tolerance
+      // hit — the marks are about to change (hasToleranceBreach says so).
       if (!analysis.hasToleranceBreach) return [];
       const key = `${p.id}|${judges.map((j) => row[SEAT_FIELD[j.judgeType]]).join(',')}`;
       return [{ rowId: p.id, name: p.name, key, analysis, panel }];
     });
-  }, [players, scores, judges, seatedPanelSize]);
+  }, [players, scores, judges, seatedPanelSize, slipBreakdowns]);
   const [dismissedTolerance, setDismissedTolerance] = useState(() => new Set());
   const [reopenToleranceKey, setReopenToleranceKey] = useState(null);
   const shownToleranceHit = toleranceHits.find((h) => h.key === reopenToleranceKey)
@@ -623,7 +690,20 @@ const ScorerScoring = () => {
 
   // The sheet is one team on one apparatus, both named at the top — the line
   // under each athlete's name repeated them on every row.
-  const tableRows = useMemo(() => players.map(({ teamName: _teamName, ...row }) => row), [players]);
+  // The category's running order, live: a Senior Judge's or Scorer's
+  // re-sequence lands here without a reload (bug 2026-11-09).
+  const orderCategory = useMemo(() => ({
+    competitionId: judgeInfo?.competition?._id || judgeInfo?.competition,
+    gender: selectedGender?.value,
+    ageGroup: selectedAgeGroup?.value,
+    competitionType: selectedCompetitionType?.value,
+  }), [judgeInfo, selectedGender, selectedAgeGroup, selectedCompetitionType]);
+  const runningOrder = useRunningOrder(orderCategory);
+  const orderedPlayers = useOrderedTeamRows(players, selectedTeam?._id, runningOrder);
+  const tableRows = useMemo(
+    () => orderedPlayers.map(({ teamName: _teamName, lotNo: _lot, runningPosition: _pos, ...row }) => row),
+    [orderedPlayers],
+  );
 
   const calculateFinalScore = (ps) => {
     const r = panelAverage(ps);
@@ -651,9 +731,11 @@ const ScorerScoring = () => {
         return;
       }
       setScores(prev => ({ ...prev, [playerId]: { ...prev[playerId], otherDeduction: text } }));
+      recordDraft(playerId, 'otherDeduction', text);
       setLastUpdated(new Date());
       return;
     }
+    recordDraft(playerId, 'time', String(value ?? ''));
 
     setScores(prev => {
       const updatedPlayer = { ...prev[playerId], time: value };
@@ -820,6 +902,8 @@ const ScorerScoring = () => {
       } = responseData;
 
       setCalculatedScores(calculatedPlayerScores || []);
+      // Saved: the server holds every time on the sheet now.
+      writeDrafts({});
       /*
        * A Scorer's lock is recorded against the apparatus, not the document, so
        * `responseLocked` stays false for it — reading that alone handed the

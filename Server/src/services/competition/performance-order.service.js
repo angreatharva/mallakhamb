@@ -549,8 +549,12 @@ class PerformanceOrderService {
         timestamp: new Date().toISOString(),
       };
 
-      for (const roomId of roomIds) {
-        this.socketManager.emitToRoom(roomId, EventTypes.PERFORMANCE_ORDER_UPDATED, payload);
+      if (typeof this.socketManager.emitToRooms === 'function') {
+        this.socketManager.emitToRooms(roomIds, EventTypes.PERFORMANCE_ORDER_UPDATED, payload);
+      } else {
+        for (const roomId of roomIds) {
+          this.socketManager.emitToRoom(roomId, EventTypes.PERFORMANCE_ORDER_UPDATED, payload);
+        }
       }
     } catch (error) {
       this.logger.error('Failed to broadcast performance order update', {

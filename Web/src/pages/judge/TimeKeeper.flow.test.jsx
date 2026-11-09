@@ -26,6 +26,12 @@ const h = vi.hoisted(() => {
 
 vi.mock('socket.io-client', () => ({ io: () => h.socket }));
 // Stable, like the real hook: both pages have effects that depend on it.
+// The running-order hook opens its own socket and API read; its ordering
+// has its own test (useRunningOrder.test.jsx).
+vi.mock('./useRunningOrder', () => ({
+  useRunningOrder: () => ({ teams: new Map(), players: new Map() }),
+  useOrderedTeamRows: (rows) => rows,
+}));
 vi.mock('react-router-dom', () => ({
   useNavigate: () => h.navigate,
   useLocation: () => ({ state: h.state.location, pathname: '/judge/scoring' }),

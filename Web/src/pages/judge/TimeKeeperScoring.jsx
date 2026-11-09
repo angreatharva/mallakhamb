@@ -30,6 +30,7 @@ import { apparatusKey } from '@/utils/scoring/apparatus';
 import { seatTypesFor } from './useJudgePanelData';
 import { useTimekeeping, BEEP_MARKS, deductionNote } from './timeKeeper';
 import StopwatchFace from './StopwatchFace';
+import { useRunningOrder, useOrderedTeamRows } from './useRunningOrder';
 
 const SESSION_KEY = 'timekeeper_active_session';
 
@@ -79,9 +80,17 @@ const TimeKeeperScoring = () => {
     }
   }, [judgeInfo, selectedTeam, gender, ageGroup, isTimeKeeper, navigate]);
 
-  const rows = useMemo(() => (selectedTeam ? buildScorerRows({
+  const squadRows = useMemo(() => (selectedTeam ? buildScorerRows({
     team: selectedTeam, gender, ageGroup, competitionType: compType, apparatus,
   }) : []), [selectedTeam, gender, ageGroup, compType, apparatus]);
+  // In running order, and re-sorted live when the Senior Judge or Scorer
+  // re-sequences (bug 2026-11-09: this list ignored the order).
+  const orderCategory = useMemo(() => ({
+    competitionId: judgeInfo?.competition?._id || judgeInfo?.competition,
+    gender, ageGroup, competitionType: compType,
+  }), [judgeInfo, gender, ageGroup, compType]);
+  const runningOrder = useRunningOrder(orderCategory);
+  const rows = useOrderedTeamRows(squadRows, selectedTeam?._id, runningOrder);
 
   // Times recorded this session: { [rowId]: { seconds, sent } }
   const timesKey = selectedTeam ? `timekeeper_times_${selectedTeam._id}_${apparatus || 'all'}` : null;

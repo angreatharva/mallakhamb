@@ -25,6 +25,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // --- Mutable router state, flipped between renders -------------------------
 let mockLocation = { state: null, pathname: '/judge/scoring' };
 
+// The running-order hook opens its own socket and API read; its ordering
+// has its own test (useRunningOrder.test.jsx).
+vi.mock('./useRunningOrder', () => ({
+  useRunningOrder: () => ({ teams: new Map(), players: new Map() }),
+  useOrderedTeamRows: (rows) => rows,
+}));
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
   useLocation: () => mockLocation,

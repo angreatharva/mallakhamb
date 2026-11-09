@@ -618,6 +618,26 @@ class SocketManager {
   }
 
   /**
+   * Emit one event to several rooms, delivered ONCE per socket.
+   *
+   * A judge sits in both forms of a category's room id (slug and display),
+   * so emitting to each room separately handed them every event twice.
+   * Socket.IO de-duplicates across the rooms of a single `to([...])`.
+   * @param {string[]} roomIds
+   * @param {string} eventName
+   * @param {*} data
+   */
+  emitToRooms(roomIds, eventName, data) {
+    if (!this.io) {
+      this.logger.error('Cannot emit to rooms: Socket.IO not initialized');
+      return;
+    }
+    const rooms = [...new Set((roomIds || []).filter(Boolean))];
+    if (rooms.length === 0) return;
+    this.io.to(rooms).emit(eventName, data);
+  }
+
+  /**
    * Emit event to a specific user
    * @param {string} userId - User ID
    * @param {string} eventName - Event name
