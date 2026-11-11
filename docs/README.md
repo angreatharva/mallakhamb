@@ -1,5 +1,7 @@
 # Mallakhamb India — User Guides
 
+> **Current reference (11 Nov 2026):** [Role guides](roles/README.md), one complete README per role: [Super Admin](roles/superadmin/README.md), [Admin](roles/admin/README.md), [Coach](roles/coach/README.md), [Player](roles/player/README.md), [Judge](roles/judge/README.md). The guides below are the 12 Oct walkthroughs with demo-video shot lists; some steps there are out of date.
+
 One guide per role for [mallakhamb-web.onrender.com](https://mallakhamb-web.onrender.com/), written as the user guide and as the script for the demo video. Each ends with a demo-video shot list.
 
 | Guide | For | Live doc |
