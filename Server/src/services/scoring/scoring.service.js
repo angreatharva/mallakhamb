@@ -1879,6 +1879,28 @@ class ScoringService {
         }
 
         /*
+         * A Scorer's Lock & Submit waits for the Senior Judge (user rule
+         * 2026-11-11). Every athlete it would lock must already carry the
+         * Senior Judge's mark on the stored row; the Scorer's own payload is
+         * never trusted for marks (see `scorerTimeOnly`). Draft saves are
+         * unaffected. Admin locks are not Scorer saves and are not gated.
+         */
+        if (scorerTimeOnly && scoreData.isLocked) {
+          const stored = existingScore?.playerScores || [];
+          const waiting = processedPlayerScores
+            .filter((ps) => {
+              const i = findSquadPlace(stored, ps);
+              return !(i >= 0 && Number(stored[i].judgeScores?.seniorJudge) > 0);
+            })
+            .map((ps) => ps.playerName || 'an athlete');
+          if (waiting.length > 0) {
+            throw new ValidationError(
+              `The Senior Judge has not marked ${waiting.join(', ')} yet. Lock & Submit waits for every Senior Judge mark.`
+            );
+          }
+        }
+
+        /*
          * What this write leaves locked. `scoreData.isLocked` is the caller
          * asking to finalize, and what it finalizes is the apparatus it just
          * sent — not the document.

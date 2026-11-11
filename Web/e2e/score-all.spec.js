@@ -605,7 +605,7 @@ for (const meet of MEETS) {
 
             await page.getByLabel(/Time Keeper/).fill('Suraj Turte');
             await page.getByLabel(/^Scorer/).fill('Preetesh Gamre');
-            await page.getByRole('button', { name: /Save & Lock Scores/ }).click();
+            await page.getByRole('button', { name: /Save & Lock Scores|^Save Draft$/ }).click();
 
             // Draft or lock is decided by the SHEET, not by this spec: the Scorer
             // locks only once every athlete on it has both a mark and a time.

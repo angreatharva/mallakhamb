@@ -64,4 +64,21 @@ export function buildScorerRows({ team, gender, ageGroup, competitionType, appar
     });
 }
 
+/**
+ * Athletes the Senior Judge has not marked yet (user rule 2026-11-11).
+ *
+ * The Scorer's Lock & Submit waits until the Senior Judge has a mark above 0
+ * on every athlete of the sheet; until then the Scorer can only save a draft.
+ * The server refuses the same lock (scoring.service saveScores).
+ *
+ * @param {Array<{id: string, name: string}>} players  the sheet's rows
+ * @param {Object<string, {seniorJudge?: string|number}>} scores  keyed by row id
+ * @returns {string[]} the names still waiting, in sheet order
+ */
+export function athletesAwaitingSeniorJudge(players = [], scores = {}) {
+  return players
+    .filter((p) => !(parseFloat(scores?.[p.id]?.seniorJudge) > 0))
+    .map((p) => p.name);
+}
+
 export default buildScorerRows;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildScorerRows } from './scorerRows';
+import { buildScorerRows, athletesAwaitingSeniorJudge } from './scorerRows';
 
 const athlete = (id, first, apparatus, { gender = 'Male', ageGroup = 'Above18' } = {}) => ({
   player: { _id: id, firstName: first, lastName: 'Angre', gender },
@@ -115,5 +115,24 @@ describe('buildScorerRows', () => {
     }));
 
     expect(rows.map((r) => r.name)).toEqual(['Atharva Angre']);
+  });
+});
+
+// User rule 2026-11-11: the Scorer's Lock & Submit waits for the Senior Judge.
+describe('athletesAwaitingSeniorJudge', () => {
+  const rows = [{ id: 'a', name: 'Asha' }, { id: 'b', name: 'Bela' }, { id: 'c', name: 'Chitra' }];
+
+  it('names every athlete with no Senior Judge mark, in sheet order', () => {
+    const scores = { a: { seniorJudge: '8.4', judge1: '8' }, b: { seniorJudge: '', judge1: '7.5' }, c: { seniorJudge: '0' } };
+    expect(athletesAwaitingSeniorJudge(rows, scores)).toEqual(['Bela', 'Chitra']);
+  });
+
+  it('counts a row with no score entry as waiting', () => {
+    expect(athletesAwaitingSeniorJudge(rows, { a: { seniorJudge: 9 } })).toEqual(['Bela', 'Chitra']);
+  });
+
+  it('is empty once the Senior Judge has marked everyone', () => {
+    const scores = { a: { seniorJudge: '8.4' }, b: { seniorJudge: 7 }, c: { seniorJudge: '6.25' } };
+    expect(athletesAwaitingSeniorJudge(rows, scores)).toEqual([]);
   });
 });

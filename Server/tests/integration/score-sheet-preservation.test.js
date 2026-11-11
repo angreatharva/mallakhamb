@@ -249,6 +249,25 @@ describe('a Scorer save changes the time and Other Deduction only', () => {
     expect(row.finalScore).toBe(0);
   });
 
+  // User rule 2026-11-11: the Scorer's Lock & Submit waits for the Senior Judge.
+  it('refuses a Scorer Lock & Submit before the Senior Judge has marked', async () => {
+    const service = buildService();
+    await service.saveScores({ ...slipFrom('judge1', 'J1', 8.0), panelSize: 3 });
+    await service.saveScores({ ...slipFrom('judge2', 'J2', 8.2), panelSize: 3 });
+    await expect(service.saveScores({ ...tampered(), isLocked: true }))
+      .rejects.toThrow(/Senior Judge has not marked Asha Kulkarni/);
+    expect((await stored()).lockedApparatus || []).toEqual([]);
+    // A draft save is still allowed.
+    await service.saveScores(tampered());
+  });
+
+  it('allows a Scorer Lock & Submit once the Senior Judge has marked', async () => {
+    const service = buildService();
+    await service.saveScores({ ...slipFrom('seniorJudge', 'SR_JUDGE', 8.4), panelSize: 3 });
+    await service.saveScores({ ...tampered(), isLocked: true });
+    expect((await stored()).lockedApparatus).toHaveLength(1);
+  });
+
   it('leaves an admin save as it was', async () => {
     const service = buildService();
     await service.saveScores({ ...slipFrom('judge1', 'J1', 8.0), panelSize: 3 });

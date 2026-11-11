@@ -20,7 +20,7 @@ import { ResponsiveScoringTable } from '../../components/responsive/ResponsiveTa
 import { analyzePanelMismatches, calculateAverageMarks, getTimeDeductionForTime, panelMarksComplete } from '@/utils/scoring/copRules';
 import { apparatusFor, apparatusKey, entryGender } from '@/utils/scoring/apparatus';
 import { mirrorChiefSeat, panelSeats, soleApparatus } from '@/utils/scoring/judgePanel';
-import { buildScorerRows } from './scorerRows';
+import { buildScorerRows, athletesAwaitingSeniorJudge } from './scorerRows';
 import { seatTypesFor, slipToBreakdown } from './useJudgePanelData';
 import { useRunningOrder, useOrderedTeamRows } from './useRunningOrder';
 import { logger } from '@/infrastructure/logger';
@@ -227,6 +227,8 @@ const ScorerScoring = () => {
    */
   const { locked: competitionLocked } = useCompetitionLock();
   const readOnly = isLocked || competitionLocked;
+  // Athletes whose Senior Judge mark is still missing; Lock & Submit waits for them.
+  const seniorJudgeWaiting = athletesAwaitingSeniorJudge(players, scores);
   const [existingScoreId, setExistingScoreId] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -832,12 +834,17 @@ const ScorerScoring = () => {
       const hasJudge = (ps.seniorJudge && parseFloat(ps.seniorJudge) > 0) || (ps.judge1 && parseFloat(ps.judge1) > 0) || (ps.judge2 && parseFloat(ps.judge2) > 0) || (ps.judge3 && parseFloat(ps.judge3) > 0) || (ps.judge4 && parseFloat(ps.judge4) > 0);
       return hasJudge && ps.time?.trim();
     });
-    const shouldLock = allPlayersScored;
+    // Lock & Submit waits for the Senior Judge's mark on every athlete
+    // (user rule 2026-11-11); until then this is a draft save.
+    const awaiting = athletesAwaitingSeniorJudge(players, scores);
+    const shouldLock = allPlayersScored && awaiting.length === 0;
 
     const dialogTitle = shouldLock ? 'Lock & Submit Scores' : 'Save Scores as Draft';
     const dialogMessage = shouldLock
       ? '⚠️ WARNING: Once scores are submitted and locked, they CANNOT be changed.\n\nAre you sure you want to proceed?'
-      : 'Save scores as draft? You can edit them later before locking.';
+      : awaiting.length > 0
+        ? `The Senior Judge has not marked ${awaiting.join(', ')} yet, so these scores can only be saved as a draft. Lock & Submit opens once the Senior Judge has marked every athlete.\n\nSave as draft?`
+        : 'Save scores as draft? You can edit them later before locking.';
 
     setConfirmDialogConfig({ title: dialogTitle, message: dialogMessage, shouldLock });
     setShowConfirmDialog(true);
@@ -1123,9 +1130,17 @@ const ScorerScoring = () => {
           </div>
           <div className="flex justify-end">
             {!readOnly ? (
-              <button onClick={handleSaveScores} className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]" style={{ background: 'rgb(var(--success-fill))', color: 'rgb(var(--success-on))' }}>
-                <Save className="w-4 h-4" /> Save & Lock Scores
-              </button>
+              <div className="flex flex-col items-end gap-2">
+                {seniorJudgeWaiting.length > 0 && (
+                  <p className="type-body-s text-fg-muted m-0 text-right" data-testid="scorer-awaiting-senior">
+                    Lock &amp; Submit opens once the Senior Judge has marked every athlete
+                    ({seniorJudgeWaiting.length} still to mark: {seniorJudgeWaiting.join(', ')}).
+                  </p>
+                )}
+                <button onClick={handleSaveScores} className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-ink min-h-[48px]" style={{ background: 'rgb(var(--success-fill))', color: 'rgb(var(--success-on))' }}>
+                  <Save className="w-4 h-4" /> {seniorJudgeWaiting.length > 0 ? 'Save Draft' : 'Save & Lock Scores'}
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2 text-sm text-fg-muted">
                 <Lock className="w-4 h-4" />
