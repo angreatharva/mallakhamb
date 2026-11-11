@@ -7,8 +7,8 @@ covers:
   - src/infrastructure/database/index-manager.js
 read_when: "adding/changing a schema field, an index, or writing a migration"
 depends_on: [03-DOMAIN-MODEL, modules/repositories, modules/infrastructure]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 For entity meaning/relationships/lifecycle, see
@@ -381,3 +381,22 @@ mechanics (strict gapless `###_` ordering, batch rollback on failure).
 - Migrations added: **013** judge slip authors, **014** player teams per
   level, **015** drop age-cut-off override, **016** automatic finals — see
   [modules/migrations.md](modules/migrations.md).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **New model `SessionRevocation`.** Logouts are persisted here and reloaded
+  at start (audit M4). Sessions also have a 30-day absolute cap that carries
+  through rotation, refresh and meet switch.
+- `Admin`: partial unique index `admin_single_superadmin` on
+  `{ role: 'superadmin' }`.
+- `Team.coCoaches: [Coach ref]`, indexed.
+- `Score.judgeSlips[].editCount` (min 0, default 0). The server counts it and
+  refuses the 4th edit.
+- Reset codes are stored as SHA-256 hashes, and the code fields are
+  `select:false` on every user model (audit H3).
+- Judge emails are never stored on, or served from, score records (audit M1).
+- `JudgeAccount` level: the validator accepts International, National, State
+  and District. `Club` stays in the enum. Seed judges on Club moved to
+  International.
+- `AuditLog` now also carries the owner's correction records (reason plus
+  field-level before/after).

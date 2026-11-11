@@ -171,3 +171,14 @@ findings F1/F2 that live in `Web/`.
 - [x] src/components/ui/text.css, src/pages/unified/UnifiedDashboard.jsx (320px overview) → GOTCHAS
 - [x] socket-URL `replace('/api','')` in 7 files, CSP `connect-src` in index.html → 09-REALTIME, GOTCHAS, 00-INDEX
 - Not re-read this pass: per-screen 06-SCREENS docs for the other judge screens (their `:NN` line refs predate the restyle; behaviour unchanged by these commits).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+Files added to scope since the 2026-10-30 pass, and where each is covered:
+
+- [x] src/pages/superadmin/{SuperAdminFix,SuperAdminHistory}.jsx, src/pages/superadmin/fix/*.jsx, src/components/coach/CoCoachesPanel.jsx → 06-SCREENS/superadmin-fix-and-history
+- [x] src/pages/judge/{JudgeHome,JudgeIdentity,JudgePanelHistory}.jsx → 06-SCREENS/judge-dashboard, 06-SCREENS/judge-profile (written in `052af5d`)
+- [x] src/pages/judge/{judgeSeats,useRunningOrder,useJudgeLogout}.js → 04-STATE-MANAGEMENT, 09-REALTIME, 06-SCREENS/{judge-dashboard,scorer-scoring,time-keeper-scoring}
+- [x] src/components/ui/SearchSelect.jsx, src/utils/ui/search.js, src/components/shell/Facts.jsx → 05-DESIGN-SYSTEM, 07-COMPONENTS
+- [x] src/utils/ui/staleChunk.js → 01-ARCHITECTURE, 16-BUILD-AND-CONFIG
+- [x] assets/images/China-Main-tall.jpg → 12-RESPONSIVE, 06-SCREENS/public-home-and-scores

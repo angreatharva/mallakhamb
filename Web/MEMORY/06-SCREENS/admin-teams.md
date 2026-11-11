@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminTeams.jsx
 read_when: "changing the team browser/viewer screen"
 depends_on: [08-API-INTEGRATION]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -49,3 +49,7 @@ applied gender/ageGroup filters for consistency (`:229`).
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Search above the team list.

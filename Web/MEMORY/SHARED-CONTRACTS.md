@@ -10,8 +10,8 @@ covers:
   - src/utils/competition/levels.js
 read_when: "changing ANY scoring math, fee/late-fee math, the competition-lock boundary, apparatus-shape reading, or panel-size logic on either stack — this is the file that tells you the other stack exists"
 depends_on: [11-SCORING-CLIENT]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Why this doc exists
@@ -320,3 +320,13 @@ New duplicated pairs:
 | `hooks/useAgeGroups` `ALL_AGES`, `ageMatches` | `config/cop-rules#ALL_AGES`, `utils/data/category.util#ageMatches` | none — keep in step |
 | `e2e/support/panel-plan.js#panelsForType` | `scripts/lib/panel-plan.js#panelsForType` | none — keep in step |
 | stats D/C/E `averageSlipBreakdown` | `utils/scoring/slip-breakdown.util` | cross-stack parity test |
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Shared with Server: the Difficulty slot rule and `difficultyClassMax`
+  (`copRules` ↔ `cop-rules.js`).
+- Tolerance rounds to the hundredth on both stacks.
+- `panelSeats` ↔ `seated-panel.util` (the seat counting must match).
+- Seven competition levels (`levels.js` ↔ `competition-levels.js`).
+- The judge certification levels.
+- The `X-User-Type` header names the role cookie.

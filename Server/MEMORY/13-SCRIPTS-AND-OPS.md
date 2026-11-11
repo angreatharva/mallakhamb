@@ -5,8 +5,8 @@ covers:
   - package.json
 read_when: "running or changing a seed/ops/perf script, or checking what an npm script actually does before running it"
 depends_on: [01-ARCHITECTURE, 04-DATA-MODEL]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 All 40 npm scripts map cleanly to an existing file (`scripts/*.js`,
@@ -169,3 +169,18 @@ New and changed scripts in `deploy/server/` (installed to `/usr/local/bin` on th
 - `Server/scripts/perf/meetDay.js --target=<public API>` against a seedScale fixture is how the
   failover-with-a-panel drill (readiness 6.8) was run; seedScale drops its target first and
   refuses the API's own database, so it went into `mallakhambcompetition_prod_restoretest`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **`npm run seed:demo`** (`scripts/seedDemo.js` + `scripts/demo/{cast,names,rng,score-model}.js`)
+  builds a believable 2026 season over the real API: 20 meets across all six
+  levels, 12 clubs, 180 athletes and 28 judges. It also plants the
+  judge-bias stories that the Fairness board should show. Guards: it writes
+  only to a database whose name contains `demo`, or one given with
+  `--allow-db`; it has no default super admin password; and it stops after
+  any failed step.
+- `createSuperAdmin.js` refuses a second owner and has
+  `--transfer-to <email>` to hand ownership over.
+- `seedScores.js` corrects each slip as **its own judge** (the Senior Judge
+  override is gone).
+- `seed/judges.json`: judges that were on Club are now International.

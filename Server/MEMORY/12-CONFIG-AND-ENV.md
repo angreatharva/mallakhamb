@@ -5,8 +5,8 @@ covers:
   - src/config/payment.config.js
 read_when: "adding a new env var, changing a default, or debugging why a config value isn't what you expect"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 All values loaded once via `config.load()` at process start
@@ -138,3 +138,14 @@ loaded config object and from `Competition` documents, not from
 - Don't add a new `process.env.X` read inside a service/controller — route
   it through `config-manager.js` so it's validated once at boot and visible
   in the startup report (`scripts/startup.js`'s config heading).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `ACCOUNT_RATE_LIMIT_ENABLED`: per-account guessing limits on sign-in and
+  password reset, **and** the 5-wrong-passwords lockout. It is independent
+  of `RATE_LIMIT_ENABLED`. **Default false everywhere, production included**
+  (D6). Documented in `.env_example`.
+- `competition-levels.js`: there are now seven levels (Zonal and University
+  added).
+- Dependency bumps for the audit: express 4.22.3, body-parser 1.20.9, qs
+  6.17.1, follow-redirects 1.16.2 (also pinned in `overrides`), zod 4.6.7.

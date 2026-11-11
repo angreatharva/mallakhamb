@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedRegister.jsx
 read_when: "changing registration for player/coach/judge, or the post-registration redirect per role"
 depends_on: [13-FORMS-AND-VALIDATION, 03-ROUTING-AND-NAV]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -113,3 +113,8 @@ circumstance.
   Copy / Download, then Continue) — the redirect waits for it.
 - Rows are full width now (long labels misaligned inputs at half width).
 - Tests: `UnifiedRegister.player.test.jsx`. See [account-and-player-identity.md](account-and-player-identity.md).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Each role shows its password rules plus an example (Player@2026,
+  Coach@2026, Judge@2026).

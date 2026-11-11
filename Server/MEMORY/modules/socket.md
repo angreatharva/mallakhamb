@@ -4,8 +4,8 @@ covers:
   - src/socket/**
 read_when: "adding or debugging a socket event"
 depends_on: [08-REALTIME-SOCKETS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 Full detail (auth handshake, room-naming, the complete event catalogue,
@@ -31,3 +31,10 @@ display, both always emitted to via `scoringRoomIds`) and, since 2026-09-23,
 `competition_{id}`. Nothing joins `team_{id}`, so an `emitToRoom` there reaches
 nobody. Use `emitToUser` for anything that must reach someone outside those
 rooms — see [08-REALTIME-SOCKETS.md](../08-REALTIME-SOCKETS.md).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `emitToRooms` sends once per socket. New `unlocked` and `edits_restored`
+  broadcasts. The Senior Judge override is refused. The handshake checks
+  origin and inactive accounts and forwards `x-user-type`. See
+  [08-REALTIME-SOCKETS.md](../08-REALTIME-SOCKETS.md).

@@ -4,8 +4,8 @@ covers:
   - src/services/scoring/**
 read_when: "changing score calculation/aggregation service internals"
 depends_on: [07-SCORING-ENGINE]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Automatic finals: Competition I → II / III (2026-10-30)
@@ -88,3 +88,16 @@ full trace before changing it.
 
 The automatic-finals section above is current, including the Finalize gate.
 Tests: `tests/integration/qualification-service.test.js`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `saveScores`: panel size from the seats (`utils/scoring/seated-panel.util.js`).
+  A Scorer save takes only Time and Other Deduction. Single-slip submits need
+  Execution of at least 0.10. Each slip has 3 edits (`editCount`, 422 after
+  that). The Senior Judge override is removed.
+- Unlock per athlete or per sheet, and restore edits: see
+  [05-API-SURFACE.md](../05-API-SURFACE.md).
+- An admin's locked save finalizes every athlete with marks (it republishes).
+- `judge-slip.util`: the slot rule and `difficultyClassMax` come from
+  `config/cop-rules.js`.
+- Owner score corrections: [modules/superadmin-corrections.md](superadmin-corrections.md).

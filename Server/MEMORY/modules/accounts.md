@@ -14,8 +14,8 @@ covers:
   - src/migrations/012_player_login_ids.js
 read_when: "touching Player IDs, players without their own email, guardians, the account page (/auth/me/*), coach-approved resets/email additions, or coach-registered players"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, 06-AUTH-AND-SECURITY, modules/auth, modules/user-services]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 # Accounts: Player identity, the account page, coach approvals
@@ -175,3 +175,9 @@ team's coach.
 `tests/unit/services/player-join-team-coach-mail.test.js`,
 `tests/unit/utils/security/data-encryption.util.test.js`,
 `tests/unit/validators/coach-register-player.validator.test.js`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The owner can now correct any account (details, a new Player ID, reset
+  password, sign out everywhere, deactivate). See
+  [modules/superadmin-corrections.md](superadmin-corrections.md).

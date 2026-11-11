@@ -4,8 +4,8 @@ covers:
   - src/middleware/**
 read_when: "adding a new middleware, or figuring out which existing one already does what you need"
 depends_on: [01-ARCHITECTURE, 06-AUTH-AND-SECURITY, 02-CONVENTIONS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Purpose
@@ -88,3 +88,13 @@ for its behavior and the historical caller-identity bug it had.
   factory in `security.middleware.js`, gated behind the single
   `security.rateLimitEnabled` switch — don't hardcode a new limiter that
   ignores that switch.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `auth.middleware` resolves `req.teamCoachId` for co-coaches and reads the
+  role's own cookie (`X-User-Type`). `security.middleware` allows that header
+  in CORS.
+- New `requireCompetitionAccess` path guard on registration routes
+  (`competition-context.middleware`).
+- `request-coalescing`, `csrf` and `metrics-auth` were touched by the audit
+  fixes. The coalescing key rule still applies: never key on `req.user`.

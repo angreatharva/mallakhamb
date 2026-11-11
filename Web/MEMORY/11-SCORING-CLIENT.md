@@ -7,8 +7,8 @@ covers:
   - src/utils/ordering/performanceOrder.js
 read_when: "changing the judge slip, Panel Review, the mismatch/tolerance modals, the Senior Judge override modal, or the running-order/lot screens"
 depends_on: [SHARED-CONTRACTS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Scope of this doc vs. SHARED-CONTRACTS.md
@@ -246,3 +246,27 @@ pages, prefer reusing this normalizer rather than comparing
 `competitionType` strings directly — a slug-vs-display mismatch there
 reads as "the event doesn't match" and running-order updates silently
 stop appearing on screen.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **`copRules` slot rule.** An extra C fills one lower slot (B, otherwise A)
+  at that slot's value. `difficultyClassMax` gives each class's maximum, and
+  the picker rows show "class score / max". This is the same function as
+  Server `cop-rules`.
+- **Execution of at least 0.10** before Submit. Below that, Submit and the
+  Senior Judge's Save read as disabled through `aria-disabled` (the native
+  attribute would swallow the tap), and a tap shows a popup.
+- **Tolerance after mismatch.** No tolerance breach is shown while a
+  Difficulty or Combination mismatch is open. The lookup rounds to the
+  hundredth. The Scorer's popup uses each seat's D/C too.
+- **`panelMarksComplete`.** The sheet shows "Waiting for marks" until every
+  seated judge has marked.
+- **`describeSlipDifferences`.** The Senior Judge mismatch dialog lists
+  totals and gap, each differing A/B/C count, and each differing combination
+  requirement.
+- **Edit My Score** shows the edits left and is disabled at 0. There is no
+  Senior Judge override of other slips.
+- The phone slip's tabs switch **on tap only**. The swipe handlers are gone.
+- The Scorer's Lock & Submit needs a Senior Judge mark above 0 on every
+  athlete (`athletesAwaitingSeniorJudge`, `pages/judge/scorerRows.js`). Until
+  then the Scorer can only save drafts.

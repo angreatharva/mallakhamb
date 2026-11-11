@@ -11,8 +11,8 @@ covers:
   - ../ocr/**
 read_when: "touching the walk-in desk (/api/desk), the printed form, the OCR sidecar, or the COP age rule"
 depends_on: [03-DOMAIN-MODEL, 09-PAYMENTS, modules/user-services]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 Competition-day registration: an Admin or Super Admin turns a coach's filled
@@ -62,3 +62,8 @@ PP-OCRv5 mobile English rec on ONNX Runtime, no detection model; CTC decode mask
 ## A coach's own paper form (2026-10-29)
 
 `/api/coaches/paper-form/*` (coach.routes: coachAuth + validateCompetitionContext, writes behind the lock guard, scan rate-limited) reuses `walkInController`/`WalkInService` with a coach actor (`_isCoach`): the meet comes from the session (no admin scope, no fee-window check — the coach pays from the dashboard), a coach only ever sees their own drafts (others 404), `currentDraft` never opens one, matches are filtered to the coach's own roster plus EXACT matches, and an exact match another team holds at this level is a row error even as "a different child". Payment methods refuse a coach. One draft per coach+meet is shared with the desk. A `submitted` draft whose registration is paid (Pay Fees) is closed to `paid` on the next view/list. Web: `pages/coach/CoachPaperForm.jsx` (+ `services/user/paper-form.api.js`, same method names as deskAPI); DeskFormStep/DeskSlip take `api` and `who`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The competition and team pickers are searchable (`SearchSelect`) on the web
+  side. The OCR sidecar has a pixel cap (audit). No change to the desk flow.

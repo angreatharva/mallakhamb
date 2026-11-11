@@ -8,8 +8,8 @@ covers:
   - src/routes/team.routes.js
 read_when: "changing team CRUD, roster membership, or the /api/teams surface"
 depends_on: [03-DOMAIN-MODEL, 05-API-SURFACE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## A player's team is final per level (2026-10-28)
@@ -155,3 +155,9 @@ paths — check the specific method).
 - ⚠️ UNVERIFIED: whether `validateTeamForCompetition`/`getTeamRoster` are
   called from anywhere outside `team.controller.js` (e.g. another service) —
   only the controller was checked for this pass.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `Team.coCoaches`, change coach, and the one-step player transfer are
+  covered in [modules/superadmin-corrections.md](superadmin-corrections.md).
+- A coach reads and acts on only their own team entry (audit H2/M3).

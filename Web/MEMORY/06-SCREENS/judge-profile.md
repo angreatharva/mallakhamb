@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeProfile.jsx
 read_when: "changing the judge's own account/profile screen"
 depends_on: [13-FORMS-AND-VALIDATION]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -81,3 +81,8 @@ you add a new editable field here that other screens read off
   `GET /judge/profile`), grouped by meet; a finished meet
   (`isCompetitionLocked`) is tagged "Completed · view only". The form heading
   is now "My profile". Tests: `JudgeProfile.test.jsx`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The Panels tab has a search. The level options are International,
+  National, State and District.

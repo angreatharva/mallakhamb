@@ -13,8 +13,8 @@ covers:
   - src/models/JudgeAccount.js
 read_when: "changing login/token/cookie behavior, adding a role guard, touching CSRF/rate-limiting, or working on competition scope/lock enforcement"
 depends_on: [01-ARCHITECTURE, 03-DOMAIN-MODEL]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Roles
@@ -391,3 +391,32 @@ above).
   `isTokenInvalidated` (the admin-competition-assignment-change invalidation
   half of the same service) is actually called from admin-management code —
   not traced in this pass.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **One session per role** (`25a9cb47`). Each role now has its own cookie pair
+  (`access_token_<role>`, `refresh_token_<role>`). A request reads its own
+  role's pair, which comes from the **`X-User-Type`** header (the SPA sends it
+  from its URL; the socket handshake passes `auth.userType`) or is implied by
+  the API path. Refresh and logout act on that role only. Old single-cookie
+  sessions keep working for their own role until the next sign-in. See
+  `utils/security/cookie.util.js`.
+- **Security audit 2026-10-31** (`c3b7aa91`; per-item status is in section H
+  of `SECURITY-AUDIT-2026-10-31.md`):
+  - JWT is pinned to HS256.
+  - Reset codes are hashed with SHA-256.
+  - Logouts are persisted (`SessionRevocation`), with a 30-day absolute
+    session cap.
+  - Payment verify needs matching Razorpay order notes and refuses a payment
+    id that was already used.
+  - `updateAdmin` takes only an allow-list of fields.
+  - Search input is escaped.
+  - The socket checks the origin and refuses inactive accounts.
+  - HTTPS redirect is safe; OCR has a pixel cap; email HTML is escaped.
+- **Account limits off by default (D6).** `ACCOUNT_RATE_LIMIT_ENABLED`
+  defaults to false everywhere and also gates the 5-strike lockout. While it
+  is off, stored locks are ignored. Super admin login and judge register sit
+  under the IP switch (`RATE_LIMIT_ENABLED`).
+- **Single owner.** See [modules/superadmin-corrections.md](modules/superadmin-corrections.md).
+  An admin unlocks or restores edits only on sheets in their own meet; a
+  superadmin can do it on every meet.

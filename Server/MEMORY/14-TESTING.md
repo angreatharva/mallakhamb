@@ -5,8 +5,8 @@ covers:
   - package.json (jest config)
 read_when: "writing a test for any layer, or figuring out where an existing test for a subsystem lives"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Setup
@@ -206,3 +206,18 @@ Counts: **103 suites / 1179 tests** green. New: `tests/integration/qualification
 (incl. migration 014), `integration/player-team-admin.test.js`,
 `unit/age-eligibility.test.js`. Migration 016 has no test of its own; the
 local e2e chain exercises it at `prepare`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Counts on `f5465b4`: Server jest 112 suites / 1263 tests, all passing (`--forceExit`; a plain `npx jest` run hung after finishing on 2026-11-11).
+- New tests cover:
+  - the correction services
+  - per-role cookies
+  - the slot rule
+  - `editCount`
+  - Scorer saves (time and Other Deduction only)
+  - seated panel size
+  - the unlock and restore-edits routes
+- Web e2e: in `score-panel` / `score-all`, each judge corrects their own
+  slip, and the specs assert that tolerance stays hidden while a D/C
+  mismatch is open.

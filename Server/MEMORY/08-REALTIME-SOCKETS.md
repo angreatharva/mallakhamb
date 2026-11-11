@@ -5,8 +5,8 @@ covers:
   - src/utils/data/scoring-room.util.js
 read_when: "adding/changing a socket event, debugging a broadcast that doesn't arrive, or touching room membership/authorization"
 depends_on: [06-AUTH-AND-SECURITY, 07-SCORING-ENGINE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 > **Updated 2026-09-23 (follow-up pass, same commit lineage).** The
@@ -246,3 +246,17 @@ the points below still stand.)
   `join_competition` event under a different name than the one implemented
   here — worth checking before assuming the new event name is what a
   future client integration should use.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- A running-order change is now sent **once per socket**
+  (`emitToRooms`), instead of once per room-id form.
+- New broadcasts:
+  - `unlocked`: per athlete or whole sheet. The judges' panel hook now
+    *reopens* on it; it used to read any notice as "finalized".
+  - `edits_restored`: the panel re-reads.
+  - Owner score corrections send `scores_saved_notification`.
+- The socket refuses a Senior Judge override of another judge's slip.
+- Handshake: the origin is checked, inactive accounts are refused, and
+  `auth.userType` is forwarded as `x-user-type` so the socket reads the
+  right role's cookie.

@@ -4,8 +4,8 @@ covers:
   - src/pages/player/PlayerDashboard.jsx
 read_when: "changing the player's landing screen or competition-selection modal"
 depends_on: [08-API-INTEGRATION, 07-COMPONENTS, 04-STATE-MANAGEMENT]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -82,3 +82,7 @@ fetch:
   `error.competitionLockedMessage` before falling back to `data.message`.
 - A player with no team is routed to `/player/select-team` by the choosers
   before they ever reach this dashboard (Level → Team → Competition).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Search in the competition dialog and the team dropdowns.

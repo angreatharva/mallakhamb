@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminLots.jsx
 read_when: "changing running-order/lot-drawing UI, or debugging a dropped drag reorder"
 depends_on: [07-COMPONENTS, 11-SCORING-CLIENT, 09-REALTIME]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -84,3 +84,7 @@ screen itself holds no socket connection; the server emits
   A type the newly chosen meet doesn't run is cleared from the selection.
 - Line numbers (`:NNN`) above predate the 2026-10 restyle and are
   approximate — search by the named function.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Search above the running-order lists (drag pauses while it is active).

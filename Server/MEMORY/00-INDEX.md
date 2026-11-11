@@ -4,8 +4,8 @@ covers:
   - Server/**
 read_when: "always — the entry point for any change in Server/"
 depends_on: []
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 # MEMORY — router
@@ -171,3 +171,26 @@ correct fix requires **either** adding a join mechanism for that room first,
 admins assigned to the competition, via `Admin.competitions[]`). This is
 exactly the kind of wrong-turn the index and `GOTCHAS.md` together are
 supposed to prevent — a naive implementation would silently do nothing.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+Refreshed against `f5465b4` (2026-11-11). Main changes since then:
+- The 2026-10-31 security-audit fixes (`/api/scoring` deleted, hashed reset
+  codes, per-account limits that are now off by default, persisted logouts).
+- One Super Admin, the owner, with the Fix / History correction tools. See
+  the new [modules/superadmin-corrections.md](modules/superadmin-corrections.md).
+- Co-coaches.
+- Per-role session cookies.
+- New judging rules: an extra element fills one lower Difficulty slot,
+  Execution must be at least 0.10, at most 3 edits per slip, and the Senior
+  Judge override is removed.
+- Scorer: may edit only Time and Other Deduction; panel size is counted from
+  the seats.
+- Admin and superadmin can unlock the judges' scores and restore edits.
+- Seven competition levels.
+- Live running order for the Scorer and Time Keeper.
+- `seed:demo`.
+
+| Path | Purpose |
+|---|---|
+| `src/services/superadmin/`, `src/routes/superadmin-corrections.routes.js`, `src/utils/auth/team-coach.util.js` | Owner corrections, History/undo, co-coaches, player transfer — [modules/superadmin-corrections.md](modules/superadmin-corrections.md) |

@@ -4,8 +4,8 @@ covers:
   - src/services/payment/**
 read_when: "changing the Razorpay gateway or webhook reconciliation"
 depends_on: [09-PAYMENTS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 Full detail (both Razorpay flows, the gateway's shared primitives, the
@@ -30,3 +30,8 @@ conflate: the client-callback scheme (`order_id|payment_id`, keyed by the API
 body, keyed by the **webhook secret**, in `payment.service.js`). Don't assume
 "signature verification" means the same code path, or the same secret, in both
 places.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Verify needs matching order notes and refuses a reused payment id.
+  Manual ledger lines exist. See [09-PAYMENTS.md](../09-PAYMENTS.md).

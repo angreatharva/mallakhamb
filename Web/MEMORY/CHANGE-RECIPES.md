@@ -181,3 +181,13 @@ layer.**
 
 **Verify with**: check the target database directly after a narrow run
 before scaling up to a full seed.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Add a searchable list:** use `SearchSelect` or `SearchField` with
+  `matchesSearch`. The owner rule (2026-11-07) is that every team or
+  competition list has a search above it.
+- **Add a Super Admin correction:** add a section under
+  `pages/superadmin/fix/`, use `ReasonDialog` and `errorOf` from
+  `SuperAdminHistory.jsx`, and register it in `SuperAdminFix.jsx`'s
+  `SECTIONS`.

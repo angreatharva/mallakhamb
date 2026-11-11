@@ -214,3 +214,16 @@ See [14-TESTING.md](14-TESTING.md#writing-a-test-for-a-given-layer) for the
 per-layer pattern (unit service/util, unit route-guard, integration,
 security, socket) and which existing file to extend vs. when to create a
 new one.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Add an owner correction:** add a method to the right
+  `services/superadmin/*.service.js` that calls `correctionService.record(...)`
+  with a reason (`requireReason`) and a before/after. Pass `undoable: true`
+  only for plain field edits that the same method can re-apply. Add the route
+  in `superadmin-corrections.routes.js` and the section in
+  `Web/src/pages/superadmin/fix/`. See
+  [modules/superadmin-corrections.md](modules/superadmin-corrections.md).
+- **Add a competition level:** change `config/competition-levels.js` **and**
+  `Web/src/utils/competition/levels.js` (the chooser counts its cards from
+  `COMPETITION_LEVELS`).

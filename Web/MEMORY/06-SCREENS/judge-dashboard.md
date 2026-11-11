@@ -5,8 +5,8 @@ covers:
   - src/pages/judge/judgeCategoryOptions.js
 read_when: "changing the judge landing screen, the category picker, or multi-meet switching"
 depends_on: [SHARED-CONTRACTS, 09-REALTIME, 08-API-INTEGRATION]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -196,3 +196,11 @@ a mixed legacy/specific seat set before assuming it's a bug.
   panel review show `CompetitionLockBanner`. The server already refuses all of
   these with 423. Tests: `JudgeDashboard.role.test.jsx`,
   `JudgeScoring.viewOnly.test.jsx`, `JudgeHome.test.jsx`, `PostLoginFlow.test.jsx`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Names the meet being judged (name, place, level) under the judge's name,
+  and always lists it in the Current Assignment strip.
+- Routes team taps and the Scorer/Time Keeper popup from the **fetched**
+  seats, and waits while they load.
+- A team with no name no longer crashes the team search.

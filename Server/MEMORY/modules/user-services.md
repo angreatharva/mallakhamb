@@ -4,8 +4,8 @@ covers:
   - src/services/user/**
 read_when: "changing admin/coach/super-admin/judge/player user-facing behavior — team management, registration, payment, judge seating, or admin dashboards"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, 06-AUTH-AND-SECURITY]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Purpose
@@ -244,3 +244,12 @@ Errors thrown: `NotFoundError`, `ValidationError`, `AuthenticationError`,
 - ⚠️ UNVERIFIED: whether `AuthorizationError` (imported in admin.service.js) is dead code.
 - ⚠️ UNVERIFIED: exact callers relying on the subdoc-`_id` branch of `SuperAdminService._findRegisteredTeam`.
 - `judge.service.js`, `judge-account.service.js`, `judge-panel.service.js` — full method maps live in [07-SCORING-ENGINE.md](../07-SCORING-ENGINE.md) (judge services are documented there, alongside the scoring flow they support), not duplicated here.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `admin.service` / `super-admin.service`: role changes are refused, and the
+  owner cannot be deactivated or deleted (Phase 1). Admin and competition
+  edits and deletes are recorded in History.
+- `judge.service`: the judge level is now International, National, State or
+  District. `PUT /judge/competition/:id/set` returns that meet's seats.
+- `coach.service`: the paper form refuses scan and save after submit (409).

@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedLogin.jsx
 read_when: "changing login for any role, lockout/rate-limit UI, or the judge-specific login path"
 depends_on: [13-FORMS-AND-VALIDATION, 03-ROUTING-AND-NAV, 10-AUTH-AND-SECURITY]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -120,3 +120,8 @@ be removed rather than maintained.
   `#player-identifier` (label "Email or Player ID"); the body sends
   `identifier`. A guardian's email never signs in. Other roles unchanged.
   See [account-and-player-identity.md](account-and-player-identity.md).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Signing in as one role no longer signs out another tab's role (per-role
+  cookies, `X-User-Type`).

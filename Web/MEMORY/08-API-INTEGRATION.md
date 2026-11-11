@@ -16,8 +16,8 @@ covers:
   - src/services/user/player.api.js
 read_when: "adding or changing any API call, touching CSRF/refresh/competition-lock handling, or looking up which endpoint a screen actually calls"
 depends_on: [10-AUTH-AND-SECURITY]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Two axios instances, one interceptor stack
@@ -404,3 +404,14 @@ rather than a dedicated lots route file, but that's ⚠️ UNVERIFIED.
   (`/coaches/paper-form/*`), `admin.api.js` / `super-admin.api.js`
   `finals.*` (incl. `finalize`, `finalizeAll`, super-admin `reopen`, all with
   `competitionId` under `/superadmin`), super-admin `playerTeams.*`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `api-client.js` sends **`X-User-Type`** (from the URL's role) on every
+  request.
+- `super-admin.api.js`: correction endpoints (history/undo, accounts,
+  fix/teams, transfer, fix/scores, fix/entries, restore).
+- `admin.api.js`: `unlockPlayerForJudges` (`PUT .../scores/:id/players/:playerId/unlock`)
+  and `restoreSlipEdits` (`.../restore-edits`, body `{ apparatus, judgeType? }`;
+  with no `judgeType` it restores every seat).
+- `coach.api.js`: `getCoCoaches` / `removeCoCoach` (`/coaches/co-coaches`).

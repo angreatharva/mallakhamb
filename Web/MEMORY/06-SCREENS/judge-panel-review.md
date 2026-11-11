@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgePanelReview.jsx
 read_when: "changing mismatch/tolerance resolution, the Senior Judge override flow, or Final Submit"
 depends_on: [06-SCREENS/judge-shared, 06-SCREENS/judge-panel-data-hook, SHARED-CONTRACTS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -134,3 +134,13 @@ slip.
 - Don't relax the click-time re-check in `finalizePanelScore` — the
   `disabled` attribute alone is not treated as sufficient here on
   purpose.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Edit My Score shows the edits left (3 per slip) and is disabled at 0.
+- The Senior Judge override of other judges' slips is removed.
+- The mismatch dialog lists exact differences (`describeSlipDifferences`); a
+  panel judge sees only their own.
+- Tolerance is hidden while a D/C mismatch is open.
+- Finished meets: no edits and no Final Submit.
+- The seat is read from the server.

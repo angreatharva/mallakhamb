@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeTeamPlayers.jsx
 read_when: "changing the judge's team roster screen or apparatus-eligibility filtering"
 depends_on: [SHARED-CONTRACTS, 09-REALTIME]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -93,3 +93,7 @@ with full session state including `returnTo: /judge/team/${team._id}`.
   fixed 2026-10-15 for `api.` hosts).
 - Line numbers (`:NNN`) above predate the 2026-10 restyle and are
   approximate — search by the named function.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Uses the server-read seats (`judgeSeats.js`).

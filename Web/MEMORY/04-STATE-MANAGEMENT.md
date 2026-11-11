@@ -7,8 +7,8 @@ covers:
   - src/contexts/CompetitionContext.jsx
 read_when: "adding shared state, touching competition selection/auto-select, or debugging a session/competition mismatch"
 depends_on: [10-AUTH-AND-SECURITY, 08-API-INTEGRATION]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## No Redux/Zustand — React Context is the entire state-management story
@@ -184,3 +184,17 @@ selected.
 - A new component mounted at more than one route prefix (the
   `AdminScoring` pattern): read its prefix from `useRouteContext()`,
   don't infer it from `window.location.pathname` directly.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Judge seats** are read from the server first. `pages/judge/judgeSeats.js`
+  (`seatsForMeet`, `judgeAtMeet`) takes the switch answer, then a retried
+  fetch, then the seats already known. It never writes an empty list over
+  known seats. The stored list is only a fallback scoped to the meet.
+- **Scorer localStorage.** Per team, category and apparatus it keeps:
+  - per-athlete locks (Time plus Other Deduction; older time-only locks
+    still read);
+  - unsaved Time / Other Deduction values.
+  Both are laid back over every reload until saved.
+- **Per-role sessions.** The SPA sends `X-User-Type` from its URL, so tabs
+  signed in as different roles no longer sign each other out.

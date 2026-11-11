@@ -8,8 +8,8 @@ covers:
   - src/services/user/stats.api.js
 read_when: "changing a profile Stats tab, the admin/superadmin Fairness tab, or a chart primitive"
 depends_on: [SHARED-CONTRACTS, 05-DESIGN-SYSTEM, 07-COMPONENTS]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is (2026-10-27, `dc1b1e8`)
@@ -42,3 +42,9 @@ their card on phones (never the page).
   that disagrees with the board.
 - D/C/E must match the board: the Web `averageSlipBreakdown` and the Server
   `slip-breakdown.util` are a guarded pair.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The filters and the Fairness board use `SearchSelect`.
+- `seed:demo` plants a biased judge (flagged) and a strict-but-fair one (not
+  flagged) for walk-throughs.

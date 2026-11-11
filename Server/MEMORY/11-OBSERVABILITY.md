@@ -13,8 +13,8 @@ covers:
   - src/routes/health.routes.js
 read_when: "adding logging, debugging why a metric/health check reads wrong, or working on the audit trail"
 depends_on: [01-ARCHITECTURE]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Logging — `src/infrastructure/logger.js` (Winston wrapper)
@@ -201,3 +201,9 @@ operation is captured in `AuditLog` just because the constant exists.
   `deploy/oci/scripts/events-rule-narrow.sh`, flat since; clears when the month resets.
 - Grafana's provisioning API stores rules with extra fields and reordered annotations; to diff a
   paste against the live group, compare PromQL, thresholds, `for` (in seconds) and labels only.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Without the metrics token, health response bodies carry statuses only
+  (audit M6).
+- Startup logs that account limits and the lockout are off (D6).

@@ -211,3 +211,25 @@ auto-join and explicit join/leave). Full suite green: 57 suites / 720 tests.
   'PUBLIC_IP_UPDATE'`.
 - **A hidden replica-set member is never selected through a replica-set URI**, whatever the read
   preference; reach db-03 with `directConnection=true` (`mallakhamb-backup-source`).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Coach code must use `teamCoachOf(req)`.** A co-coach's `req.user._id` is
+  not the team's coach. Any new coach endpoint that filters by
+  `req.user._id` silently shows a co-coach nothing.
+- **A Scorer's save body is ignored** except Time and Other Deduction. The
+  seat is read from the token, not the body. Don't "fix" missing marks by
+  sending them from the Scorer.
+- **Panel size** comes from the seats (`seated-panel.util`). The guess from
+  the marks is only a fallback for when the seats cannot be read.
+- **`paymentStatus: 'completed'` without `isSubmitted`** is a real state
+  (written by the webhook). Check both when deciding whether a squad is
+  locked.
+- **`Club`** is still in the `JudgeAccount` level enum, but the validator
+  refuses it on new writes.
+- **Old single-pair cookies** (`access_token` / `refresh_token`) are still
+  read for their own role until the next sign-in. Don't delete that fallback
+  while live sessions may still use it.
+- **A Scorer cannot lock before the Senior Judge has marked.** A seeder or e2e
+  step that locks as the Scorer must have the Senior Judge mark every athlete
+  first, or the lock comes back 400.

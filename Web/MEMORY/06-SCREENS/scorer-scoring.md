@@ -5,8 +5,8 @@ covers:
   - src/pages/judge/scorerRows.js
 read_when: "changing the Scorer's time/deduction sheet"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT, 09-REALTIME]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Disambiguation — two similarly-named files, not one
@@ -127,3 +127,23 @@ while the sheet loads are queued in `pendingTimesRef` and applied after) — see
 - Don't read `scoreMetadata.isLocked` alone to decide whether a
   specific apparatus panel is locked — check `lockedApparatus` for that
   apparatus.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The Scorer can edit only **Time and Other Deduction** (0–10.00, two
+  decimals). Judges' marks and the time deduction are view-only. These are
+  opt-in props on the shared score table, so the admin sheet is unchanged.
+- A per-athlete lock (Time plus Other Deduction) is stored in localStorage
+  and survives Time Keeper readings and reloads. A second tap unlocks.
+  Unsaved values are kept too.
+- A tolerance popup (the Senior Judge's dialog, worded for the Scorer) and a
+  strip to re-open it. It waits for every mark and for D/C agreement.
+- "Waiting for marks" replaces the average and final until the panel is
+  complete.
+- Rows follow the live running order (`useRunningOrder`).
+- **Lock & Submit waits for the Senior Judge** (user rule 2026-11-11, after
+  `f5465b4`). `athletesAwaitingSeniorJudge(players, scores)` in
+  `scorerRows.js` lists the athletes whose Senior Judge mark is missing or 0.
+  While any are listed, the button reads **Save Draft** with a note naming
+  them, and the confirm dialog is the draft dialog. The server refuses the
+  same lock (Server `07-SCORING-ENGINE`).

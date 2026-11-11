@@ -5,8 +5,8 @@ covers:
   - playwright.config.js
 read_when: "running ANY e2e/seed/audit npm script, or before pointing E2E_BASE_URL/E2E_API_URL at anything other than localhost"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Read this before running anything in `e2e/`
@@ -276,3 +276,13 @@ the new Home (`9814afa`). All read-only. Results and run commands:
   (SCORE_STAGE=one) → `finalize` → `finals-scores` (SCORE_STAGE=finals).
 - `chooseCategory` picks the age group by its LABEL ("Under 10", "All ages");
   `squadPlaces` accepts every age group in an All-ages category.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `score-panel` / `score-all`: each judge corrects their own slip (Edit My
+  Score), and tolerance is asserted hidden while a D/C mismatch is open.
+  `support/{judge-roster,meets,scoring-flows}.js` follow the new rules.
+- `npm --prefix Server run seed:demo` provides a 20-meet demo season for
+  screen walk-throughs. See Server `13-SCRIPTS-AND-OPS.md`.
+- `.claude/launch.json`: `api-sa-check` and `api-scorer-check` are APIs on
+  throw-away local database clones used for browser checks.

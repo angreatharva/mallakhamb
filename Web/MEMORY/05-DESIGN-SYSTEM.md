@@ -17,8 +17,8 @@ covers:
   - eslint-rules/no-hardcoded-spacing.js
 read_when: "adding a UI primitive, touching colors/spacing/breakpoints/appearance, restyling anything, or wondering why two components share a name"
 depends_on: []
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 Rewritten 2026-10-07. The responsive/appearance work (branch
@@ -235,3 +235,14 @@ before editing one.
 
 - Data-viz tokens `viz-1..3`, `viz-up/down/mid` (colour-blind validated in
   both appearances) are the only chart colours.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- New primitives:
+  - `SearchField` and `SearchSelect` (`components/ui/SearchSelect.jsx`), a
+    searchable replacement for native `<select>`s;
+  - `matchesSearch` (`utils/ui/search.js`);
+  - `Facts` (`components/shell/Facts.jsx`), the label/value list used on the
+    judge home and profile.
+- `shell.css`: header bar parts don't shrink; the overflow fold is described
+  in [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md).

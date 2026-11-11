@@ -8,8 +8,8 @@ covers:
   - .env_example
 read_when: "changing build output, env vars, chunking, or wondering whether there's a CI pipeline"
 depends_on: [02-CONVENTIONS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## There is no CI pipeline in this repository
@@ -175,3 +175,9 @@ above, not specific to that one variable.
 - If you're asked to wire up CI: there's nothing to extend — you'd be
   creating the first pipeline this repo has ever had, not fixing a
   broken one.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `vite.config.js` adds the `mallakhamb-production-csp` plugin (build only).
+- The stale-chunk reload uses `vite:preloadError` (see
+  [01-ARCHITECTURE.md](01-ARCHITECTURE.md)).

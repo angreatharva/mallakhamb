@@ -4,8 +4,8 @@ covers:
   - src/pages/unified/UnifiedDashboard.jsx
 read_when: "changing the admin/superadmin dashboard shell, tab system, or competition auto-selection"
 depends_on: [03-ROUTING-AND-NAV, 04-STATE-MANAGEMENT, 06-SCREENS/superadmin-management]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Scope correction: admin/superadmin only
@@ -146,3 +146,7 @@ in [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md).
   1440px, the menu below.
 - Judges / Lots / Scores pickers offer "All ages" for Competition II
   (`withAllAges`, `typesForAgeGroup`, `judgeCategoryOptions`).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Super Admin gains lazy **Fix** and **History** tabs.

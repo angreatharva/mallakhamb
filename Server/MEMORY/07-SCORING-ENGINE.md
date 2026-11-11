@@ -12,8 +12,8 @@ covers:
   - src/repositories/tie-break-draw.repository.js
 read_when: "changing score calculation, ranking, tie-breaks, lucky draws, Team Championship, judge panel maths, or the running-order/lot-draw subsystem"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, 08-REALTIME-SOCKETS]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## COP rules — `src/config/cop-rules.js` (single backend source of truth)
@@ -455,3 +455,42 @@ with the real 0-10 `judgeScores` schema).
   group `AllAges` (Competition II).
 - "Published" is one predicate, `utils/scoring/published-score.util`, shared
   by the public board, the Stats API and the finals engine.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Difficulty slot rule** (`49a300a1`, `config/cop-rules.js`, mirrored in
+  Web `copRules`). An extra C fills **one** empty lower slot (B, otherwise A),
+  and an extra B fills one empty A slot. Each scores what that slot is worth:
+  C in a B slot 0.40; C or B in an A slot 0.20. An extra C no longer keeps
+  its own 0.60. Competition I examples: A2 B6 C2 3.80 → 3.60; A0 B5 C2
+  3.20 → 3.00. Stored slips keep their saved totals.
+- `difficultyClassMax`: Competition I A 0.80, B 2.40, C 0.60; Competition
+  II/III A 0.20, B 2.40, C 1.20; 3.80 in total either way.
+- **Execution of at least 0.10** is required on single-slip submits (400
+  otherwise).
+- **Panel size from the seats** (`utils/scoring/seated-panel.util.js`, which
+  mirrors Web `panelSeats`). `saveScores` counts the live evaluation seats
+  per apparatus on every save. Before this, a Scorer's save sent no size, and
+  a 4-judge panel with one mark missing was averaged as 3 (6.67 instead of
+  7.00).
+- **Scorer save** takes only Time and Other Deduction (Other Deduction is
+  clamped to 0–10.00). The time deduction is derived on the server, and the
+  average and final are recomputed from the stored marks. A later judge save
+  keeps the Scorer's Other Deduction.
+- **Tolerance** is reported only once there is no Difficulty or Combination
+  mismatch. The lookup rounds to the hundredth on both stacks.
+- **3 edits per slip** (`editCount`). The Senior Judge override is removed.
+- **Unlock** (per athlete or whole sheet) clears Final Submit and the
+  apparatus lock without moving any mark. The result is withdrawn until the
+  next Final Submit.
+- **An admin's locked save** finalizes every athlete with marks, so Lock &
+  Submit after an unlock republishes the category (`5f386bec`).
+- Owner score corrections recalculate through `calculateCompletePlayerScore`.
+  See [modules/superadmin-corrections.md](modules/superadmin-corrections.md).
+- **A Scorer's Lock & Submit waits for the Senior Judge** (user rule
+  2026-11-11, after `f5465b4`). In `saveScores`, when `scorerTimeOnly` and
+  `isLocked` are both set, every athlete being locked must already have a
+  stored `judgeScores.seniorJudge` above 0; otherwise it throws a
+  `ValidationError` (400) naming them. The check reads the stored row, never
+  the payload. Draft saves and admin locks are not gated. Tests are in
+  `tests/integration/score-sheet-preservation.test.js`.

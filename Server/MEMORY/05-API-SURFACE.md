@@ -8,8 +8,8 @@ covers:
   - src/docs/api-enums.js
 read_when: "adding/changing any HTTP endpoint, or checking what auth/lock/validator a route already has"
 depends_on: [01-ARCHITECTURE, 06-AUTH-AND-SECURITY]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Coverage check (per the build instructions' verification step)
@@ -338,3 +338,37 @@ New routes (all through the usual auth/role middleware):
   `draft` (GET/POST), `draft/:draftId` (GET/DELETE), `draft/:draftId/scan`,
   `/rows`, `/submit`, `/slip` — the desk's WalkInService with a coach actor.
 - `POST /api/players/...join-team` now takes the level.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Deleted: `/api/scoring`.** Any judge token could rewrite or lock any
+  score through it (audit C1).
+- Creating, editing, changing status of and deleting a meet, and assigning
+  admins to it, are **super admin only** (H1). Registration routes are
+  scoped by a new `requireCompetitionAccess` path guard.
+- A coach reads and acts on **only their own team entry** (H2/M3).
+- New owner correction routes under `/api/superadmin/`: `history`, `accounts`,
+  `fix/teams`, `fix/transfer`, `fix/scores`, `fix/entries`, and restoring
+  competitions. The table is in
+  [modules/superadmin-corrections.md](modules/superadmin-corrections.md).
+- New `PUT /api/{admin,superadmin}/scores/:scoreId/players/:playerId/unlock`
+  (body `{ apparatus }`). Like the whole-sheet `.../scores/:scoreId/unlock`,
+  it clears the Senior Judge's Final Submit and the Scorer's apparatus lock,
+  and broadcasts `unlocked`.
+- New `PUT /api/{admin,superadmin}/scores/:scoreId/players/:playerId/restore-edits`
+  (body `{ apparatus, judgeType? }`) restores a seat's 3-edit allowance, or
+  every seat's when there is no `judgeType`, and broadcasts `edits_restored`.
+- New `GET /api/coaches/co-coaches` and
+  `POST /api/coaches/co-coaches/:coachId/remove` (main coach only).
+- `PUT /judge/competition/:id/set` now returns that meet's seats along with
+  the token.
+- Coach paper form: `scanPage` and `saveRows` return **409** once the squad is
+  submitted, the same as submit. `GET /coaches/paper-form/draft` reports
+  whether the squad is submitted.
+- Single-slip submits (a judge's own slip) with Execution under 0.10, or with
+  no breakdown, get a **400**. Whole-panel writes (Final Submit, Scorer,
+  admin) are exempt.
+- The Senior Judge overriding another judge's slip now gets a **403**.
+- The `openapi.json` / `openapi.yaml` docs were updated with these changes.
+- A Scorer save with `isLocked: true` gets a **400** while any athlete in it
+  has no Senior Judge mark (2026-11-11).

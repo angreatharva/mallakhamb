@@ -8,8 +8,8 @@ covers:
   - src/components/responsive/**
 read_when: "touching any table/grid/filter layout, a dialog, a touch target, or investigating a horizontal-scroll or mobile/tablet-layout bug"
 depends_on: [05-DESIGN-SYSTEM]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 Rewritten 2026-10-07 after the responsive/appearance work (merged
@@ -126,3 +126,12 @@ Use the Playwright audits — see [15-E2E-AND-SEEDING.md](15-E2E-AND-SEEDING.md#
   fixed-layout pattern, or go to cards below 1024 like it does.
 - Run `responsive-audit` (both appearances) and, for anything behind a filter
   or state, `deep-screens` / `judge-deep-screens`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Header overflow: tabs fold into the menu instead of overlapping (see
+  [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md)).
+- Home on phones: `data-device="phone"` when the short side is under 600px.
+  Small print is ×1.45 and body ×1.2 upright, ×1.3 / ×1.12 sideways. Upright
+  screens get `China-Main-tall.jpg` (947×1661), chosen by `useMediaQuery`,
+  not `<picture>`, so iPhones fetch only one photo.

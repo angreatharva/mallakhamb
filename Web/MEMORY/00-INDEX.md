@@ -4,8 +4,8 @@ covers:
   - Web/**
 read_when: "always — the entry point for any change in Web/"
 depends_on: []
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 # MEMORY — router
@@ -201,3 +201,26 @@ CSS clipping in `AmbientOrbs.jsx`. The doc also flags that the generic
 sideways on purpose — that's accepted behavior there, not a bug to
 match. **Result**: confirms which of two unrelated fixes applies before
 any code is touched, avoiding a "fix" that copies the wrong pattern.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+Refreshed against `f5465b4` (2026-11-11). Main changes since then:
+- Super Admin Fix / History tabs. See the new
+  [06-SCREENS/superadmin-fix-and-history.md](06-SCREENS/superadmin-fix-and-history.md).
+- A home for a judge with no seat, and My Profile in the shared shell.
+- Finished meets are view-only on judge screens.
+- Judge seats are read from the server.
+- Scorer: Time and Other Deduction only, per-athlete locks, and "Waiting for
+  marks".
+- Live running order for the Scorer and Time Keeper.
+- Judging: the Difficulty slot rule, Execution of at least 0.10, 3 edits per
+  slip, and tolerance only after mismatches are cleared.
+- Admin unlock and restore-edits.
+- A search box above every team or competition list.
+- Per-role sessions (`X-User-Type`).
+- The header folds tabs that don't fit into the menu.
+- A one-time reload after a deploy removes old screen files.
+- A production CSP.
+- Home: a tall hero photo on upright screens, bigger phone text.
+
+Screen list addition: `06-SCREENS/superadmin-fix-and-history`.

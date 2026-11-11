@@ -6,8 +6,8 @@ covers:
   - src/pages/public/PublicScores.jsx
 read_when: "changing the public landing page or the public results viewer"
 depends_on: [07-COMPONENTS, 05-DESIGN-SYSTEM]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## `Home.jsx` — the landing page (rebuilt 2026-10-06, `9814afa`)
@@ -126,3 +126,10 @@ search-yields-nothing sub-state within results ("No players found for
 
 - The results page has a **Finals** view (`/api/public/finals`): finalized
   Competition II/III qualifier lists only.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Home on phones: bigger small print and body copy (`data-device="phone"`).
+- Upright screens use the tall outpainted hero (`China-Main-tall.jpg`),
+  chosen by orientation at render. Preloads are split by orientation.
+  `npm run audit:home` gives 41 devices, 0 problems.

@@ -8,8 +8,8 @@ covers:
   - src/components/superadmin/AddPlayerForm.jsx
 read_when: "adding a form, changing password/phone/name validation rules, or wondering why two forms validate the same field differently"
 depends_on: [07-COMPONENTS]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## The headline finding: `zodResolver` is never used, anywhere
@@ -209,3 +209,12 @@ manually and inline rather than through a shared helper.
   [06-SCREENS/superadmin-management.md](06-SCREENS/superadmin-management.md).
 - Field markup moved onto the shared `ui/Field` / `Input` primitives in the
   2026-10 restyle (no behaviour change).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The Player, Coach and Judge sign-up forms show the password rules plus a
+  role example (Player@2026, Coach@2026, Judge@2026).
+- Judge certification level options: International, National, State,
+  District. A legacy `Club` stays visible on the profile until changed.
+- Owner corrections ask for a reason of at least 5 characters through the
+  shared `ReasonDialog` (`SuperAdminHistory.jsx`).

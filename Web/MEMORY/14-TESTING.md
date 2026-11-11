@@ -6,8 +6,8 @@ covers:
   - "**/*.test.jsx"
 read_when: "adding a test, debugging a failing test, or deciding whether a test file already covers something"
 depends_on: [SHARED-CONTRACTS, 10-AUTH-AND-SECURITY, 13-FORMS-AND-VALIDATION]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Stack
@@ -169,3 +169,15 @@ Counts: **74 files / 598 tests** green. New: `AdminFinals.test.jsx`,
 `AdminJudgeFairness.test.jsx`, `stats/PlayerStats.test.jsx`,
 `stats/statsModel.test.js`, `utils/scoring/adminSheet.test.js`,
 `CoachPaperForm.test.jsx`, `PlayerTeamSelection.test.jsx` additions.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Counts on `f5465b4`: Web vitest 82 files / 669 tests, all passing.
+- New tests:
+  - the stale-chunk reload
+  - `SearchSelect`
+  - the slot rule
+  - the swipe test (tabs stay put)
+  - Scorer locks
+  - the seat source
+  - the level chooser

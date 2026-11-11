@@ -9,8 +9,8 @@ covers:
   - src/pages/superadmin/SuperAdminDashboard.jsx
 read_when: "adding a route, a new role screen, or investigating why a URL doesn't render what you expect"
 depends_on: [10-AUTH-AND-SECURITY, 04-STATE-MANAGEMENT]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## §3.4 resolved: `UnifiedLogin`/`UnifiedDashboard` are the real implementations
@@ -211,3 +211,12 @@ visit to `/judge/select-level` all land on `/judge/dashboard`, which renders
 `JudgeHome` for an unseated judge. Seated judges still go level → competition
 → category. See [06-SCREENS/judge-dashboard.md](06-SCREENS/judge-dashboard.md).
 
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Super Admin has two new lazy tabs, **Fix** and **History**
+  (`UnifiedDashboard.jsx`).
+- The level chooser counts its cards from `COMPETITION_LEVELS` (7).
+- `AppHeader` measures its tab row. If the row overflows, the tabs fold into
+  the menu (the competition picker stays) until the bar is wide enough. Bar
+  parts never shrink and labels never wrap. Long rows (admin, super admin)
+  get a bar up to 100rem from 1440px (`f5465b41`).

@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminJudges.jsx
 read_when: "changing judge panel staffing/assignment UI"
 depends_on: [08-API-INTEGRATION, SHARED-CONTRACTS, 03-ROUTING-AND-NAV]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -105,3 +105,7 @@ offering one the meet doesn't run would seat a panel nobody is judged by.
 - Don't add a competition-type-level panel fetch — apparatus is
   deliberately the only rung that fetches, per the migration-010 reason
   above.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Judge levels: International, National, State, District.

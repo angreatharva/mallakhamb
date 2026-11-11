@@ -27,8 +27,8 @@ covers:
   - src/utils/security/sanitize.js
 read_when: "reusing or changing a shared (non-design-system, non-responsive) component"
 depends_on: [05-DESIGN-SYSTEM, SHARED-CONTRACTS]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Scope
@@ -486,3 +486,15 @@ components documented here.
   [06-SCREENS/stats-and-fairness.md](06-SCREENS/stats-and-fairness.md).
 - `components/finals/QualifiedFinals.jsx` — coach/player qualifier cards.
 - `superadmin/AddPlayerForm.jsx` — Competition I only; COP age util.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `ui/SearchSelect`, `ui/Field` (search field), `shell/Facts`,
+  `coach/CoCoachesPanel`.
+- `auth/Dropdown`: the team/competition dropdowns are searchable on admin,
+  superadmin and player.
+- `CompetitionSelector` / `CompetitionSelectionScreen`: search is always
+  shown (it used to appear only above 3 items).
+- `ResponsiveTable`, `ScoreCategoryFilters`: search above the lists.
+- `layout/ErrorBoundary`: shows crash details in production and reloads once
+  for a stale chunk.

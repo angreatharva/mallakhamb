@@ -7,8 +7,8 @@ covers:
   - src/pages/judge/stopwatchPalette.js
 read_when: "changing the Time Keeper's stopwatch, how a stopped time reaches the Scorer's sheet, or the 60/90 s beeps"
 depends_on: [06-SCREENS/judge-scoring, 06-SCREENS/scorer-scoring, 09-REALTIME, SHARED-CONTRACTS]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -90,3 +90,8 @@ the `CompetitionLockBanner`.
   so a time and its deduction are saved together.
 - Keep the displayed and recorded number the same (floor of elapsed seconds).
 - A new audible mark goes in `BEEP_MARKS`; the sub-dial reads the same list.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The list follows the category's running order and re-sorts live
+  (`useRunningOrder`).

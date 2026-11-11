@@ -199,3 +199,13 @@ repo-root `deploy/` plans (`cd66189`):
 - [x] docs/gmail-api-email.md — PowerShell form → modules/email
 - [x] tests/unit/services/email/gmail-api.adapter.test.js — new malformed-token case → modules/email
 - [x] ../deploy/{README,COMMON}.md (summary only; oci/aws plans referenced, not transcribed) → 15-DEPLOYMENT, 00-INDEX
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+Files added to scope since the 2026-10-30/31 passes, and where each is covered:
+
+- [x] src/services/superadmin/{correction,accounts-admin,team-admin,score-correction,entries-admin}.service.js, src/routes/superadmin-corrections.routes.js, src/utils/auth/team-coach.util.js → modules/superadmin-corrections
+- [x] src/models/SessionRevocation.js → 04-DATA-MODEL, 06-AUTH-AND-SECURITY, modules/auth
+- [x] src/utils/scoring/seated-panel.util.js → 07-SCORING-ENGINE, modules/scoring
+- [x] scripts/seedDemo.js, scripts/demo/{cast,names,rng,score-model}.js → 13-SCRIPTS-AND-OPS
+- [x] removed: src/routes/scoring.routes.js (`/api/scoring`, audit C1) → 05-API-SURFACE

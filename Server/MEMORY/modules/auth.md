@@ -7,8 +7,8 @@ covers:
   - src/services/email/**
 read_when: "changing auth service internals, token/OTP mechanics, or email delivery"
 depends_on: [06-AUTH-AND-SECURITY]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 Flow-level narrative (login/refresh/logout/reset sequences, cookie
@@ -147,3 +147,12 @@ Templates: `templates/otp.template.js` (`otp.service.js:generateAndSendOTP`),
 - ⚠️ UNVERIFIED: whether `AuthenticationService`'s constructor is supplied
   `judgeAccountRepository` in production DI wiring vs. relying on its
   `null`-defaulting fallback.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Per-role cookie pairs and `X-User-Type`; see [06-AUTH-AND-SECURITY.md](../06-AUTH-AND-SECURITY.md).
+- Persisted logouts (`SessionRevocation`), a 30-day absolute cap, hashed
+  reset codes, and HS256 pinning (`token.service`,
+  `token-invalidation.service`, `otp.service`).
+- `login-security.util`: the per-account limits and the lockout are gated by
+  `ACCOUNT_RATE_LIMIT_ENABLED` (default off).

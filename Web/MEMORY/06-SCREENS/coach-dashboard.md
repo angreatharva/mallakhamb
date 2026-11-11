@@ -4,8 +4,8 @@ covers:
   - src/pages/coach/CoachDashboard.jsx
 read_when: "changing the coach's team/roster management screen"
 depends_on: [SHARED-CONTRACTS, 07-COMPONENTS, 04-STATE-MANAGEMENT]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -114,3 +114,9 @@ Re-fetched whenever `currentCompetition._id` changes (`:173-177`, from
   entries breaking it show the server's `players[].ageIssue` in red; a refusal
   shows the server's reason.
 - "Scan Paper Form" → `/coach/paper-form` — [superadmin-player-teams.md](superadmin-player-teams.md).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Save Team, Add Player and Scan Paper Form lock when the squad is submitted
+  **or** `paymentStatus` is completed. Register Player stays open.
+- `CoCoachesPanel` lists co-coaches. Only the main coach removes one.

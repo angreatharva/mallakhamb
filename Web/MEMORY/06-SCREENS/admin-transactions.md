@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminTransactions.jsx
 read_when: "changing the payment/transactions viewer"
 depends_on: [07-COMPONENTS, 12-RESPONSIVE]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -67,3 +67,7 @@ Razorpay Payment ID, Players (opens a modal), Amount, Status.
 - Restyled in the 2026-10 "prime-time" design-language pass (shared `ui/` primitives,
   tokens, no colour literals); behaviour otherwise unchanged. Line numbers (`:NNN`)
   above predate it and are approximate — search by the named function.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Search above the transactions list.

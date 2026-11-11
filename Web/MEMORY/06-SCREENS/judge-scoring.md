@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeScoring.jsx
 read_when: "changing the judge's COP slip form, the HIGH-W1 dispatcher, or slip autosave"
 depends_on: [06-SCREENS/judge-shared, 06-SCREENS/judge-panel-data-hook, SHARED-CONTRACTS, 09-REALTIME]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -161,3 +161,12 @@ average/mismatch analysis happens only after navigating to
   `(teamId, playerId, judgeType)` in **localStorage** — a key collision
   or a switch to sessionStorage would change cross-session persistence
   behavior in a way judges may be relying on.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Execution of at least 0.10 before Submit (`aria-disabled` plus a popup).
+- Difficulty rows show the class score against its maximum.
+- Phone tabs switch on tap only.
+- The seat comes from the category's panel on the server. Restore waits for
+  it.
+- On a finished meet the slip is read-only (`SlipReadOnly`).

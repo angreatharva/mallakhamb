@@ -4,8 +4,8 @@ covers:
   - src/pages/admin/AdminScoring.jsx
 read_when: "changing the admin/superadmin live score-entry screen"
 depends_on: [SHARED-CONTRACTS, 11-SCORING-CLIENT, 09-REALTIME, 04-STATE-MANAGEMENT]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -104,3 +104,12 @@ project — see [01-ARCHITECTURE.md](../01-ARCHITECTURE.md)).
   `6363816` a multi-apparatus save overwrote Pole and dropped Hanging/Rope from
   the public results.
 - Entry filters use `ageMatches` (All-ages finals).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- A "locked for the judges" banner with **Unlock all**, and a per-athlete
+  list with **Unlock**, each behind a confirm dialog. The age-group-started
+  gate on Unlock is gone.
+- A new **Out of edits** list restores a seat's 3-edit allowance.
+- Lock & Submit after an unlock republishes the category.
+- Available to admin (own meet) and superadmin (every meet).

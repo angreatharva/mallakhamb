@@ -12,8 +12,8 @@ covers:
   - src/components/auth/AuthLoadingSpinner.jsx
 read_when: "changing login/logout/session behavior, route guarding, cross-tab sync, or the password-reset screens"
 depends_on: [04-STATE-MANAGEMENT, 08-API-INTEGRATION]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Session model in one paragraph
@@ -411,3 +411,15 @@ that role's login, or `/` with no role), and `withPortal(path, portal)` (keeps
   accounts resets the right one.
 - Back from a signed-in screen now asks "Sign out?" instead of reopening login
   or the choosers — see [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md#sign-out-on-back).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **One session per role.** The server keeps a cookie pair per role; the SPA
+  names its role with `X-User-Type`. Signing in as a coach in tab 2 no longer
+  signs out the admin in tab 1.
+- **Production CSP** (`vite.config.js` `productionCsp`, audit M7). The build
+  rewrites `connect-src` (self, the build's API over https and wss, Razorpay)
+  and `script-src` (self, hashes of inline scripts, Razorpay; no
+  unsafe-inline or unsafe-eval). Without an https `VITE_API_URL` the dev
+  policy stays.
+- The Super Admin form no longer has a role picker (there is one owner).

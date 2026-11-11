@@ -4,8 +4,8 @@ covers:
   - src/utils/**
 read_when: "looking for an existing helper before writing a new one, especially anything touching ids, apparatus, dates, or PII projection"
 depends_on: [03-DOMAIN-MODEL, 06-AUTH-AND-SECURITY, 07-SCORING-ENGINE]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Purpose
@@ -85,3 +85,10 @@ injection through a query object).
   add it to the relevant deny-list/allow-list in `user-projection.util.js`,
   don't rely on the schema's `toJSON` transform (it doesn't run on `.lean()`
   reads, which is most of them).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- New `utils/auth/team-coach.util.js` (`teamCoachOf(req)`) and
+  `utils/scoring/seated-panel.util.js`.
+- `cookie.util`: per-role cookie pairs. `user-projection.util`: reset-code
+  fields are kept out.

@@ -6,8 +6,8 @@ covers:
   - index.html
 read_when: "first orientation in this codebase, or touching the app shell (provider order, navbar visibility, toast placement)"
 depends_on: [04-STATE-MANAGEMENT, 03-ROUTING-AND-NAV]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What this is
@@ -187,3 +187,13 @@ viewport before any specific route has rendered.
   factual claim about current behavior: check this MEMORY tree or
   `docs/AUDIT.md`/`docs/RESPONSIVE_UIUX_PLAN.md` first — both older docs
   have confirmed stale sections (above).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `main.jsx` installs `installStaleChunkReload()` (`utils/ui/staleChunk.js`).
+  When a tab opened before a deploy asks for a screen file that no longer
+  exists, Vite's `vite:preloadError` triggers **one** reload, at most once per
+  30 s per tab. `ErrorBoundary` does the same as a backstop.
+- In every build, the `ErrorBoundary` "Technical details" now shows the error
+  and the first lines of the component stack. Production strips console
+  calls, so this is the only crash trace.

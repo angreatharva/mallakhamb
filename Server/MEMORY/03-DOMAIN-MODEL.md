@@ -7,8 +7,8 @@ covers:
   - src/config/judge-seats.js
 read_when: "you need to understand an entity's meaning, lifecycle, or relationships before changing behavior around it — not just its schema shape (see 04-DATA-MODEL for schema/index detail)"
 depends_on: []
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## The entities, in one paragraph each
@@ -256,3 +256,26 @@ Four owner rules changed the domain (details in the linked docs):
 - **`AllAges` is a CATEGORY age group, never a player's**: it exists in
   `CATEGORY_AGE_GROUPS` (Score, Judge, PerformanceOrder, TieBreakDraw,
   `startedAgeGroups`) and must be matched with `utils/data/category.util#ageMatches`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Exactly one Super Admin, the owner.** No HTTP path creates, promotes,
+  demotes or deletes one, and a partial unique index on `Admin.role` backs
+  that up. See [modules/superadmin-corrections.md](modules/superadmin-corrections.md).
+- **Co-coaches.** `Team.coCoaches` holds co-coaches, and each one acts **as**
+  the main coach. Coach-side code must address the team through
+  `teamCoachOf(req)`, never through `req.user._id`.
+- **Competition levels** are now seven, in the order the organisers use:
+  District, Zonal, State, National, International, University, DSO
+  (`config/competition-levels.js`, `95847435`).
+- **Judge certification level** is now International, National, State or
+  District. The validator accepts only these four. `Club` stays in the
+  `JudgeAccount` enum so that old judges still save.
+- **Slip edits.** Each panel judge, the Senior Judge included, can change a
+  submitted slip at most **3 times** (`Score.judgeSlips.editCount`). The 4th
+  attempt gets a 422. An admin or superadmin can restore the allowance. The
+  Senior Judge can **no longer** override another judge's slip: HTTP returns
+  403 and the socket refuses it.
+- **The Scorer seat** edits only Time and Other Deduction. Everything else on
+  a Scorer save comes from storage. The server decides this from the
+  authenticated seat, never from the request body.

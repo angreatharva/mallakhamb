@@ -4,8 +4,8 @@ covers:
   - src/validators/**
 read_when: "adding or auditing input validation for a route"
 depends_on: [02-CONVENTIONS, 05-API-SURFACE]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Purpose
@@ -48,3 +48,9 @@ upper+lower+digit.
 - Before adding a validator export, check whether the route you're building
   it for already exists — this directory has several orphaned exports (see
   above) from validators written ahead of, or after removal of, their route.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `judge.validator`: the level is International, National, State or District
+  only.
+- `competition.validator`: seven levels.

@@ -9,8 +9,8 @@ covers:
   - src/pages/admin/AdminScoring.jsx
 read_when: "adding or debugging any socket.io-client usage — live scoring, running-order pushes, panel sync"
 depends_on: [08-API-INTEGRATION, 11-SCORING-CLIENT]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## No shared socket context — seven independent connections, one copy-pasted pattern
@@ -182,3 +182,13 @@ as "not consumed by the SPA today," not necessarily "unused server-side."
   up live," check `eventMatchesCategory`/`apparatusKey` filtering before
   assuming the socket itself is broken — both `performance_order_updated`
   and `score_updated` are filtered client-side after being received.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `useRunningOrder` (`pages/judge/useRunningOrder.js`): the Scorer sheet and
+  the Time Keeper list follow the category's order and re-sort live on
+  `performance_order_updated`.
+- `unlocked` makes the judges' panel hook **reopen** (it used to lock).
+  `edits_restored` makes it re-read.
+- A Final Submit broadcast no longer wipes the Scorer's unsaved times, and it
+  ignores other teams.

@@ -6,8 +6,8 @@ covers:
   - ../deploy/{README,COMMON}.md (plan summary only)
 read_when: "deploying, rolling back, or changing render.yaml/deployment-relevant env vars"
 depends_on: [01-ARCHITECTURE, 12-CONFIG-AND-ENV]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Topology
@@ -192,3 +192,12 @@ What the plan changes about this doc's assumptions:
   session carried on after the outage with no re-login). The returning VM demoted itself.
 - The A1 VMs are **1 OCPU / 4 GB** now (idle-reclaim sizing), not 6 GB as written above.
 - `deploy/oci/ARCHITECTURE.md` is the one-page picture (`architecture.svg`, `failover.svg`).
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- No change to the deploy mechanics. This range adds **no new migrations**.
+  The new `Admin` and `Team` indexes are owned by the schemas (see
+  `startup-and-indexes`), so they build on boot.
+- The production web build rewrites the CSP to the build's own API
+  (`Web/vite.config.js` `productionCsp`, audit M7). A build without an https
+  `VITE_API_URL` keeps the dev policy.

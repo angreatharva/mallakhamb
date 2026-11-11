@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/JudgeSequence.jsx
 read_when: "changing the judge-side running-order screen"
 depends_on: [07-COMPONENTS, 09-REALTIME, 06-SCREENS/judge-dashboard]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -89,3 +89,8 @@ switching while this screen might stay mounted across the change.
   fixed 2026-10-15).
 - Line numbers (`:NNN`) above predate the 2026-10 restyle and are
   approximate — search by the named function.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- Search above the running-order list (drag pauses while it is active).
+- Finished meets: no drag and no Save, and Set Sequence is hidden.

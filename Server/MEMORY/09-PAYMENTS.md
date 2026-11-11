@@ -9,8 +9,8 @@ covers:
   - src/models/Transaction.js
 read_when: "changing pricing, the Razorpay flow, the discount code, registration fee windows, or the webhook"
 depends_on: [03-DOMAIN-MODEL, 04-DATA-MODEL, modules/user-services]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Two independent Razorpay flows, one gateway module
@@ -258,3 +258,14 @@ its job.
 ## Open questions
 - None outstanding for the idempotency finding as of 2026-09-23 — fixed, see
   above and GOTCHAS.md's "Fixed since this MEMORY build" section.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Verify is stricter** (audit M5). It needs matching Razorpay order notes
+  and refuses a payment id that was already used.
+- **Manual ledger lines.** The owner can record money paid or refunded
+  outside the app (refunds are negative). This never calls Razorpay. See
+  [modules/superadmin-corrections.md](modules/superadmin-corrections.md).
+- The Razorpay webhook records `paymentStatus: 'completed'` without setting
+  `isSubmitted`. The coach dashboard now locks its squad buttons on either
+  signal (`188ceb6f`), and the paper form returns 409 after submission.

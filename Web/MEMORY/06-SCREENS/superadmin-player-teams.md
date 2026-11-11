@@ -7,8 +7,8 @@ covers:
   - src/utils/competition/ageEligibility.js
 read_when: "changing the Super Admin Players tab, the coach paper-form scan, a player's team at a level, or the COP age rule on the client"
 depends_on: [06-SCREENS/walk-in-desk, 06-SCREENS/player-team-selection, SHARED-CONTRACTS]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## Team per level (owner rule 2026-10-28, `docs/team-per-level-plan.md`)
@@ -42,3 +42,7 @@ override, the Super Admin "Age cut-off" field is gone), "Under N" includes N,
 own group or any higher one. Mirrors Server `config/cop-rules#ageCutoffYear`
 and `utils/data/age-eligibility.util`. The coach dashboard shows the server's
 `players[].ageIssue` in red for older entries that break it.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The team/competition `<select>`s are now `SearchSelect`.

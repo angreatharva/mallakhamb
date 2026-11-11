@@ -4,8 +4,8 @@ covers:
   - src/pages/superadmin/SuperAdminManagement.jsx
 read_when: "changing any destructive superadmin action (delete competition/admin, remove admin), or the competition create/edit form"
 depends_on: [08-API-INTEGRATION, 06-SCREENS/unified-dashboard]
-verified_against_commit: 4201319
-last_verified: 2026-10-30
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is — and what it is NOT
@@ -155,3 +155,11 @@ a form) for assign/remove-admin-per-competition, opened via a green
 
 - The competition form's "Age cut-off" choice is **removed** (`2ce3ec9`): the
   cut-off is always 31 Dec of the start year.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- No role picker on the admin form. The owner's row reads "Owner" instead of
+  Delete.
+- Search above the Competitions table.
+- Correction tools moved to the new Fix and History tabs; see
+  [superadmin-fix-and-history.md](superadmin-fix-and-history.md).

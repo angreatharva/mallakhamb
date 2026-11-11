@@ -7,8 +7,8 @@ covers:
   - src/utils/payment/razorpay.js
 read_when: "changing the walk-in desk (Admin/Super Admin dashboard tab 'Walk-in'), its photo upload, review grid, payment or slip"
 depends_on: [08-API-INTEGRATION, SHARED-CONTRACTS, 06-SCREENS/unified-dashboard]
-verified_against_commit: ff89ca5
-last_verified: 2026-10-21
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 # Walk-in desk (2026-10)
@@ -75,3 +75,7 @@ OCR off (`deskAPI.ocrStatus()`) → manual entry only; the desk still works.
   [SHARED-CONTRACTS.md](../SHARED-CONTRACTS.md)).
 - Super Admin's competition form has an optional **Age cut-off year** select
   (start year or the year before; blank = start year) — `SuperAdminManagement.jsx`.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- The competition and team pickers are `SearchSelect`.

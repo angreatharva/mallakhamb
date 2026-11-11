@@ -4,8 +4,8 @@ covers:
   - src/pages/judge/useJudgePanelData.js
 read_when: "changing how JudgeScoring/JudgePanelReview fetch or receive live panel data"
 depends_on: [SHARED-CONTRACTS, 09-REALTIME, 06-SCREENS/judge-scoring, 06-SCREENS/judge-panel-review]
-verified_against_commit: 06891b5
-last_verified: 2026-10-18
+verified_against_commit: f5465b4
+last_verified: 2026-11-11
 ---
 
 ## What it is
@@ -141,3 +141,8 @@ screens sit on top of.
 - If adding a new socket-driven update, match on `(playerId,
   apparatusKey)`, never player id alone — this is the exact bug class
   item 2 above exists to prevent.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- `unlocked` now **reopens** the panel (it used to read as finalized).
+  `edits_restored` re-reads. A re-read sets the finalized state both ways.

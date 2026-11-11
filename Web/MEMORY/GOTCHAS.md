@@ -353,3 +353,18 @@ your own machine.
   nothing for a computed-but-not-finalized list. That is the design.
 - **A local e2e run on a reused database** fails the finals step (old meet
   types, finals already started) — drop `mallakhamb_local_e2e` first.
+
+## Since the last pass (2026-11-11, against `f5465b4`)
+
+- **Use `aria-disabled`, not `disabled`, on Submit buttons that must explain
+  themselves.** A native `disabled` swallows the tap, so the "why" popup
+  never opens.
+- **Scorer values live in localStorage** until saved. Clearing storage
+  mid-meet loses unsaved times.
+- **Never route a judge from the stored seat list alone.** Use
+  `judgeSeats.js`; an empty or foreign list made the Senior Judge see no
+  marks.
+- **Running-order drag pauses while a search is active.** Reordering a
+  filtered list would scramble the hidden rows.
+- **A paid squad can still read `isSubmitted: false`** (the webhook sets only
+  `paymentStatus`). Lock on either signal.
