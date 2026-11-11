@@ -536,6 +536,15 @@ const CoachDashboard = () => {
 
   const canAdd = selectedPlayer && selectedAgeGroup && selectedGender && selectedApparatus.length > 0;
 
+  /*
+   * Fees paid → the squad is closed: Save Team, Add Player and Scan Paper Form
+   * are off. Either signal counts: the checkout/discount paths set both, but
+   * the Razorpay webhook records `paymentStatus: 'completed'` on its own.
+   * Register Player stays open — it makes an account, not a squad place.
+   */
+  const feesPaid = Boolean(team?.isSubmitted || team?.paymentStatus === 'completed');
+  const paidTitle = 'Fees are paid — the squad is locked. Contact admin to make changes.';
+
   return (
     <div className="min-h-screen bg-bg text-fg">
       {masthead}
@@ -563,10 +572,12 @@ const CoachDashboard = () => {
               )}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button variant="line" icon={Save} onClick={handleSaveDraft} disabled={savingDraft || team?.isSubmitted}>
+              <Button variant="line" icon={Save} onClick={handleSaveDraft} disabled={savingDraft || feesPaid}
+                title={feesPaid ? paidTitle : undefined}>
                 {savingDraft ? 'Saving...' : 'Save Team'}
               </Button>
-              <Button variant="line" icon={UserPlus} onClick={() => setShowAddPlayer(true)} disabled={team?.isSubmitted}>
+              <Button variant="line" icon={UserPlus} onClick={() => setShowAddPlayer(true)} disabled={feesPaid}
+                title={feesPaid ? paidTitle : undefined}>
                 Add Player
               </Button>
               {/* An account, not a squad place: open even after the squad is submitted. */}
@@ -574,8 +585,8 @@ const CoachDashboard = () => {
                 Register Player
               </Button>
               {/* A filled paper form, photographed: Player IDs + squad places in one go. */}
-              <Button variant="line" icon={ScanLine} onClick={() => navigate('/coach/paper-form')} disabled={team?.isSubmitted}
-                title={team?.isSubmitted ? 'Your squad is submitted' : 'Register players from a photographed paper form'}>
+              <Button variant="line" icon={ScanLine} onClick={() => navigate('/coach/paper-form')} disabled={feesPaid}
+                title={feesPaid ? paidTitle : 'Register players from a photographed paper form'}>
                 Scan Paper Form
               </Button>
               <Button
