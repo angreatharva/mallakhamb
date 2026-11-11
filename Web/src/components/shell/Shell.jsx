@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { KeyRound, LogOut, Mail, Menu as MenuIcon, UserRound } from 'lucide-react';
@@ -116,9 +116,49 @@ export const AppHeader = ({
   // Every signed-in role has a profile page at /<role>/profile, so the
   // account menu appears wherever the header has someone to sign out.
   const profileTo = profileToProp || (role && onLogout ? `/${role}/profile` : null);
+
+  /*
+   * The breakpoints above are a first guess at when the tabs fit; this is the
+   * answer. The bar's parts never shrink (shell.css), so when the tabs, the
+   * `extra` and the account controls together need more than the bar has,
+   * the bar overflows — and the tabs go into the menu instead of sliding
+   * under the role ident, wrapping "Walk-in", or crushing the competition
+   * picker under the Light/Dark switch. The width they needed is kept, so
+   * they come back only once the bar is that wide again (no flicker at the
+   * edge). Every row of tabs, whatever its length or language, fits or folds.
+   */
+  const barRef = useRef(null);
+  const [squeezed, setSqueezed] = useState(false);
+  const squeezedRef = useRef(false);
+  const neededRef = useRef(0);
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!bar || !nav.length || typeof ResizeObserver === 'undefined') return undefined;
+    const set = (value) => { squeezedRef.current = value; setSqueezed(value); };
+    const check = () => {
+      if (squeezedRef.current) {
+        if (bar.clientWidth >= neededRef.current) set(false);
+        return;
+      }
+      const navEl = bar.querySelector('.shell-header__nav');
+      // The breakpoints already sent the tabs to the menu: nothing to measure.
+      if (!navEl || getComputedStyle(navEl).display === 'none') return;
+      if (bar.scrollWidth > bar.clientWidth + 1) {
+        neededRef.current = bar.scrollWidth;
+        set(true);
+      }
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(bar);
+    // Content, not just the window: a longer competition name, a web font arriving.
+    [...bar.children].forEach((child) => observer.observe(child));
+    return () => observer.disconnect();
+  }, [nav.length]);
+
   return (
-    <header className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl', navFrom === 'xxl' && 'shell-header--nav-xxl')}>
-      <div className="shell-header__bar">
+    <header className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl', navFrom === 'xxl' && 'shell-header--nav-xxl', squeezed && 'shell-header--squeezed')}>
+      <div className="shell-header__bar" ref={barRef}>
         <div className="shell-header__brand">
           <Wordmark to={homeTo} compact={compactBrand} />
           <RoleIdent role={role} />

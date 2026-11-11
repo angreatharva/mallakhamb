@@ -120,3 +120,51 @@ describe('AuthLayout', () => {
     expect(screen.queryByRole('navigation', { name: 'Sign in as' })).toBeNull();
   });
 });
+
+/*
+ * The admin bar used to squeeze: nine tabs, the competition picker and the
+ * account controls in a 1280px bar slid the role ident under "Dashboard" and
+ * the picker under the Light/Dark switch. Now the parts keep their size and a
+ * row that does not fit folds its tabs into the menu, coming back only once
+ * the bar is as wide as the row needed.
+ */
+describe('AppHeader folds tabs that do not fit', () => {
+  const widths = (bar, { client, scroll }) => {
+    Object.defineProperty(bar, 'clientWidth', { configurable: true, get: () => client });
+    Object.defineProperty(bar, 'scrollWidth', { configurable: true, get: () => scroll });
+  };
+  const setup = ({ client, scroll }) => {
+    let observer;
+    const Real = window.ResizeObserver;
+    window.ResizeObserver = class extends Real {
+      constructor(cb) { super(cb); observer = this; }
+    };
+    // jsdom lays nothing out: report the sizes the row would have before mount.
+    const client0 = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function w() {
+      return this.classList?.contains('shell-header__bar') ? client : 0;
+    });
+    const scroll0 = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function w() {
+      return this.classList?.contains('shell-header__bar') ? scroll : 0;
+    });
+    const view = at('/admin/dashboard', <AppHeader role="admin" nav={NAV} extra={<span>Picker</span>} onLogout={() => {}} />);
+    client0.mockRestore(); scroll0.mockRestore();
+    window.ResizeObserver = Real;
+    const header = view.container.querySelector('.shell-header');
+    const bar = view.container.querySelector('.shell-header__bar');
+    const resize = (next) => { widths(bar, next); observer.callback([]); };
+    return { header, resize };
+  };
+
+  it('keeps the tabs in the bar when the row fits', () => {
+    const { header } = setup({ client: 1600, scroll: 1488 });
+    expect(header).not.toHaveClass('shell-header--squeezed');
+  });
+
+  it('folds them into the menu when the row overflows, and brings them back once it fits', async () => {
+    const { header, resize } = setup({ client: 1440, scroll: 1488 });
+    expect(header).toHaveClass('shell-header--squeezed');
+    // Still too narrow for the 1488px the row needed: stays folded.
+    await vi.waitFor(() => { resize({ client: 1480, scroll: 1480 }); expect(header).toHaveClass('shell-header--squeezed'); });
+    await vi.waitFor(() => { resize({ client: 1600, scroll: 1600 }); expect(header).not.toHaveClass('shell-header--squeezed'); });
+  });
+});

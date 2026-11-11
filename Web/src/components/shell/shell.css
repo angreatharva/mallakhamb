@@ -35,8 +35,22 @@
 }
 .shell-account { display: flex; align-items: center; gap: 8px; }
 .shell-header__nav { display: none; margin-left: auto; }
-/* "Walk-in" broke at its hyphen into two lines. */
-.shell-header--nav-xxl .shell-header__nav a { white-space: nowrap; }
+/* "Walk-in" broke at its hyphen into two lines — on every row of tabs. */
+.shell-header__nav a { white-space: nowrap; }
+/*
+ * Nothing in the bar shrinks: squeezed, the brand slid its role ident under
+ * the first tab and the competition picker slid under the Light/Dark switch.
+ * A row that does not fit overflows instead, and AppHeader sees that and
+ * folds the tabs into the menu (shell-header--squeezed, below).
+ */
+.shell-header__nav,
+.shell-header__extra,
+.shell-header__account { flex-shrink: 0; }
+/* The brand gives up only its segment (a signed-in name, ellipsised) —
+   never the wordmark or the role ident. With no segment it has nothing to
+   give, so it keeps its size outright. */
+.shell-header__brand > :not(.shell-header__segment) { flex-shrink: 0; }
+.shell-header__brand:not(:has(.shell-header__segment)) { flex-shrink: 0; }
 .shell-header__account { display: none; align-items: center; gap: 8px; margin-left: auto; }
 .shell-header__nav + .shell-header__account { margin-left: 8px; }
 .shell-header--fixed { position: fixed; left: 0; right: 0; }
@@ -69,9 +83,20 @@
   .shell-header--nav-xxl .shell-header__menu { display: inline-flex; }
 }
 @media (min-width: 1440px) {
-  .shell-header--nav-xxl .shell-header__bar { max-width: 90rem; }
+  /* The long rows (Admin: nine tabs and the competition picker; Super Admin:
+     twelve) take a wider bar when the screen has it, rather than folding
+     into the menu on a large monitor. */
+  .shell-header--nav-xl .shell-header__bar,
+  .shell-header--nav-xxl .shell-header__bar { max-width: 100rem; }
   .shell-header--nav-xxl .shell-header__brand { flex-shrink: 0; }
 }
+/* The tabs did not fit (measured in AppHeader): they go into the menu, the
+   competition picker stays in the bar and takes the free space before it. */
+.shell-header--squeezed .shell-header__nav { display: none; }
+.shell-header--squeezed .shell-header__menu { display: inline-flex; }
+.shell-header--squeezed .shell-header__extra { margin-left: auto; }
+.shell-header--squeezed .shell-header__account { margin-left: auto; }
+.shell-header--squeezed .shell-header__extra + .shell-header__account { margin-left: 8px; }
 @media (min-width: 768px) and (max-width: 1023px) {
   .shell-header__menu { margin-left: 8px; }
 }
