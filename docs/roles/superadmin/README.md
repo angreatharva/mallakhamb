@@ -46,7 +46,7 @@ The Super Admin is **the owner of the platform**. There is **exactly one** Super
 
 ## 4. The dashboard — tabs
 
-`/superadmin/dashboard/<tab>`. On screens narrower than 1440 px the tabs fold into the menu (☰). On wider screens, any tabs that don't fit in the bar also fold into the menu, so they never overlap.
+`/superadmin/dashboard/<tab>`. On a laptop or larger screen the tabs sit on **their own row under the top bar** (wrapping onto a second line on narrower laptops). On phones and small tablets (under 1024 px) they are in the menu (☰).
 
 | Tab | Purpose |
 | --- | --- |
@@ -179,7 +179,7 @@ Competition II is one **All ages** final per gender: the top 2 of each age group
 
 | You see | Meaning / action |
 | --- | --- |
-| A tab is missing from the bar | The screen is narrow; the tab is in the ☰ menu. |
+| No tabs under the top bar | The screen is under 1024 px wide; the tabs are in the ☰ menu. |
 | "Give a reason (at least 5 characters)" | Every Fix action needs a reason. |
 | A finals warning after a score fix | That final already started or was finalized, so its list was kept. Review it in Finals. |
 | A competition has "disappeared" | It was deleted. Use **Fix → Restore**. |

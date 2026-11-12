@@ -246,3 +246,5 @@ before editing one.
     judge home and profile.
 - `shell.css`: header bar parts don't shrink; the overflow fold is described
   in [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md).
+- `AppHeader` `navFrom="row"` (`.shell-header__row`, `.shell-header--nav-row`)
+  and the `--shell-header-h` variable a fixed header publishes (2026-11-12).

@@ -156,20 +156,50 @@ export const AppHeader = ({
     return () => observer.disconnect();
   }, [nav.length]);
 
+  /*
+   * The longest row (Super Admin, thirteen tabs) never fits beside the
+   * account controls, so measuring folded every tab into the menu on every
+   * screen. From `lg` it gets a row of its own under the bar instead, which
+   * wraps rather than folds; phones keep the menu.
+   */
+  const rowNav = navFrom === 'row' && nav.length > 0;
+
+  /*
+   * A fixed header's height is no longer always 64px (the tab row, and its
+   * wrap on a narrower laptop), so it publishes its height for the page to
+   * pad itself by: `var(--shell-header-h)`.
+   */
+  const headerRef = useRef(null);
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!fixed || !header || typeof ResizeObserver === 'undefined') return undefined;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty('--shell-header-h', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(header);
+    return () => { observer.disconnect(); root.style.removeProperty('--shell-header-h'); };
+  }, [fixed]);
+
   return (
-    <header className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl', navFrom === 'xxl' && 'shell-header--nav-xxl', squeezed && 'shell-header--squeezed')}>
+    <header ref={headerRef} className={cx('shell-header', fixed && 'shell-header--fixed', navFrom === 'xl' && 'shell-header--nav-xl', navFrom === 'xxl' && 'shell-header--nav-xxl', rowNav && 'shell-header--nav-row', squeezed && 'shell-header--squeezed')}>
       <div className="shell-header__bar" ref={barRef}>
         <div className="shell-header__brand">
           <Wordmark to={homeTo} compact={compactBrand} />
           <RoleIdent role={role} />
           {segment && <span className="shell-header__segment type-body-s">{segment}</span>}
         </div>
-        {nav.length > 0 && <TabNav items={nav} label={navLabel} className="shell-header__nav" />}
+        {nav.length > 0 && !rowNav && <TabNav items={nav} label={navLabel} className="shell-header__nav" />}
         {extra && <div className="shell-header__extra">{extra}</div>}
         <AccountControls onLogout={onLogout} profileTo={profileTo} className="shell-header__account" />
         <AppearanceMenu className="shell-header__appearance" />
         <IconButton className="shell-header__menu" label="Menu" icon={MenuIcon} variant="line" aria-expanded={open} onClick={() => setOpen(true)} />
       </div>
+      {rowNav && (
+        <div className="shell-header__row">
+          <TabNav items={nav} label={navLabel} className="shell-header__rownav" />
+        </div>
+      )}
       <Dialog open={open} onClose={() => setOpen(false)} title="Menu" sheet>
         {extra && <div className="shell-drawer__extra">{extra}</div>}
         {nav.length > 0 && <TabNav items={nav} label={navLabel} vertical onNavigate={() => setOpen(false)} />}
@@ -189,7 +219,7 @@ AppHeader.propTypes = {
   extra: PropTypes.node,
   fixed: PropTypes.bool,
   /** Where the tabs join the bar: `xl` for a long row (the admin dashboards' six or seven). */
-  navFrom: PropTypes.oneOf(['lg', 'xl', 'xxl']),
+  navFrom: PropTypes.oneOf(['lg', 'xl', 'xxl', 'row']),
   /** The mark alone (named for screen readers), to leave the bar to the tabs. */
   compactBrand: PropTypes.bool,
 };

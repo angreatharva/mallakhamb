@@ -100,6 +100,23 @@
 @media (min-width: 768px) and (max-width: 1023px) {
   .shell-header__menu { margin-left: 8px; }
 }
+/*
+ * The tab row of its own (navFrom="row", the Super Admin's thirteen tabs):
+ * under the bar from `lg`, wrapping onto a second line on a narrower laptop
+ * rather than folding into the menu. Below `lg` it is the menu, as for
+ * everyone.
+ */
+.shell-header__row { display: none; }
+@media (min-width: 1024px) {
+  .shell-header--nav-row .shell-header__menu { display: none; }
+  .shell-header--nav-row .shell-header__row {
+    display: block;
+    max-width: 100rem;
+    margin: 0 auto;
+    padding: 0 var(--pad) 12px;
+  }
+  .shell-header__rownav .shell-tabnav { flex-wrap: wrap; row-gap: 14px; }
+}
 @media (max-width: 479px) {
   .shell-header__segment { display: none; }
   /* The mark alone (the name stays for screen readers), as Home's masthead

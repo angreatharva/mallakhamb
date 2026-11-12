@@ -686,7 +686,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
         role={isSuperAdmin ? 'superadmin' : 'admin'}
         nav={navItems}
         navLabel={`${isSuperAdmin ? 'Super admin' : 'Admin'} navigation`}
-        navFrom={isSuperAdmin ? 'xxl' : 'xl'}
+        navFrom={isSuperAdmin ? 'row' : 'xl'}
         compactBrand
         homeTo={`${routePrefix}/dashboard`}
         extra={!isSuperAdmin ? <CompetitionSelector userType={storagePrefix} /> : null}
@@ -694,7 +694,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
       />
 
       {/* ─── Page Content ───────────────────────────────────────────────── */}
-      <main id="main-content" className="pt-16">
+      <main id="main-content" className="pt-16" style={{ paddingTop: 'var(--shell-header-h, 64px)' }}>
         <div className="max-w-7xl mx-auto px-[var(--pad)] py-8">
           {/*
             * Above the tabs, not inside one: the lock applies to the whole meet,

@@ -220,3 +220,8 @@ visit to `/judge/select-level` all land on `/judge/dashboard`, which renders
   the menu (the competition picker stays) until the bar is wide enough. Bar
   parts never shrink and labels never wrap. Long rows (admin, super admin)
   get a bar up to 100rem from 1440px (`f5465b41`).
+- **Super Admin tab row** (2026-11-12): `AppHeader navFrom="row"` puts the tabs on
+  their own row under the bar from 1024px (wrapping on narrower laptops); the
+  bar no longer carries them, so the overflow fold never sends all thirteen
+  into the menu. Below 1024px they stay in the menu. A fixed header publishes
+  its height as `--shell-header-h`; `UnifiedDashboard`'s `<main>` pads by it.
