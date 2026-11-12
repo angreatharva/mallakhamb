@@ -49,6 +49,27 @@ The server already runs with `NODE_ENV=production` (secure cookies, strict CORS,
   break the live alerts, so it happens at §3 step 7. The older runbooks (COMMON.md, PLAN.md,
   aws/PLAN.md) keep their `<STAGING_*_HOST>` wording as history.
 
+**Deployed 2026-11-12 15:23–15:26 UTC:** master `ae64c78` pushed; app-02 STANDBY UPDATED, then
+app-01 DEPLOYED (no new migration; OCR self-test passed on both). Checks afterwards, all as
+expected:
+- Both VMs: services up, site files `api/ocr/web.caddy`, role watcher bad-ticks=0, no failed units.
+- Replica set: app-01 PRIMARY; app-02 and db-03 SECONDARY.
+- From outside: ready 200, public competitions 200 (22), cop-rules 200, web + `/scores` deep link
+  200, missing asset 404, docs 404, metrics 401, no-login dashboard 401, wrong-password login 401,
+  login without CSRF 403, socket.io handshake OK, security headers present.
+- In Chrome: `/scores` loads the competition list with no console errors.
+
+**Owner answers 2026-11-12:**
+- Coaches register and pay on **OCI**.
+- **Every database (Atlas and OCI) holds test data only** and will be truncated before final
+  production, so the cutover has no data to move (§3 step 6 becomes "truncate, then bootstrap the
+  superadmin").
+- OCI and Render must use the same env and the same DB.
+
+Found the same day: OCI still has **Razorpay TEST keys** (`rzp_test_…`), so payments made on OCI
+today are test payments. Render's env wasn't compared because the Render dashboard needs the owner's
+sign-in.
+
 1. **Repo:** rename the Caddy templates to `api.caddy.tmpl`, `web.caddy.tmpl` and `ocr.caddy.tmpl`
    (`install.sh` too). Rename `staging-app.env.example` → `app.env.example`. Update the docs
    (deploy/, Server/MEMORY, Web/MEMORY): "OCI staging" → "OCI production". Historic notes stay

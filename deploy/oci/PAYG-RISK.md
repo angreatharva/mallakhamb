@@ -22,6 +22,15 @@ built-in identity-domain apps (IAM DataSafe, OCI Console, IAM LoginClient).
 Script fixes from this run: empty block-backup list broke jq (`--argjson`), and the budget command
 is `oci budgets budget budget list` in Cloud Shell's CLI.
 
+**Upgrade started 2026-11-12 ~15:45 UTC** (owner), account type **Individual**:
+- Before the upgrade, the budget rule `actual-over-1pct` became `actual-over-0-01-sgd` (ACTUAL,
+  ABSOLUTE 0.01, both addresses, ACTIVE).
+- Oracle's card verification hold of SGD 138.19 was reversed the same minute (ICICI SMS).
+- Oracle said "upgrade in progress", with a confirmation email to follow.
+- **After the confirmation email:** check the account type on the "Upgrade and Manage Payment"
+  page, re-run `free-tier-audit.sh` (quota unchanged, no COST line), then check the usage once a
+  day for 7 days.
+
 ## The question
 
 Today the account is a Free Trial. When something goes past a free limit, it is either refused or
