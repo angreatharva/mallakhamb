@@ -113,3 +113,10 @@ project — see [01-ARCHITECTURE.md](../01-ARCHITECTURE.md)).
 - A new **Out of edits** list restores a seat's 3-edit allowance.
 - Lock & Submit after an unlock republishes the category.
 - Available to admin (own meet) and superadmin (every meet).
+- **Bug fix 2026-11-12:** the Super Admin's sheet never knew its meet. A Super
+  Admin has no `currentCompetition` (they pick the meet inside the Scores tab),
+  so judges, the stored scores and saves went out with no `competition`: no
+  panel, no marks, and no Unlock / Out of edits lists. `AdminScores` now passes
+  `competitionId` in the navigation state; this screen uses
+  `sheetCompetitionId = state.competitionId || currentCompetition?._id`
+  everywhere it used `currentCompetition._id`. Admins were never affected.

@@ -394,7 +394,7 @@ const Scores = () => {
                             teams={filteredTeams}
                             onTeamClick={(teamId) => {
                               const team = submittedTeams.find(t => t._id === teamId);
-                              if (team) navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } });
+                              if (team) navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType, competitionId: isSuperAdmin ? selectedCompetition?.value : undefined } });
                             }}
                             searchTerm={searchTerm}
                             renderMobileCard={(team) => (
@@ -405,7 +405,7 @@ const Scores = () => {
                                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-line">
                                   <span className="text-sm text-fg-muted">Players: <span className="font-bold text-ink">{team.players?.length || 0}</span></span>
                                   <Button variant="line" size="sm"
-                                    onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType } })}>
+                                    onClick={() => navigate(`${routePrefix}/scoring`, { state: { selectedTeam: team, selectedGender, selectedAgeGroup, selectedCompetitionType, competitionId: isSuperAdmin ? selectedCompetition?.value : undefined } })}>
                                     View Details →
                                   </Button>
                                 </div>

@@ -81,6 +81,7 @@ Pick **Gender**, **Age group**, **Competition type** and **Apparatus**. Nothing 
 - **Locked for the judges**: when the panel has finalized athletes, a banner offers **Unlock all**, and a list offers **Unlock** per athlete. Each asks for confirmation. Unlocking clears the Senior Judge's Final Submit and the Scorer's lock so the panel can correct their slips; no mark, slip or time is changed. **The published result is withdrawn until the next Final Submit.**
 - **Out of edits**: each judge may change a submitted slip at most **3 times**. This list shows seats that have used all three; **Restore** gives one seat (or every seat) its 3 edits back.
 - Once the end date has passed, the sheet is read-only for admins.
+- **Demo:** [unlocking an athlete and restoring a judge's edits](../media/superadmin-unlock-and-restore-edits.gif), recorded as the Super Admin on a local test copy. The Admin's sheet is the same screen.
 
 **Individual Rankings**
 - Every athlete in the category, ranked across teams: position, name, team, time, final score, and the score breakdown (Difficulty, Combination, Execution, Originality, deduction).

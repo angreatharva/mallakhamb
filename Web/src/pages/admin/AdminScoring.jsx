@@ -30,7 +30,15 @@ const AdminScoring = () => {
     const navigate = useNavigate();
     const { routePrefix } = useRouteContext();
     const { currentCompetition } = useCompetition();
-    const { selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType } = location.state || {};
+    const { selectedTeam, selectedGender, selectedAgeGroup, selectedCompetitionType, competitionId: stateCompetitionId } = location.state || {};
+    /*
+     * The meet this sheet belongs to. An admin's comes from the competition
+     * context; a Super Admin has none (they pick the meet inside the Scores
+     * tab), so Scores passes it in the navigation state. Without it the
+     * Super Admin's sheet asked for no competition and loaded no panel and
+     * no stored scores, hiding Unlock and Out of edits (bug fix 2026-11-12).
+     */
+    const sheetCompetitionId = stateCompetitionId || currentCompetition?._id;
     const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
 
     const [socket, setSocket] = useState(null);
@@ -215,8 +223,8 @@ const AdminScoring = () => {
             if (selectedCompetitionType?.value) judgesParams.competitionTypes = selectedCompetitionType.value;
             if (teamApparatus) judgesParams.apparatus = teamApparatus;
             // Add competition ID for superadmin
-            if (routePrefix === '/superadmin' && currentCompetition?._id) {
-                judgesParams.competition = currentCompetition._id;
+            if (routePrefix === '/superadmin' && sheetCompetitionId) {
+                judgesParams.competition = sheetCompetitionId;
             }
 
             const judgesResponse = await api.getJudges(judgesParams);
@@ -228,8 +236,8 @@ const AdminScoring = () => {
             if (sc?.name) setScorer((prev) => prev || sc.name);
             
             const summaryParams = {};
-            if (routePrefix === '/superadmin' && currentCompetition?._id) {
-                summaryParams.competition = currentCompetition._id;
+            if (routePrefix === '/superadmin' && sheetCompetitionId) {
+                summaryParams.competition = sheetCompetitionId;
             }
             const summaryResponse = await api.getAllJudgesSummary(summaryParams);
             const summaryData = summaryResponse.data.data?.summary || summaryResponse.data.summary || [];
@@ -273,8 +281,8 @@ const AdminScoring = () => {
             const scoresParams = { teamId, gender, ageGroup };
             if (selectedCompetitionType?.value) scoresParams.competitionType = selectedCompetitionType.value;
             // Add competition ID for superadmin
-            if (routePrefix === '/superadmin' && currentCompetition?._id) {
-                scoresParams.competition = currentCompetition._id;
+            if (routePrefix === '/superadmin' && sheetCompetitionId) {
+                scoresParams.competition = sheetCompetitionId;
             }
             
             const allResponse = await api.getTeamScores(scoresParams);
@@ -537,8 +545,8 @@ const AdminScoring = () => {
             };
             
             // Add competition ID for superadmin
-            if (routePrefix === '/superadmin' && currentCompetition?._id) {
-                scoringData.competition = currentCompetition._id;
+            if (routePrefix === '/superadmin' && sheetCompetitionId) {
+                scoringData.competition = sheetCompetitionId;
             }
             
             const response = await api.saveScores(scoringData);

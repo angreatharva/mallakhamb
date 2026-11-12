@@ -54,7 +54,7 @@ The Super Admin is **the owner of the platform**. There is **exactly one** Super
 | **Management** | Competitions · Admins · Coaches · Add Player (section 5). |
 | **Teams** | Pick competition → gender → age group. Shows every entered team and its athletes; **View Details** gives the coach, contact details and each athlete's age group, date of birth and apparatus. |
 | **Lots** | Draw lots and set the running order (same as Admin, see the [Admin guide](../admin/README.md#lots)). |
-| **Scores** | Score sheets, Individual and Team Rankings, lucky-draw recording, unlock for judges, restore edits (see the [Admin guide](../admin/README.md#scores)). |
+| **Scores** | Score sheets, Individual and Team Rankings, lucky-draw recording, unlock for judges, restore edits (see the [Admin guide](../admin/README.md#scores); [demo GIF](../media/superadmin-unlock-and-restore-edits.gif)). |
 | **Finals** | Competition II/III qualifiers, Finalize, and **Reopen** (Super Admin only). |
 | **Judges** | Staff the judging panels (see the [Admin guide](../admin/README.md#judges)). |
 | **Fairness** | Judge-fairness board for any competition (see the [Admin guide](../admin/README.md#fairness)). |
