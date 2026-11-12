@@ -2,7 +2,7 @@
 # (deploy/oci/PLAN.md O15.4). The sidecar refuses /v1/read without OCR_TOKEN;
 # Caddy forwards nothing but /health and /v1/read. Remove this site (and the
 # token) once production runs on OCI: the API there uses 127.0.0.1:8090.
-<STAGING_OCR_HOST> {
+<OCR_HOST> {
     @allowed path /health /v1/read
     handle @allowed {
         request_body {

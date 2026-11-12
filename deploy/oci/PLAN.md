@@ -605,7 +605,7 @@ Later releases need nothing special: plain `sudo mallakhamb-deploy <sha>` builds
 **O15.4 Public address for Render (temporary — early testing only).** Render's API cannot reach `127.0.0.1` on OCI, so for testing on Render before the move the active VM also serves the OCR at `ocr-<reserved-IP-with-dashes>.sslip.io` (e.g. `ocr-137-23-63-84.sslip.io`):
 
 1. On **both** VMs: `printf "OCR_TOKEN='%s'\n" '<token>' | sudo install -m 0640 -o root -g mallakhamb /dev/stdin /etc/mallakhamb/ocr.env` (the sidecar then refuses `/v1/read` without it; `/health` and `/metrics` stay open on loopback).
-2. On the **active**: `sed "s#<STAGING_OCR_HOST>#ocr-…sslip.io#" deploy/server/caddy/sites/staging-ocr.caddy.tmpl | sudo tee /etc/caddy/sites/staging-ocr.caddy && sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy`. On the **standby** put the same file in `/etc/caddy/sites-standby/` — promote copies it across, and the reserved IP moves with failover, so the name keeps working.
+2. On the **active**: `sed "s#<OCR_HOST>#ocr-…sslip.io#" deploy/server/caddy/sites/ocr.caddy.tmpl | sudo tee /etc/caddy/sites/ocr.caddy && sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy`. On the **standby** put the same file in `/etc/caddy/sites-standby/` — promote copies it across, and the reserved IP moves with failover, so the name keeps working.
 3. The same `OCR_TOKEN` in the OCI app env (O15.1) and, on Render, `OCR_URL=https://ocr-…sslip.io` + `OCR_TOKEN` (Dashboard → Environment; both `sync: false` in `render.yaml`).
 4. Check from your PC: `curl https://ocr-…sslip.io/health` → `{"status":"ok",…}`; `curl -X POST https://ocr-…sslip.io/v1/read` → **401**; `curl https://ocr-…sslip.io/metrics` → **404**.
 

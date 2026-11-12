@@ -5,7 +5,7 @@ with its instance principal (policy `mallakhamb-prod-pol-app`: read secret-bundl
 
 1. **Atlas → Network Access → Add IP Address:** `137.23.63.84/32` (comment `oci app-01`).
    Never `0.0.0.0/0`.
-2. Copy `deploy/oci/staging-app.env.example` **outside the repo** (or straight into your password
+2. Copy `deploy/oci/app.env.example` **outside the repo** (or straight into your password
    manager) and fill it there: test DB only, `rzp_test_` keys. The example file is tracked by git.
 3. OCI console → Cloud Shell, then:
 

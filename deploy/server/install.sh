@@ -98,12 +98,12 @@ else
 fi
 chmod 0644 /etc/mallakhamb/web.env && grep -o "^VITE_API_URL=.*" /etc/mallakhamb/web.env
 
-step "C4.11 / O7.3 Caddy (staging hosts only)"
+step "C4.11 / O7.3 Caddy (api + web sites; one file per site, every host of that site on its first line)"
 install -d -m 0750 -o caddy -g caddy /var/log/caddy     # the site files log here; the package does not create it
 install -m 0644 "$HERE/caddy/Caddyfile" /etc/caddy/Caddyfile
 caddy fmt --overwrite /etc/caddy/Caddyfile
-sed "s#<STAGING_API_HOST>#$API_HOST#" "$HERE/caddy/sites/staging-api.caddy.tmpl" > /etc/caddy/sites/staging-api.caddy
-sed "s#<STAGING_APP_HOST>#$APP_HOST#" "$HERE/caddy/sites/staging-web.caddy.tmpl" > /etc/caddy/sites/staging-web.caddy
+sed "s#<API_HOST>#$API_HOST#" "$HERE/caddy/sites/api.caddy.tmpl" > /etc/caddy/sites/api.caddy
+sed "s#<APP_HOST>#$APP_HOST#" "$HERE/caddy/sites/web.caddy.tmpl" > /etc/caddy/sites/web.caddy
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile 2>&1 | tail -1
 chown -R caddy:caddy /var/log/caddy      # validate (as root) creates the log files; the service runs as caddy
 systemctl enable caddy >/dev/null 2>&1 && systemctl reload-or-restart caddy
