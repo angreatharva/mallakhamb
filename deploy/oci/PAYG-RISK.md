@@ -4,6 +4,24 @@ Audit of the whole tenancy against the Always Free limits, taken **2026-10-26 ~1
 Cloud Shell with [scripts/free-tier-audit.sh](scripts/free-tier-audit.sh) (read-only). Re-run it
 before the upgrade and after any new resource.
 
+## Re-run 2026-11-12 (Free Trial ended that day)
+
+Oracle ended the Free Trial on **2026-11-12 02:39 UTC**; anything not Always Free is reclaimed after
+**2026-12-11 02:39 UTC**. Owner decision the same day: upgrade to PAYG **only while it stays at
+SGD 0**, and run the 12-13 / 19-20 Dec meets on OCI.
+
+Audit result (~07:30 UTC): **nothing outside Always Free.** A1 app-01 + app-02 at 1 OCPU / 4 GB,
+db-03 E2.1.Micro 1/1 GB, all RUNNING; nothing outside `mallakhamb-prod`. Boot 150 GB, block 0.
+Volume backups **4 of 5** (golden + 3 weekly, keep 3). Bucket 26 MB / 1,939 objects. 2 reserved IPs.
+No LB / NLB / NAT. DEFAULT vault, 1 SOFTWARE key, 9 secrets. Quota `mallakhamb-prod-quota-free-tier`
+ACTIVE, statements unchanged. Budget `mallakhamb-guard` SGD 1.50, actual 0.0, forecast 0.0, ACTIVE.
+Metered month to date: A1 552 OCPU-h / 2,208 GB-h, E2 Micro 276 OCPU-h, block 55.6 GB-months,
+object 0.005 GB-months / 2,270 requests, outbound 1.97 GB, monitoring retrieval 48 M datapoints;
+**no Notifications line and no COST line.** The 3 "App" resources in the search are Oracle's
+built-in identity-domain apps (IAM DataSafe, OCI Console, IAM LoginClient).
+Script fixes from this run: empty block-backup list broke jq (`--argjson`), and the budget command
+is `oci budgets budget budget list` in Cloud Shell's CLI.
+
 ## The question
 
 Today the account is a Free Trial. When something goes past a free limit, it is either refused or

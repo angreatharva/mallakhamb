@@ -27,6 +27,8 @@ echo "  boot ${B} GB + block ${V} GB = $((B+V)) GB"
 echo "== volume backups (free: 5 total, boot+block)"
 BB=$(q oci bv boot-volume-backup list -c "$C" --all | jq '[.data[] | select(."lifecycle-state"!="TERMINATED")]')
 VB=$(q oci bv backup list -c "$C" --all | jq '[.data[] | select(."lifecycle-state"!="TERMINATED")]')
+# The CLI prints NOTHING for an empty list, so jq yields nothing; default to an empty array.
+BB=${BB:-[]}; VB=${VB:-[]}
 echo "  boot backups $(echo "$BB" | jq length), block backups $(echo "$VB" | jq length), total GB $(jq -n --argjson a "$BB" --argjson b "$VB" '[$a[],$b[] | (."unique-size-in-gbs" // ."size-in-gbs" // 0)] | add // 0')"
 echo "$BB" | jq -r '.[] | "    \(."display-name") \(.type) \(."source-type") \(."time-created"[0:10]) exp=\(."expiration-time" // "-" | tostring | .[0:10])"' | head -8
 echo "  backup policies assigned: $(q oci bv volume-backup-policy-assignment get-volume-backup-policy-asset-assignment --asset-id "$(q oci bv boot-volume list -c "$C" --availability-domain "$AD" --all | jq -r '.data[0].id')" | n) (first boot volume)"
@@ -73,7 +75,7 @@ q oci limits quota list -c "$T" --all | jq -r '.data[] | "  quota \(.name)"'
 for id in $(q oci limits quota list -c "$T" --all | jq -r '.data[].id'); do
   oci limits quota get --quota-id "$id" 2>/dev/null | jq -r '.data.statements[] | "    \(.)"'
 done
-q oci budgets budget list -c "$T" --all | jq -r '.data[] | "  budget \(."display-name") \(.amount) actual=\(."actual-spend") forecast=\(."forecasted-spend")"'
+q oci budgets budget budget list -c "$T" --all | jq -r '.data[] | "  budget \(."display-name") \(.amount) actual=\(."actual-spend") forecast=\(."forecasted-spend")"'
 
 echo "== metered usage this month, every service (quantity even when free)"
 q oci usage-api usage-summary request-summarized-usages --tenant-id "$T" \
