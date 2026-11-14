@@ -1,0 +1,15 @@
+{"id":"panel.isPanelJudgeType#0","args":["Senior Judge"],"result":true}
+{"id":"panel.isPanelJudgeType#1","args":["Judge 1"],"result":true}
+{"id":"panel.isPanelJudgeType#2","args":["Judge 2"],"result":true}
+{"id":"panel.isPanelJudgeType#3","args":["Judge 3"],"result":true}
+{"id":"panel.isPanelJudgeType#4","args":["Judge 4"],"result":true}
+{"id":"panel.isPanelJudgeType#5","args":["Scorer"],"result":false}
+{"id":"panel.isPanelJudgeType#6","args":["Time Keeper"],"result":false}
+{"id":"panel.isPanelJudgeType#7","args":["Judge 5"],"result":false}
+{"id":"panel.isPanelJudgeType#8","args":["Chief"],"result":false}
+{"id":"panel.isPanelJudgeType#9","args":[""],"result":false}
+{"id":"panel.isPanelJudgeType#10","args":[null],"result":false}
+{"id":"panel.isPanelJudgeType#11","args":[{"$":"undefined"}],"result":false}
+{"id":"panel.isPanelJudgeType#12","args":["senior judge"],"result":false}
+{"id":"panel.isPanelJudgeType#13","args":["toString"],"result":false}
+{"id":"panel.isPanelJudgeType#14","args":["constructor"],"result":false}

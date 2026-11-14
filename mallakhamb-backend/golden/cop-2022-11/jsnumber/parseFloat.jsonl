@@ -1,0 +1,17 @@
+{"id":"jsnumber.parseFloat#0","args":[""],"result":{"$":"NaN"}}
+{"id":"jsnumber.parseFloat#1","args":[" "],"result":{"$":"NaN"}}
+{"id":"jsnumber.parseFloat#2","args":["8.5"],"result":8.5}
+{"id":"jsnumber.parseFloat#3","args":[" 8.5 "],"result":8.5}
+{"id":"jsnumber.parseFloat#4","args":["08"],"result":8}
+{"id":"jsnumber.parseFloat#5","args":["1e2"],"result":100}
+{"id":"jsnumber.parseFloat#6","args":["0x10"],"result":0}
+{"id":"jsnumber.parseFloat#7","args":[".5"],"result":0.5}
+{"id":"jsnumber.parseFloat#8","args":["5."],"result":5}
+{"id":"jsnumber.parseFloat#9","args":["-0"],"result":{"$":"-0"}}
+{"id":"jsnumber.parseFloat#10","args":["+3"],"result":3}
+{"id":"jsnumber.parseFloat#11","args":["1,5"],"result":1}
+{"id":"jsnumber.parseFloat#12","args":["abc"],"result":{"$":"NaN"}}
+{"id":"jsnumber.parseFloat#13","args":["8.5abc"],"result":8.5}
+{"id":"jsnumber.parseFloat#14","args":["Infinity"],"result":{"$":"Infinity"}}
+{"id":"jsnumber.parseFloat#15","args":[null],"result":{"$":"NaN"}}
+{"id":"jsnumber.parseFloat#16","args":[{"$":"undefined"}],"result":{"$":"NaN"}}

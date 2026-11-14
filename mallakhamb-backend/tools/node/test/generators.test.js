@@ -49,3 +49,30 @@ test('every code declared in error-codes.js that Node uses appears in the catalo
     assert.ok(catalogues.codes[name], `${name} missing from catalogues.json`);
   }
 });
+
+test('the committed golden vectors replay exactly against the Node engines', () => {
+  const output = execFileSync(process.execPath, [path.join(ROOT, 'golden', 'generate.js'), '--verify'], { cwd: ROOT, encoding: 'utf8' });
+  assert.match(output, /replay exactly/);
+});
+
+test('the golden codec round-trips the values plain JSON loses', () => {
+  const { encode, decode } = require('../golden/lib/codec');
+  const value = { a: undefined, b: Number.NaN, c: -0, d: Infinity, e: new Date('2026-12-12T00:00:00.000Z'), f: [1, null, 'x'] };
+  const back = decode(JSON.parse(JSON.stringify(encode(value))));
+  assert.ok('a' in back && back.a === undefined);
+  assert.ok(Number.isNaN(back.b));
+  assert.ok(Object.is(back.c, -0));
+  assert.equal(back.d, Infinity);
+  assert.equal(back.e.toISOString(), '2026-12-12T00:00:00.000Z');
+  assert.deepEqual(back.f, [1, null, 'x']);
+});
+
+test('the same seed gives the same random cases', () => {
+  const { Rng } = require('../golden/lib/rng');
+  const draw = () => {
+    const rng = new Rng(42);
+    return [rng.next(), rng.int(1, 100), rng.grid(0, 10, 0.05), rng.shuffle([1, 2, 3, 4, 5])];
+  };
+  assert.deepEqual(draw(), draw());
+  assert.deepEqual(draw()[3].slice().sort(), [1, 2, 3, 4, 5]);
+});

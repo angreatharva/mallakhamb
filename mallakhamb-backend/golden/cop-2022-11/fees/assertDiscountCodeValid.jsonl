@@ -1,0 +1,4 @@
+{"id":"fees.assertDiscountCodeValid#0","args":["MEET100",{"enabled":true,"code":"MEET100"}],"result":{"$":"undefined"}}
+{"id":"fees.assertDiscountCodeValid#1","args":["WRONG",{"enabled":true,"code":"MEET100"}],"throws":{"name":"ValidationError","message":"That discount code is not valid","statusCode":400,"code":"VALIDATION_ERROR"}}
+{"id":"fees.assertDiscountCodeValid#2","args":["MEET100",{"enabled":false,"code":"MEET100"}],"throws":{"name":"ValidationError","message":"Discount codes are not being accepted for this event","statusCode":400,"code":"VALIDATION_ERROR"}}
+{"id":"fees.assertDiscountCodeValid#3","args":["MEET100",null],"throws":{"name":"ValidationError","message":"Discount codes are not being accepted for this event","statusCode":400,"code":"VALIDATION_ERROR"}}

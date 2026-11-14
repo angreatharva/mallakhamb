@@ -1,0 +1,422 @@
+{
+  "edition": "cop-2022-11",
+  "seed": 20221101,
+  "engines": {
+    "scoring": {
+      "cases": 3565,
+      "functions": {
+        "calculateIndividualScore": {
+          "cases": 423,
+          "thrown": 0,
+          "sha256": "1be00f6a8f02dc3e7b85b5148180df77c20c9562fbf8013be5a92fc6c3ff7111"
+        },
+        "getTolerance": {
+          "cases": 423,
+          "thrown": 0,
+          "sha256": "cb53fd7d6936db0bc6d80437d8eca73f88ee345f7472d6c7d9afb30787a3556b"
+        },
+        "getTimeDeduction": {
+          "cases": 420,
+          "thrown": 0,
+          "sha256": "cc0485d1aaea5bf824afadd1db500192db03b0c3f5f160d4e09e051a8059743a"
+        },
+        "getTimeDeductionForTime": {
+          "cases": 428,
+          "thrown": 0,
+          "sha256": "84eea32bdf8505ba2aadf79d80913b46463c99efe309093651a1352bec3479d3"
+        },
+        "getDifficultyRequirement": {
+          "cases": 14,
+          "thrown": 0,
+          "sha256": "701468acdda571e4368dc5b94ed44237a823c7f12aa275c09d56e146e9048850"
+        },
+        "resolveDifficultyValue": {
+          "cases": 406,
+          "thrown": 0,
+          "sha256": "77510487d26a411e165d5c1b5f56051081dce1ff0ea3ff81251ca80927869dfe"
+        },
+        "validateSlipBreakdown": {
+          "cases": 406,
+          "thrown": 0,
+          "sha256": "5b9c39ed95b6246ad756cdeed879aae7251987a71770307fc4185341070f9d97"
+        },
+        "validateExecutionFloor": {
+          "cases": 417,
+          "thrown": 0,
+          "sha256": "cda9c9a274db6c0c814fa72784aa08c5223ac69eac4be40e2763dfb871c7359b"
+        },
+        "averageSlipBreakdown": {
+          "cases": 403,
+          "thrown": 0,
+          "sha256": "37598669e790a68eb41173fd8b06665f6ee1b672fc4cbe7ee9f2b525b5b6dcf2"
+        },
+        "normalizeApparatus": {
+          "cases": 14,
+          "thrown": 0,
+          "sha256": "cfb24e51e4251d99aa6f780e1eef655421c48feb24c84787d29ce36dcbc1e824"
+        },
+        "apparatusKey": {
+          "cases": 14,
+          "thrown": 0,
+          "sha256": "291698e99f0d023b4a0313e4d0305f5cee939cea572c02092c12285537b67d80"
+        },
+        "getCombinationChecklist": {
+          "cases": 14,
+          "thrown": 0,
+          "sha256": "6d9449fa9dca814396de5477603afdbcfef98600eb3b15630bebcbf7c176199d"
+        },
+        "toCompetitionTypeDisplay": {
+          "cases": 14,
+          "thrown": 0,
+          "sha256": "564a75efcb5970ef86dac3bdcf823c69522de7cc92b137c8013182facb3f5b7c"
+        },
+        "toCompetitionTypeSlug": {
+          "cases": 14,
+          "thrown": 0,
+          "sha256": "3be7d60fe072b0efe262082c59ed86ee00794c03db11330dd80d75a0b45bf181"
+        },
+        "isApparatusAllowedForGender": {
+          "cases": 154,
+          "thrown": 0,
+          "sha256": "a99abb6ce94565eb3c348e178fc6356c320440e5ae1a85d37415f40b359b4989"
+        },
+        "getCopRulesData": {
+          "cases": 1,
+          "thrown": 0,
+          "sha256": "b4a306c87e7b7ee24d4e3cbc39e28b7b40fe39a505af100c09f6d5c4a7e1cc27"
+        }
+      }
+    },
+    "ranking": {
+      "cases": 4890,
+      "functions": {
+        "determineTieBreakerWinner": {
+          "cases": 410,
+          "thrown": 0,
+          "sha256": "5d5adce3ab752ff1eedb8aa99d91fb03f584c4e8ef2782116ca789cfedd4db2b"
+        },
+        "areTied": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "6f2d0fc0fee13b2218be15c2f35cd1cabb526d3510b3c2d8de806482fbbe3828"
+        },
+        "applyTieBreaker": {
+          "cases": 407,
+          "thrown": 0,
+          "sha256": "e282a8080d3d6683dd8e6379b7946913d776a18a00057e2f2fc02de2bb22f877"
+        },
+        "calculateIndividualRankings": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "9450a3d49c7fd88621ffdc0c5def583fad8f3649244f10825a6f7f2d76e8ac74"
+        },
+        "calculateIndividualRankingsByApparatus": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "90e940552bc244cc6694220bd4e6af0a056e675027ff0c32e54821aef28be342"
+        },
+        "calculateTeamRankings": {
+          "cases": 403,
+          "thrown": 0,
+          "sha256": "2b5916a0d6eb736393e360a6422f471d664b2150d6b534f5ed07424812d4a7cd"
+        },
+        "panelSizeOf": {
+          "cases": 406,
+          "thrown": 0,
+          "sha256": "ab0078082711258b8645841a9d6a3d87e9222e883bf2d780e5c409bf3dbfb07c"
+        },
+        "seniorScoreOf": {
+          "cases": 404,
+          "thrown": 0,
+          "sha256": "abfdbc44564de48b4bfcc60b1c6fa9e99b775ad7860f3cf4cc0759d92fbf3f47"
+        },
+        "baseScoreOf": {
+          "cases": 405,
+          "thrown": 0,
+          "sha256": "51d41bae711043f64f52be54df15168f6a5da35ccbb4f75125ac7a05a6fee5fb"
+        },
+        "fourJudgeAverageOf": {
+          "cases": 403,
+          "thrown": 0,
+          "sha256": "a0b19abf12218144d4ad0fcef2a65386c893916d4986106e6f312ebe5252634d"
+        },
+        "fourJudgeAverageWithChiefOf": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "f0a955d741c73e3e6eaf13d3e7271cfaa49d05a4e4c4dce62826c066194fc129"
+        },
+        "timeInSeconds": {
+          "cases": 434,
+          "thrown": 0,
+          "sha256": "88c006587c90125abd9b076b1a12d98c94129cb2969a5616e5e845a7503f266b"
+        },
+        "tieGroupKey": {
+          "cases": 4,
+          "thrown": 0,
+          "sha256": "0ebc8cd2ec69f2478f5835d0a6f67ece80e50b9ad93a9af3a7a2e27d955cf9dc"
+        },
+        "playerKeyOf": {
+          "cases": 6,
+          "thrown": 0,
+          "sha256": "fdd2999aaf26fd4972327efb60ad34dd8a89a19e6e8dfb44214e1e6cd8acd3fd"
+        }
+      }
+    },
+    "team": {
+      "cases": 1644,
+      "functions": {
+        "isValidTeamSize": {
+          "cases": 11,
+          "thrown": 0,
+          "sha256": "634bd1f358febccdb716b18e5fee8c7dd1fd6c6a4f910da9f89d53d78213d489"
+        },
+        "effectiveTeamSize": {
+          "cases": 11,
+          "thrown": 0,
+          "sha256": "0a9509665e7db9cdf633e92ef7bc2a646897360dfe018d632f9b4dd79a8e8adb"
+        },
+        "countedScoresFor": {
+          "cases": 11,
+          "thrown": 0,
+          "sha256": "b8b2f4d3c0aa929638b732dda7b6ee8bb9d6afc6f0f6250f00014fe7de68d8e2"
+        },
+        "entriesInCategory": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "1b57ef5c4f9665b93ce486eeaeaf6c0a0ac19f9e8c0f49473b6ecc58b91d13dd"
+        },
+        "hasRoomInSquad": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "47c62a3431ac750b8920ebefbe59ab874d2efd9687aaf9992e1421d8ea5bf7da"
+        },
+        "scoreTeam": {
+          "cases": 405,
+          "thrown": 0,
+          "sha256": "65eef342fb3645cc7bc0c6d44b1fd2d9b622291f03d0c40c5e0539b3c55a064b"
+        },
+        "rankTeamChampionship": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "d33f0e1c9df991f2c23ea21727a8b573c654f865d145507746bb4319d9d9ad00"
+        }
+      }
+    },
+    "fees": {
+      "cases": 2851,
+      "functions": {
+        "resolveFeeWindow": {
+          "cases": 409,
+          "thrown": 0,
+          "sha256": "7ee429ef7c19970ec92dc5fa83ed853ea496ce861fcb8f211031ed5b8526e976"
+        },
+        "getLateFeePerPlayer": {
+          "cases": 401,
+          "thrown": 0,
+          "sha256": "d752393a76a228aacabf63655ef6681456907cb4f02864d7418ddabc22f5a763"
+        },
+        "assertPaymentWindowOpen": {
+          "cases": 403,
+          "thrown": 139,
+          "sha256": "e4daaec462f80e470cf2af7581e0d9b2f713bfc2600265129ed8c3da41410a61"
+        },
+        "calculatePlayerFee": {
+          "cases": 410,
+          "thrown": 27,
+          "sha256": "41bdc519fce053702b21345aaab4c88693812e6d21cc848194e36bb198fc8b66"
+        },
+        "calculatePlayerAdditionAmount": {
+          "cases": 401,
+          "thrown": 20,
+          "sha256": "215488a915ee9f2540e55a80665354e586ea24a2da77f4c7fad0b997cb637f0c"
+        },
+        "calculateTeamPaymentAmount": {
+          "cases": 405,
+          "thrown": 19,
+          "sha256": "89a324bdfc430ed1bc61b6516443464ffcbf10bf45bd5169c4380fc3a07160fd"
+        },
+        "isDiscountCodeValid": {
+          "cases": 10,
+          "thrown": 0,
+          "sha256": "fd4b4c37ec446079e9161b63ebef10021126ebedfceceffef7a5b8d8633ba2fa"
+        },
+        "applyDiscountCode": {
+          "cases": 407,
+          "thrown": 0,
+          "sha256": "8f306f97e48e07609d1a07d8fe3aadb79a65406a547cce1ba21942c1f685b285"
+        },
+        "assertDiscountCodeValid": {
+          "cases": 4,
+          "thrown": 3,
+          "sha256": "1272795a176afba2c51d72d224e5e0c11b722a75dc4057ca4181175467c84ce4"
+        },
+        "getPaymentConfig": {
+          "cases": 1,
+          "thrown": 0,
+          "sha256": "17122873fbbcfaf1b4ded4a2f14f65ff24ca4fae862c6d3b009aadb8c8d67d4e"
+        }
+      }
+    },
+    "panel": {
+      "cases": 2134,
+      "functions": {
+        "seatsFor": {
+          "cases": 6,
+          "thrown": 0,
+          "sha256": "1090f4a25618c3de381ce6bf1f3fc7b2b442865d0f6b73ff3882837104384526"
+        },
+        "evaluatorSeats": {
+          "cases": 6,
+          "thrown": 0,
+          "sha256": "a2a010129a3f9332493963e51f5063b9922b05478a19f7f6234ab8e8e1e841a5"
+        },
+        "withTimeKeeper": {
+          "cases": 5,
+          "thrown": 0,
+          "sha256": "ac84ff281c3a2acc902fbc5c94eb979f5eec2894df0f1acc1d3a3f3b380aebcd"
+        },
+        "sizeFor": {
+          "cases": 8,
+          "thrown": 0,
+          "sha256": "736ccaad83c3106a38fd6cfccdd4c7880e9848a4e3d99df8c38083f28766094d"
+        },
+        "panelsForType": {
+          "cases": 3,
+          "thrown": 0,
+          "sha256": "bc64b37e68f5c52d91461a34f13382f18d13485fa7211d43f1d5cc601eb1cab3"
+        },
+        "getJudgeRoleMapping": {
+          "cases": 13,
+          "thrown": 0,
+          "sha256": "2f706ba5ec69415cfa8a5b9b1f55b9a0e7d131f1c96b76dfda05fc4e3deb0f00"
+        },
+        "isPanelJudgeType": {
+          "cases": 15,
+          "thrown": 0,
+          "sha256": "4f3abf6dd0056fd9c351a223ee572ca68763dd6ae69235155f6f1d26347d2adb"
+        },
+        "maySeatTogether": {
+          "cases": 64,
+          "thrown": 0,
+          "sha256": "ace852ec08540f15b425a1b344b16bb6f27612c3ddbb3d611378d2179df2a132"
+        },
+        "seatedPanelSize": {
+          "cases": 406,
+          "thrown": 0,
+          "sha256": "1a56aa88e9fe692d14926489e719f2c5f99911df21e1e2e73f93271406d5be5d"
+        },
+        "assignmentCoversCategory": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "fa3b712c808661cf77af5ec0ccd5249170f21feca6a1fed5555778ac61fd35d8"
+        },
+        "resolveAssignment": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "2963f562ad9c88886ef42ebd83284ea31643d3d96a2d8fff6830f950d0c4806f"
+        },
+        "hasAnyRole": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "9ee27415060769961561474a2889f3da26fcd9fd6c0085e74d6d8317f522da1b"
+        },
+        "competitionsFor": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "b626f771505da0f19a947edff871c7962ceba7eb1fa227995850f22cd42db82d"
+        }
+      }
+    },
+    "eligibility": {
+      "cases": 2282,
+      "functions": {
+        "ageCutoffYear": {
+          "cases": 9,
+          "thrown": 0,
+          "sha256": "5f9645a8e2a71b7511e469a9e5e7e69c6def44fc898956ee538da46fbb4b99da"
+        },
+        "ageOnCutoff": {
+          "cases": 409,
+          "thrown": 0,
+          "sha256": "fb0f3c3c1dc36af077f1c2cce29491900cd0141f553bcb5cbd611b57a1855553"
+        },
+        "lowestAgeGroup": {
+          "cases": 93,
+          "thrown": 0,
+          "sha256": "855ec731d09d3ebb0024260bebbf99df67a84554cb91a38c25a5b4ebdf3eab71"
+        },
+        "eligibleAgeGroups": {
+          "cases": 448,
+          "thrown": 0,
+          "sha256": "52c0d43db6b15c846f3fac8139aa0a5de2c7f963d4f93de66dc7fa11aa9c8572"
+        },
+        "checkAgeGroup": {
+          "cases": 407,
+          "thrown": 0,
+          "sha256": "6c8edfea29db8d6048260d9a37939c7d3cf0280ece2404fbde1d619e47f1b54d"
+        },
+        "groupLabel": {
+          "cases": 12,
+          "thrown": 0,
+          "sha256": "1c122e37ef95666b50f9b93535c70d29329fdfd0a05d06aeb3c1fdfac55ff332"
+        },
+        "ageMatches": {
+          "cases": 99,
+          "thrown": 0,
+          "sha256": "75d4130baa1eca9fdd6320254c4774f2e6caed4b2024c8d67e898e22c683180f"
+        },
+        "entryInCompetition": {
+          "cases": 403,
+          "thrown": 0,
+          "sha256": "cdd1f1f43521e95a4e8482c4d4f36b4c0d5e5a5351e985495e41099d8cb39d21"
+        },
+        "categoryAgeGroups": {
+          "cases": 402,
+          "thrown": 0,
+          "sha256": "7a5ce9f2ff5e2266ba01c9a9d5e3722ee721a0a0374152db234867ffac210350"
+        }
+      }
+    },
+    "jsnumber": {
+      "cases": 2219,
+      "functions": {
+        "toFixed": {
+          "cases": 480,
+          "thrown": 0,
+          "sha256": "aff03085fb259fd62aa5b4d1749bd62d584f0dc4c3ea32b299a4e9f58ff8f577"
+        },
+        "toFixedNumber": {
+          "cases": 440,
+          "thrown": 0,
+          "sha256": "b564309811eed1a25bc8105d7aa74549923d68d208e579c047986662539cdfff"
+        },
+        "round": {
+          "cases": 420,
+          "thrown": 0,
+          "sha256": "0cef7760b157cb1b8ad8a7e391fabcd0d94c6d9e47d9a21940eb4066f1066072"
+        },
+        "roundToHundredths": {
+          "cases": 420,
+          "thrown": 0,
+          "sha256": "d4e749c0526ac22eeee3018ebdc2b5562c122450505bc62eb9ca05c814d7a046"
+        },
+        "toString": {
+          "cases": 420,
+          "thrown": 0,
+          "sha256": "d9bb40ee9d613161b24593825545b5df6aec2047a2f1cef9d8aa84b5db62a071"
+        },
+        "toNumber": {
+          "cases": 22,
+          "thrown": 0,
+          "sha256": "38ff0ff84ab4a6f7321f3ce0be0b6f567ad453fa3fdcff6003f78e98627c0b5c"
+        },
+        "parseFloat": {
+          "cases": 17,
+          "thrown": 0,
+          "sha256": "e31a9f6053cbc4b862b1b552911905193f61e306b1d0c8273630693476f75452"
+        }
+      }
+    }
+  },
+  "randomCasesPerFunction": 400
+}

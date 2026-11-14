@@ -30,7 +30,7 @@ Tracking file for the Spring Boot migration (plan:
 | Port kit: `gen-catalogues`, report mode | **Done** | `tools/node/gen/gen-catalogues.js` → `generated/catalogues.json`, `generated/CATALOGUE-REPORT.md` |
 | Publish the drift report | **Done**, decisions open | See "Open decisions" below |
 | Port kit: `context-pack` | Not started | Needs the call tracer and the corpus |
-| Golden engine vectors (`tools/node/golden`) | Not started | |
+| Golden engine vectors (`tools/node/golden`) | **Done**, with gaps listed below | `golden/cop-2022-11/`: 19,585 committed cases; the 700,000-case set is rebuilt on demand and its hashes are committed |
 | `twinrun` and the HTTP corpus | Not started | Needs a local MongoDB with seed data |
 | Socket recorder and recordings | Not started | |
 | Call tracer (DI-container proxy) | Not started | |
@@ -50,6 +50,34 @@ Tracking file for the Spring Boot migration (plan:
 - **29** socket events are sent. `edits_restored` is sent but not declared in `event-types.js`; five events are sent as string literals.
 - Auth cookies are per role (`access_token_<role>`, `refresh_token_<role>`), plus `csrf-token`.
 - **11** environment variables are read outside the config manager at 19 sites (the plan counted 17 reads).
+
+## Golden vectors
+
+`tools/node/golden/generate.js` runs the real Node functions and records input and output. The Java engines must give the same output.
+
+| Suite | Functions | Committed cases | Full set |
+|---|---|---|---|
+| scoring | 16 | 3,565 | 100,365 |
+| ranking and tie-break | 14 | 4,890 | 100,098 |
+| team championship | 7 | 1,644 | 100,044 |
+| fees | 10 | 2,851 | 100,053 |
+| panel | 13 | 2,134 | 100,134 |
+| eligibility | 9 | 2,282 | 100,282 |
+| jsnumber (primitives for `JsNumber`) | 7 | 2,219 | 100,219 |
+
+Checked: the committed cases replay exactly against Node; two runs give identical hashes; every tie-break step (time, base score, four-judge average, average with Chief, lucky draw) and all four fee phases are reached.
+
+Differences from 04 §3, and gaps:
+
+| Item | State |
+|---|---|
+| fast-check | Not used. A seeded generator written in the tool is used instead, so committed vectors don't change when a library is upgraded |
+| 100,000 cases per engine committed | Only the hashes are committed (`manifest.full.json`); the files are 403 MB and are rebuilt with `npm run golden:full` in about 30 seconds |
+| Worked examples from `v2-scoring.test.js` and the COP PDF | Not imported yet. The fixed cases were written from the Node code |
+| Lot draw and running order | Not covered. The draw uses `crypto.randomInt`, so it is checked by invariant in the twin-run (04 §2), and the sequence rules sit inside a service |
+| `qualification.util` (finals qualifiers) | Not covered yet |
+| `buildJudgeSlipPlayerScore`, `published-score.util`, `player-row.util` | Not covered yet |
+| Functions that default to "now" (`resolveFeeWindow`, `checkAgeGroup`) | Always called with an explicit time or year, so no vector depends on the day it was generated |
 
 ## Open decisions (lead and owner, before milestone 2a)
 

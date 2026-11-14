@@ -1,0 +1,14 @@
+{"id":"scoring.normalizeApparatus#0","args":["Pole Mallakhamb"],"result":"Pole Mallakhamb"}
+{"id":"scoring.normalizeApparatus#1","args":["Hanging Mallakhamb"],"result":"Hanging Mallakhamb"}
+{"id":"scoring.normalizeApparatus#2","args":["Rope Mallakhamb"],"result":"Rope Mallakhamb"}
+{"id":"scoring.normalizeApparatus#3","args":["pole"],"result":"Pole Mallakhamb"}
+{"id":"scoring.normalizeApparatus#4","args":["ROPE"],"result":"Rope Mallakhamb"}
+{"id":"scoring.normalizeApparatus#5","args":["hanging"],"result":"Hanging Mallakhamb"}
+{"id":"scoring.normalizeApparatus#6","args":["Hang"],"result":"Hanging Mallakhamb"}
+{"id":"scoring.normalizeApparatus#7","args":["rope mallakhamb "],"result":"Rope Mallakhamb"}
+{"id":"scoring.normalizeApparatus#8","args":[""],"result":null}
+{"id":"scoring.normalizeApparatus#9","args":[null],"result":null}
+{"id":"scoring.normalizeApparatus#10","args":[{"$":"undefined"}],"result":null}
+{"id":"scoring.normalizeApparatus#11","args":["Unknown"],"result":null}
+{"id":"scoring.normalizeApparatus#12","args":[7],"result":null}
+{"id":"scoring.normalizeApparatus#13","args":["Pole Rope"],"result":"Pole Mallakhamb"}

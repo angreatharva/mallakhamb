@@ -1,0 +1,14 @@
+{"id":"scoring.toCompetitionTypeDisplay#0","args":["competition_1"],"result":"Competition I"}
+{"id":"scoring.toCompetitionTypeDisplay#1","args":["competition_2"],"result":"Competition II"}
+{"id":"scoring.toCompetitionTypeDisplay#2","args":["competition_3"],"result":"Competition III"}
+{"id":"scoring.toCompetitionTypeDisplay#3","args":["Competition I"],"result":"Competition I"}
+{"id":"scoring.toCompetitionTypeDisplay#4","args":["Competition II"],"result":"Competition II"}
+{"id":"scoring.toCompetitionTypeDisplay#5","args":["Competition III"],"result":"Competition III"}
+{"id":"scoring.toCompetitionTypeDisplay#6","args":["competition i"],"result":"competition i"}
+{"id":"scoring.toCompetitionTypeDisplay#7","args":["Competition 1"],"result":"Competition 1"}
+{"id":"scoring.toCompetitionTypeDisplay#8","args":["COMPETITION_1"],"result":"COMPETITION_1"}
+{"id":"scoring.toCompetitionTypeDisplay#9","args":[""],"result":""}
+{"id":"scoring.toCompetitionTypeDisplay#10","args":[null],"result":null}
+{"id":"scoring.toCompetitionTypeDisplay#11","args":[{"$":"undefined"}],"result":{"$":"undefined"}}
+{"id":"scoring.toCompetitionTypeDisplay#12","args":["competition_4"],"result":"competition_4"}
+{"id":"scoring.toCompetitionTypeDisplay#13","args":["Competition IV"],"result":"Competition IV"}

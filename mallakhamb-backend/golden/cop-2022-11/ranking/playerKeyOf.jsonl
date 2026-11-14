@@ -1,0 +1,6 @@
+{"id":"ranking.playerKeyOf#0","args":[null],"result":""}
+{"id":"ranking.playerKeyOf#1","args":[{}],"result":""}
+{"id":"ranking.playerKeyOf#2","args":[{"playerId":"a"}],"result":"a"}
+{"id":"ranking.playerKeyOf#3","args":[{"playerId":{"_id":"a"}}],"result":"a"}
+{"id":"ranking.playerKeyOf#4","args":[{"playerId":null}],"result":""}
+{"id":"ranking.playerKeyOf#5","args":[{"playerId":7}],"result":"7"}

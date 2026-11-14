@@ -1,0 +1,5 @@
+{"id":"panel.withTimeKeeper#0","args":[{"Scorer":"s@x"}],"result":{"Scorer":"s@x","Time Keeper":"s@x"}}
+{"id":"panel.withTimeKeeper#1","args":[{"Scorer":"s@x","Time Keeper":"t@x"}],"result":{"Scorer":"s@x","Time Keeper":"t@x"}}
+{"id":"panel.withTimeKeeper#2","args":[{"Senior Judge":"a@x"}],"result":{"Senior Judge":"a@x","Time Keeper":{"$":"undefined"}}}
+{"id":"panel.withTimeKeeper#3","args":[null],"result":{"Time Keeper":{"$":"undefined"}}}
+{"id":"panel.withTimeKeeper#4","args":[{"$":"undefined"}],"result":{"Time Keeper":{"$":"undefined"}}}

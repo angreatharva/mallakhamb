@@ -1,0 +1,154 @@
+{"id":"scoring.isApparatusAllowedForGender#0","args":["Pole Mallakhamb","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#1","args":["Pole Mallakhamb","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#2","args":["Pole Mallakhamb","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#3","args":["Pole Mallakhamb","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#4","args":["Pole Mallakhamb","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#5","args":["Pole Mallakhamb","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#6","args":["Pole Mallakhamb","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#7","args":["Pole Mallakhamb",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#8","args":["Pole Mallakhamb",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#9","args":["Pole Mallakhamb",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#10","args":["Pole Mallakhamb","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#11","args":["Hanging Mallakhamb","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#12","args":["Hanging Mallakhamb","Female"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#13","args":["Hanging Mallakhamb","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#14","args":["Hanging Mallakhamb","female"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#15","args":["Hanging Mallakhamb","F"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#16","args":["Hanging Mallakhamb","f"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#17","args":["Hanging Mallakhamb","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#18","args":["Hanging Mallakhamb",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#19","args":["Hanging Mallakhamb",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#20","args":["Hanging Mallakhamb",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#21","args":["Hanging Mallakhamb","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#22","args":["Rope Mallakhamb","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#23","args":["Rope Mallakhamb","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#24","args":["Rope Mallakhamb","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#25","args":["Rope Mallakhamb","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#26","args":["Rope Mallakhamb","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#27","args":["Rope Mallakhamb","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#28","args":["Rope Mallakhamb","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#29","args":["Rope Mallakhamb",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#30","args":["Rope Mallakhamb",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#31","args":["Rope Mallakhamb",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#32","args":["Rope Mallakhamb","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#33","args":["pole","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#34","args":["pole","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#35","args":["pole","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#36","args":["pole","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#37","args":["pole","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#38","args":["pole","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#39","args":["pole","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#40","args":["pole",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#41","args":["pole",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#42","args":["pole",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#43","args":["pole","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#44","args":["ROPE","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#45","args":["ROPE","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#46","args":["ROPE","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#47","args":["ROPE","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#48","args":["ROPE","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#49","args":["ROPE","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#50","args":["ROPE","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#51","args":["ROPE",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#52","args":["ROPE",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#53","args":["ROPE",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#54","args":["ROPE","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#55","args":["hanging","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#56","args":["hanging","Female"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#57","args":["hanging","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#58","args":["hanging","female"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#59","args":["hanging","F"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#60","args":["hanging","f"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#61","args":["hanging","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#62","args":["hanging",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#63","args":["hanging",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#64","args":["hanging",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#65","args":["hanging","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#66","args":["Hang","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#67","args":["Hang","Female"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#68","args":["Hang","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#69","args":["Hang","female"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#70","args":["Hang","F"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#71","args":["Hang","f"],"result":false}
+{"id":"scoring.isApparatusAllowedForGender#72","args":["Hang","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#73","args":["Hang",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#74","args":["Hang",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#75","args":["Hang",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#76","args":["Hang","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#77","args":["rope mallakhamb ","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#78","args":["rope mallakhamb ","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#79","args":["rope mallakhamb ","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#80","args":["rope mallakhamb ","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#81","args":["rope mallakhamb ","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#82","args":["rope mallakhamb ","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#83","args":["rope mallakhamb ","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#84","args":["rope mallakhamb ",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#85","args":["rope mallakhamb ",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#86","args":["rope mallakhamb ",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#87","args":["rope mallakhamb ","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#88","args":["","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#89","args":["","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#90","args":["","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#91","args":["","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#92","args":["","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#93","args":["","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#94","args":["","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#95","args":["",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#96","args":["",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#97","args":["",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#98","args":["","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#99","args":[null,"Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#100","args":[null,"Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#101","args":[null,"male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#102","args":[null,"female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#103","args":[null,"F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#104","args":[null,"f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#105","args":[null,"M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#106","args":[null,""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#107","args":[null,null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#108","args":[null,{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#109","args":[null,"Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#110","args":[{"$":"undefined"},"Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#111","args":[{"$":"undefined"},"Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#112","args":[{"$":"undefined"},"male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#113","args":[{"$":"undefined"},"female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#114","args":[{"$":"undefined"},"F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#115","args":[{"$":"undefined"},"f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#116","args":[{"$":"undefined"},"M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#117","args":[{"$":"undefined"},""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#118","args":[{"$":"undefined"},null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#119","args":[{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#120","args":[{"$":"undefined"},"Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#121","args":["Unknown","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#122","args":["Unknown","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#123","args":["Unknown","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#124","args":["Unknown","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#125","args":["Unknown","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#126","args":["Unknown","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#127","args":["Unknown","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#128","args":["Unknown",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#129","args":["Unknown",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#130","args":["Unknown",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#131","args":["Unknown","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#132","args":[7,"Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#133","args":[7,"Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#134","args":[7,"male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#135","args":[7,"female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#136","args":[7,"F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#137","args":[7,"f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#138","args":[7,"M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#139","args":[7,""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#140","args":[7,null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#141","args":[7,{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#142","args":[7,"Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#143","args":["Pole Rope","Male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#144","args":["Pole Rope","Female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#145","args":["Pole Rope","male"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#146","args":["Pole Rope","female"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#147","args":["Pole Rope","F"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#148","args":["Pole Rope","f"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#149","args":["Pole Rope","M"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#150","args":["Pole Rope",""],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#151","args":["Pole Rope",null],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#152","args":["Pole Rope",{"$":"undefined"}],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#153","args":["Pole Rope","Other"],"result":true}

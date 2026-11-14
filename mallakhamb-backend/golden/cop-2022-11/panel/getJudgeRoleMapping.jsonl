@@ -1,0 +1,13 @@
+{"id":"panel.getJudgeRoleMapping#0","args":["Senior Judge"],"result":{"field":"seniorJudge","role":"SR_JUDGE"}}
+{"id":"panel.getJudgeRoleMapping#1","args":["Judge 1"],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#2","args":["Judge 2"],"result":{"field":"judge2","role":"J2"}}
+{"id":"panel.getJudgeRoleMapping#3","args":["Judge 3"],"result":{"field":"judge3","role":"J3"}}
+{"id":"panel.getJudgeRoleMapping#4","args":["Judge 4"],"result":{"field":"judge4","role":"J4"}}
+{"id":"panel.getJudgeRoleMapping#5","args":["Scorer"],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#6","args":["Time Keeper"],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#7","args":["Judge 5"],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#8","args":["Chief"],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#9","args":[""],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#10","args":[null],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#11","args":[{"$":"undefined"}],"result":{"field":"judge1","role":"J1"}}
+{"id":"panel.getJudgeRoleMapping#12","args":["senior judge"],"result":{"field":"judge1","role":"J1"}}

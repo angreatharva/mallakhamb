@@ -1,0 +1,10 @@
+{"id":"fees.isDiscountCodeValid#0","args":["MEET100",{"enabled":true,"code":"MEET100"}],"result":true}
+{"id":"fees.isDiscountCodeValid#1","args":["meet100",{"enabled":true,"code":"MEET100"}],"result":false}
+{"id":"fees.isDiscountCodeValid#2","args":["MEET100 ",{"enabled":true,"code":"MEET100"}],"result":false}
+{"id":"fees.isDiscountCodeValid#3","args":["",{"enabled":true,"code":"MEET100"}],"result":false}
+{"id":"fees.isDiscountCodeValid#4","args":[null,{"enabled":true,"code":"MEET100"}],"result":false}
+{"id":"fees.isDiscountCodeValid#5","args":["MEET100",{"enabled":false,"code":"MEET100"}],"result":false}
+{"id":"fees.isDiscountCodeValid#6","args":["MEET100",{"enabled":"true","code":"MEET100"}],"result":false}
+{"id":"fees.isDiscountCodeValid#7","args":["MEET100",{"enabled":true,"code":""}],"result":false}
+{"id":"fees.isDiscountCodeValid#8","args":["MEET100",null],"result":false}
+{"id":"fees.isDiscountCodeValid#9","args":[100,{"enabled":true,"code":100}],"result":true}

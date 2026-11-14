@@ -1,0 +1,22 @@
+{"id":"jsnumber.toNumber#0","args":[""],"result":0}
+{"id":"jsnumber.toNumber#1","args":[" "],"result":0}
+{"id":"jsnumber.toNumber#2","args":["8.5"],"result":8.5}
+{"id":"jsnumber.toNumber#3","args":[" 8.5 "],"result":8.5}
+{"id":"jsnumber.toNumber#4","args":["08"],"result":8}
+{"id":"jsnumber.toNumber#5","args":["1e2"],"result":100}
+{"id":"jsnumber.toNumber#6","args":["0x10"],"result":16}
+{"id":"jsnumber.toNumber#7","args":[".5"],"result":0.5}
+{"id":"jsnumber.toNumber#8","args":["5."],"result":5}
+{"id":"jsnumber.toNumber#9","args":["-0"],"result":{"$":"-0"}}
+{"id":"jsnumber.toNumber#10","args":["+3"],"result":3}
+{"id":"jsnumber.toNumber#11","args":["1,5"],"result":{"$":"NaN"}}
+{"id":"jsnumber.toNumber#12","args":["abc"],"result":{"$":"NaN"}}
+{"id":"jsnumber.toNumber#13","args":["8.5abc"],"result":{"$":"NaN"}}
+{"id":"jsnumber.toNumber#14","args":["Infinity"],"result":{"$":"Infinity"}}
+{"id":"jsnumber.toNumber#15","args":[null],"result":0}
+{"id":"jsnumber.toNumber#16","args":[{"$":"undefined"}],"result":{"$":"NaN"}}
+{"id":"jsnumber.toNumber#17","args":[true],"result":1}
+{"id":"jsnumber.toNumber#18","args":[false],"result":0}
+{"id":"jsnumber.toNumber#19","args":[[]],"result":0}
+{"id":"jsnumber.toNumber#20","args":[[7]],"result":7}
+{"id":"jsnumber.toNumber#21","args":[{}],"result":{"$":"NaN"}}

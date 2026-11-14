@@ -1,0 +1,14 @@
+{"id":"scoring.toCompetitionTypeSlug#0","args":["competition_1"],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#1","args":["competition_2"],"result":"competition_2"}
+{"id":"scoring.toCompetitionTypeSlug#2","args":["competition_3"],"result":"competition_3"}
+{"id":"scoring.toCompetitionTypeSlug#3","args":["Competition I"],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#4","args":["Competition II"],"result":"competition_2"}
+{"id":"scoring.toCompetitionTypeSlug#5","args":["Competition III"],"result":"competition_3"}
+{"id":"scoring.toCompetitionTypeSlug#6","args":["competition i"],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#7","args":["Competition 1"],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#8","args":["COMPETITION_1"],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#9","args":[""],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#10","args":[null],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#11","args":[{"$":"undefined"}],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#12","args":["competition_4"],"result":"competition_1"}
+{"id":"scoring.toCompetitionTypeSlug#13","args":["Competition IV"],"result":"competition_1"}

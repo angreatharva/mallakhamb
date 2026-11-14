@@ -1,0 +1,11 @@
+{"id":"team.isValidTeamSize#0","args":[4],"result":true}
+{"id":"team.isValidTeamSize#1","args":[6],"result":true}
+{"id":"team.isValidTeamSize#2","args":[4],"result":true}
+{"id":"team.isValidTeamSize#3","args":[6],"result":true}
+{"id":"team.isValidTeamSize#4","args":["4"],"result":true}
+{"id":"team.isValidTeamSize#5","args":["6"],"result":true}
+{"id":"team.isValidTeamSize#6","args":[{"$":"undefined"}],"result":false}
+{"id":"team.isValidTeamSize#7","args":[null],"result":false}
+{"id":"team.isValidTeamSize#8","args":[5],"result":false}
+{"id":"team.isValidTeamSize#9","args":[0],"result":false}
+{"id":"team.isValidTeamSize#10","args":["six"],"result":false}

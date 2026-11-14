@@ -1,0 +1,9 @@
+{"id":"eligibility.ageCutoffYear#0","args":[{"startDate":"2026-12-12"}],"result":2026}
+{"id":"eligibility.ageCutoffYear#1","args":[{"startDate":"2026-12-31T23:59:59.999Z"}],"result":2026}
+{"id":"eligibility.ageCutoffYear#2","args":[{"startDate":"2027-01-01T00:00:00.000Z"}],"result":2027}
+{"id":"eligibility.ageCutoffYear#3","args":[{"startDate":{"$date":"2026-06-01T00:00:00.000Z"}}],"result":2026}
+{"id":"eligibility.ageCutoffYear#4","args":[{"startDate":"not a date"}],"result":null}
+{"id":"eligibility.ageCutoffYear#5","args":[{"startDate":null}],"result":null}
+{"id":"eligibility.ageCutoffYear#6","args":[{}],"result":null}
+{"id":"eligibility.ageCutoffYear#7","args":[null],"result":null}
+{"id":"eligibility.ageCutoffYear#8","args":[{"$":"undefined"}],"result":null}

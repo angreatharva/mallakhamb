@@ -1,0 +1,404 @@
+{"id":"ranking.seniorScoreOf#0","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#1","args":[{"seniorJudgeScore":8}],"result":8}
+{"id":"ranking.seniorScoreOf#2","args":[{"chiefScore":7}],"result":7}
+{"id":"ranking.seniorScoreOf#3","args":[{"judgeScores":{"seniorJudge":"9"},"chiefScore":7}],"result":7}
+{"id":"ranking.seniorScoreOf#4","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#5","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.825,"judgeScores":{"seniorJudge":9.3,"judge1":8.1,"judge2":8.75,"judge3":9.5,"judge4":9.75},"time":" 1:05 "}],"result":9.3}
+{"id":"ranking.seniorScoreOf#6","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.08,"judgeScores":{"seniorJudge":8.95,"judge1":8.35,"judge2":7.25,"judge3":9.3},"time":"","panelSize":4}],"result":8.95}
+{"id":"ranking.seniorScoreOf#7","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#8","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.8,"judgeScores":{"seniorJudge":7.85,"judge1":8.7,"judge2":8.75,"judge3":7.95},"time":" 1:05 "}],"result":7.85}
+{"id":"ranking.seniorScoreOf#9","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.3,"judgeScores":{"seniorJudge":8.65,"judge1":8.45,"judge2":8.65,"judge3":8.65,"judge4":8.85},"time":"65","panelSize":5}],"result":8.65}
+{"id":"ranking.seniorScoreOf#10","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.04,"judgeScores":{"seniorJudge":7.55,"judge1":9.7,"judge2":8.75,"judge3":7.75},"time":"1:","panelSize":4}],"result":7.55}
+{"id":"ranking.seniorScoreOf#11","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.005,"judgeScores":{"seniorJudge":9.45,"judge1":7.8,"judge2":8.1,"judge3":8.8,"judge4":9.1},"time":"01:05","panelSize":5}],"result":9.45}
+{"id":"ranking.seniorScoreOf#12","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.435,"judgeScores":{"seniorJudge":7.6,"judge1":8.75,"judge2":8.55},"time":null,"panelSize":3}],"result":7.6}
+{"id":"ranking.seniorScoreOf#13","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.41,"judgeScores":{"seniorJudge":8.8,"judge1":8.7,"judge2":8.55,"judge3":9.6,"judge4":9.45},"time":"1:2:3:4","panelSize":5}],"result":8.8}
+{"id":"ranking.seniorScoreOf#14","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#15","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.485,"judgeScores":{"seniorJudge":7.05,"judge1":8.25,"judge2":8.75},"time":"70","panelSize":3}],"result":7.05}
+{"id":"ranking.seniorScoreOf#16","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.335,"judgeScores":{"seniorJudge":8.2,"judge1":7.7,"judge2":8,"judge3":8,"judge4":8.7},"time":"1:2:3:4","panelSize":5}],"result":8.2}
+{"id":"ranking.seniorScoreOf#17","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#18","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.565,"judgeScores":{"seniorJudge":8.85,"judge1":8.5,"judge2":8.15},"time":"70","panelSize":3}],"result":8.85}
+{"id":"ranking.seniorScoreOf#19","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":8.59,"judgeScores":{"seniorJudge":7.25,"judge1":0,"judge2":7.3,"judge3":7.7},"time":"1:xx","panelSize":4}],"result":7.25}
+{"id":"ranking.seniorScoreOf#20","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.19,"judgeScores":{"seniorJudge":8.65,"judge1":8.15,"judge2":9.75},"time":null,"panelSize":3}],"result":8.65}
+{"id":"ranking.seniorScoreOf#21","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.715,"judgeScores":{"seniorJudge":8,"judge1":8.8,"judge2":8.25,"judge3":7.5,"judge4":7.85},"time":"01:05","panelSize":5}],"result":8}
+{"id":"ranking.seniorScoreOf#22","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.745,"judgeScores":{"seniorJudge":9.1,"judge1":8.1,"judge2":9.25},"time":"1:02:03","panelSize":3}],"result":9.1}
+{"id":"ranking.seniorScoreOf#23","args":[{"playerName":"Player 1","finalScore":9.14,"judgeScores":{"seniorJudge":7.9,"judge1":9.4,"judge2":8.45},"time":"1:","panelSize":3}],"result":7.9}
+{"id":"ranking.seniorScoreOf#24","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.91,"judgeScores":{"seniorJudge":9.7,"judge1":8.5,"judge2":8.5},"time":""}],"result":9.7}
+{"id":"ranking.seniorScoreOf#25","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.685,"judgeScores":{"seniorJudge":9.05,"judge1":8.6,"judge2":8.15,"judge3":7.7,"judge4":7.9},"time":"","panelSize":5}],"result":9.05}
+{"id":"ranking.seniorScoreOf#26","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.72,"judgeScores":{"seniorJudge":9.3,"judge1":9.1,"judge2":9.5,"judge3":9.8},"time":"1:2:3:4","panelSize":4}],"result":9.3}
+{"id":"ranking.seniorScoreOf#27","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.815,"judgeScores":{"seniorJudge":9.55,"judge1":0,"judge2":8.85,"judge3":9.4,"judge4":7.9},"time":"1:2:3:4","panelSize":5}],"result":9.55}
+{"id":"ranking.seniorScoreOf#28","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.825,"judgeScores":{"seniorJudge":9.5,"judge1":9.8,"judge2":7.7,"judge3":8.75},"time":"1:xx","panelSize":4}],"result":9.5}
+{"id":"ranking.seniorScoreOf#29","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":9.645,"judgeScores":{"seniorJudge":9,"judge1":9.6,"judge2":7.05,"judge3":9.4},"time":" 1:05 ","panelSize":4}],"result":9}
+{"id":"ranking.seniorScoreOf#30","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.495,"judgeScores":{"seniorJudge":8.5,"judge1":8.3,"judge2":8.5,"judge3":8.5,"judge4":8.7},"time":{"$":"undefined"},"panelSize":5}],"result":8.5}
+{"id":"ranking.seniorScoreOf#31","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":8.27,"judgeScores":{"seniorJudge":9.15,"judge1":8.65,"judge2":8.95,"judge3":8.95,"judge4":9.65},"time":65,"panelSize":5}],"result":9.15}
+{"id":"ranking.seniorScoreOf#32","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.03,"judgeScores":{"seniorJudge":8.75,"judge1":8.55,"judge2":8.75,"judge3":8.75,"judge4":8.95},"time":"1:05"}],"result":8.75}
+{"id":"ranking.seniorScoreOf#33","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.52,"judgeScores":{"seniorJudge":8.5,"judge1":9.45,"judge2":7.85},"time":"1:","panelSize":3}],"result":8.5}
+{"id":"ranking.seniorScoreOf#34","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#35","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.3,"judgeScores":{"seniorJudge":8.9,"judge1":8.3,"judge2":8.85,"judge3":9.2},"time":"1:","panelSize":4}],"result":8.9}
+{"id":"ranking.seniorScoreOf#36","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.175,"judgeScores":{"seniorJudge":8.55,"judge1":9.75,"judge2":7.05},"time":70.5,"panelSize":3}],"result":8.55}
+{"id":"ranking.seniorScoreOf#37","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#38","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.31,"judgeScores":{"seniorJudge":7.55,"judge1":7.6,"judge2":8.05,"judge3":8.35,"judge4":8.9},"time":"1:xx","panelSize":5}],"result":7.55}
+{"id":"ranking.seniorScoreOf#39","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.935,"judgeScores":{"seniorJudge":8.45,"judge1":8.25,"judge2":8.45,"judge3":8.65},"time":65,"panelSize":4}],"result":8.45}
+{"id":"ranking.seniorScoreOf#40","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.415,"judgeScores":{"seniorJudge":7.7,"judge1":7.85,"judge2":8.45,"judge3":8.75},"time":"1:10","panelSize":4}],"result":7.7}
+{"id":"ranking.seniorScoreOf#41","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.115,"judgeScores":{"seniorJudge":8.4,"judge1":8,"judge2":8,"judge3":8.8},"time":"1:2:3:4","panelSize":4}],"result":8.4}
+{"id":"ranking.seniorScoreOf#42","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#43","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.515,"judgeScores":{"seniorJudge":9.5,"judge1":7.8,"judge2":8.8,"judge3":7.15},"time":70.5,"panelSize":4}],"result":9.5}
+{"id":"ranking.seniorScoreOf#44","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.125,"judgeScores":{"seniorJudge":8.9,"judge1":8.7,"judge2":8.9,"judge3":8.9,"judge4":9.1},"time":{"$":"undefined"},"panelSize":5}],"result":8.9}
+{"id":"ranking.seniorScoreOf#45","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.665,"judgeScores":{"seniorJudge":8.95,"judge1":7.75,"judge2":8.7,"judge3":8.45,"judge4":8.75},"time":"65","panelSize":5}],"result":8.95}
+{"id":"ranking.seniorScoreOf#46","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.175,"judgeScores":{"seniorJudge":7.85,"judge1":8.2,"judge2":9.05,"judge3":9.3,"judge4":9.65},"time":"65","panelSize":5}],"result":7.85}
+{"id":"ranking.seniorScoreOf#47","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.21,"judgeScores":{"seniorJudge":9.35,"judge1":0,"judge2":8.55},"time":"01:05","panelSize":3}],"result":9.35}
+{"id":"ranking.seniorScoreOf#48","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.8,"judgeScores":{"seniorJudge":8.75,"judge1":8.35,"judge2":8.35,"judge3":9.15},"time":"","panelSize":4}],"result":8.75}
+{"id":"ranking.seniorScoreOf#49","args":[{"playerName":"Player 1","finalScore":8.145,"judgeScores":{"seniorJudge":7.45,"judge1":9.75,"judge2":7.5,"judge3":7.8},"time":"abc"}],"result":7.45}
+{"id":"ranking.seniorScoreOf#50","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.745,"judgeScores":{"seniorJudge":8.3,"judge1":7.9,"judge2":7.9,"judge3":8.7},"time":" 1:05 ","panelSize":4}],"result":8.3}
+{"id":"ranking.seniorScoreOf#51","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.37,"judgeScores":{"seniorJudge":9.4,"judge1":7.15,"judge2":7.1},"time":"1:05","panelSize":3}],"result":9.4}
+{"id":"ranking.seniorScoreOf#52","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.4,"judgeScores":{"seniorJudge":8.75,"judge1":7.9,"judge2":9.75,"judge3":8.65},"time":" 1:05 ","panelSize":4}],"result":8.75}
+{"id":"ranking.seniorScoreOf#53","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.74,"judgeScores":{"seniorJudge":8.9,"judge1":8.5,"judge2":8.05},"time":70.5,"panelSize":3}],"result":8.9}
+{"id":"ranking.seniorScoreOf#54","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.945,"judgeScores":{"seniorJudge":8.1,"judge1":7.9,"judge2":8.1,"judge3":8.1,"judge4":8.3},"time":"0:59","panelSize":5}],"result":8.1}
+{"id":"ranking.seniorScoreOf#55","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.39,"time":"65","panelSize":5}],"result":0}
+{"id":"ranking.seniorScoreOf#56","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.69,"judgeScores":{"seniorJudge":8.25,"judge1":6.9,"judge2":9.05,"judge3":9.3},"time":"1:2:3:4","panelSize":4}],"result":8.25}
+{"id":"ranking.seniorScoreOf#57","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.76,"judgeScores":{"seniorJudge":7.5,"judge1":9.8,"judge2":9.05,"judge3":9.7},"time":"0:59","panelSize":4}],"result":7.5}
+{"id":"ranking.seniorScoreOf#58","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.8,"judgeScores":{"seniorJudge":8.65,"judge1":8.45,"judge2":8.65,"judge3":8.65,"judge4":8.85},"time":"01:05","panelSize":5}],"result":8.65}
+{"id":"ranking.seniorScoreOf#59","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.08,"judgeScores":{"seniorJudge":9.1,"judge1":7.25,"judge2":7.1},"time":"abc","panelSize":3}],"result":9.1}
+{"id":"ranking.seniorScoreOf#60","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.325,"judgeScores":{"seniorJudge":7.2,"judge1":8.85,"judge2":8.2},"time":{"$":"undefined"},"panelSize":3}],"result":7.2}
+{"id":"ranking.seniorScoreOf#61","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.71,"judgeScores":{"seniorJudge":9.65,"judge1":8.75,"judge2":7.65,"judge3":7.6,"judge4":9.65},"time":"70"}],"result":9.65}
+{"id":"ranking.seniorScoreOf#62","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.7,"judgeScores":{"seniorJudge":8.85,"judge1":8.65,"judge2":8.85,"judge3":8.85,"judge4":9.05},"time":"70","panelSize":5}],"result":8.85}
+{"id":"ranking.seniorScoreOf#63","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.525,"judgeScores":{"seniorJudge":9.25,"judge1":7.15,"judge2":8.25},"time":"01:05","panelSize":3}],"result":9.25}
+{"id":"ranking.seniorScoreOf#64","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.605,"judgeScores":{"seniorJudge":9.35,"judge1":8.4,"judge2":8.25},"time":"70","panelSize":3}],"result":9.35}
+{"id":"ranking.seniorScoreOf#65","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":7.725,"judgeScores":{"seniorJudge":7.35,"judge1":9.2,"judge2":7.5,"judge3":9.05},"time":"1:02:03"}],"result":7.35}
+{"id":"ranking.seniorScoreOf#66","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.51,"judgeScores":{"seniorJudge":7.85,"judge1":7.85,"judge2":8.35,"judge3":8.1},"time":{"$":"undefined"},"panelSize":4}],"result":7.85}
+{"id":"ranking.seniorScoreOf#67","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.095,"judgeScores":{"seniorJudge":9.5,"judge1":7.4,"judge2":8.25},"time":"01:05","panelSize":3}],"result":9.5}
+{"id":"ranking.seniorScoreOf#68","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.565,"judgeScores":{"seniorJudge":9.2,"judge1":8.7,"judge2":9,"judge3":9,"judge4":9.7},"time":null,"panelSize":5}],"result":9.2}
+{"id":"ranking.seniorScoreOf#69","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":8.83,"judgeScores":{"seniorJudge":9.2,"judge1":9,"judge2":8.7},"time":null,"panelSize":3}],"result":9.2}
+{"id":"ranking.seniorScoreOf#70","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.62,"judgeScores":{"seniorJudge":9.65,"judge1":8.3,"judge2":8.2},"time":"70","panelSize":3}],"result":9.65}
+{"id":"ranking.seniorScoreOf#71","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.17,"judgeScores":{"seniorJudge":7.8,"judge1":8.9,"judge2":7.4},"time":"65","panelSize":3}],"result":7.8}
+{"id":"ranking.seniorScoreOf#72","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.73,"judgeScores":{"seniorJudge":8.95,"judge1":0,"judge2":8.75,"judge3":8.75,"judge4":9.45},"time":"1:10","panelSize":5}],"result":8.95}
+{"id":"ranking.seniorScoreOf#73","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.295,"judgeScores":{"seniorJudge":9.2,"judge1":8.8,"judge2":8.8,"judge3":9.6},"time":"","panelSize":4}],"result":9.2}
+{"id":"ranking.seniorScoreOf#74","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.68,"judgeScores":{"seniorJudge":7.85,"judge1":8.65,"judge2":7.15,"judge3":9.8,"judge4":9.5},"time":"1:","panelSize":5}],"result":7.85}
+{"id":"ranking.seniorScoreOf#75","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.29,"judgeScores":{"seniorJudge":8.85,"judge1":9.65,"judge2":8.05,"judge3":9.1},"time":" 1:05 "}],"result":8.85}
+{"id":"ranking.seniorScoreOf#76","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.965,"judgeScores":{"seniorJudge":7.8,"judge1":7.15,"judge2":7.25,"judge3":7.45},"time":"","panelSize":4}],"result":7.8}
+{"id":"ranking.seniorScoreOf#77","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.525,"judgeScores":{"seniorJudge":9.65,"judge1":9.8,"judge2":8.9},"time":"1:","panelSize":3}],"result":9.65}
+{"id":"ranking.seniorScoreOf#78","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.34,"judgeScores":{"seniorJudge":7.55,"judge1":0,"judge2":7.65},"time":65,"panelSize":3}],"result":7.55}
+{"id":"ranking.seniorScoreOf#79","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.695,"judgeScores":{"seniorJudge":8.5,"judge1":7.05,"judge2":9.35},"time":"65","panelSize":3}],"result":8.5}
+{"id":"ranking.seniorScoreOf#80","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.665,"judgeScores":{"seniorJudge":7.95,"judge1":7.9,"judge2":9.2},"time":"1:xx","panelSize":3}],"result":7.95}
+{"id":"ranking.seniorScoreOf#81","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.93,"judgeScores":{"seniorJudge":7.55,"judge1":8.8,"judge2":8.3,"judge3":9.75,"judge4":9.45},"time":"65","panelSize":5}],"result":7.55}
+{"id":"ranking.seniorScoreOf#82","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.67,"judgeScores":{"seniorJudge":8.35,"judge1":7.3,"judge2":7.6},"time":"1:","panelSize":3}],"result":8.35}
+{"id":"ranking.seniorScoreOf#83","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.74,"judgeScores":{"seniorJudge":8.15,"judge1":7.95,"judge2":8.15,"judge3":8.15,"judge4":8.35},"time":65,"panelSize":5}],"result":8.15}
+{"id":"ranking.seniorScoreOf#84","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.105,"judgeScores":{"seniorJudge":9,"judge1":9.7,"judge2":7.65,"judge3":8.9},"time":"1:xx"}],"result":9}
+{"id":"ranking.seniorScoreOf#85","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.52,"judgeScores":{"seniorJudge":8.55,"judge1":9.5,"judge2":7.8,"judge3":9.05},"time":"","panelSize":4}],"result":8.55}
+{"id":"ranking.seniorScoreOf#86","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.1,"judgeScores":{"seniorJudge":8.8,"judge1":8.4,"judge2":8.4,"judge3":9.2},"time":"01:05","panelSize":4}],"result":8.8}
+{"id":"ranking.seniorScoreOf#87","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.59,"judgeScores":{"seniorJudge":8.05,"judge1":8.9,"judge2":7.35,"judge3":7.2,"judge4":7.45},"time":65,"panelSize":5}],"result":8.05}
+{"id":"ranking.seniorScoreOf#88","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#89","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.055,"judgeScores":{"seniorJudge":8.05,"judge1":7.8,"judge2":7.45},"time":"65","panelSize":3}],"result":8.05}
+{"id":"ranking.seniorScoreOf#90","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.385,"judgeScores":{"seniorJudge":8.35,"judge1":9.7,"judge2":9.2},"time":"01:05","panelSize":3}],"result":8.35}
+{"id":"ranking.seniorScoreOf#91","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.74,"judgeScores":{"seniorJudge":9.8,"judge1":8.4,"judge2":8.1,"judge3":9.15},"time":"0:59","panelSize":4}],"result":9.8}
+{"id":"ranking.seniorScoreOf#92","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.055,"judgeScores":{"seniorJudge":8.8,"judge1":8.4,"judge2":8.4,"judge3":9.2},"time":"1:2:3:4","panelSize":4}],"result":8.8}
+{"id":"ranking.seniorScoreOf#93","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.535,"judgeScores":{"seniorJudge":9.25,"judge1":7.5,"judge2":8.15,"judge3":8.55},"time":"abc","panelSize":4}],"result":9.25}
+{"id":"ranking.seniorScoreOf#94","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.965,"judgeScores":{"seniorJudge":8.7,"judge1":8.5,"judge2":8.7,"judge3":8.7,"judge4":8.9},"time":"65","panelSize":5}],"result":8.7}
+{"id":"ranking.seniorScoreOf#95","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.875,"judgeScores":{"seniorJudge":8.65,"judge1":8.95,"judge2":8.7},"time":"0:59","panelSize":3}],"result":8.65}
+{"id":"ranking.seniorScoreOf#96","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.24,"judgeScores":{"seniorJudge":8.75,"judge1":8.35,"judge2":8.35,"judge3":9.15},"time":"1:10","panelSize":4}],"result":8.75}
+{"id":"ranking.seniorScoreOf#97","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.64,"judgeScores":{"seniorJudge":8,"judge1":8.85,"judge2":9.1},"time":"65"}],"result":8}
+{"id":"ranking.seniorScoreOf#98","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#99","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.765,"judgeScores":{"seniorJudge":8.35,"judge1":7.95,"judge2":7.95,"judge3":8.75},"time":"65","panelSize":4}],"result":8.35}
+{"id":"ranking.seniorScoreOf#100","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":8.365,"judgeScores":{"seniorJudge":8.35,"judge1":8.85,"judge2":9.45,"judge3":8.05,"judge4":7.5},"time":"01:05","panelSize":5}],"result":8.35}
+{"id":"ranking.seniorScoreOf#101","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.705,"judgeScores":{"seniorJudge":8.1,"judge1":7.3,"judge2":8.55,"judge3":7.95},"time":{"$":"undefined"}}],"result":8.1}
+{"id":"ranking.seniorScoreOf#102","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.245,"judgeScores":{"seniorJudge":8.8,"judge1":7.4,"judge2":8.9},"time":"1:2:3:4","panelSize":3}],"result":8.8}
+{"id":"ranking.seniorScoreOf#103","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.745,"judgeScores":{"seniorJudge":9.25,"judge1":8.95,"judge2":8.25},"time":65,"panelSize":3}],"result":9.25}
+{"id":"ranking.seniorScoreOf#104","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.205,"judgeScores":{"seniorJudge":9,"judge1":7.45,"judge2":8},"time":"1:xx","panelSize":3}],"result":9}
+{"id":"ranking.seniorScoreOf#105","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.08,"judgeScores":{"seniorJudge":7.15,"judge1":8.5,"judge2":9.1,"judge3":9.6},"time":"1:05"}],"result":7.15}
+{"id":"ranking.seniorScoreOf#106","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.365,"judgeScores":{"seniorJudge":8.65,"judge1":8.45,"judge2":8.65,"judge3":8.85},"time":"abc"}],"result":8.65}
+{"id":"ranking.seniorScoreOf#107","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#108","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.345,"judgeScores":{"seniorJudge":8.55,"judge1":9.1,"judge2":7.45,"judge3":7.8},"time":{"$":"undefined"},"panelSize":4}],"result":8.55}
+{"id":"ranking.seniorScoreOf#109","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.07,"judgeScores":{"seniorJudge":9.7,"judge1":7.35,"judge2":7.75,"judge3":7.8},"time":70.5,"panelSize":4}],"result":9.7}
+{"id":"ranking.seniorScoreOf#110","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.93,"judgeScores":{"seniorJudge":7.1,"judge1":7.65,"judge2":7.25,"judge3":9.3,"judge4":9.1},"time":"70","panelSize":5}],"result":7.1}
+{"id":"ranking.seniorScoreOf#111","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.36,"judgeScores":{"seniorJudge":7.35,"judge1":9.15,"judge2":8.65},"time":"1:xx","panelSize":3}],"result":7.35}
+{"id":"ranking.seniorScoreOf#112","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.06,"judgeScores":{"seniorJudge":8.75,"judge1":8.35,"judge2":8.35,"judge3":9.15},"time":"01:05","panelSize":4}],"result":8.75}
+{"id":"ranking.seniorScoreOf#113","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.38,"judgeScores":{"seniorJudge":7.8,"judge1":7.1,"judge2":7.85,"judge3":8.65},"time":"1:"}],"result":7.8}
+{"id":"ranking.seniorScoreOf#114","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.16,"judgeScores":{"seniorJudge":7.3,"judge1":7.05,"judge2":7.4,"judge3":9.4,"judge4":9.6},"time":"abc","panelSize":5}],"result":7.3}
+{"id":"ranking.seniorScoreOf#115","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.44,"judgeScores":{"seniorJudge":9.7,"judge1":9.55,"judge2":8.55},"time":"abc","panelSize":3}],"result":9.7}
+{"id":"ranking.seniorScoreOf#116","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.865,"judgeScores":{"seniorJudge":8.6,"judge1":8.45,"judge2":7.3},"time":"abc","panelSize":3}],"result":8.6}
+{"id":"ranking.seniorScoreOf#117","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8,"judgeScores":{"seniorJudge":7.65,"judge1":7.3,"judge2":8.4,"judge3":9.2},"time":"0:59","panelSize":4}],"result":7.65}
+{"id":"ranking.seniorScoreOf#118","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"undefined"},"judgeScores":{"seniorJudge":8.85,"judge1":8.65,"judge2":8.85,"judge3":8.85,"judge4":9.05},"time":"01:05"}],"result":8.85}
+{"id":"ranking.seniorScoreOf#119","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.02,"judgeScores":{"seniorJudge":9.1,"judge1":9.65,"judge2":8.3},"time":"1:2:3:4","panelSize":3}],"result":9.1}
+{"id":"ranking.seniorScoreOf#120","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#121","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.49,"judgeScores":{"seniorJudge":8.3,"judge1":8.1,"judge2":8.3,"judge3":8.3,"judge4":8.5},"time":"1:xx","panelSize":5}],"result":8.3}
+{"id":"ranking.seniorScoreOf#122","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.435,"judgeScores":{"seniorJudge":8.4,"judge1":8.5,"judge2":9.35,"judge3":7.2,"judge4":7.2},"time":"1:","panelSize":5}],"result":8.4}
+{"id":"ranking.seniorScoreOf#123","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.165,"judgeScores":{"seniorJudge":8.9,"judge1":8.4,"judge2":8.7,"judge3":8.7,"judge4":9.4},"time":{"$":"undefined"},"panelSize":5}],"result":8.9}
+{"id":"ranking.seniorScoreOf#124","args":[{"playerId":"p01","playerName":"Player 1","finalScore":null,"judgeScores":{"seniorJudge":8.65,"judge1":8.45,"judge2":8.65,"judge3":8.85},"time":{"$":"undefined"},"panelSize":4}],"result":8.65}
+{"id":"ranking.seniorScoreOf#125","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.485,"judgeScores":{"seniorJudge":8.8,"judge1":9.5,"judge2":7},"time":{"$":"undefined"},"panelSize":3}],"result":8.8}
+{"id":"ranking.seniorScoreOf#126","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.83,"judgeScores":{"seniorJudge":7.7,"judge1":7.9,"judge2":9.7},"time":"","panelSize":3}],"result":7.7}
+{"id":"ranking.seniorScoreOf#127","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.275,"judgeScores":{"seniorJudge":8.4,"judge1":8.2,"judge2":8.4,"judge3":8.4,"judge4":8.6},"time":"1:10","panelSize":5}],"result":8.4}
+{"id":"ranking.seniorScoreOf#128","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.705,"judgeScores":{"seniorJudge":7.4,"judge1":9.05,"judge2":9.3,"judge3":7.25},"time":null,"panelSize":4}],"result":7.4}
+{"id":"ranking.seniorScoreOf#129","args":[{"playerName":"Player 1","finalScore":9.04,"judgeScores":{"seniorJudge":8.9,"judge1":9.75,"judge2":8.3,"judge3":7.25,"judge4":8.5},"time":"70","panelSize":5}],"result":8.9}
+{"id":"ranking.seniorScoreOf#130","args":[{"playerId":"p01","playerName":"Player 1","finalScore":null,"judgeScores":{"seniorJudge":9.65,"judge1":9,"judge2":9},"time":"01:05","panelSize":3}],"result":9.65}
+{"id":"ranking.seniorScoreOf#131","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#132","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.19,"judgeScores":{"seniorJudge":7.6,"judge1":6.95,"judge2":7.95,"judge3":9.5},"time":65,"panelSize":4}],"result":7.6}
+{"id":"ranking.seniorScoreOf#133","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#134","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.065,"judgeScores":{"seniorJudge":9.1,"judge1":8.9,"judge2":9.1,"judge3":9.3},"time":{"$":"undefined"},"panelSize":4}],"result":9.1}
+{"id":"ranking.seniorScoreOf#135","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.295,"judgeScores":{"seniorJudge":8.5,"judge1":9.1,"judge2":9.4},"time":null,"panelSize":3}],"result":8.5}
+{"id":"ranking.seniorScoreOf#136","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.12,"judgeScores":{"seniorJudge":7.15,"judge1":9.55,"judge2":8.6},"time":""}],"result":7.15}
+{"id":"ranking.seniorScoreOf#137","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.47,"judgeScores":{"seniorJudge":9.6,"judge1":8.1,"judge2":8.9},"time":"1:2:3:4","panelSize":3}],"result":9.6}
+{"id":"ranking.seniorScoreOf#138","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.435,"judgeScores":{"seniorJudge":9.5,"judge1":7.95,"judge2":8.75},"time":{"$":"undefined"},"panelSize":3}],"result":9.5}
+{"id":"ranking.seniorScoreOf#139","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.38,"judgeScores":{"seniorJudge":8.3,"judge1":9,"judge2":7.75},"time":"1:2:3:4","panelSize":3}],"result":8.3}
+{"id":"ranking.seniorScoreOf#140","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#141","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.01,"judgeScores":{"seniorJudge":9.2,"judge1":9.25,"judge2":9.75},"time":70.5,"panelSize":3}],"result":9.2}
+{"id":"ranking.seniorScoreOf#142","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.45,"judgeScores":{"seniorJudge":9.15,"judge1":8.75,"judge2":8.75,"judge3":9.55},"time":"65","panelSize":4}],"result":9.15}
+{"id":"ranking.seniorScoreOf#143","args":[{"playerName":"Player 1","finalScore":8.935,"judgeScores":{"seniorJudge":8,"judge1":7.4,"judge2":8.45},"time":"01:05","panelSize":3}],"result":8}
+{"id":"ranking.seniorScoreOf#144","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.79,"judgeScores":{"seniorJudge":7.45,"judge1":8.65,"judge2":7.9},"time":"1:","panelSize":3}],"result":7.45}
+{"id":"ranking.seniorScoreOf#145","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7,"judgeScores":{"seniorJudge":9.55,"judge1":9.55,"judge2":7.4},"time":"65","panelSize":3}],"result":9.55}
+{"id":"ranking.seniorScoreOf#146","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.52,"judgeScores":{"seniorJudge":7.85,"judge1":9.55,"judge2":9.25},"time":"1:2:3:4","panelSize":3}],"result":7.85}
+{"id":"ranking.seniorScoreOf#147","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.16,"judgeScores":{"seniorJudge":9.8,"judge1":7,"judge2":9.7,"judge3":8.05},"time":null,"panelSize":4}],"result":9.8}
+{"id":"ranking.seniorScoreOf#148","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.14,"judgeScores":{"seniorJudge":9.25,"judge1":8.85,"judge2":8.7,"judge3":7.65,"judge4":9.2},"time":" 1:05 ","panelSize":5}],"result":9.25}
+{"id":"ranking.seniorScoreOf#149","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.19,"judgeScores":{"seniorJudge":7.35,"judge1":9.55,"judge2":9,"judge3":9.6,"judge4":8.55},"time":"","panelSize":5}],"result":7.35}
+{"id":"ranking.seniorScoreOf#150","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.6,"judgeScores":{"seniorJudge":9.3,"judge1":7.75,"judge2":9.15,"judge3":8.3,"judge4":9.75},"time":"1:05","panelSize":5}],"result":9.3}
+{"id":"ranking.seniorScoreOf#151","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.345,"judgeScores":{"seniorJudge":8.85,"judge1":9.35,"judge2":8.1},"time":"1:xx","panelSize":3}],"result":8.85}
+{"id":"ranking.seniorScoreOf#152","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.515,"judgeScores":{"seniorJudge":8.55,"judge1":8.35,"judge2":8.55,"judge3":8.55,"judge4":8.75},"time":"1:2:3:4","panelSize":5}],"result":8.55}
+{"id":"ranking.seniorScoreOf#153","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.05,"judgeScores":{"seniorJudge":7.1,"judge1":8.4,"judge2":8.55},"time":" 1:05 ","panelSize":3}],"result":7.1}
+{"id":"ranking.seniorScoreOf#154","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.745,"judgeScores":{"seniorJudge":7.55,"judge1":7.4,"judge2":8.8,"judge3":9.35},"time":{"$":"undefined"}}],"result":7.55}
+{"id":"ranking.seniorScoreOf#155","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.35,"judgeScores":{"seniorJudge":9.15,"judge1":8.35,"judge2":9.55,"judge3":7.8,"judge4":8.7},"time":"1:02:03","panelSize":5}],"result":9.15}
+{"id":"ranking.seniorScoreOf#156","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.39,"judgeScores":{"seniorJudge":9,"judge1":8.8,"judge2":9,"judge3":9,"judge4":9.2},"time":"1:2:3:4","panelSize":5}],"result":9}
+{"id":"ranking.seniorScoreOf#157","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.74,"judgeScores":{"seniorJudge":9.15,"judge1":9.2,"judge2":9.1},"time":"01:05","panelSize":3}],"result":9.15}
+{"id":"ranking.seniorScoreOf#158","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.25,"judgeScores":{"seniorJudge":7.8,"judge1":7.65,"judge2":7.45},"time":" 1:05 ","panelSize":3}],"result":7.8}
+{"id":"ranking.seniorScoreOf#159","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.59,"judgeScores":{"seniorJudge":9.4,"judge1":7.55,"judge2":9.4,"judge3":9.35},"time":"70","panelSize":4}],"result":9.4}
+{"id":"ranking.seniorScoreOf#160","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.27,"judgeScores":{"seniorJudge":9.1,"judge1":8.9,"judge2":9.1,"judge3":9.3},"time":"1:02:03","panelSize":4}],"result":9.1}
+{"id":"ranking.seniorScoreOf#161","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.975,"judgeScores":{"seniorJudge":8.7,"judge1":8.55,"judge2":8.8,"judge3":9.15},"time":"01:05","panelSize":4}],"result":8.7}
+{"id":"ranking.seniorScoreOf#162","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.715,"judgeScores":{"seniorJudge":7.2,"judge1":7.55,"judge2":7.4},"time":"1:2:3:4","panelSize":3}],"result":7.2}
+{"id":"ranking.seniorScoreOf#163","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.12,"judgeScores":{"seniorJudge":9.3,"judge1":7.45,"judge2":9.8,"judge3":7.05},"time":null,"panelSize":4}],"result":9.3}
+{"id":"ranking.seniorScoreOf#164","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.77,"judgeScores":{"seniorJudge":9.5,"judge1":9.35,"judge2":9.6},"time":"abc"}],"result":9.5}
+{"id":"ranking.seniorScoreOf#165","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.16,"judgeScores":{"seniorJudge":8.45,"judge1":8.4,"judge2":8.75,"judge3":9.55},"time":65,"panelSize":4}],"result":8.45}
+{"id":"ranking.seniorScoreOf#166","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.075,"judgeScores":{"seniorJudge":8.25,"judge1":7.75,"judge2":8.05,"judge3":8.05,"judge4":8.75},"time":"65","panelSize":5}],"result":8.25}
+{"id":"ranking.seniorScoreOf#167","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#168","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.205,"judgeScores":{"seniorJudge":9.15,"judge1":8.95,"judge2":9.15,"judge3":9.35},"time":"1:02:03","panelSize":4}],"result":9.15}
+{"id":"ranking.seniorScoreOf#169","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.675,"judgeScores":{"seniorJudge":7.35,"judge1":7.6,"judge2":8.5},"time":"0:59","panelSize":3}],"result":7.35}
+{"id":"ranking.seniorScoreOf#170","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#171","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.055,"judgeScores":{"seniorJudge":9.55,"judge1":7.1,"judge2":8.15,"judge3":7},"time":"abc","panelSize":4}],"result":9.55}
+{"id":"ranking.seniorScoreOf#172","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.27,"judgeScores":{"seniorJudge":7.7,"judge1":9.6,"judge2":9.05},"time":"1:05","panelSize":3}],"result":7.7}
+{"id":"ranking.seniorScoreOf#173","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.98,"judgeScores":{"seniorJudge":8,"judge1":7.8,"judge2":8,"judge3":8,"judge4":8.2},"time":" 1:05 ","panelSize":5}],"result":8}
+{"id":"ranking.seniorScoreOf#174","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.635,"judgeScores":{"seniorJudge":7.6,"judge1":7.7,"judge2":8.8},"time":"1:xx"}],"result":7.6}
+{"id":"ranking.seniorScoreOf#175","args":[{"playerId":"p01","playerName":"Player 1","finalScore":null,"judgeScores":{"seniorJudge":8.5,"judge1":8.3,"judge2":8.5,"judge3":8.7},"time":"0:59","panelSize":4}],"result":8.5}
+{"id":"ranking.seniorScoreOf#176","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#177","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.345,"judgeScores":{"seniorJudge":9.55,"judge1":6.95,"judge2":7.15,"judge3":7.3,"judge4":9.15},"time":"1:10","panelSize":5}],"result":9.55}
+{"id":"ranking.seniorScoreOf#178","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.225,"judgeScores":{"seniorJudge":7.9,"judge1":7.9,"judge2":7.95},"time":"1:2:3:4","panelSize":3}],"result":7.9}
+{"id":"ranking.seniorScoreOf#179","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.945,"judgeScores":{"seniorJudge":7.2,"judge1":9.5,"judge2":9.25},"time":65}],"result":7.2}
+{"id":"ranking.seniorScoreOf#180","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.13,"judgeScores":{"seniorJudge":7.65,"judge1":7.6,"judge2":7.8},"time":"01:05","panelSize":3}],"result":7.65}
+{"id":"ranking.seniorScoreOf#181","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.7,"judgeScores":{"seniorJudge":8.35,"judge1":7.85,"judge2":8.15,"judge3":8.15,"judge4":8.85},"time":"0:59","panelSize":5}],"result":8.35}
+{"id":"ranking.seniorScoreOf#182","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.895,"judgeScores":{"seniorJudge":9.6,"judge1":9.5,"judge2":9.2},"time":null}],"result":9.6}
+{"id":"ranking.seniorScoreOf#183","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.94,"judgeScores":{"seniorJudge":8.6,"judge1":7.7,"judge2":8.25,"judge3":9.1},"time":null,"panelSize":4}],"result":8.6}
+{"id":"ranking.seniorScoreOf#184","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.465,"judgeScores":{"seniorJudge":9.75,"judge1":9.65,"judge2":9.2,"judge3":9.25,"judge4":8.1},"time":null,"panelSize":5}],"result":9.75}
+{"id":"ranking.seniorScoreOf#185","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.435,"judgeScores":{"seniorJudge":8.15,"judge1":7.65,"judge2":7.95,"judge3":7.95,"judge4":8.65},"time":70.5}],"result":8.15}
+{"id":"ranking.seniorScoreOf#186","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.44,"judgeScores":{"seniorJudge":9.6,"judge1":9.65,"judge2":7.4,"judge3":9.1,"judge4":9.6},"time":"1:02:03","panelSize":5}],"result":9.6}
+{"id":"ranking.seniorScoreOf#187","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.395,"judgeScores":{"seniorJudge":8.25,"judge1":7.6,"judge2":8.6},"time":"","panelSize":3}],"result":8.25}
+{"id":"ranking.seniorScoreOf#188","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#189","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.41,"judgeScores":{"seniorJudge":7.15,"judge1":7.75,"judge2":7.2},"time":"1:xx","panelSize":3}],"result":7.15}
+{"id":"ranking.seniorScoreOf#190","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.3,"judgeScores":{"seniorJudge":9.75,"judge1":7.7,"judge2":8.3},"time":null,"panelSize":3}],"result":9.75}
+{"id":"ranking.seniorScoreOf#191","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.205,"judgeScores":{"seniorJudge":7.05,"judge1":8.3,"judge2":7.15,"judge3":9.55,"judge4":9.75},"time":"65","panelSize":5}],"result":7.05}
+{"id":"ranking.seniorScoreOf#192","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.685,"judgeScores":{"seniorJudge":7.45,"judge1":8.5,"judge2":7.55,"judge3":8.75},"time":"abc","panelSize":4}],"result":7.45}
+{"id":"ranking.seniorScoreOf#193","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.51,"judgeScores":{"seniorJudge":7,"judge1":8.15,"judge2":7.4},"time":"1:02:03","panelSize":3}],"result":7}
+{"id":"ranking.seniorScoreOf#194","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#195","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#196","args":[{"playerName":"Player 1","finalScore":8.31,"judgeScores":{"seniorJudge":9.65,"judge1":7.55,"judge2":7.7,"judge3":7.6,"judge4":8.15},"time":" 1:05 ","panelSize":5}],"result":9.65}
+{"id":"ranking.seniorScoreOf#197","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.84,"judgeScores":{"seniorJudge":7.6,"judge1":8.35,"judge2":9,"judge3":9.35},"time":"1:xx","panelSize":4}],"result":7.6}
+{"id":"ranking.seniorScoreOf#198","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.945,"judgeScores":{"seniorJudge":7.25,"judge1":7.3,"judge2":8.65},"time":70.5}],"result":7.25}
+{"id":"ranking.seniorScoreOf#199","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"NaN"},"judgeScores":{"seniorJudge":8.95,"judge1":9.55,"judge2":8.15},"time":{"$":"undefined"},"panelSize":3}],"result":8.95}
+{"id":"ranking.seniorScoreOf#200","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.255,"judgeScores":{"seniorJudge":8.85,"judge1":8.5,"judge2":8.15,"judge3":8.7,"judge4":8.7},"time":"","panelSize":5}],"result":8.85}
+{"id":"ranking.seniorScoreOf#201","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"NaN"},"judgeScores":{"seniorJudge":9.8,"judge1":7.05,"judge2":7.25},"time":65,"panelSize":3}],"result":9.8}
+{"id":"ranking.seniorScoreOf#202","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.485,"judgeScores":{"seniorJudge":9.3,"judge1":7,"judge2":7},"time":" 1:05 ","panelSize":3}],"result":9.3}
+{"id":"ranking.seniorScoreOf#203","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.125,"judgeScores":{"seniorJudge":7.9,"judge1":8.95,"judge2":8.55,"judge3":7.9,"judge4":7.5},"time":65,"panelSize":5}],"result":7.9}
+{"id":"ranking.seniorScoreOf#204","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.57,"judgeScores":{"seniorJudge":8.7,"judge1":9.35,"judge2":7.2,"judge3":7.7},"time":"1:05","panelSize":4}],"result":8.7}
+{"id":"ranking.seniorScoreOf#205","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.16,"judgeScores":{"seniorJudge":8.35,"judge1":8.8,"judge2":9.55,"judge3":9.75},"time":"abc","panelSize":4}],"result":8.35}
+{"id":"ranking.seniorScoreOf#206","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.585,"judgeScores":{"seniorJudge":8.55,"judge1":7.4,"judge2":8.1},"time":65}],"result":8.55}
+{"id":"ranking.seniorScoreOf#207","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#208","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.985,"judgeScores":{"seniorJudge":7.8,"judge1":7.6,"judge2":7.6},"time":null,"panelSize":3}],"result":7.8}
+{"id":"ranking.seniorScoreOf#209","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.67,"judgeScores":{"seniorJudge":8.15,"judge1":7.65,"judge2":7.95,"judge3":7.95,"judge4":8.65},"time":"","panelSize":5}],"result":8.15}
+{"id":"ranking.seniorScoreOf#210","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.42,"judgeScores":{"seniorJudge":7.3,"judge1":7.35,"judge2":7.85,"judge3":9.1},"time":"","panelSize":4}],"result":7.3}
+{"id":"ranking.seniorScoreOf#211","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.79,"judgeScores":{"seniorJudge":7.35,"judge1":9.7,"judge2":9.5},"time":{"$":"undefined"},"panelSize":3}],"result":7.35}
+{"id":"ranking.seniorScoreOf#212","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.055,"judgeScores":{"seniorJudge":7.4,"judge1":8,"judge2":8.5,"judge3":7.35},"time":"1:xx","panelSize":4}],"result":7.4}
+{"id":"ranking.seniorScoreOf#213","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.69,"judgeScores":{"seniorJudge":9.6,"judge1":8.2,"judge2":9.45},"time":"1:10","panelSize":3}],"result":9.6}
+{"id":"ranking.seniorScoreOf#214","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.13,"judgeScores":{"seniorJudge":7.65,"judge1":7.05,"judge2":7.7,"judge3":8.55,"judge4":9.7},"time":"1:","panelSize":5}],"result":7.65}
+{"id":"ranking.seniorScoreOf#215","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.24,"judgeScores":{"seniorJudge":9.05,"judge1":7.5,"judge2":7.65},"time":"1:05","panelSize":3}],"result":9.05}
+{"id":"ranking.seniorScoreOf#216","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.75,"judgeScores":{"seniorJudge":8.35,"judge1":8.15,"judge2":8.35,"judge3":8.55},"time":"1:05","panelSize":4}],"result":8.35}
+{"id":"ranking.seniorScoreOf#217","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.525,"judgeScores":{"seniorJudge":9,"judge1":8.5,"judge2":8.8,"judge3":8.8,"judge4":9.5},"time":"01:05","panelSize":5}],"result":9}
+{"id":"ranking.seniorScoreOf#218","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.59,"judgeScores":{"seniorJudge":8.35,"judge1":7.85,"judge2":8.15,"judge3":8.15,"judge4":8.85},"time":"1:2:3:4","panelSize":5}],"result":8.35}
+{"id":"ranking.seniorScoreOf#219","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.105,"judgeScores":{"seniorJudge":8.85,"judge1":7.8,"judge2":7.6},"time":"01:05","panelSize":3}],"result":8.85}
+{"id":"ranking.seniorScoreOf#220","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.53,"judgeScores":{"seniorJudge":9.05,"judge1":8.6,"judge2":9.05},"time":"1:02:03","panelSize":3}],"result":9.05}
+{"id":"ranking.seniorScoreOf#221","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.54,"judgeScores":{"seniorJudge":8.45,"judge1":8.1,"judge2":8.35,"judge3":8.75,"judge4":9.05},"time":"1:2:3:4"}],"result":8.45}
+{"id":"ranking.seniorScoreOf#222","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.9,"judgeScores":{"seniorJudge":9.35,"judge1":7.15,"judge2":8.35},"time":"1:xx"}],"result":9.35}
+{"id":"ranking.seniorScoreOf#223","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.76,"judgeScores":{"seniorJudge":9.7,"judge1":7.55,"judge2":9.55,"judge3":7.6},"time":"1:02:03","panelSize":4}],"result":9.7}
+{"id":"ranking.seniorScoreOf#224","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":8.73,"judgeScores":{"seniorJudge":9.8,"judge1":8,"judge2":8.2,"judge3":8.5},"time":"1:xx","panelSize":4}],"result":9.8}
+{"id":"ranking.seniorScoreOf#225","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.435,"judgeScores":{"seniorJudge":8.05,"judge1":8.5,"judge2":9.65},"time":"1:","panelSize":3}],"result":8.05}
+{"id":"ranking.seniorScoreOf#226","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.92,"judgeScores":{"seniorJudge":7.75,"judge1":8.35,"judge2":7.9,"judge3":9.25,"judge4":8.35},"time":null,"panelSize":5}],"result":7.75}
+{"id":"ranking.seniorScoreOf#227","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":7.78,"judgeScores":{"seniorJudge":9.15,"judge1":8.15,"judge2":9.35},"time":"1:2:3:4"}],"result":9.15}
+{"id":"ranking.seniorScoreOf#228","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.61,"judgeScores":{"seniorJudge":8.15,"judge1":7.95,"judge2":8.15,"judge3":8.15,"judge4":8.35},"time":"1:10","panelSize":5}],"result":8.15}
+{"id":"ranking.seniorScoreOf#229","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#230","args":[{"playerName":"Player 1","finalScore":9.21,"judgeScores":{"seniorJudge":8.85,"judge1":8.35,"judge2":8.65,"judge3":8.65,"judge4":9.35},"time":"1:02:03","panelSize":5}],"result":8.85}
+{"id":"ranking.seniorScoreOf#231","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.505,"judgeScores":{"seniorJudge":8.1,"judge1":0,"judge2":7.85},"time":" 1:05 "}],"result":8.1}
+{"id":"ranking.seniorScoreOf#232","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.565,"judgeScores":{"seniorJudge":9.7,"judge1":7.55,"judge2":9.25},"time":"1:","panelSize":3}],"result":9.7}
+{"id":"ranking.seniorScoreOf#233","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.245,"judgeScores":{"seniorJudge":9.1,"judge1":8.6,"judge2":8.9,"judge3":8.9,"judge4":9.6},"time":"1:10"}],"result":9.1}
+{"id":"ranking.seniorScoreOf#234","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.21,"judgeScores":{"seniorJudge":8.75,"judge1":8.55,"judge2":8.75,"judge3":8.95},"time":"1:05"}],"result":8.75}
+{"id":"ranking.seniorScoreOf#235","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#236","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.73,"judgeScores":{"seniorJudge":9.4,"judge1":8.6,"judge2":9.5,"judge3":7.1},"time":70.5,"panelSize":4}],"result":9.4}
+{"id":"ranking.seniorScoreOf#237","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.56,"judgeScores":{"seniorJudge":8.75,"judge1":7.9,"judge2":8.9,"judge3":9.3,"judge4":9.8},"time":"1:2:3:4","panelSize":5}],"result":8.75}
+{"id":"ranking.seniorScoreOf#238","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.475,"judgeScores":{"seniorJudge":9.05,"judge1":8.85,"judge2":9.05,"judge3":9.05,"judge4":9.25},"time":"01:05"}],"result":9.05}
+{"id":"ranking.seniorScoreOf#239","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.025,"judgeScores":{"seniorJudge":7.7,"judge1":7.3,"judge2":8.5},"time":"1:2:3:4","panelSize":3}],"result":7.7}
+{"id":"ranking.seniorScoreOf#240","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.595,"time":65,"panelSize":4}],"result":0}
+{"id":"ranking.seniorScoreOf#241","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.6,"judgeScores":{"seniorJudge":9.5,"judge1":7.35,"judge2":7.8,"judge3":8.55,"judge4":8.05},"time":"1:10","panelSize":5}],"result":9.5}
+{"id":"ranking.seniorScoreOf#242","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.515,"judgeScores":{"seniorJudge":9.6,"judge1":8.7,"judge2":7.55},"time":"01:05","panelSize":3}],"result":9.6}
+{"id":"ranking.seniorScoreOf#243","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"NaN"},"judgeScores":{"seniorJudge":7.3,"judge1":9.4,"judge2":7.15,"judge3":7.05,"judge4":7.35},"time":"1:2:3:4","panelSize":5}],"result":7.3}
+{"id":"ranking.seniorScoreOf#244","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":7.505,"judgeScores":{"seniorJudge":7.55,"judge1":9.2,"judge2":9.5,"judge3":7.75,"judge4":9.15},"time":70.5,"panelSize":5}],"result":7.55}
+{"id":"ranking.seniorScoreOf#245","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":7.76,"judgeScores":{"seniorJudge":8.9,"judge1":8.05,"judge2":8,"judge3":7.2},"time":{"$":"undefined"},"panelSize":4}],"result":8.9}
+{"id":"ranking.seniorScoreOf#246","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.24,"judgeScores":{"seniorJudge":8.85,"judge1":7.1,"judge2":7,"judge3":9.8,"judge4":8.95},"time":" 1:05 ","panelSize":5}],"result":8.85}
+{"id":"ranking.seniorScoreOf#247","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.875,"judgeScores":{"seniorJudge":8.45,"judge1":8.05,"judge2":8.05,"judge3":8.85},"time":"1:2:3:4"}],"result":8.45}
+{"id":"ranking.seniorScoreOf#248","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.635,"judgeScores":{"seniorJudge":7.15,"judge1":8.6,"judge2":8.2,"judge3":9.65,"judge4":7.95},"time":"1:xx"}],"result":7.15}
+{"id":"ranking.seniorScoreOf#249","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.61,"judgeScores":{"seniorJudge":9.5,"judge1":8.4,"judge2":7.1,"judge3":8.5,"judge4":9.15},"time":"abc"}],"result":9.5}
+{"id":"ranking.seniorScoreOf#250","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.235,"judgeScores":{"seniorJudge":8.45,"judge1":8.25,"judge2":8.45,"judge3":8.45,"judge4":8.65},"time":"1:02:03","panelSize":5}],"result":8.45}
+{"id":"ranking.seniorScoreOf#251","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.605,"judgeScores":{"seniorJudge":9.5,"judge1":9.35,"judge2":8.45},"time":65}],"result":9.5}
+{"id":"ranking.seniorScoreOf#252","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.185,"judgeScores":{"seniorJudge":9.8,"judge1":7.5,"judge2":9.55,"judge3":8.45},"time":"01:05","panelSize":4}],"result":9.8}
+{"id":"ranking.seniorScoreOf#253","args":[{"playerName":"Player 1","finalScore":8.095,"judgeScores":{"seniorJudge":8.65,"judge1":8.45,"judge2":9.8},"time":"70","panelSize":3}],"result":8.65}
+{"id":"ranking.seniorScoreOf#254","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.675,"judgeScores":{"seniorJudge":9.4,"judge1":8.75,"judge2":7.6,"judge3":8.9,"judge4":9.1},"time":{"$":"undefined"},"panelSize":5}],"result":9.4}
+{"id":"ranking.seniorScoreOf#255","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#256","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#257","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"NaN"},"judgeScores":{"seniorJudge":9.55,"judge1":8.1,"judge2":8.4},"time":"1:","panelSize":3}],"result":9.55}
+{"id":"ranking.seniorScoreOf#258","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.295,"judgeScores":{"seniorJudge":9.75,"judge1":9.65,"judge2":9.1},"time":"65","panelSize":3}],"result":9.75}
+{"id":"ranking.seniorScoreOf#259","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.79,"judgeScores":{"seniorJudge":8.3,"judge1":7.8,"judge2":8.1,"judge3":8.1,"judge4":8.8},"time":"1:xx","panelSize":5}],"result":8.3}
+{"id":"ranking.seniorScoreOf#260","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"undefined"},"judgeScores":{"seniorJudge":7.25,"judge1":7.1,"judge2":7.25,"judge3":9.1},"time":"70","panelSize":4}],"result":7.25}
+{"id":"ranking.seniorScoreOf#261","args":[{"playerName":"Player 1","finalScore":8.5,"judgeScores":{"seniorJudge":8.75,"judge1":7.55,"judge2":9.35,"judge3":8.7},"time":"","panelSize":4}],"result":8.75}
+{"id":"ranking.seniorScoreOf#262","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.91,"judgeScores":{"seniorJudge":9.25,"judge1":8.85,"judge2":8.85,"judge3":9.65},"time":"abc","panelSize":4}],"result":9.25}
+{"id":"ranking.seniorScoreOf#263","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.885,"judgeScores":{"seniorJudge":7.7,"judge1":9.7,"judge2":9.25},"time":"1:xx","panelSize":3}],"result":7.7}
+{"id":"ranking.seniorScoreOf#264","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.105,"judgeScores":{"seniorJudge":7.45,"judge1":9.75,"judge2":8.2},"time":"1:xx","panelSize":3}],"result":7.45}
+{"id":"ranking.seniorScoreOf#265","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.145,"judgeScores":{"seniorJudge":8.45,"judge1":8.25,"judge2":8.45,"judge3":8.65},"time":"abc","panelSize":4}],"result":8.45}
+{"id":"ranking.seniorScoreOf#266","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.34,"judgeScores":{"seniorJudge":8.65,"judge1":7.9,"judge2":7.55,"judge3":7.75,"judge4":7.15},"time":"abc","panelSize":5}],"result":8.65}
+{"id":"ranking.seniorScoreOf#267","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.64,"judgeScores":{"seniorJudge":9.3,"judge1":7.65,"judge2":8.3},"time":"1:10"}],"result":9.3}
+{"id":"ranking.seniorScoreOf#268","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.515,"judgeScores":{"seniorJudge":9.2,"judge1":7.4,"judge2":9},"time":"abc","panelSize":3}],"result":9.2}
+{"id":"ranking.seniorScoreOf#269","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.02,"judgeScores":{"seniorJudge":7.2,"judge1":8.6,"judge2":8.9,"judge3":9.45},"time":"65","panelSize":4}],"result":7.2}
+{"id":"ranking.seniorScoreOf#270","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.505,"judgeScores":{"seniorJudge":8,"judge1":7.8,"judge2":8,"judge3":8.2},"time":{"$":"undefined"},"panelSize":4}],"result":8}
+{"id":"ranking.seniorScoreOf#271","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.8,"judgeScores":{"seniorJudge":9.15,"judge1":8.15,"judge2":8.55,"judge3":9.6},"time":"70","panelSize":4}],"result":9.15}
+{"id":"ranking.seniorScoreOf#272","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.01,"judgeScores":{"seniorJudge":8.5,"judge1":8,"judge2":8.3,"judge3":8.3,"judge4":9},"time":null,"panelSize":5}],"result":8.5}
+{"id":"ranking.seniorScoreOf#273","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#274","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#275","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.895,"judgeScores":{"seniorJudge":9.05,"judge1":8.65,"judge2":8.65,"judge3":9.45},"time":"1:2:3:4","panelSize":4}],"result":9.05}
+{"id":"ranking.seniorScoreOf#276","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.365,"judgeScores":{"seniorJudge":9.1,"judge1":9.8,"judge2":8.25},"time":"01:05","panelSize":3}],"result":9.1}
+{"id":"ranking.seniorScoreOf#277","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.27,"judgeScores":{"seniorJudge":7.45,"judge1":8.1,"judge2":7.65},"time":"70","panelSize":3}],"result":7.45}
+{"id":"ranking.seniorScoreOf#278","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.34,"judgeScores":{"seniorJudge":8.7,"judge1":0,"judge2":8.35,"judge3":8.65},"time":{"$":"undefined"},"panelSize":4}],"result":8.7}
+{"id":"ranking.seniorScoreOf#279","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.52,"judgeScores":{"seniorJudge":9,"judge1":8.3,"judge2":8.1},"time":70.5,"panelSize":3}],"result":9}
+{"id":"ranking.seniorScoreOf#280","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#281","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.015,"judgeScores":{"seniorJudge":7.9,"judge1":9.7,"judge2":8.75},"time":"70"}],"result":7.9}
+{"id":"ranking.seniorScoreOf#282","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.635,"judgeScores":{"seniorJudge":9.75,"judge1":9.55,"judge2":8.95},"time":"1:2:3:4","panelSize":3}],"result":9.75}
+{"id":"ranking.seniorScoreOf#283","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.71,"judgeScores":{"seniorJudge":8.35,"judge1":8.7,"judge2":8.2,"judge3":9.7},"time":"1:2:3:4","panelSize":4}],"result":8.35}
+{"id":"ranking.seniorScoreOf#284","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.23,"judgeScores":{"seniorJudge":9.2,"judge1":8.8,"judge2":8.8,"judge3":9.6},"time":null,"panelSize":4}],"result":9.2}
+{"id":"ranking.seniorScoreOf#285","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.45,"judgeScores":{"seniorJudge":9.2,"judge1":9,"judge2":9.2,"judge3":9.4},"time":"70","panelSize":4}],"result":9.2}
+{"id":"ranking.seniorScoreOf#286","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#287","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.76,"judgeScores":{"seniorJudge":7.45,"judge1":7.95,"judge2":9.35},"time":"0:59","panelSize":3}],"result":7.45}
+{"id":"ranking.seniorScoreOf#288","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#289","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.315,"time":"01:05","panelSize":5}],"result":0}
+{"id":"ranking.seniorScoreOf#290","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.515,"judgeScores":{"seniorJudge":8.6,"judge1":8.4,"judge2":8.6,"judge3":8.6,"judge4":8.8},"time":"1:05"}],"result":8.6}
+{"id":"ranking.seniorScoreOf#291","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":8.175,"judgeScores":{"seniorJudge":7.8,"judge1":7.1,"judge2":7.65,"judge3":8.15,"judge4":9.05},"time":70.5,"panelSize":5}],"result":7.8}
+{"id":"ranking.seniorScoreOf#292","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#293","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.42,"judgeScores":{"seniorJudge":9.15,"judge1":8.95,"judge2":9.15,"judge3":9.15,"judge4":9.35},"time":"1:10","panelSize":5}],"result":9.15}
+{"id":"ranking.seniorScoreOf#294","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.05,"judgeScores":{"seniorJudge":8.2,"judge1":8.45,"judge2":8.7},"time":" 1:05 ","panelSize":3}],"result":8.2}
+{"id":"ranking.seniorScoreOf#295","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.615,"judgeScores":{"seniorJudge":7.1,"judge1":8.85,"judge2":7.15},"time":"01:05","panelSize":3}],"result":7.1}
+{"id":"ranking.seniorScoreOf#296","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.05,"judgeScores":{"seniorJudge":9.05,"judge1":8.85,"judge2":9.05,"judge3":9.05,"judge4":9.25},"time":"1:","panelSize":5}],"result":9.05}
+{"id":"ranking.seniorScoreOf#297","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.165,"judgeScores":{"seniorJudge":8.1,"judge1":7.9,"judge2":8.1,"judge3":8.1,"judge4":8.3},"time":"1:","panelSize":5}],"result":8.1}
+{"id":"ranking.seniorScoreOf#298","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.415,"judgeScores":{"seniorJudge":7.95,"judge1":7.05,"judge2":9,"judge3":9.05},"time":"70","panelSize":4}],"result":7.95}
+{"id":"ranking.seniorScoreOf#299","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.155,"judgeScores":{"seniorJudge":9.65,"judge1":7.5,"judge2":9.15},"time":"1:2:3:4","panelSize":3}],"result":9.65}
+{"id":"ranking.seniorScoreOf#300","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.585,"judgeScores":{"seniorJudge":7.2,"judge1":9.35,"judge2":7.7,"judge3":9.65,"judge4":7.65},"time":" 1:05 ","panelSize":5}],"result":7.2}
+{"id":"ranking.seniorScoreOf#301","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.785,"judgeScores":{"seniorJudge":8.35,"judge1":8.45,"judge2":9.3,"judge3":9.55},"time":"1:02:03","panelSize":4}],"result":8.35}
+{"id":"ranking.seniorScoreOf#302","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.11,"judgeScores":{"seniorJudge":7.2,"judge1":9.2,"judge2":7.3},"time":70.5,"panelSize":3}],"result":7.2}
+{"id":"ranking.seniorScoreOf#303","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.445,"judgeScores":{"seniorJudge":8.8,"judge1":8.5,"judge2":8.95},"time":"1:02:03"}],"result":8.8}
+{"id":"ranking.seniorScoreOf#304","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#305","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.11,"judgeScores":{"seniorJudge":8.9,"judge1":7.75,"judge2":7.7},"time":70.5}],"result":8.9}
+{"id":"ranking.seniorScoreOf#306","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.635,"judgeScores":{"seniorJudge":9.05,"judge1":8.65,"judge2":8.65,"judge3":9.45},"time":"65","panelSize":4}],"result":9.05}
+{"id":"ranking.seniorScoreOf#307","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.41,"judgeScores":{"seniorJudge":9.05,"judge1":8.85,"judge2":9.05,"judge3":9.05,"judge4":9.25},"time":"abc","panelSize":5}],"result":9.05}
+{"id":"ranking.seniorScoreOf#308","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":7.73,"judgeScores":{"seniorJudge":8.3,"judge1":7.5,"judge2":7.75},"time":70.5,"panelSize":3}],"result":8.3}
+{"id":"ranking.seniorScoreOf#309","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.805,"time":65}],"result":0}
+{"id":"ranking.seniorScoreOf#310","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"undefined"},"judgeScores":{"seniorJudge":8.65,"judge1":8.3,"judge2":8.65,"judge3":7.3,"judge4":7.2},"time":""}],"result":8.65}
+{"id":"ranking.seniorScoreOf#311","args":[{"playerName":"Player 1","finalScore":8.45,"judgeScores":{"seniorJudge":8.25,"judge1":8.05,"judge2":8.25,"judge3":8.45},"time":"0:59","panelSize":4}],"result":8.25}
+{"id":"ranking.seniorScoreOf#312","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.97,"judgeScores":{"seniorJudge":8.2,"judge1":8,"judge2":8.2,"judge3":8.4},"time":"","panelSize":4}],"result":8.2}
+{"id":"ranking.seniorScoreOf#313","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.295,"judgeScores":{"seniorJudge":8.4,"judge1":8.4,"judge2":9.4,"judge3":7.65,"judge4":9.55},"time":"70","panelSize":5}],"result":8.4}
+{"id":"ranking.seniorScoreOf#314","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.635,"judgeScores":{"seniorJudge":8.95,"judge1":8.7,"judge2":9.6,"judge3":9.6,"judge4":8.4},"time":"abc","panelSize":5}],"result":8.95}
+{"id":"ranking.seniorScoreOf#315","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.76,"judgeScores":{"seniorJudge":7.2,"judge1":7.4,"judge2":8.6,"judge3":9.15,"judge4":9.8},"time":"0:59","panelSize":5}],"result":7.2}
+{"id":"ranking.seniorScoreOf#316","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.375,"judgeScores":{"seniorJudge":8.65,"judge1":9,"judge2":9.3},"time":"1:"}],"result":8.65}
+{"id":"ranking.seniorScoreOf#317","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.995,"judgeScores":{"seniorJudge":7.2,"judge1":7.1,"judge2":8.7,"judge3":9.8},"time":70.5,"panelSize":4}],"result":7.2}
+{"id":"ranking.seniorScoreOf#318","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.74,"judgeScores":{"seniorJudge":9.25,"judge1":6.95,"judge2":9.2,"judge3":9.3,"judge4":9.7},"time":"","panelSize":5}],"result":9.25}
+{"id":"ranking.seniorScoreOf#319","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.065,"judgeScores":{"seniorJudge":8.95,"judge1":7.45,"judge2":8.45,"judge3":9.8},"time":"0:59","panelSize":4}],"result":8.95}
+{"id":"ranking.seniorScoreOf#320","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#321","args":[{"playerName":"Player 1","finalScore":8.96,"judgeScores":{"seniorJudge":7.15,"judge1":7.55,"judge2":8.4},"time":" 1:05 ","panelSize":3}],"result":7.15}
+{"id":"ranking.seniorScoreOf#322","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.675,"judgeScores":{"seniorJudge":8.85,"judge1":7.9,"judge2":9.8,"judge3":8.3,"judge4":9.15},"time":70.5,"panelSize":5}],"result":8.85}
+{"id":"ranking.seniorScoreOf#323","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#324","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.72,"judgeScores":{"seniorJudge":9.8,"judge1":7.5,"judge2":7.2},"time":"1:10","panelSize":3}],"result":9.8}
+{"id":"ranking.seniorScoreOf#325","args":[{"playerName":"Player 1","finalScore":7.14,"judgeScores":{"seniorJudge":9,"judge1":8.35,"judge2":8.35,"judge3":8.95},"time":"65","panelSize":4}],"result":9}
+{"id":"ranking.seniorScoreOf#326","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.52,"judgeScores":{"seniorJudge":9.6,"judge1":8.35,"judge2":9.05,"judge3":9.25},"time":65,"panelSize":4}],"result":9.6}
+{"id":"ranking.seniorScoreOf#327","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.4,"judgeScores":{"seniorJudge":8.8,"judge1":8,"judge2":7.05},"time":{"$":"undefined"},"panelSize":3}],"result":8.8}
+{"id":"ranking.seniorScoreOf#328","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.185,"judgeScores":{"seniorJudge":8.3,"judge1":7.3,"judge2":8.6,"judge3":9.8,"judge4":9.8},"time":null,"panelSize":5}],"result":8.3}
+{"id":"ranking.seniorScoreOf#329","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"undefined"},"judgeScores":{"seniorJudge":9.6,"judge1":7.1,"judge2":7.9},"time":"","panelSize":3}],"result":9.6}
+{"id":"ranking.seniorScoreOf#330","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.32,"judgeScores":{"seniorJudge":8.65,"judge1":7,"judge2":9.35,"judge3":8.25,"judge4":9.05},"time":"01:05","panelSize":5}],"result":8.65}
+{"id":"ranking.seniorScoreOf#331","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.305,"judgeScores":{"seniorJudge":7.65,"judge1":7.1,"judge2":8.6,"judge3":9.1,"judge4":9.45},"time":{"$":"undefined"},"panelSize":5}],"result":7.65}
+{"id":"ranking.seniorScoreOf#332","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.66,"judgeScores":{"seniorJudge":7.45,"judge1":7.7,"judge2":8.25,"judge3":8.3},"time":"1:2:3:4"}],"result":7.45}
+{"id":"ranking.seniorScoreOf#333","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.11,"judgeScores":{"seniorJudge":9.45,"judge1":8.55,"judge2":8.25},"time":"1:xx","panelSize":3}],"result":9.45}
+{"id":"ranking.seniorScoreOf#334","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.65,"judgeScores":{"seniorJudge":8.25,"judge1":9.25,"judge2":7.95},"time":"","panelSize":3}],"result":8.25}
+{"id":"ranking.seniorScoreOf#335","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.62,"judgeScores":{"seniorJudge":9.1,"judge1":9.7,"judge2":9.7,"judge3":7.85},"time":"65","panelSize":4}],"result":9.1}
+{"id":"ranking.seniorScoreOf#336","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.635,"judgeScores":{"seniorJudge":7.9,"judge1":7.7,"judge2":8.15,"judge3":9.55,"judge4":9.65},"time":"1:"}],"result":7.9}
+{"id":"ranking.seniorScoreOf#337","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.035,"judgeScores":{"seniorJudge":8.15,"judge1":8.6,"judge2":7.2,"judge3":8.7,"judge4":8.4},"time":"","panelSize":5}],"result":8.15}
+{"id":"ranking.seniorScoreOf#338","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.375,"judgeScores":{"seniorJudge":8.45,"judge1":9.8,"judge2":7.65,"judge3":7.4,"judge4":7.6},"time":"1:05","panelSize":5}],"result":8.45}
+{"id":"ranking.seniorScoreOf#339","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#340","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.595,"judgeScores":{"seniorJudge":9.5,"judge1":8.55,"judge2":7.3},"time":"65","panelSize":3}],"result":9.5}
+{"id":"ranking.seniorScoreOf#341","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.01,"judgeScores":{"seniorJudge":8.6,"judge1":8.1,"judge2":8.4,"judge3":8.4,"judge4":9.1},"time":"1:","panelSize":5}],"result":8.6}
+{"id":"ranking.seniorScoreOf#342","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.945,"judgeScores":{"seniorJudge":7.6,"judge1":8.15,"judge2":8.5,"judge3":9.35,"judge4":9.7},"time":"0:59","panelSize":5}],"result":7.6}
+{"id":"ranking.seniorScoreOf#343","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.4,"judgeScores":{"seniorJudge":7.2,"judge1":9,"judge2":9.5,"judge3":9.25},"time":65,"panelSize":4}],"result":7.2}
+{"id":"ranking.seniorScoreOf#344","args":[{"playerId":{"_id":"p01"},"playerName":"Player 1","finalScore":7.395,"judgeScores":{"seniorJudge":8.9,"judge1":7.35,"judge2":9.05,"judge3":8.75,"judge4":9.2},"time":65,"panelSize":5}],"result":8.9}
+{"id":"ranking.seniorScoreOf#345","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.84,"judgeScores":{"seniorJudge":8.25,"judge1":9.5,"judge2":8.85},"time":"0:59","panelSize":3}],"result":8.25}
+{"id":"ranking.seniorScoreOf#346","args":[null],"result":0}
+{"id":"ranking.seniorScoreOf#347","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.02,"judgeScores":{"seniorJudge":7.6,"judge1":7.05,"judge2":7.75,"judge3":8.65},"time":65,"panelSize":4}],"result":7.6}
+{"id":"ranking.seniorScoreOf#348","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#349","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#350","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.535,"judgeScores":{"seniorJudge":8.65,"judge1":7.65,"judge2":8.8},"time":null,"panelSize":3}],"result":8.65}
+{"id":"ranking.seniorScoreOf#351","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.57,"judgeScores":{"seniorJudge":8.2,"judge1":8.45,"judge2":8.95},"time":65,"panelSize":3}],"result":8.2}
+{"id":"ranking.seniorScoreOf#352","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.625,"judgeScores":{"seniorJudge":8.4,"judge1":8.8,"judge2":8.25,"judge3":8,"judge4":9.75},"time":" 1:05 ","panelSize":5}],"result":8.4}
+{"id":"ranking.seniorScoreOf#353","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.17,"judgeScores":{"seniorJudge":9.5,"judge1":8.95,"judge2":9.4},"time":" 1:05 ","panelSize":3}],"result":9.5}
+{"id":"ranking.seniorScoreOf#354","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.77,"judgeScores":{"seniorJudge":8.3,"judge1":7.65,"judge2":9.05,"judge3":7.3},"time":"","panelSize":4}],"result":8.3}
+{"id":"ranking.seniorScoreOf#355","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#356","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#357","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.895,"judgeScores":{"seniorJudge":8.15,"judge1":7.35,"judge2":7.05,"judge3":9.5,"judge4":7.35},"time":"70","panelSize":5}],"result":8.15}
+{"id":"ranking.seniorScoreOf#358","args":[{"playerId":"p01","playerName":"Player 1","finalScore":null,"judgeScores":{"seniorJudge":9.45,"judge1":7.8,"judge2":8.2,"judge3":9},"time":"abc","panelSize":4}],"result":9.45}
+{"id":"ranking.seniorScoreOf#359","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.5,"judgeScores":{"seniorJudge":8.45,"judge1":9.6,"judge2":8.85},"time":"1:"}],"result":8.45}
+{"id":"ranking.seniorScoreOf#360","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#361","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.11,"judgeScores":{"seniorJudge":9.45,"judge1":7.9,"judge2":7.25,"judge3":7.9,"judge4":7.1},"time":{"$":"undefined"}}],"result":9.45}
+{"id":"ranking.seniorScoreOf#362","args":[{"playerName":"Player 1","finalScore":7.72,"judgeScores":{"seniorJudge":8.45,"judge1":7.05,"judge2":8.7,"judge3":9.1},"time":"1:xx","panelSize":4}],"result":8.45}
+{"id":"ranking.seniorScoreOf#363","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.75,"judgeScores":{"seniorJudge":8.8,"judge1":8.3,"judge2":8.6,"judge3":8.6,"judge4":9.3},"time":65,"panelSize":5}],"result":8.8}
+{"id":"ranking.seniorScoreOf#364","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.69,"judgeScores":{"seniorJudge":8.9,"judge1":9.1,"judge2":9.1,"judge3":9.2,"judge4":8.05},"time":""}],"result":8.9}
+{"id":"ranking.seniorScoreOf#365","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.43,"judgeScores":{"seniorJudge":8.1,"judge1":8.1,"judge2":7},"time":70.5,"panelSize":3}],"result":8.1}
+{"id":"ranking.seniorScoreOf#366","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#367","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.04,"judgeScores":{"seniorJudge":8.65,"judge1":9.05,"judge2":7.5},"time":"abc"}],"result":8.65}
+{"id":"ranking.seniorScoreOf#368","args":[{"playerName":"Player 1","finalScore":7.3,"judgeScores":{"seniorJudge":9.15,"judge1":7.15,"judge2":7.35,"judge3":7.05,"judge4":9.4},"time":null,"panelSize":5}],"result":9.15}
+{"id":"ranking.seniorScoreOf#369","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.715,"judgeScores":{"seniorJudge":9.75,"judge1":0,"judge2":9.05,"judge3":7.05},"time":{"$":"undefined"},"panelSize":4}],"result":9.75}
+{"id":"ranking.seniorScoreOf#370","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.195,"judgeScores":{"seniorJudge":9.7,"judge1":7.65,"judge2":8.45,"judge3":7.8},"time":"01:05","panelSize":4}],"result":9.7}
+{"id":"ranking.seniorScoreOf#371","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.265,"judgeScores":{"seniorJudge":7.15,"judge1":8.55,"judge2":8.65,"judge3":8.55,"judge4":7.7},"time":"1:2:3:4","panelSize":5}],"result":7.15}
+{"id":"ranking.seniorScoreOf#372","args":[{"playerId":"p01","playerName":"Player 1","finalScore":null,"judgeScores":{"seniorJudge":7.75,"judge1":8.65,"judge2":8.2,"judge3":8.35,"judge4":9.45},"time":"1:05","panelSize":5}],"result":7.75}
+{"id":"ranking.seniorScoreOf#373","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.19,"judgeScores":{"seniorJudge":8.1,"judge1":7.4,"judge2":9.45},"time":"70","panelSize":3}],"result":8.1}
+{"id":"ranking.seniorScoreOf#374","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.53,"judgeScores":{"seniorJudge":7.35,"judge1":9.8,"judge2":7.15},"time":65,"panelSize":3}],"result":7.35}
+{"id":"ranking.seniorScoreOf#375","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.325,"time":"1:10","panelSize":3}],"result":0}
+{"id":"ranking.seniorScoreOf#376","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.56,"judgeScores":{"seniorJudge":7.1,"judge1":7.2,"judge2":9.8},"time":{"$":"undefined"},"panelSize":3}],"result":7.1}
+{"id":"ranking.seniorScoreOf#377","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#378","args":[{"playerId":"p01","playerName":"Player 1","finalScore":{"$":"NaN"},"judgeScores":{"seniorJudge":7.05,"judge1":8.95,"judge2":7.35},"time":"1:02:03"}],"result":7.05}
+{"id":"ranking.seniorScoreOf#379","args":[{"playerId":"p01","playerName":"Player 1","finalScore":null,"judgeScores":{"seniorJudge":8.3,"judge1":8.1,"judge2":7,"judge3":9.05},"time":"1:2:3:4","panelSize":4}],"result":8.3}
+{"id":"ranking.seniorScoreOf#380","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#381","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.41,"judgeScores":{"seniorJudge":8.15,"judge1":9.25,"judge2":8.75,"judge3":9,"judge4":7.4},"time":"0:59","panelSize":5}],"result":8.15}
+{"id":"ranking.seniorScoreOf#382","args":[{}],"result":0}
+{"id":"ranking.seniorScoreOf#383","args":[{"playerName":"Player 1","finalScore":8.235,"judgeScores":{"seniorJudge":9.4,"judge1":7.75,"judge2":8.15,"judge3":9.65},"time":"1:","panelSize":4}],"result":9.4}
+{"id":"ranking.seniorScoreOf#384","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.67,"judgeScores":{"seniorJudge":8.45,"judge1":9.8,"judge2":8.9},"time":"01:05","panelSize":3}],"result":8.45}
+{"id":"ranking.seniorScoreOf#385","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.82,"judgeScores":{"seniorJudge":9.2,"judge1":7.55,"judge2":9.7},"time":" 1:05 ","panelSize":3}],"result":9.2}
+{"id":"ranking.seniorScoreOf#386","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.3,"judgeScores":{"seniorJudge":9.2,"judge1":9.4,"judge2":7.75,"judge3":7,"judge4":7.7},"time":"1:10","panelSize":5}],"result":9.2}
+{"id":"ranking.seniorScoreOf#387","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.375,"judgeScores":{"seniorJudge":9,"judge1":7.25,"judge2":7.65,"judge3":7},"time":70.5,"panelSize":4}],"result":9}
+{"id":"ranking.seniorScoreOf#388","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.14,"judgeScores":{"seniorJudge":9.3,"judge1":7.9,"judge2":9.6,"judge3":7.1,"judge4":7.75},"time":"1:02:03"}],"result":9.3}
+{"id":"ranking.seniorScoreOf#389","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.27,"judgeScores":{"seniorJudge":8.55,"judge1":8.85,"judge2":8.3},"time":"1:10","panelSize":3}],"result":8.55}
+{"id":"ranking.seniorScoreOf#390","args":[{"$":"undefined"}],"result":0}
+{"id":"ranking.seniorScoreOf#391","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.28,"judgeScores":{"seniorJudge":7.5,"judge1":7.55,"judge2":7.5,"judge3":9.05,"judge4":9.45},"time":"","panelSize":5}],"result":7.5}
+{"id":"ranking.seniorScoreOf#392","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.35,"judgeScores":{"seniorJudge":8.45,"judge1":7.95,"judge2":8.25,"judge3":8.25,"judge4":8.95},"time":"1:2:3:4","panelSize":5}],"result":8.45}
+{"id":"ranking.seniorScoreOf#393","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.455,"time":"1:xx"}],"result":0}
+{"id":"ranking.seniorScoreOf#394","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.23,"judgeScores":{"seniorJudge":7.4,"judge1":7.05,"judge2":7.2,"judge3":7.2,"judge4":7.45},"time":"1:05","panelSize":5}],"result":7.4}
+{"id":"ranking.seniorScoreOf#395","args":[{"playerId":"p01","playerName":"Player 1","finalScore":8.505,"judgeScores":{"seniorJudge":8.5,"judge1":9.15,"judge2":8.65},"time":"1:02:03","panelSize":3}],"result":8.5}
+{"id":"ranking.seniorScoreOf#396","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.15,"judgeScores":{"seniorJudge":8.75,"judge1":8.55,"judge2":8.75,"judge3":8.75,"judge4":8.95},"time":"1:02:03","panelSize":5}],"result":8.75}
+{"id":"ranking.seniorScoreOf#397","args":[{"playerName":"Player 1","finalScore":8.405,"judgeScores":{"seniorJudge":9,"judge1":8.8,"judge2":9,"judge3":9.2},"time":"0:59","panelSize":4}],"result":9}
+{"id":"ranking.seniorScoreOf#398","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.42,"judgeScores":{"seniorJudge":9.3,"judge1":8.05,"judge2":8.25,"judge3":9.45},"time":"abc","panelSize":4}],"result":9.3}
+{"id":"ranking.seniorScoreOf#399","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.565,"judgeScores":{"seniorJudge":9,"judge1":8.8,"judge2":9,"judge3":9.2},"time":70.5,"panelSize":4}],"result":9}
+{"id":"ranking.seniorScoreOf#400","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.61,"judgeScores":{"seniorJudge":9.2,"judge1":7.3,"judge2":7.8,"judge3":8.6},"time":"65","panelSize":4}],"result":9.2}
+{"id":"ranking.seniorScoreOf#401","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.115,"judgeScores":{"seniorJudge":7.2,"judge1":9.75,"judge2":9.8},"time":"70"}],"result":7.2}
+{"id":"ranking.seniorScoreOf#402","args":[{"playerId":"p01","playerName":"Player 1","finalScore":9.735,"judgeScores":{"seniorJudge":8.4,"judge1":8,"judge2":7.9,"judge3":8.6},"time":70.5,"panelSize":4}],"result":8.4}
+{"id":"ranking.seniorScoreOf#403","args":[{"playerId":"p01","playerName":"Player 1","finalScore":7.115,"judgeScores":{"seniorJudge":9.3,"judge1":8.95,"judge2":9.55,"judge3":7.85,"judge4":7.75},"time":"abc","panelSize":5}],"result":9.3}

@@ -3,3 +3,4 @@
 *.jar binary
 generated/** text eol=lf
 tools/node/** text eol=lf
+golden/** text eol=lf

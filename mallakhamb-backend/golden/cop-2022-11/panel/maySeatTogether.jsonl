@@ -1,0 +1,64 @@
+{"id":"panel.maySeatTogether#0","args":["Senior Judge","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#1","args":["Senior Judge","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#2","args":["Senior Judge","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#3","args":["Senior Judge","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#4","args":["Senior Judge","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#5","args":["Senior Judge","Scorer"],"result":false}
+{"id":"panel.maySeatTogether#6","args":["Senior Judge","Time Keeper"],"result":false}
+{"id":"panel.maySeatTogether#7","args":["Senior Judge","Chief"],"result":false}
+{"id":"panel.maySeatTogether#8","args":["Judge 1","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#9","args":["Judge 1","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#10","args":["Judge 1","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#11","args":["Judge 1","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#12","args":["Judge 1","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#13","args":["Judge 1","Scorer"],"result":false}
+{"id":"panel.maySeatTogether#14","args":["Judge 1","Time Keeper"],"result":false}
+{"id":"panel.maySeatTogether#15","args":["Judge 1","Chief"],"result":false}
+{"id":"panel.maySeatTogether#16","args":["Judge 2","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#17","args":["Judge 2","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#18","args":["Judge 2","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#19","args":["Judge 2","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#20","args":["Judge 2","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#21","args":["Judge 2","Scorer"],"result":false}
+{"id":"panel.maySeatTogether#22","args":["Judge 2","Time Keeper"],"result":false}
+{"id":"panel.maySeatTogether#23","args":["Judge 2","Chief"],"result":false}
+{"id":"panel.maySeatTogether#24","args":["Judge 3","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#25","args":["Judge 3","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#26","args":["Judge 3","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#27","args":["Judge 3","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#28","args":["Judge 3","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#29","args":["Judge 3","Scorer"],"result":false}
+{"id":"panel.maySeatTogether#30","args":["Judge 3","Time Keeper"],"result":false}
+{"id":"panel.maySeatTogether#31","args":["Judge 3","Chief"],"result":false}
+{"id":"panel.maySeatTogether#32","args":["Judge 4","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#33","args":["Judge 4","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#34","args":["Judge 4","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#35","args":["Judge 4","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#36","args":["Judge 4","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#37","args":["Judge 4","Scorer"],"result":false}
+{"id":"panel.maySeatTogether#38","args":["Judge 4","Time Keeper"],"result":false}
+{"id":"panel.maySeatTogether#39","args":["Judge 4","Chief"],"result":false}
+{"id":"panel.maySeatTogether#40","args":["Scorer","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#41","args":["Scorer","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#42","args":["Scorer","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#43","args":["Scorer","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#44","args":["Scorer","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#45","args":["Scorer","Scorer"],"result":false}
+{"id":"panel.maySeatTogether#46","args":["Scorer","Time Keeper"],"result":true}
+{"id":"panel.maySeatTogether#47","args":["Scorer","Chief"],"result":false}
+{"id":"panel.maySeatTogether#48","args":["Time Keeper","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#49","args":["Time Keeper","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#50","args":["Time Keeper","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#51","args":["Time Keeper","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#52","args":["Time Keeper","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#53","args":["Time Keeper","Scorer"],"result":true}
+{"id":"panel.maySeatTogether#54","args":["Time Keeper","Time Keeper"],"result":false}
+{"id":"panel.maySeatTogether#55","args":["Time Keeper","Chief"],"result":false}
+{"id":"panel.maySeatTogether#56","args":["Chief","Senior Judge"],"result":false}
+{"id":"panel.maySeatTogether#57","args":["Chief","Judge 1"],"result":false}
+{"id":"panel.maySeatTogether#58","args":["Chief","Judge 2"],"result":false}
+{"id":"panel.maySeatTogether#59","args":["Chief","Judge 3"],"result":false}
+{"id":"panel.maySeatTogether#60","args":["Chief","Judge 4"],"result":false}
+{"id":"panel.maySeatTogether#61","args":["Chief","Scorer"],"result":false}
+{"id":"panel.maySeatTogether#62","args":["Chief","Time Keeper"],"result":false}
+{"id":"panel.maySeatTogether#63","args":["Chief","Chief"],"result":false}

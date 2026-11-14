@@ -1,0 +1,403 @@
+{"id":"eligibility.entryInCompetition#0","args":[null,null],"result":true}
+{"id":"eligibility.entryInCompetition#1","args":[{},"competition_1"],"result":true}
+{"id":"eligibility.entryInCompetition#2","args":[{"apparatus":["Pole Mallakhamb"]},"competition_3","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#3","args":[{},{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#4","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Rope Mallakhamb"],"competition_2":["Rope Mallakhamb","Pole Mallakhamb"],"competition_3":["Hanging Mallakhamb"]}},"competition_2",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#5","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"]}},"Competition III",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#6","args":[{},"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#7","args":[{},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#8","args":[{"apparatus":[]},"unknown",null],"result":true}
+{"id":"eligibility.entryInCompetition#9","args":[{"apparatus":{"competition_1":["Pole Mallakhamb"],"competition_2":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"],"competition_3":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"]}},null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#10","args":[null,"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#11","args":[{},null,"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#12","args":[null,null,null],"result":true}
+{"id":"eligibility.entryInCompetition#13","args":[{"apparatus":{"competition_1":["Pole Mallakhamb"],"competition_2":["Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"competition_2",null],"result":true}
+{"id":"eligibility.entryInCompetition#14","args":[{"apparatus":"Rope Mallakhamb"},"Competition I",null],"result":true}
+{"id":"eligibility.entryInCompetition#15","args":[null,"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#16","args":[null,"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#17","args":[{"apparatus":"Hanging Mallakhamb"},"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#18","args":[{"apparatus":"Hanging Mallakhamb"},"competition_1","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#19","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb"]},null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#20","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"],"competition_2":["Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]}},"competition_2",null],"result":true}
+{"id":"eligibility.entryInCompetition#21","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},"competition_2",null],"result":false}
+{"id":"eligibility.entryInCompetition#22","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":["Rope Mallakhamb"],"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"Competition III","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#23","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":[],"competition_3":[]}},"competition_2","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#24","args":[{},"Competition II",null],"result":false}
+{"id":"eligibility.entryInCompetition#25","args":[{"apparatus":[]},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#26","args":[{"apparatus":"Pole Mallakhamb"},"Competition III",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#27","args":[{},"Competition II",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#28","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_2":["Rope Mallakhamb"],"competition_3":["Rope Mallakhamb"]}},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#29","args":[{},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#30","args":[{"apparatus":"Rope Mallakhamb"},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#31","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]}},"Competition III","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#32","args":[null,null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#33","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]}},"unknown","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#34","args":[{"apparatus":"Hanging Mallakhamb"},"competition_3",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#35","args":[{"apparatus":[]},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#36","args":[{"apparatus":"Rope Mallakhamb"},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#37","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#38","args":[null,"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#39","args":[null,{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#40","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"competition_2",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#41","args":[{"apparatus":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]},"competition_3",null],"result":true}
+{"id":"eligibility.entryInCompetition#42","args":[null,"competition_2","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#43","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Pole Mallakhamb"],"competition_2":["Pole Mallakhamb"],"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#44","args":[{"apparatus":"Pole Mallakhamb"},"Competition III","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#45","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"Competition III","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#46","args":[null,"competition_3",null],"result":false}
+{"id":"eligibility.entryInCompetition#47","args":[{"apparatus":["Rope Mallakhamb"]},"Competition III","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#48","args":[{},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#49","args":[{"apparatus":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#50","args":[null,"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#51","args":[null,"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#52","args":[{},"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#53","args":[{"apparatus":["Rope Mallakhamb","Pole Mallakhamb"]},"Competition I","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#54","args":[{},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#55","args":[{"apparatus":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]},"Competition III","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#56","args":[{"apparatus":{"competition_1":[],"competition_2":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"],"competition_3":[]}},"Competition III","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#57","args":[{"apparatus":"Hanging Mallakhamb"},null,"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#58","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#59","args":[{"apparatus":"Pole Mallakhamb"},"Competition II","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#60","args":[null,"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#61","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},"Competition III","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#62","args":[{"apparatus":"Pole Mallakhamb"},"competition_2",null],"result":true}
+{"id":"eligibility.entryInCompetition#63","args":[{"apparatus":["Rope Mallakhamb","Pole Mallakhamb"]},"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#64","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Rope Mallakhamb"]}},"",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#65","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},"Competition II","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#66","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#67","args":[{},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#68","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb"]}},"competition_3",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#69","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},"Competition III","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#70","args":[{},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#71","args":[{"apparatus":{"competition_3":[]}},"Competition III","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#72","args":[{"apparatus":"Hanging Mallakhamb"},"competition_3",null],"result":true}
+{"id":"eligibility.entryInCompetition#73","args":[{"apparatus":{"competition_3":["Rope Mallakhamb"]}},"competition_1",null],"result":true}
+{"id":"eligibility.entryInCompetition#74","args":[{"apparatus":[]},"Competition II","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#75","args":[{},"Competition II",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#76","args":[null,"competition_2",null],"result":false}
+{"id":"eligibility.entryInCompetition#77","args":[{"apparatus":{"competition_1":[],"competition_2":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"],"competition_3":[]}},"competition_1",null],"result":true}
+{"id":"eligibility.entryInCompetition#78","args":[{"apparatus":"Hanging Mallakhamb"},"Competition III",null],"result":true}
+{"id":"eligibility.entryInCompetition#79","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#80","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"],"competition_2":["Hanging Mallakhamb"],"competition_3":["Rope Mallakhamb","Pole Mallakhamb"]}},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#81","args":[{"apparatus":["Rope Mallakhamb"]},"Competition III","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#82","args":[{"apparatus":{"competition_3":["Rope Mallakhamb"]}},"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#83","args":[null,"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#84","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":[],"competition_3":[]}},"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#85","args":[{"apparatus":["Hanging Mallakhamb","Rope Mallakhamb"]},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#86","args":[{"apparatus":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]},"competition_2",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#87","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},"",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#88","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_2":["Pole Mallakhamb","Rope Mallakhamb"],"competition_3":[]}},"competition_2",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#89","args":[{"apparatus":["Rope Mallakhamb"]},"Competition I","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#90","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":[],"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#91","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb"],"competition_2":["Pole Mallakhamb","Rope Mallakhamb"],"competition_3":[]}},"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#92","args":[{"apparatus":[]},"competition_2","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#93","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Pole Mallakhamb"],"competition_2":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},"competition_3",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#94","args":[{"apparatus":{"competition_3":[]}},"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#95","args":[{"apparatus":"Rope Mallakhamb"},"competition_3","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#96","args":[{},null,"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#97","args":[{},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#98","args":[{"apparatus":["Hanging Mallakhamb"]},"Competition II","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#99","args":[{"apparatus":{"competition_3":[]}},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#100","args":[{"apparatus":["Hanging Mallakhamb"]},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#101","args":[{},"Competition II","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#102","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb"]},null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#103","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},"competition_2","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#104","args":[{},"Competition III","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#105","args":[{"apparatus":{"competition_3":["Rope Mallakhamb"]}},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#106","args":[{"apparatus":["Rope Mallakhamb","Hanging Mallakhamb"]},{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#107","args":[{"apparatus":["Rope Mallakhamb"]},"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#108","args":[{},"competition_2","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#109","args":[{"apparatus":{"competition_3":[]}},"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#110","args":[{},"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#111","args":[{"apparatus":["Pole Mallakhamb"]},"Competition II","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#112","args":[{"apparatus":"Rope Mallakhamb"},"competition_2",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#113","args":[{},"Competition II",null],"result":false}
+{"id":"eligibility.entryInCompetition#114","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#115","args":[null,"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#116","args":[null,null,"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#117","args":[null,"Competition III","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#118","args":[{"apparatus":["Pole Mallakhamb"]},"",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#119","args":[{"apparatus":["Hanging Mallakhamb","Rope Mallakhamb"]},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#120","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#121","args":[{"apparatus":"Hanging Mallakhamb"},"Competition II","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#122","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#123","args":[{"apparatus":[]},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#124","args":[{},"Competition III","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#125","args":[{"apparatus":{"competition_3":[]}},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#126","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Pole Mallakhamb"],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":[]}},null,{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#127","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Rope Mallakhamb"]}},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#128","args":[{"apparatus":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]},"Competition II","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#129","args":[null,"Competition III","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#130","args":[{"apparatus":["Pole Mallakhamb"]},"competition_1",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#131","args":[{},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#132","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"],"competition_3":[]}},"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#133","args":[{"apparatus":{"competition_3":[]}},"competition_3",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#134","args":[{"apparatus":"Pole Mallakhamb"},"Competition III",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#135","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Pole Mallakhamb"]}},"Competition III","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#136","args":[{},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#137","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"]}},"",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#138","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":[],"competition_3":["Hanging Mallakhamb"]}},null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#139","args":[{},"competition_1",null],"result":true}
+{"id":"eligibility.entryInCompetition#140","args":[{},"Competition I",null],"result":true}
+{"id":"eligibility.entryInCompetition#141","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"]}},"unknown","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#142","args":[{"apparatus":"Pole Mallakhamb"},"Competition III","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#143","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#144","args":[null,"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#145","args":[{},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#146","args":[{},"Competition III","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#147","args":[{"apparatus":"Hanging Mallakhamb"},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#148","args":[{"apparatus":{"competition_1":["Pole Mallakhamb"],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":["Pole Mallakhamb","Hanging Mallakhamb"]}},"Competition III","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#149","args":[{"apparatus":["Pole Mallakhamb"]},"Competition I","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#150","args":[null,"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#151","args":[{"apparatus":"Pole Mallakhamb"},"Competition II",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#152","args":[{},"competition_3",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#153","args":[null,"",null],"result":true}
+{"id":"eligibility.entryInCompetition#154","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb"]},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#155","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":["Rope Mallakhamb","Pole Mallakhamb"]}},"competition_2",null],"result":false}
+{"id":"eligibility.entryInCompetition#156","args":[{"apparatus":["Rope Mallakhamb","Pole Mallakhamb"]},"","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#157","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]}},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#158","args":[{"apparatus":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#159","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Pole Mallakhamb","Rope Mallakhamb"],"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#160","args":[{"apparatus":"Pole Mallakhamb"},{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#161","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb"],"competition_2":["Rope Mallakhamb"],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#162","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_2":["Hanging Mallakhamb"],"competition_3":[]}},{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#163","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"],"competition_2":[],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},null,{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#164","args":[{"apparatus":"Pole Mallakhamb"},"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#165","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"],"competition_2":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},"unknown",null],"result":true}
+{"id":"eligibility.entryInCompetition#166","args":[{"apparatus":{"competition_3":[]}},"Competition I","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#167","args":[{"apparatus":"Rope Mallakhamb"},"competition_3",null],"result":true}
+{"id":"eligibility.entryInCompetition#168","args":[{},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#169","args":[{"apparatus":"Rope Mallakhamb"},null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#170","args":[{"apparatus":["Pole Mallakhamb"]},{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#171","args":[null,"competition_1",null],"result":true}
+{"id":"eligibility.entryInCompetition#172","args":[{},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#173","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]}},"competition_2",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#174","args":[{},"Competition II","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#175","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},"competition_2","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#176","args":[{"apparatus":{"competition_1":[],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":["Pole Mallakhamb","Hanging Mallakhamb"]}},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#177","args":[{"apparatus":["Rope Mallakhamb"]},"Competition II",null],"result":true}
+{"id":"eligibility.entryInCompetition#178","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},"Competition I","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#179","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"unknown",null],"result":true}
+{"id":"eligibility.entryInCompetition#180","args":[{"apparatus":"Rope Mallakhamb"},"competition_3",null],"result":true}
+{"id":"eligibility.entryInCompetition#181","args":[{"apparatus":{"competition_1":[],"competition_2":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"],"competition_3":["Rope Mallakhamb","Pole Mallakhamb"]}},"Competition II",null],"result":true}
+{"id":"eligibility.entryInCompetition#182","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb"]}},"Competition II",null],"result":false}
+{"id":"eligibility.entryInCompetition#183","args":[null,"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#184","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#185","args":[null,"Competition III","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#186","args":[{"apparatus":{"competition_3":[]}},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#187","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#188","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"Competition II",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#189","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"competition_3","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#190","args":[{"apparatus":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]},"competition_3","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#191","args":[{"apparatus":["Rope Mallakhamb"]},"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#192","args":[{"apparatus":"Rope Mallakhamb"},"Competition III","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#193","args":[null,"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#194","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#195","args":[{},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#196","args":[null,"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#197","args":[{},"Competition III","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#198","args":[null,"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#199","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_2":["Rope Mallakhamb","Hanging Mallakhamb"],"competition_3":[]}},"competition_1","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#200","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":["Pole Mallakhamb"],"competition_3":["Hanging Mallakhamb"]}},"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#201","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb"],"competition_2":["Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":[]}},"competition_2","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#202","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#203","args":[{"apparatus":"Rope Mallakhamb"},"Competition II",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#204","args":[{"apparatus":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]},"","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#205","args":[null,"unknown","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#206","args":[null,{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#207","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Rope Mallakhamb"]}},"competition_3",null],"result":true}
+{"id":"eligibility.entryInCompetition#208","args":[{"apparatus":{"competition_1":[],"competition_2":["Hanging Mallakhamb"],"competition_3":[]}},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#209","args":[{},"Competition III","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#210","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"competition_1",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#211","args":[null,"competition_2",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#212","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Pole Mallakhamb"]}},"Competition I",null],"result":true}
+{"id":"eligibility.entryInCompetition#213","args":[{},"Competition I","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#214","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Hanging Mallakhamb"],"competition_3":["Rope Mallakhamb","Pole Mallakhamb"]}},"competition_1","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#215","args":[{},"Competition I","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#216","args":[{},"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#217","args":[null,"competition_2","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#218","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},"Competition III","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#219","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb"]},"Competition II",null],"result":true}
+{"id":"eligibility.entryInCompetition#220","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"]}},"Competition III","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#221","args":[null,"Competition II",null],"result":false}
+{"id":"eligibility.entryInCompetition#222","args":[{"apparatus":{"competition_1":[],"competition_2":["Pole Mallakhamb"],"competition_3":[]}},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#223","args":[{"apparatus":["Hanging Mallakhamb"]},{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#224","args":[{"apparatus":{"competition_1":["Pole Mallakhamb"],"competition_2":["Pole Mallakhamb"],"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"Competition III",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#225","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb"],"competition_2":["Hanging Mallakhamb"],"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"Competition I",null],"result":true}
+{"id":"eligibility.entryInCompetition#226","args":[{"apparatus":"Hanging Mallakhamb"},{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#227","args":[{"apparatus":"Hanging Mallakhamb"},{"$":"undefined"},{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#228","args":[{"apparatus":{"competition_1":["Pole Mallakhamb"],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#229","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},"competition_1","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#230","args":[null,"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#231","args":[{"apparatus":{"competition_3":[]}},"competition_3",null],"result":false}
+{"id":"eligibility.entryInCompetition#232","args":[null,"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#233","args":[{"apparatus":"Rope Mallakhamb"},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#234","args":[{"apparatus":["Rope Mallakhamb","Pole Mallakhamb"]},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#235","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":[]}},"competition_1","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#236","args":[{"apparatus":"Pole Mallakhamb"},"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#237","args":[null,{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#238","args":[null,"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#239","args":[null,"unknown","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#240","args":[null,"Competition I","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#241","args":[{},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#242","args":[null,null,null],"result":true}
+{"id":"eligibility.entryInCompetition#243","args":[{"apparatus":"Rope Mallakhamb"},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#244","args":[null,"competition_1","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#245","args":[{},"competition_2",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#246","args":[{"apparatus":"Rope Mallakhamb"},"competition_2","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#247","args":[{},"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#248","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":[],"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#249","args":[{"apparatus":[]},"competition_3",null],"result":false}
+{"id":"eligibility.entryInCompetition#250","args":[{},"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#251","args":[null,"Competition I",null],"result":true}
+{"id":"eligibility.entryInCompetition#252","args":[{"apparatus":{"competition_1":[],"competition_2":["Pole Mallakhamb","Rope Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},null,{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#253","args":[null,"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#254","args":[null,null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#255","args":[{"apparatus":"Rope Mallakhamb"},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#256","args":[{"apparatus":{"competition_1":["Pole Mallakhamb"],"competition_2":[],"competition_3":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"]}},"competition_1","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#257","args":[null,"Competition III","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#258","args":[{"apparatus":"Hanging Mallakhamb"},"competition_1","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#259","args":[{},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#260","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]}},"Competition III",null],"result":true}
+{"id":"eligibility.entryInCompetition#261","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Rope Mallakhamb"],"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#262","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb"],"competition_2":[],"competition_3":["Rope Mallakhamb"]}},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#263","args":[{},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#264","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":["Rope Mallakhamb"]}},"Competition I",null],"result":true}
+{"id":"eligibility.entryInCompetition#265","args":[{"apparatus":{"competition_1":["Pole Mallakhamb"],"competition_2":[],"competition_3":["Hanging Mallakhamb"]}},"","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#266","args":[{"apparatus":"Rope Mallakhamb"},"Competition II",null],"result":true}
+{"id":"eligibility.entryInCompetition#267","args":[{"apparatus":{"competition_1":[],"competition_2":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#268","args":[null,"Competition II","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#269","args":[{"apparatus":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"]},"competition_2","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#270","args":[{},"competition_3","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#271","args":[{"apparatus":"Rope Mallakhamb"},"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#272","args":[{"apparatus":["Rope Mallakhamb","Hanging Mallakhamb"]},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#273","args":[{},"Competition II","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#274","args":[{"apparatus":"Hanging Mallakhamb"},{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#275","args":[null,"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#276","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#277","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb"]}},"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#278","args":[null,"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#279","args":[{"apparatus":"Hanging Mallakhamb"},"competition_2",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#280","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Pole Mallakhamb"],"competition_2":[],"competition_3":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]}},"competition_1",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#281","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"]}},"Competition III",null],"result":true}
+{"id":"eligibility.entryInCompetition#282","args":[{},"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#283","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},null,"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#284","args":[{"apparatus":{"competition_3":[]}},null,"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#285","args":[{"apparatus":{"competition_3":[]}},"competition_3",null],"result":false}
+{"id":"eligibility.entryInCompetition#286","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":["Hanging Mallakhamb"],"competition_3":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]}},"competition_1",null],"result":true}
+{"id":"eligibility.entryInCompetition#287","args":[{"apparatus":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"]},"competition_3","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#288","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Rope Mallakhamb"],"competition_2":[],"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"competition_2",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#289","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb"]}},"Competition III",null],"result":true}
+{"id":"eligibility.entryInCompetition#290","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb"]}},"competition_2",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#291","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb"],"competition_2":[],"competition_3":[]}},"","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#292","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":["Rope Mallakhamb"]}},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#293","args":[null,"competition_3",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#294","args":[null,"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#295","args":[{"apparatus":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#296","args":[null,"competition_1","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#297","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},"",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#298","args":[null,"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#299","args":[{},null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#300","args":[{},{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#301","args":[{},null,{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#302","args":[{"apparatus":[]},"unknown",null],"result":true}
+{"id":"eligibility.entryInCompetition#303","args":[{"apparatus":"Pole Mallakhamb"},"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#304","args":[null,"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#305","args":[null,{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#306","args":[{},"competition_2","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#307","args":[{"apparatus":"Rope Mallakhamb"},"competition_2",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#308","args":[{"apparatus":[]},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#309","args":[null,"",null],"result":true}
+{"id":"eligibility.entryInCompetition#310","args":[null,"Competition I","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#311","args":[{"apparatus":"Rope Mallakhamb"},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#312","args":[{},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#313","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Pole Mallakhamb","Rope Mallakhamb"],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#314","args":[{"apparatus":{"competition_1":[],"competition_2":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},null,"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#315","args":[{"apparatus":"Hanging Mallakhamb"},"Competition III","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#316","args":[null,null,null],"result":true}
+{"id":"eligibility.entryInCompetition#317","args":[{},"competition_3","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#318","args":[{"apparatus":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]},"competition_3","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#319","args":[{"apparatus":{"competition_1":["Rope Mallakhamb"],"competition_2":[],"competition_3":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]}},"competition_3","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#320","args":[null,"Competition III",null],"result":false}
+{"id":"eligibility.entryInCompetition#321","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":["Pole Mallakhamb"]}},"unknown",null],"result":true}
+{"id":"eligibility.entryInCompetition#322","args":[null,"",null],"result":true}
+{"id":"eligibility.entryInCompetition#323","args":[null,{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#324","args":[{"apparatus":["Pole Mallakhamb"]},"competition_3",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#325","args":[{"apparatus":{"competition_3":[]}},null,{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#326","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb"],"competition_3":[]}},"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#327","args":[{"apparatus":{"competition_1":[],"competition_2":[],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"]}},"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#328","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},"Competition II",null],"result":false}
+{"id":"eligibility.entryInCompetition#329","args":[{"apparatus":"Hanging Mallakhamb"},"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#330","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb"],"competition_3":[]}},"Competition III","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#331","args":[{"apparatus":"Rope Mallakhamb"},"unknown",null],"result":true}
+{"id":"eligibility.entryInCompetition#332","args":[{},"competition_3",null],"result":false}
+{"id":"eligibility.entryInCompetition#333","args":[{"apparatus":{"competition_1":[],"competition_2":["Hanging Mallakhamb"],"competition_3":["Rope Mallakhamb"]}},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#334","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Pole Mallakhamb"],"competition_2":["Hanging Mallakhamb"],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb"]}},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#335","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Rope Mallakhamb","Pole Mallakhamb"],"competition_2":[],"competition_3":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"]}},"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#336","args":[{"apparatus":"Pole Mallakhamb"},"competition_2","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#337","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#338","args":[{"apparatus":[]},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#339","args":[null,"Competition I",null],"result":true}
+{"id":"eligibility.entryInCompetition#340","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Pole Mallakhamb"],"competition_2":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"],"competition_3":[]}},"competition_1","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#341","args":[{"apparatus":{"competition_1":[],"competition_2":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},"Competition III",null],"result":true}
+{"id":"eligibility.entryInCompetition#342","args":[{"apparatus":[]},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#343","args":[{"apparatus":{"competition_3":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"]}},"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#344","args":[{"apparatus":{"competition_3":["Pole Mallakhamb","Rope Mallakhamb"]}},"competition_3",null],"result":true}
+{"id":"eligibility.entryInCompetition#345","args":[{},"Competition I","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#346","args":[{"apparatus":{"competition_1":["Hanging Mallakhamb","Pole Mallakhamb"],"competition_2":["Rope Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#347","args":[null,"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#348","args":[null,null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#349","args":[{"apparatus":{"competition_3":[]}},"competition_1",null],"result":true}
+{"id":"eligibility.entryInCompetition#350","args":[{"apparatus":{"competition_3":[]}},"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#351","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Pole Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},"Competition III",null],"result":true}
+{"id":"eligibility.entryInCompetition#352","args":[null,null,null],"result":true}
+{"id":"eligibility.entryInCompetition#353","args":[{"apparatus":["Pole Mallakhamb"]},"","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#354","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"]}},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#355","args":[{"apparatus":["Hanging Mallakhamb"]},"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#356","args":[{"apparatus":["Hanging Mallakhamb"]},"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#357","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"]}},"Competition II","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#358","args":[{},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#359","args":[{"apparatus":{"competition_3":["Pole Mallakhamb"]}},"Competition III","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#360","args":[null,"competition_3","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#361","args":[{},"Competition II","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#362","args":[{"apparatus":{"competition_3":["Rope Mallakhamb"]}},null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#363","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_2":["Pole Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#364","args":[{},"Competition III",null],"result":false}
+{"id":"eligibility.entryInCompetition#365","args":[null,{"$":"undefined"},null],"result":true}
+{"id":"eligibility.entryInCompetition#366","args":[null,"unknown",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#367","args":[{},"",null],"result":true}
+{"id":"eligibility.entryInCompetition#368","args":[{},"competition_1",null],"result":true}
+{"id":"eligibility.entryInCompetition#369","args":[{"apparatus":{"competition_3":[]}},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#370","args":[null,"unknown","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#371","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Rope Mallakhamb","Hanging Mallakhamb","Pole Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#372","args":[{},"Competition II",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#373","args":[{"apparatus":"Rope Mallakhamb"},"competition_2","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#374","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Rope Mallakhamb","Hanging Mallakhamb"],"competition_2":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":[]}},"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#375","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_2":["Pole Mallakhamb","Rope Mallakhamb"],"competition_3":["Hanging Mallakhamb","Rope Mallakhamb"]}},"unknown","Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#376","args":[null,"competition_3","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#377","args":[{"apparatus":{"competition_3":["Rope Mallakhamb","Hanging Mallakhamb"]}},"Competition III","Pole Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#378","args":[{},"competition_3",{"$":"undefined"}],"result":false}
+{"id":"eligibility.entryInCompetition#379","args":[{},"competition_3","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#380","args":[{"apparatus":"Pole Mallakhamb"},"Competition II","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#381","args":[{"apparatus":{"competition_1":[],"competition_2":["Hanging Mallakhamb","Rope Mallakhamb"],"competition_3":["Rope Mallakhamb"]}},"Competition I","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#382","args":[{"apparatus":[]},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#383","args":[{"apparatus":"Rope Mallakhamb"},"unknown","Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#384","args":[{"apparatus":"Pole Mallakhamb"},"competition_3","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#385","args":[{},"competition_2","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#386","args":[{"apparatus":{"competition_3":[]}},"competition_2","Rope Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#387","args":[{"apparatus":["Rope Mallakhamb","Pole Mallakhamb","Hanging Mallakhamb"]},"competition_3",null],"result":true}
+{"id":"eligibility.entryInCompetition#388","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Hanging Mallakhamb"],"competition_2":["Hanging Mallakhamb","Pole Mallakhamb","Rope Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},null,"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#389","args":[{"apparatus":{"competition_1":["Pole Mallakhamb","Hanging Mallakhamb","Rope Mallakhamb"],"competition_2":["Hanging Mallakhamb","Pole Mallakhamb"],"competition_3":[]}},{"$":"undefined"},"Rope Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#390","args":[{"apparatus":{"competition_1":["Rope Mallakhamb","Pole Mallakhamb"],"competition_2":[],"competition_3":["Rope Mallakhamb"]}},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#391","args":[null,"competition_1","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#392","args":[null,{"$":"undefined"},"Hanging Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#393","args":[{},"competition_2","Hanging Mallakhamb"],"result":false}
+{"id":"eligibility.entryInCompetition#394","args":[{"apparatus":"Hanging Mallakhamb"},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#395","args":[null,null,null],"result":true}
+{"id":"eligibility.entryInCompetition#396","args":[{"apparatus":"Rope Mallakhamb"},null,null],"result":true}
+{"id":"eligibility.entryInCompetition#397","args":[{"apparatus":{"competition_3":[]}},"competition_3",null],"result":false}
+{"id":"eligibility.entryInCompetition#398","args":[{},"Competition I",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#399","args":[{"apparatus":{"competition_1":[],"competition_2":["Rope Mallakhamb","Pole Mallakhamb"],"competition_3":["Pole Mallakhamb"]}},"",{"$":"undefined"}],"result":true}
+{"id":"eligibility.entryInCompetition#400","args":[null,"Competition I","Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#401","args":[{"apparatus":"Hanging Mallakhamb"},{"$":"undefined"},"Pole Mallakhamb"],"result":true}
+{"id":"eligibility.entryInCompetition#402","args":[{"apparatus":[]},"Competition III","Pole Mallakhamb"],"result":false}

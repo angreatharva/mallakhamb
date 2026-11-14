@@ -1,0 +1,14 @@
+{"id":"scoring.apparatusKey#0","args":["Pole Mallakhamb"],"result":"Pole Mallakhamb"}
+{"id":"scoring.apparatusKey#1","args":["Hanging Mallakhamb"],"result":"Hanging Mallakhamb"}
+{"id":"scoring.apparatusKey#2","args":["Rope Mallakhamb"],"result":"Rope Mallakhamb"}
+{"id":"scoring.apparatusKey#3","args":["pole"],"result":"Pole Mallakhamb"}
+{"id":"scoring.apparatusKey#4","args":["ROPE"],"result":"Rope Mallakhamb"}
+{"id":"scoring.apparatusKey#5","args":["hanging"],"result":"Hanging Mallakhamb"}
+{"id":"scoring.apparatusKey#6","args":["Hang"],"result":"Hanging Mallakhamb"}
+{"id":"scoring.apparatusKey#7","args":["rope mallakhamb "],"result":"Rope Mallakhamb"}
+{"id":"scoring.apparatusKey#8","args":[""],"result":"Pole Mallakhamb"}
+{"id":"scoring.apparatusKey#9","args":[null],"result":"Pole Mallakhamb"}
+{"id":"scoring.apparatusKey#10","args":[{"$":"undefined"}],"result":"Pole Mallakhamb"}
+{"id":"scoring.apparatusKey#11","args":["Unknown"],"result":"Pole Mallakhamb"}
+{"id":"scoring.apparatusKey#12","args":[7],"result":"Pole Mallakhamb"}
+{"id":"scoring.apparatusKey#13","args":["Pole Rope"],"result":"Pole Mallakhamb"}

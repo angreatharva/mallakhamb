@@ -1,0 +1,6 @@
+{"id":"panel.evaluatorSeats#0","args":[3],"result":["Judge 1","Judge 2"]}
+{"id":"panel.evaluatorSeats#1","args":[4],"result":["Judge 1","Judge 2","Judge 3"]}
+{"id":"panel.evaluatorSeats#2","args":[5],"result":["Judge 1","Judge 2","Judge 3","Judge 4"]}
+{"id":"panel.evaluatorSeats#3","args":[0],"result":[]}
+{"id":"panel.evaluatorSeats#4","args":[2],"result":["Judge 1"]}
+{"id":"panel.evaluatorSeats#5","args":[6],"result":["Judge 1","Judge 2","Judge 3","Judge 4"]}

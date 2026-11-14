@@ -1,0 +1,14 @@
+{"id":"scoring.getDifficultyRequirement#0","args":["competition_1"],"result":{"A":4,"B":6,"C":1}}
+{"id":"scoring.getDifficultyRequirement#1","args":["competition_2"],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#2","args":["competition_3"],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#3","args":["Competition I"],"result":{"A":4,"B":6,"C":1}}
+{"id":"scoring.getDifficultyRequirement#4","args":["Competition II"],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#5","args":["Competition III"],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#6","args":["competition i"],"result":{"A":4,"B":6,"C":1}}
+{"id":"scoring.getDifficultyRequirement#7","args":["Competition 1"],"result":{"A":4,"B":6,"C":1}}
+{"id":"scoring.getDifficultyRequirement#8","args":["COMPETITION_1"],"result":{"A":4,"B":6,"C":1}}
+{"id":"scoring.getDifficultyRequirement#9","args":[""],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#10","args":[null],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#11","args":[{"$":"undefined"}],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#12","args":["competition_4"],"result":{"A":1,"B":6,"C":2}}
+{"id":"scoring.getDifficultyRequirement#13","args":["Competition IV"],"result":{"A":1,"B":6,"C":2}}

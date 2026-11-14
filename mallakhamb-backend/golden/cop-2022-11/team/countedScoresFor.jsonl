@@ -1,0 +1,11 @@
+{"id":"team.countedScoresFor#0","args":[4],"result":3}
+{"id":"team.countedScoresFor#1","args":[6],"result":5}
+{"id":"team.countedScoresFor#2","args":[4],"result":3}
+{"id":"team.countedScoresFor#3","args":[6],"result":5}
+{"id":"team.countedScoresFor#4","args":["4"],"result":3}
+{"id":"team.countedScoresFor#5","args":["6"],"result":5}
+{"id":"team.countedScoresFor#6","args":[{"$":"undefined"}],"result":5}
+{"id":"team.countedScoresFor#7","args":[null],"result":5}
+{"id":"team.countedScoresFor#8","args":[5],"result":5}
+{"id":"team.countedScoresFor#9","args":[0],"result":5}
+{"id":"team.countedScoresFor#10","args":["six"],"result":5}
