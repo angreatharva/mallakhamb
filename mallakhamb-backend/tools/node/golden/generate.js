@@ -35,7 +35,13 @@ const FULL_PER_ENGINE = 100_000;
 const COMMITTED_DIR = path.join(BACKEND_ROOT, 'golden', EDITION);
 const FULL_DIR = path.join(BACKEND_ROOT, 'build', 'golden-full', EDITION);
 
-const SUITES = ['scoring', 'ranking', 'team', 'fees', 'panel', 'eligibility', 'jsnumber'].map((name) => require(`./suites/${name}`));
+const { SUITE_NAMES } = require('./suites');
+
+const SUITES = SUITE_NAMES.map((name) => require(`./suites/${name}`));
+
+/** Worked examples taken from Node's unit tests by `capture-examples.js`: `engine.function` → [{ from, args }]. */
+const EXAMPLES_FILE = path.join(__dirname, 'examples.json');
+const EXAMPLES = fs.existsSync(EXAMPLES_FILE) ? JSON.parse(fs.readFileSync(EXAMPLES_FILE, 'utf8')) : {};
 
 function parseArgs(argv) {
   const options = { count: DEFAULT_COUNT, full: false, verify: false };
@@ -54,22 +60,25 @@ function runCase(fn, encodedArgs) {
   try {
     return { result: encode(fn(...decode(encodedArgs))) };
   } catch (error) {
-    const thrown = { name: error.name, message: error.message };
+    // A JavaScript runtime error (a null dereference, say) has engine-specific wording; only its kind is recorded.
+    const isRuntimeError = error instanceof TypeError || error instanceof RangeError || error instanceof ReferenceError;
+    const thrown = isRuntimeError ? { name: error.name } : { name: error.name, message: error.message };
     if (error.statusCode !== undefined) thrown.statusCode = error.statusCode;
     if (error.code !== undefined) thrown.code = error.code;
     return { throws: thrown };
   }
 }
 
-/** Every case of one function, as JSONL lines: the fixed cases first, then `count` random ones. */
+/** Every case of one function, as JSONL lines: the fixed cases, the COP's worked examples, the examples from Node's tests, then `count` random ones. */
 function* casesOf(engine, spec, count) {
   const prefix = `${engine}.${spec.name}`;
   let index = 0;
-  const line = (args) => {
-    const encodedArgs = encode(args);
-    return JSON.stringify({ id: `${prefix}#${index++}`, args: encodedArgs, ...runCase(spec.fn, encodedArgs) });
-  };
+  const lineOf = (encodedArgs, from) =>
+    JSON.stringify({ id: `${prefix}#${index++}`, ...(from ? { from } : {}), args: encodedArgs, ...runCase(spec.fn, encodedArgs) });
+  const line = (args) => lineOf(encode(args));
   for (const args of spec.fixed || []) yield line(args);
+  for (const example of spec.cop || []) yield lineOf(encode(example.args), example.from);
+  for (const example of EXAMPLES[prefix] || []) yield lineOf(example.args, example.from);
   if (!spec.gen) return;
   const rng = new Rng(hash32(prefix) ^ BASE_SEED);
   for (let i = 0; i < count; i++) yield line(spec.gen(rng));
@@ -133,7 +142,7 @@ function verify() {
       }
       for (const line of text.split('\n')) {
         if (!line) continue;
-        const { id, args, ...expected } = JSON.parse(line);
+        const { id, from, args, ...expected } = JSON.parse(line);
         cases++;
         const actual = runCase(spec.fn, args);
         if (JSON.stringify(actual) !== JSON.stringify(expected)) {

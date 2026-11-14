@@ -4,403 +4,412 @@
 {"id":"scoring.validateSlipBreakdown#3","args":[{"difficulty":{"total":3.8},"combination":{"total":1.7},"execution":4.4}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
 {"id":"scoring.validateSlipBreakdown#4","args":[{"difficulty":{"total":3.8},"combination":{"total":1.6},"execution":4.45}],"result":{"valid":false,"error":"Execution 4.45 exceeds ceiling 4.4"}}
 {"id":"scoring.validateSlipBreakdown#5","args":[{"execution":4.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#6","args":[{"difficulty":{"total":2.2},"combination":{"total":1.5},"execution":0.45,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#7","args":[{"difficulty":{"total":2.6},"execution":3.3,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#8","args":[{"difficulty":{"total":0.4},"combination":{"total":0.2},"execution":0.016,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#9","args":[{"difficulty":{"total":0},"combination":{"total":0.9},"execution":"abc","bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#10","args":[{"difficulty":{"total":4},"combination":{"total":1.7},"execution":0.75,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#11","args":[{"difficulty":{"total":1.4},"combination":{"total":0.2},"execution":2,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#12","args":[{"difficulty":{"total":2.2},"combination":{"total":0.5},"execution":null,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#13","args":[{"difficulty":{"total":2.6},"combination":{"total":1.2},"execution":0.002,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#14","args":[{"difficulty":{"total":3.8},"combination":{"total":0.2},"execution":3.3,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#15","args":[{"difficulty":{"total":3.4},"combination":{"total":1.7},"execution":0.052,"bonus":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#16","args":[{"difficulty":{"total":1.6},"combination":{"total":0.7},"execution":0.4,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#17","args":[{"difficulty":{"total":3.8},"combination":{"total":1.4},"execution":2.25,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#18","args":[{"difficulty":{"total":3.6},"combination":{"total":0.9},"execution":2.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#19","args":[{"difficulty":{"total":0.8},"combination":{"total":1.3},"execution":1.15,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#20","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#21","args":[{"difficulty":{"total":2.6},"combination":{"total":0.6},"execution":2.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#22","args":[{"difficulty":{"total":0},"combination":{"total":1.7},"execution":3.35,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#23","args":[{"difficulty":{"total":0.2},"combination":{"total":1},"execution":0.034,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#24","args":[{"difficulty":{"total":3.4},"combination":{"total":0.1},"execution":0.09,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#25","args":[{"difficulty":{"total":2.2},"combination":{"total":1.3},"execution":0.12,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#26","args":[{"difficulty":{"total":2.4},"combination":{"total":0.5},"execution":2.25,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#27","args":[{"difficulty":{"total":3.2},"combination":{"total":0.8},"execution":2.65,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#28","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"execution":1.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#29","args":[{"difficulty":{"total":3.6},"combination":{"total":0.7},"execution":4.25,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#30","args":[{"difficulty":{"total":1.4},"combination":{"total":1.8},"execution":"4.4","bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#31","args":[{"difficulty":{"total":3.2},"combination":{"total":0.5},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#32","args":[{"difficulty":{"total":2.8},"combination":{"total":0.3},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#33","args":[{"difficulty":{"total":2.4},"combination":{"total":1},"execution":3.1,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#34","args":[{"difficulty":{"total":1.6},"combination":{"total":1},"execution":0.45,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#35","args":[{"difficulty":{"total":2.4},"combination":{"total":0.7},"execution":0.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#36","args":[{"difficulty":{"total":0},"combination":{"total":0.8},"execution":1.95,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#37","args":[{"difficulty":{"total":1.4},"combination":{"total":1.4},"execution":2.85,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#38","args":[{"difficulty":{"total":2},"combination":{"total":0.9},"execution":0.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#39","args":[{"difficulty":{"total":2.2},"combination":{"total":1.8},"execution":0.095,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#40","args":[{"difficulty":{"total":3.2},"combination":{"total":1.1},"execution":3.2,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#41","args":[{"difficulty":{"total":2.8},"combination":{"total":0.7},"execution":3.45,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#42","args":[{"difficulty":{"total":4},"combination":{"total":1.8},"execution":1.8,"originality":0.1}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#43","args":[{"difficulty":{"total":1.8},"execution":3.65,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#44","args":[{"difficulty":{"total":2.4},"execution":4.3,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#45","args":[{"combination":{"total":0.1},"execution":0.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#46","args":[{}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#47","args":[{"difficulty":{"total":3.8},"combination":{"total":0.4},"execution":2.85,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#48","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#49","args":[{"difficulty":{"total":4.2},"combination":{"total":1},"execution":3.95,"originality":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#50","args":[{"difficulty":{"total":3},"combination":{"total":1.7},"execution":3.2,"bonus":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#51","args":[{"difficulty":{"total":1.4},"combination":{"total":1.6},"execution":0.2,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#52","args":[{"difficulty":{"total":2.8},"combination":{"total":1.1},"execution":3.95,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#53","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#54","args":[{"difficulty":{"total":1.6},"combination":{"total":1.1},"execution":"4.4","bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#55","args":[{"difficulty":{"total":0.2},"combination":{"total":0.4},"execution":1.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#56","args":[{"difficulty":{"total":0},"combination":{"total":1.4},"execution":0.052,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#57","args":[{"difficulty":{"total":3},"combination":{"total":1.4},"execution":4.55,"bonus":0}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#58","args":[{"difficulty":{"total":0.2},"combination":{"total":1.5},"execution":2.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#59","args":[{"difficulty":{"total":2.8},"combination":{"total":0},"execution":0.11,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#60","args":[{"combination":{"total":0.2},"execution":4.35,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#61","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#62","args":[{"difficulty":{"total":0.2},"combination":{"total":1.7},"execution":2.95,"originality":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#63","args":[{"difficulty":{"total":3.6},"combination":{"total":1.7},"execution":3.6,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#64","args":[{"combination":{"total":0},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#65","args":[{"combination":{"total":0.2},"execution":2.35,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#66","args":[{"difficulty":{"total":1.2},"combination":{"total":1},"execution":0.123,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#67","args":[{"difficulty":{"total":3},"combination":{"total":1.3},"execution":2.15,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#68","args":[{"difficulty":{"total":0.8},"combination":{"total":0.3},"execution":2.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#69","args":[{"difficulty":{"total":1.4},"combination":{"total":0.2},"execution":2.25,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#70","args":[{"difficulty":{"total":3.2},"execution":4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#71","args":[{"difficulty":{"total":0.4},"combination":{"total":0.7},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#72","args":[{"difficulty":{"total":3},"combination":{"total":0.3},"execution":3.75,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#73","args":[{"difficulty":{"total":2.6},"combination":{"total":0},"execution":3.85,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#74","args":[{"difficulty":{"total":1.6},"combination":{"total":1.5},"execution":2.55,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#75","args":[{"difficulty":{"total":1.6},"execution":2.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#76","args":[{"difficulty":{"total":3},"combination":{"total":0.7},"execution":1.35,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#77","args":[{"difficulty":{"total":0.2},"combination":{"total":1},"execution":0.066,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#78","args":[{"difficulty":{"total":4},"combination":{"total":0.7},"execution":0.5,"originality":0.20000000001}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#79","args":[{"difficulty":{"total":1.6},"combination":{"total":0.8},"execution":4.35,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#80","args":[{"difficulty":{"total":1.6},"combination":{"total":0.6},"execution":0.139,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#81","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#82","args":[{"difficulty":{"total":2.6},"execution":0.8,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#83","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#84","args":[{"difficulty":{"total":3.8},"combination":{"total":0.2},"execution":2,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#85","args":[{"difficulty":{"total":1.8},"combination":{"total":1.6},"execution":1.95,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#86","args":[{"difficulty":{"total":1.6},"combination":{"total":0},"execution":1.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#87","args":[{"difficulty":{"total":3.8},"combination":{"total":0.1},"execution":1.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#88","args":[{"difficulty":{"total":2.6},"execution":2.6,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#89","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#90","args":[{"difficulty":{"total":4.2},"combination":{"total":0.5},"execution":0.55,"bonus":0.20000000001}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#91","args":[{"combination":{"total":0.3},"execution":2.1,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#92","args":[{"difficulty":{"total":3.6},"combination":{"total":1.4},"execution":3.85,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#93","args":[{"difficulty":{"total":3.8},"combination":{"total":0.8},"execution":1.8,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#94","args":[{"difficulty":{"total":1},"combination":{"total":1},"execution":2.2,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#95","args":[{"difficulty":{"total":2.4},"combination":{"total":1.6},"execution":3.65,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#96","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"execution":1.2,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#97","args":[{"combination":{"total":1.3},"execution":4.45,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.45 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#98","args":[{"difficulty":{"total":0.6},"combination":{"total":0.8},"execution":1.5,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#99","args":[{"difficulty":{"total":2.6},"combination":{"total":1.2},"execution":0.55,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#100","args":[{"difficulty":{"total":2.8},"combination":{"total":0.5},"execution":0.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#101","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#102","args":[{"difficulty":{"total":0.4},"combination":{"total":1.8},"execution":0.105,"bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#103","args":[{"difficulty":{"total":2},"combination":{"total":0.5},"execution":0.5,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#104","args":[{"difficulty":{"total":0.2},"combination":{"total":0.2},"execution":3.5,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#105","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#106","args":[{"difficulty":{"total":2.4},"execution":0.95,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#107","args":[{"difficulty":{"total":0},"combination":{"total":0.1},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#108","args":[{"difficulty":{"total":0.8},"combination":{"total":0.3},"execution":3.05,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#109","args":[{"difficulty":{"total":0.8},"combination":{"total":1.3},"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#110","args":[{"difficulty":{"total":1.6},"combination":{"total":1.8},"execution":3.65,"originality":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#111","args":[{"difficulty":{"total":4},"combination":{"total":1.1},"execution":0.8,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#112","args":[{"difficulty":{"total":1},"combination":{"total":1.3},"execution":2.9,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#113","args":[{"difficulty":{"total":3.2},"combination":{"total":0.8},"execution":3.15,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#114","args":[{"combination":{"total":1.2},"execution":0.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#115","args":[{"difficulty":{"total":1.8},"combination":{"total":1},"execution":1.9,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#116","args":[{"difficulty":{"total":1.6},"combination":{"total":1.5},"execution":3.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#117","args":[{"combination":{"total":0.1},"execution":4.2,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#118","args":[{"difficulty":{"total":1.8},"combination":{"total":0.9},"execution":3.9,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#119","args":[{"difficulty":{"total":1.6},"combination":{"total":1.3},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#120","args":[{"difficulty":{"total":0.8},"combination":{"total":1.5},"execution":3.35,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#121","args":[{"difficulty":{"total":2.2},"combination":{"total":1.1},"execution":4.55,"bonus":0}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#122","args":[{"difficulty":{"total":1.6},"combination":{"total":1.4},"execution":0.5,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#123","args":[{"difficulty":{"total":3.2},"combination":{"total":1.3},"execution":null,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#124","args":[{"difficulty":{"total":1},"combination":{"total":1.7},"execution":3.25,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#125","args":[{"difficulty":{"total":1.6},"combination":{"total":1.6},"execution":3.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#126","args":[{"difficulty":{"total":2.6},"combination":{"total":1.8},"execution":1.8,"originality":0.1}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#127","args":[{"difficulty":{"total":3},"combination":{"total":1.1},"execution":2.05,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#128","args":[{"difficulty":{"total":0.4},"combination":{"total":0.2},"execution":0.25,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#129","args":[{"difficulty":{"total":2.8},"combination":{"total":0.4},"execution":0.089,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#130","args":[{"difficulty":{"total":1.8},"combination":{"total":1.8},"execution":2.9,"bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#131","args":[{"difficulty":{"total":2},"combination":{"total":0.5},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#132","args":[{"difficulty":{"total":3.4},"combination":{"total":0.8},"execution":1.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#133","args":[{"difficulty":{"total":0.8},"combination":{"total":0.1},"execution":"abc","bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#134","args":[{"combination":{"total":0.1},"execution":2.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#135","args":[{"difficulty":{"total":4},"combination":{"total":0.5},"execution":0.65,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#136","args":[{"difficulty":{"total":3},"execution":2.55,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#137","args":[{"difficulty":{"total":3},"combination":{"total":0},"execution":0.121,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#138","args":[{"difficulty":{"total":2.6},"combination":{"total":1},"execution":1.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#139","args":[{"combination":{"total":0.1},"execution":2.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#140","args":[{"difficulty":{"total":0.6},"combination":{"total":0.5},"execution":0.134,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#141","args":[{"difficulty":{"total":1.8},"combination":{"total":1.8},"execution":null,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#142","args":[{"difficulty":{"total":0.8},"combination":{"total":1.5},"execution":1.35,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#143","args":[{"difficulty":{"total":3.2},"combination":{"total":0.2},"execution":0.75,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#144","args":[{"difficulty":{"total":1.8},"combination":{"total":0},"execution":0.043,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#145","args":[{"combination":{"total":0},"execution":1.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#146","args":[{"difficulty":{"total":1.2},"combination":{"total":1.6},"execution":2.8,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#147","args":[{"difficulty":{"total":2.2},"combination":{"total":0.5},"execution":1.6,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#148","args":[{"difficulty":{"total":3},"combination":{"total":1.4},"execution":1.6,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#149","args":[{"combination":{"total":1},"execution":1.15,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#150","args":[{"difficulty":{"total":1},"combination":{"total":0.3},"execution":2.3,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#151","args":[{"difficulty":{"total":1.8},"combination":{"total":0.4},"execution":2.85,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#152","args":[{"difficulty":{"total":3.8},"combination":{"total":0.1},"execution":0.095,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#153","args":[{"difficulty":{"total":1.6},"combination":{"total":0.6},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#154","args":[{}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#155","args":[{"difficulty":{"total":2.4},"combination":{"total":1.6},"execution":0.2,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#156","args":[{"difficulty":{"total":2},"combination":{"total":0},"execution":0.105,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#157","args":[{"difficulty":{"total":2.2},"combination":{"total":1.7},"execution":2,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#158","args":[{"difficulty":{"total":1.8},"combination":{"total":0.6},"execution":1.45,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#159","args":[{}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#160","args":[{"difficulty":{"total":2.4},"combination":{"total":1.6},"execution":0.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#161","args":[{}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#162","args":[{"difficulty":{"total":3},"combination":{"total":1.5},"execution":3,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#163","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#164","args":[{"difficulty":{"total":1.4},"combination":{"total":0.9},"execution":4.2,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#165","args":[{"difficulty":{"total":3.4},"combination":{"total":0.4},"execution":0.1,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#166","args":[{"difficulty":{"total":2.6},"execution":0.1,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#167","args":[{"difficulty":{"total":0.8},"execution":4.55,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#168","args":[{"difficulty":{"total":3.4},"combination":{"total":0.9},"execution":2.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#169","args":[{"difficulty":{"total":2},"combination":{"total":0.4},"execution":0.02,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#170","args":[{"difficulty":{"total":1},"combination":{"total":1.6},"execution":2.1,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#171","args":[{"difficulty":{"total":1},"execution":3,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#172","args":[{"combination":{"total":1.5},"execution":2.55,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#173","args":[{"difficulty":{"total":4.2},"combination":{"total":0.9},"execution":1.45,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#174","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#175","args":[{"difficulty":{"total":4.2},"combination":{"total":0.4},"execution":"abc","bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#176","args":[{"difficulty":{"total":1.8},"combination":{"total":0.2},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#177","args":[{"difficulty":{"total":1},"combination":{"total":1},"execution":1.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#178","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#179","args":[{"difficulty":{"total":0.2},"combination":{"total":1.4},"execution":0.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#180","args":[{"difficulty":{"total":0},"combination":{"total":0.3},"execution":0.95,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#181","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#182","args":[{"difficulty":{"total":2.8},"combination":{"total":1.2},"execution":2.1,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#183","args":[{"difficulty":{"total":0},"combination":{"total":1.5},"execution":0.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#184","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#185","args":[{"difficulty":{"total":0.2},"execution":2.6,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#186","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#187","args":[{"difficulty":{"total":4.2},"combination":{"total":0.3},"execution":0.1,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#188","args":[{"difficulty":{"total":2.6},"combination":{"total":0.1},"execution":4.55,"originality":0}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#189","args":[{"difficulty":{"total":2.4},"combination":{"total":0.3},"execution":"","bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#190","args":[{"difficulty":{"total":2.8},"combination":{"total":0.9},"execution":0.105,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#191","args":[{"difficulty":{"total":0.8},"combination":{"total":0.4},"execution":2.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#192","args":[{"difficulty":{"total":2.4},"execution":0.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#193","args":[{"combination":{"total":0.3},"execution":0.25,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#194","args":[{"difficulty":{"total":4},"combination":{"total":1.5},"execution":2.75,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#195","args":[{"difficulty":{"total":4},"combination":{"total":0.4},"execution":0.111,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#196","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#197","args":[{"difficulty":{"total":4.2},"combination":{"total":1.2},"execution":1.45,"originality":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#198","args":[{"difficulty":{"total":3.6},"combination":{"total":1},"execution":0.55,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#199","args":[{"difficulty":{"total":2.8},"combination":{"total":1.5},"execution":1.45,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#200","args":[{"difficulty":{"total":0.8},"combination":{"total":0.8},"execution":0.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#201","args":[{"difficulty":{"total":3.2},"combination":{"total":1.2},"execution":3.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#202","args":[{"difficulty":{"total":3.2},"execution":1.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#203","args":[{"difficulty":{"total":2.2},"combination":{"total":1.5},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#204","args":[{"difficulty":{"total":4.2},"combination":{"total":0.6},"execution":3.45,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#205","args":[{"combination":{"total":1.8},"execution":3.05,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#206","args":[{"difficulty":{"total":0.2},"combination":{"total":0.8},"execution":0.35,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#207","args":[{"difficulty":{"total":2},"combination":{"total":1.3},"execution":0.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#208","args":[{"difficulty":{"total":2.6},"combination":{"total":0.1},"execution":0.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#209","args":[7],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#210","args":[{"combination":{"total":0},"execution":1.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#211","args":[{"difficulty":{"total":2.8},"combination":{"total":1.5},"execution":2.55,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#212","args":[{"difficulty":{"total":3.2},"combination":{"total":1.5},"execution":1.8,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#213","args":[{"difficulty":{"total":0.2},"combination":{"total":1},"execution":3.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#214","args":[{"difficulty":{"total":3.4},"combination":{"total":0.8},"execution":0.25,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#215","args":[{"combination":{"total":1.7},"execution":1.8,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#216","args":[{"difficulty":{"total":3},"execution":2.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#217","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"execution":2.25,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#218","args":[{"difficulty":{"total":1},"combination":{"total":1.8},"execution":0.05,"bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#219","args":[{"difficulty":{"total":2.8},"combination":{"total":0.2},"execution":0.095,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#220","args":[{"difficulty":{"total":2.2},"combination":{"total":1.4},"execution":0.4,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#221","args":[{"difficulty":{"total":2.8},"combination":{"total":0.3},"execution":1.55,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#222","args":[{"difficulty":{"total":0.2},"combination":{"total":0.9},"execution":2.8,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#223","args":[{"difficulty":{"total":1.6},"execution":4.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#224","args":[{"combination":{"total":1.6},"execution":4.45,"bonus":0.1}],"result":{"valid":false,"error":"Execution 4.45 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#225","args":[{"difficulty":{"total":0.2},"combination":{"total":0.2},"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#226","args":[{"combination":{"total":0.1},"execution":4.25,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#227","args":[{"combination":{"total":0.7},"execution":2.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#228","args":[{"difficulty":{"total":3},"execution":3.6,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#229","args":[{"difficulty":{"total":0.4},"combination":{"total":0.5},"execution":3.6,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#230","args":[{"combination":{"total":1.5},"execution":1.7,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#231","args":[{"difficulty":{"total":2.6},"execution":3.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#232","args":[{"difficulty":{"total":1.4},"combination":{"total":1.3},"execution":3.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#233","args":[{"difficulty":{"total":2.6},"combination":{"total":1.4},"execution":2.35,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#234","args":[{"difficulty":{"total":4},"combination":{"total":1.7},"execution":0.85,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#235","args":[{"difficulty":{"total":3.8},"combination":{"total":0.4},"execution":4.5,"bonus":0.1}],"result":{"valid":false,"error":"Execution 4.5 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#236","args":[{"difficulty":{"total":3.4},"combination":{"total":0.2},"execution":0.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#237","args":[{"difficulty":{"total":2.4},"combination":{"total":1.4},"execution":2.35,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#238","args":[{"difficulty":{"total":0},"combination":{"total":0.4},"execution":1.85,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#239","args":[{"combination":{"total":0.7},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#240","args":[{"difficulty":{"total":2},"combination":{"total":1},"execution":4.05,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#241","args":[{"difficulty":{"total":1.6},"combination":{"total":1},"execution":0.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#242","args":[{"difficulty":{"total":2.6},"combination":{"total":1.4},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#243","args":[{"combination":{"total":0.8},"execution":1,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#244","args":[{"difficulty":{"total":1.8},"combination":{"total":0.9},"execution":3.55,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#245","args":[{"difficulty":{"total":2.4},"combination":{"total":0.7},"execution":3.2,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#246","args":[{"difficulty":{"total":3.2},"combination":{"total":0.7},"execution":3.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#247","args":[{"difficulty":{"total":0.4},"combination":{"total":1.1},"execution":3.2,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#248","args":[{"difficulty":{"total":3.8},"combination":{"total":1.8},"execution":1.7,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#249","args":[{"difficulty":{"total":0.2},"combination":{"total":0.7},"execution":3.25,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#250","args":[{"difficulty":{"total":0},"combination":{"total":0.2},"execution":1.55,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#251","args":[{"difficulty":{"total":4},"execution":0.45,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#252","args":[{"difficulty":{"total":1.2},"combination":{"total":1},"execution":4.25,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#253","args":[{"difficulty":{"total":4.2},"combination":{"total":0.6},"execution":2.55,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#254","args":[{"difficulty":{"total":1.6},"execution":1.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#255","args":[{"combination":{"total":0.2},"execution":4.5,"bonus":0.20000000001}],"result":{"valid":false,"error":"Execution 4.5 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#256","args":[{"difficulty":{"total":2},"combination":{"total":0.2},"execution":4.6,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.6 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#257","args":[{"difficulty":{"total":0.4},"combination":{"total":1},"execution":0.183,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#258","args":[{"difficulty":{"total":1.2},"combination":{"total":1.1},"execution":0.136,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#259","args":[{"difficulty":{"total":3.6},"combination":{"total":1.2},"execution":0.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#260","args":[{"difficulty":{"total":2.6},"combination":{"total":1.8},"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#261","args":[{"difficulty":{"total":0.6},"combination":{"total":1.3},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#262","args":[{"difficulty":{"total":4.2},"combination":{"total":0.2},"execution":0.25,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#263","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"execution":0,"originality":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#264","args":[7],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#265","args":[{"difficulty":{"total":3.8},"combination":{"total":1.2},"execution":"abc","bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#266","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"execution":3.55,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#267","args":[{"combination":{"total":1.2},"execution":2.2,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#268","args":[{"difficulty":{"total":2},"combination":{"total":1},"execution":2.45,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#269","args":[{"difficulty":{"total":2},"combination":{"total":0.3},"execution":1.75,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#270","args":[{"difficulty":{"total":0},"combination":{"total":0.6},"execution":1.65,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#271","args":[{"difficulty":{"total":2.6},"execution":3.55,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#272","args":[{"difficulty":{"total":2.8},"combination":{"total":1.6},"execution":4.15,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#273","args":[{"difficulty":{"total":4.2},"combination":{"total":0.5},"execution":4.3,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#274","args":[{"difficulty":{"total":1.2},"combination":{"total":1.1},"execution":1.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#275","args":[{"difficulty":{"total":0},"execution":1.55,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#276","args":[{"difficulty":{"total":1},"combination":{"total":0.1},"execution":3.05,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#277","args":[{"difficulty":{"total":2},"combination":{"total":1.3},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#278","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#279","args":[{"difficulty":{"total":3.2},"combination":{"total":0.4},"execution":0.85,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#280","args":[{"combination":{"total":1.2},"execution":1.75,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#281","args":[{"difficulty":{"total":3.8},"combination":{"total":0.9},"execution":4.2,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#282","args":[{"difficulty":{"total":0.2},"combination":{"total":0},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#283","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"execution":2.4,"originality":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#284","args":[{"difficulty":{"total":1.6},"combination":{"total":1.7},"execution":"","bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#285","args":[{"difficulty":{"total":1.6},"combination":{"total":0.6},"execution":0.178,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#286","args":[{"combination":{"total":0.9},"execution":4.2,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#287","args":[{"difficulty":{"total":3.2},"combination":{"total":0.7},"execution":0.9,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#288","args":[{"combination":{"total":1.7},"execution":3.3,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#289","args":[{"difficulty":{"total":1.8},"combination":{"total":0.4},"execution":3.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#290","args":[{"difficulty":{"total":3.6},"combination":{"total":1.1},"execution":4.2,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#291","args":[{"difficulty":{"total":0.4},"combination":{"total":1.5},"execution":1.85,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#292","args":[7],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#293","args":[{"difficulty":{"total":0.2},"combination":{"total":0.4},"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#294","args":[{"difficulty":{"total":3},"combination":{"total":1.1},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#295","args":[{"difficulty":{"total":3.6},"combination":{"total":0.2},"execution":0.037,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#296","args":[7],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#297","args":[{"difficulty":{"total":3.2},"combination":{"total":1.1},"execution":0.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#298","args":[{"difficulty":{"total":1},"execution":0.85,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#299","args":[{"difficulty":{"total":2.8},"combination":{"total":1.1},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#300","args":[{}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#301","args":[{"difficulty":{"total":4.2},"execution":1.95,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#302","args":[{"difficulty":{"total":4.2},"combination":{"total":0.9},"execution":0.09,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#303","args":[{"combination":{"total":0.7},"execution":2.2,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#304","args":[{"difficulty":{"total":3.2},"combination":{"total":0.9},"execution":0.105,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#305","args":[{"difficulty":{"total":4.2},"combination":{"total":0.7},"execution":3.15,"bonus":0.20000000001}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#306","args":[{"combination":{"total":1},"execution":3.85,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#307","args":[{"difficulty":{"total":0},"combination":{"total":0.8},"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#308","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#309","args":[{"difficulty":{"total":0.6},"combination":{"total":1.4},"execution":0.55,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#310","args":[{"combination":{"total":0.2},"execution":3.95,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#311","args":[{"combination":{"total":0.9},"execution":2.95,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#312","args":[{"difficulty":{"total":1.4},"combination":{"total":1},"execution":0.134,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#313","args":[{"difficulty":{"total":3.6},"combination":{"total":0.3},"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#314","args":[{"difficulty":{"total":0},"combination":{"total":0.5},"execution":2.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#315","args":[{"difficulty":{"total":3.4},"combination":{"total":1.5},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#316","args":[{"difficulty":{"total":2.4},"combination":{"total":0.7},"execution":4.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#317","args":[{"difficulty":{"total":1.2},"combination":{"total":1},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#318","args":[{"difficulty":{"total":1.6},"combination":{"total":0.9},"execution":0.044,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#319","args":[{"difficulty":{"total":3.6},"combination":{"total":1.8},"execution":4.35,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#320","args":[{"difficulty":{"total":1.6},"execution":3.3,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#321","args":[{"difficulty":{"total":4.2},"combination":{"total":1},"execution":2.5,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#322","args":[{"difficulty":{"total":0.4},"execution":2.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#323","args":[{"difficulty":{"total":3.2},"combination":{"total":0.9},"execution":4.25,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#324","args":[{"difficulty":{"total":0.2},"combination":{"total":0.4},"execution":0.4,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#325","args":["text"],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#326","args":[{"combination":{"total":0.8},"execution":1.65,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#327","args":[{"difficulty":{"total":0.6},"combination":{"total":0.1},"execution":1.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#328","args":[{"difficulty":{"total":3.6},"combination":{"total":0},"execution":1.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#329","args":[{"difficulty":{"total":1.8},"combination":{"total":0.6},"execution":2.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#330","args":[{"difficulty":{"total":0.2},"combination":{"total":1.6},"execution":4.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#331","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#332","args":[{"difficulty":{"total":1.8},"combination":{"total":0.4},"execution":0.199,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#333","args":[{"combination":{"total":0.8},"execution":0.25,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#334","args":[{"difficulty":{"total":4},"combination":{"total":1.4},"execution":0.09,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#335","args":[{"difficulty":{"total":0.2},"combination":{"total":1.6},"execution":0.043,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#336","args":[{"difficulty":{"total":3.4},"combination":{"total":1.4},"execution":"abc","bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#337","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#338","args":[{"difficulty":{"total":1.8},"combination":{"total":0.7},"execution":2.5,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#339","args":[{"difficulty":{"total":4.2},"combination":{"total":0.5},"execution":2.15,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#340","args":[{"difficulty":{"total":1.2},"combination":{"total":1.4},"execution":3.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#341","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#342","args":[{"difficulty":{"total":1.4},"combination":{"total":0.2},"execution":0.129,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#343","args":[{"difficulty":{"total":2.8},"combination":{"total":1.3},"execution":0.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#344","args":[{"difficulty":{"total":3.8},"combination":{"total":1.4},"execution":0.137,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#345","args":[{"difficulty":{"total":2.6},"combination":{"total":0.3},"execution":0.033,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#346","args":[{"difficulty":{"total":3},"combination":{"total":1.6},"execution":0.157,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#347","args":[7],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#348","args":[{"combination":{"total":0.7},"execution":2,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#349","args":[{"difficulty":{"total":0.6},"combination":{"total":0.8},"execution":1,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#350","args":[{"difficulty":{"total":2.4},"execution":1.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#351","args":[{"difficulty":{"total":4.2},"combination":{"total":0.1},"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#352","args":[{"difficulty":{"total":0.2},"combination":{"total":0},"execution":0,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#353","args":[{"difficulty":{"total":0},"combination":{"total":1.7},"execution":0.05,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#354","args":[null],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#355","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#356","args":[{"difficulty":{"total":3.6},"combination":{"total":0.6},"execution":2.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#357","args":[{"difficulty":{"total":0.4},"combination":{"total":0.3},"execution":0.1,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#358","args":[{"difficulty":{"total":1},"combination":{"total":0.8},"execution":1.85,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#359","args":[{"difficulty":{"total":1.8},"execution":2.05,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#360","args":[{"difficulty":{"total":2.4},"combination":{"total":0.2},"execution":2.05,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#361","args":[{"difficulty":{"total":1.4},"combination":{"total":1.7},"execution":3.3,"originality":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#362","args":[{"difficulty":{"total":0.4},"combination":{"total":0.3},"execution":2.25,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#363","args":[{"difficulty":{"total":3.8},"combination":{"total":0.8},"execution":0.05,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#364","args":[{"difficulty":{"total":1.8},"combination":{"total":1.8},"execution":1.5,"originality":0.2}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#365","args":[{}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#366","args":[{"difficulty":{"total":2.6},"combination":{"total":1.5},"execution":0.096,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#367","args":[{"difficulty":{"total":3.4},"combination":{"total":1.3},"execution":"4.4","bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#368","args":[{"difficulty":{"total":0.2},"combination":{"total":0.5},"execution":3.6,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#369","args":[{"difficulty":{"total":0},"combination":{"total":1},"execution":2.9,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#370","args":[{"difficulty":{"total":1.2},"execution":1.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#371","args":[{"difficulty":{"total":1.8},"combination":{"total":0.7},"execution":1.4,"originality":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#372","args":[{"difficulty":{"total":2.6},"combination":{"total":1.5},"execution":4.6,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.6 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#373","args":[{"difficulty":{"total":3.8},"execution":1.1,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#374","args":[{"difficulty":{"total":2.6},"combination":{"total":0.6},"execution":4.4,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#375","args":[{"difficulty":{"total":2},"combination":{"total":0},"execution":0.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#376","args":[{"difficulty":{"total":3.2},"execution":4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#377","args":[{"difficulty":{"total":1},"combination":{"total":0.2},"execution":0,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#378","args":[{"difficulty":{"total":1},"combination":{"total":1},"execution":0.75,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#379","args":[{"difficulty":{"total":1.6},"combination":{"total":0.4},"execution":3.45,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#380","args":[{"difficulty":{"total":1.6},"combination":{"total":0},"execution":0.003,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#381","args":[{"difficulty":{"total":4},"combination":{"total":1.7},"execution":3.25,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
-{"id":"scoring.validateSlipBreakdown#382","args":[{"difficulty":{"total":3.4},"execution":0.05,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#383","args":[{"difficulty":{"total":0.2},"combination":{"total":1.5},"execution":2.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#384","args":[{"difficulty":{"total":0.6},"combination":{"total":1.8},"execution":3.75,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#385","args":[{"difficulty":{"total":2.6},"combination":{"total":1.5},"execution":0.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
-{"id":"scoring.validateSlipBreakdown#386","args":[{"difficulty":{"total":3.6},"combination":{"total":0.6},"execution":1.4,"originality":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#387","args":[{"difficulty":{"total":1},"combination":{"total":0.5},"execution":0.6,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#388","args":[{"difficulty":{"total":0.6},"combination":{"total":1.7},"execution":0.15,"bonus":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#389","args":[{"difficulty":{"total":2},"combination":{"total":1},"execution":"abc","bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#390","args":[{"difficulty":{"total":2.4},"combination":{"total":0.6},"execution":3.95,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#391","args":[{"difficulty":{"total":1},"combination":{"total":1.3},"execution":1.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#392","args":[{"difficulty":{"total":1.6},"combination":{"total":1.7},"execution":1.4,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
-{"id":"scoring.validateSlipBreakdown#393","args":[{"combination":{"total":0.9},"execution":4.6,"bonus":0.1}],"result":{"valid":false,"error":"Execution 4.6 exceeds ceiling 4.4"}}
-{"id":"scoring.validateSlipBreakdown#394","args":[{"difficulty":{"total":3.2},"combination":{"total":1.5},"execution":2.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#395","args":[{"difficulty":{"total":1.4},"combination":{"total":0.8},"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#396","args":[{"difficulty":{"total":2.6},"combination":{"total":1.1},"execution":3.75,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#397","args":[{"difficulty":{"total":2.4},"combination":{"total":1.5},"execution":4.15,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#398","args":[{"difficulty":{"total":3.6},"combination":{"total":0.4},"execution":2.4,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#399","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#400","args":[{"combination":{"total":0.7},"execution":3.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#401","args":[{"difficulty":{"total":2.4},"combination":{"total":1.1},"execution":0.14,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#402","args":[{"difficulty":{"total":2.6},"combination":{"total":1},"execution":0.097,"bonus":0}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#403","args":[{"difficulty":{"total":3.2},"combination":{"total":0.4},"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#404","args":[{"difficulty":{"total":3.6},"combination":{"total":1.6},"execution":3.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
-{"id":"scoring.validateSlipBreakdown#405","args":[{"difficulty":{"total":1.4},"combination":{"total":1.6},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#6","from":"Server/tests/unit/calculation.service.test.js","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#7","from":"Server/tests/unit/calculation.service.test.js","args":[{}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#8","from":"Server/tests/unit/calculation.service.test.js","args":[{"difficulty":{"total":4}}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#9","from":"Server/tests/unit/calculation.service.test.js","args":[{"execution":4.5}],"result":{"valid":false,"error":"Execution 4.5 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#10","from":"Server/tests/unit/calculation.service.test.js","args":[{"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#11","from":"Server/tests/unit/calculation.service.test.js","args":[{"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#12","from":"Server/tests/unit/calculation.service.test.js","args":[{"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#13","from":"Server/tests/unit/calculation.service.test.js","args":[{"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#14","from":"Server/tests/unit/calculation.service.test.js","args":[{"originality":0.15}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.15)"}}
+{"id":"scoring.validateSlipBreakdown#15","args":[{"difficulty":{"total":2.2},"combination":{"total":1.5},"execution":0.45,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#16","args":[{"difficulty":{"total":2.6},"execution":3.3,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#17","args":[{"difficulty":{"total":0.4},"combination":{"total":0.2},"execution":0.016,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#18","args":[{"difficulty":{"total":0},"combination":{"total":0.9},"execution":"abc","bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#19","args":[{"difficulty":{"total":4},"combination":{"total":1.7},"execution":0.75,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#20","args":[{"difficulty":{"total":1.4},"combination":{"total":0.2},"execution":2,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#21","args":[{"difficulty":{"total":2.2},"combination":{"total":0.5},"execution":null,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#22","args":[{"difficulty":{"total":2.6},"combination":{"total":1.2},"execution":0.002,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#23","args":[{"difficulty":{"total":3.8},"combination":{"total":0.2},"execution":3.3,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#24","args":[{"difficulty":{"total":3.4},"combination":{"total":1.7},"execution":0.052,"bonus":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#25","args":[{"difficulty":{"total":1.6},"combination":{"total":0.7},"execution":0.4,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#26","args":[{"difficulty":{"total":3.8},"combination":{"total":1.4},"execution":2.25,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#27","args":[{"difficulty":{"total":3.6},"combination":{"total":0.9},"execution":2.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#28","args":[{"difficulty":{"total":0.8},"combination":{"total":1.3},"execution":1.15,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#29","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#30","args":[{"difficulty":{"total":2.6},"combination":{"total":0.6},"execution":2.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#31","args":[{"difficulty":{"total":0},"combination":{"total":1.7},"execution":3.35,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#32","args":[{"difficulty":{"total":0.2},"combination":{"total":1},"execution":0.034,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#33","args":[{"difficulty":{"total":3.4},"combination":{"total":0.1},"execution":0.09,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#34","args":[{"difficulty":{"total":2.2},"combination":{"total":1.3},"execution":0.12,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#35","args":[{"difficulty":{"total":2.4},"combination":{"total":0.5},"execution":2.25,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#36","args":[{"difficulty":{"total":3.2},"combination":{"total":0.8},"execution":2.65,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#37","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"execution":1.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#38","args":[{"difficulty":{"total":3.6},"combination":{"total":0.7},"execution":4.25,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#39","args":[{"difficulty":{"total":1.4},"combination":{"total":1.8},"execution":"4.4","bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#40","args":[{"difficulty":{"total":3.2},"combination":{"total":0.5},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#41","args":[{"difficulty":{"total":2.8},"combination":{"total":0.3},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#42","args":[{"difficulty":{"total":2.4},"combination":{"total":1},"execution":3.1,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#43","args":[{"difficulty":{"total":1.6},"combination":{"total":1},"execution":0.45,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#44","args":[{"difficulty":{"total":2.4},"combination":{"total":0.7},"execution":0.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#45","args":[{"difficulty":{"total":0},"combination":{"total":0.8},"execution":1.95,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#46","args":[{"difficulty":{"total":1.4},"combination":{"total":1.4},"execution":2.85,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#47","args":[{"difficulty":{"total":2},"combination":{"total":0.9},"execution":0.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#48","args":[{"difficulty":{"total":2.2},"combination":{"total":1.8},"execution":0.095,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#49","args":[{"difficulty":{"total":3.2},"combination":{"total":1.1},"execution":3.2,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#50","args":[{"difficulty":{"total":2.8},"combination":{"total":0.7},"execution":3.45,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#51","args":[{"difficulty":{"total":4},"combination":{"total":1.8},"execution":1.8,"originality":0.1}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#52","args":[{"difficulty":{"total":1.8},"execution":3.65,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#53","args":[{"difficulty":{"total":2.4},"execution":4.3,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#54","args":[{"combination":{"total":0.1},"execution":0.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#55","args":[{}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#56","args":[{"difficulty":{"total":3.8},"combination":{"total":0.4},"execution":2.85,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#57","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#58","args":[{"difficulty":{"total":4.2},"combination":{"total":1},"execution":3.95,"originality":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#59","args":[{"difficulty":{"total":3},"combination":{"total":1.7},"execution":3.2,"bonus":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#60","args":[{"difficulty":{"total":1.4},"combination":{"total":1.6},"execution":0.2,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#61","args":[{"difficulty":{"total":2.8},"combination":{"total":1.1},"execution":3.95,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#62","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#63","args":[{"difficulty":{"total":1.6},"combination":{"total":1.1},"execution":"4.4","bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#64","args":[{"difficulty":{"total":0.2},"combination":{"total":0.4},"execution":1.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#65","args":[{"difficulty":{"total":0},"combination":{"total":1.4},"execution":0.052,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#66","args":[{"difficulty":{"total":3},"combination":{"total":1.4},"execution":4.55,"bonus":0}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#67","args":[{"difficulty":{"total":0.2},"combination":{"total":1.5},"execution":2.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#68","args":[{"difficulty":{"total":2.8},"combination":{"total":0},"execution":0.11,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#69","args":[{"combination":{"total":0.2},"execution":4.35,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#70","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#71","args":[{"difficulty":{"total":0.2},"combination":{"total":1.7},"execution":2.95,"originality":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#72","args":[{"difficulty":{"total":3.6},"combination":{"total":1.7},"execution":3.6,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#73","args":[{"combination":{"total":0},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#74","args":[{"combination":{"total":0.2},"execution":2.35,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#75","args":[{"difficulty":{"total":1.2},"combination":{"total":1},"execution":0.123,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#76","args":[{"difficulty":{"total":3},"combination":{"total":1.3},"execution":2.15,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#77","args":[{"difficulty":{"total":0.8},"combination":{"total":0.3},"execution":2.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#78","args":[{"difficulty":{"total":1.4},"combination":{"total":0.2},"execution":2.25,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#79","args":[{"difficulty":{"total":3.2},"execution":4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#80","args":[{"difficulty":{"total":0.4},"combination":{"total":0.7},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#81","args":[{"difficulty":{"total":3},"combination":{"total":0.3},"execution":3.75,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#82","args":[{"difficulty":{"total":2.6},"combination":{"total":0},"execution":3.85,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#83","args":[{"difficulty":{"total":1.6},"combination":{"total":1.5},"execution":2.55,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#84","args":[{"difficulty":{"total":1.6},"execution":2.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#85","args":[{"difficulty":{"total":3},"combination":{"total":0.7},"execution":1.35,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#86","args":[{"difficulty":{"total":0.2},"combination":{"total":1},"execution":0.066,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#87","args":[{"difficulty":{"total":4},"combination":{"total":0.7},"execution":0.5,"originality":0.20000000001}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#88","args":[{"difficulty":{"total":1.6},"combination":{"total":0.8},"execution":4.35,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#89","args":[{"difficulty":{"total":1.6},"combination":{"total":0.6},"execution":0.139,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#90","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#91","args":[{"difficulty":{"total":2.6},"execution":0.8,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#92","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#93","args":[{"difficulty":{"total":3.8},"combination":{"total":0.2},"execution":2,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#94","args":[{"difficulty":{"total":1.8},"combination":{"total":1.6},"execution":1.95,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#95","args":[{"difficulty":{"total":1.6},"combination":{"total":0},"execution":1.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#96","args":[{"difficulty":{"total":3.8},"combination":{"total":0.1},"execution":1.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#97","args":[{"difficulty":{"total":2.6},"execution":2.6,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#98","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#99","args":[{"difficulty":{"total":4.2},"combination":{"total":0.5},"execution":0.55,"bonus":0.20000000001}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#100","args":[{"combination":{"total":0.3},"execution":2.1,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#101","args":[{"difficulty":{"total":3.6},"combination":{"total":1.4},"execution":3.85,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#102","args":[{"difficulty":{"total":3.8},"combination":{"total":0.8},"execution":1.8,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#103","args":[{"difficulty":{"total":1},"combination":{"total":1},"execution":2.2,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#104","args":[{"difficulty":{"total":2.4},"combination":{"total":1.6},"execution":3.65,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#105","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"execution":1.2,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#106","args":[{"combination":{"total":1.3},"execution":4.45,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.45 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#107","args":[{"difficulty":{"total":0.6},"combination":{"total":0.8},"execution":1.5,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#108","args":[{"difficulty":{"total":2.6},"combination":{"total":1.2},"execution":0.55,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#109","args":[{"difficulty":{"total":2.8},"combination":{"total":0.5},"execution":0.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#110","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#111","args":[{"difficulty":{"total":0.4},"combination":{"total":1.8},"execution":0.105,"bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#112","args":[{"difficulty":{"total":2},"combination":{"total":0.5},"execution":0.5,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#113","args":[{"difficulty":{"total":0.2},"combination":{"total":0.2},"execution":3.5,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#114","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#115","args":[{"difficulty":{"total":2.4},"execution":0.95,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#116","args":[{"difficulty":{"total":0},"combination":{"total":0.1},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#117","args":[{"difficulty":{"total":0.8},"combination":{"total":0.3},"execution":3.05,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#118","args":[{"difficulty":{"total":0.8},"combination":{"total":1.3},"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#119","args":[{"difficulty":{"total":1.6},"combination":{"total":1.8},"execution":3.65,"originality":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#120","args":[{"difficulty":{"total":4},"combination":{"total":1.1},"execution":0.8,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#121","args":[{"difficulty":{"total":1},"combination":{"total":1.3},"execution":2.9,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#122","args":[{"difficulty":{"total":3.2},"combination":{"total":0.8},"execution":3.15,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#123","args":[{"combination":{"total":1.2},"execution":0.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#124","args":[{"difficulty":{"total":1.8},"combination":{"total":1},"execution":1.9,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#125","args":[{"difficulty":{"total":1.6},"combination":{"total":1.5},"execution":3.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#126","args":[{"combination":{"total":0.1},"execution":4.2,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#127","args":[{"difficulty":{"total":1.8},"combination":{"total":0.9},"execution":3.9,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#128","args":[{"difficulty":{"total":1.6},"combination":{"total":1.3},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#129","args":[{"difficulty":{"total":0.8},"combination":{"total":1.5},"execution":3.35,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#130","args":[{"difficulty":{"total":2.2},"combination":{"total":1.1},"execution":4.55,"bonus":0}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#131","args":[{"difficulty":{"total":1.6},"combination":{"total":1.4},"execution":0.5,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#132","args":[{"difficulty":{"total":3.2},"combination":{"total":1.3},"execution":null,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#133","args":[{"difficulty":{"total":1},"combination":{"total":1.7},"execution":3.25,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#134","args":[{"difficulty":{"total":1.6},"combination":{"total":1.6},"execution":3.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#135","args":[{"difficulty":{"total":2.6},"combination":{"total":1.8},"execution":1.8,"originality":0.1}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#136","args":[{"difficulty":{"total":3},"combination":{"total":1.1},"execution":2.05,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#137","args":[{"difficulty":{"total":0.4},"combination":{"total":0.2},"execution":0.25,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#138","args":[{"difficulty":{"total":2.8},"combination":{"total":0.4},"execution":0.089,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#139","args":[{"difficulty":{"total":1.8},"combination":{"total":1.8},"execution":2.9,"bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#140","args":[{"difficulty":{"total":2},"combination":{"total":0.5},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#141","args":[{"difficulty":{"total":3.4},"combination":{"total":0.8},"execution":1.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#142","args":[{"difficulty":{"total":0.8},"combination":{"total":0.1},"execution":"abc","bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#143","args":[{"combination":{"total":0.1},"execution":2.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#144","args":[{"difficulty":{"total":4},"combination":{"total":0.5},"execution":0.65,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#145","args":[{"difficulty":{"total":3},"execution":2.55,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#146","args":[{"difficulty":{"total":3},"combination":{"total":0},"execution":0.121,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#147","args":[{"difficulty":{"total":2.6},"combination":{"total":1},"execution":1.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#148","args":[{"combination":{"total":0.1},"execution":2.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#149","args":[{"difficulty":{"total":0.6},"combination":{"total":0.5},"execution":0.134,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#150","args":[{"difficulty":{"total":1.8},"combination":{"total":1.8},"execution":null,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#151","args":[{"difficulty":{"total":0.8},"combination":{"total":1.5},"execution":1.35,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#152","args":[{"difficulty":{"total":3.2},"combination":{"total":0.2},"execution":0.75,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#153","args":[{"difficulty":{"total":1.8},"combination":{"total":0},"execution":0.043,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#154","args":[{"combination":{"total":0},"execution":1.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#155","args":[{"difficulty":{"total":1.2},"combination":{"total":1.6},"execution":2.8,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#156","args":[{"difficulty":{"total":2.2},"combination":{"total":0.5},"execution":1.6,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#157","args":[{"difficulty":{"total":3},"combination":{"total":1.4},"execution":1.6,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#158","args":[{"combination":{"total":1},"execution":1.15,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#159","args":[{"difficulty":{"total":1},"combination":{"total":0.3},"execution":2.3,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#160","args":[{"difficulty":{"total":1.8},"combination":{"total":0.4},"execution":2.85,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#161","args":[{"difficulty":{"total":3.8},"combination":{"total":0.1},"execution":0.095,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#162","args":[{"difficulty":{"total":1.6},"combination":{"total":0.6},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#163","args":[{}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#164","args":[{"difficulty":{"total":2.4},"combination":{"total":1.6},"execution":0.2,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#165","args":[{"difficulty":{"total":2},"combination":{"total":0},"execution":0.105,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#166","args":[{"difficulty":{"total":2.2},"combination":{"total":1.7},"execution":2,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#167","args":[{"difficulty":{"total":1.8},"combination":{"total":0.6},"execution":1.45,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#168","args":[{}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#169","args":[{"difficulty":{"total":2.4},"combination":{"total":1.6},"execution":0.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#170","args":[{}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#171","args":[{"difficulty":{"total":3},"combination":{"total":1.5},"execution":3,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#172","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#173","args":[{"difficulty":{"total":1.4},"combination":{"total":0.9},"execution":4.2,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#174","args":[{"difficulty":{"total":3.4},"combination":{"total":0.4},"execution":0.1,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#175","args":[{"difficulty":{"total":2.6},"execution":0.1,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#176","args":[{"difficulty":{"total":0.8},"execution":4.55,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#177","args":[{"difficulty":{"total":3.4},"combination":{"total":0.9},"execution":2.7,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#178","args":[{"difficulty":{"total":2},"combination":{"total":0.4},"execution":0.02,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#179","args":[{"difficulty":{"total":1},"combination":{"total":1.6},"execution":2.1,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#180","args":[{"difficulty":{"total":1},"execution":3,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#181","args":[{"combination":{"total":1.5},"execution":2.55,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#182","args":[{"difficulty":{"total":4.2},"combination":{"total":0.9},"execution":1.45,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#183","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#184","args":[{"difficulty":{"total":4.2},"combination":{"total":0.4},"execution":"abc","bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#185","args":[{"difficulty":{"total":1.8},"combination":{"total":0.2},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#186","args":[{"difficulty":{"total":1},"combination":{"total":1},"execution":1.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#187","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#188","args":[{"difficulty":{"total":0.2},"combination":{"total":1.4},"execution":0.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#189","args":[{"difficulty":{"total":0},"combination":{"total":0.3},"execution":0.95,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#190","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#191","args":[{"difficulty":{"total":2.8},"combination":{"total":1.2},"execution":2.1,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#192","args":[{"difficulty":{"total":0},"combination":{"total":1.5},"execution":0.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#193","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#194","args":[{"difficulty":{"total":0.2},"execution":2.6,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#195","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#196","args":[{"difficulty":{"total":4.2},"combination":{"total":0.3},"execution":0.1,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#197","args":[{"difficulty":{"total":2.6},"combination":{"total":0.1},"execution":4.55,"originality":0}],"result":{"valid":false,"error":"Execution 4.55 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#198","args":[{"difficulty":{"total":2.4},"combination":{"total":0.3},"execution":"","bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#199","args":[{"difficulty":{"total":2.8},"combination":{"total":0.9},"execution":0.105,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#200","args":[{"difficulty":{"total":0.8},"combination":{"total":0.4},"execution":2.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#201","args":[{"difficulty":{"total":2.4},"execution":0.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#202","args":[{"combination":{"total":0.3},"execution":0.25,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#203","args":[{"difficulty":{"total":4},"combination":{"total":1.5},"execution":2.75,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#204","args":[{"difficulty":{"total":4},"combination":{"total":0.4},"execution":0.111,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#205","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#206","args":[{"difficulty":{"total":4.2},"combination":{"total":1.2},"execution":1.45,"originality":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#207","args":[{"difficulty":{"total":3.6},"combination":{"total":1},"execution":0.55,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#208","args":[{"difficulty":{"total":2.8},"combination":{"total":1.5},"execution":1.45,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#209","args":[{"difficulty":{"total":0.8},"combination":{"total":0.8},"execution":0.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#210","args":[{"difficulty":{"total":3.2},"combination":{"total":1.2},"execution":3.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#211","args":[{"difficulty":{"total":3.2},"execution":1.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#212","args":[{"difficulty":{"total":2.2},"combination":{"total":1.5},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#213","args":[{"difficulty":{"total":4.2},"combination":{"total":0.6},"execution":3.45,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#214","args":[{"combination":{"total":1.8},"execution":3.05,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#215","args":[{"difficulty":{"total":0.2},"combination":{"total":0.8},"execution":0.35,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#216","args":[{"difficulty":{"total":2},"combination":{"total":1.3},"execution":0.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#217","args":[{"difficulty":{"total":2.6},"combination":{"total":0.1},"execution":0.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#218","args":[7],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#219","args":[{"combination":{"total":0},"execution":1.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#220","args":[{"difficulty":{"total":2.8},"combination":{"total":1.5},"execution":2.55,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#221","args":[{"difficulty":{"total":3.2},"combination":{"total":1.5},"execution":1.8,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#222","args":[{"difficulty":{"total":0.2},"combination":{"total":1},"execution":3.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#223","args":[{"difficulty":{"total":3.4},"combination":{"total":0.8},"execution":0.25,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#224","args":[{"combination":{"total":1.7},"execution":1.8,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#225","args":[{"difficulty":{"total":3},"execution":2.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#226","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"execution":2.25,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#227","args":[{"difficulty":{"total":1},"combination":{"total":1.8},"execution":0.05,"bonus":0}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#228","args":[{"difficulty":{"total":2.8},"combination":{"total":0.2},"execution":0.095,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#229","args":[{"difficulty":{"total":2.2},"combination":{"total":1.4},"execution":0.4,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#230","args":[{"difficulty":{"total":2.8},"combination":{"total":0.3},"execution":1.55,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#231","args":[{"difficulty":{"total":0.2},"combination":{"total":0.9},"execution":2.8,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#232","args":[{"difficulty":{"total":1.6},"execution":4.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#233","args":[{"combination":{"total":1.6},"execution":4.45,"bonus":0.1}],"result":{"valid":false,"error":"Execution 4.45 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#234","args":[{"difficulty":{"total":0.2},"combination":{"total":0.2},"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#235","args":[{"combination":{"total":0.1},"execution":4.25,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#236","args":[{"combination":{"total":0.7},"execution":2.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#237","args":[{"difficulty":{"total":3},"execution":3.6,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#238","args":[{"difficulty":{"total":0.4},"combination":{"total":0.5},"execution":3.6,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#239","args":[{"combination":{"total":1.5},"execution":1.7,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#240","args":[{"difficulty":{"total":2.6},"execution":3.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#241","args":[{"difficulty":{"total":1.4},"combination":{"total":1.3},"execution":3.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#242","args":[{"difficulty":{"total":2.6},"combination":{"total":1.4},"execution":2.35,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#243","args":[{"difficulty":{"total":4},"combination":{"total":1.7},"execution":0.85,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#244","args":[{"difficulty":{"total":3.8},"combination":{"total":0.4},"execution":4.5,"bonus":0.1}],"result":{"valid":false,"error":"Execution 4.5 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#245","args":[{"difficulty":{"total":3.4},"combination":{"total":0.2},"execution":0.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#246","args":[{"difficulty":{"total":2.4},"combination":{"total":1.4},"execution":2.35,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#247","args":[{"difficulty":{"total":0},"combination":{"total":0.4},"execution":1.85,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#248","args":[{"combination":{"total":0.7},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#249","args":[{"difficulty":{"total":2},"combination":{"total":1},"execution":4.05,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#250","args":[{"difficulty":{"total":1.6},"combination":{"total":1},"execution":0.3,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#251","args":[{"difficulty":{"total":2.6},"combination":{"total":1.4},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#252","args":[{"combination":{"total":0.8},"execution":1,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#253","args":[{"difficulty":{"total":1.8},"combination":{"total":0.9},"execution":3.55,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#254","args":[{"difficulty":{"total":2.4},"combination":{"total":0.7},"execution":3.2,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#255","args":[{"difficulty":{"total":3.2},"combination":{"total":0.7},"execution":3.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#256","args":[{"difficulty":{"total":0.4},"combination":{"total":1.1},"execution":3.2,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#257","args":[{"difficulty":{"total":3.8},"combination":{"total":1.8},"execution":1.7,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#258","args":[{"difficulty":{"total":0.2},"combination":{"total":0.7},"execution":3.25,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#259","args":[{"difficulty":{"total":0},"combination":{"total":0.2},"execution":1.55,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#260","args":[{"difficulty":{"total":4},"execution":0.45,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#261","args":[{"difficulty":{"total":1.2},"combination":{"total":1},"execution":4.25,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#262","args":[{"difficulty":{"total":4.2},"combination":{"total":0.6},"execution":2.55,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#263","args":[{"difficulty":{"total":1.6},"execution":1.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#264","args":[{"combination":{"total":0.2},"execution":4.5,"bonus":0.20000000001}],"result":{"valid":false,"error":"Execution 4.5 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#265","args":[{"difficulty":{"total":2},"combination":{"total":0.2},"execution":4.6,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.6 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#266","args":[{"difficulty":{"total":0.4},"combination":{"total":1},"execution":0.183,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#267","args":[{"difficulty":{"total":1.2},"combination":{"total":1.1},"execution":0.136,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#268","args":[{"difficulty":{"total":3.6},"combination":{"total":1.2},"execution":0.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#269","args":[{"difficulty":{"total":2.6},"combination":{"total":1.8},"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#270","args":[{"difficulty":{"total":0.6},"combination":{"total":1.3},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#271","args":[{"difficulty":{"total":4.2},"combination":{"total":0.2},"execution":0.25,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#272","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"execution":0,"originality":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#273","args":[7],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#274","args":[{"difficulty":{"total":3.8},"combination":{"total":1.2},"execution":"abc","bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#275","args":[{"difficulty":{"total":0.8},"combination":{"total":0.7},"execution":3.55,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#276","args":[{"combination":{"total":1.2},"execution":2.2,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#277","args":[{"difficulty":{"total":2},"combination":{"total":1},"execution":2.45,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#278","args":[{"difficulty":{"total":2},"combination":{"total":0.3},"execution":1.75,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#279","args":[{"difficulty":{"total":0},"combination":{"total":0.6},"execution":1.65,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#280","args":[{"difficulty":{"total":2.6},"execution":3.55,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#281","args":[{"difficulty":{"total":2.8},"combination":{"total":1.6},"execution":4.15,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#282","args":[{"difficulty":{"total":4.2},"combination":{"total":0.5},"execution":4.3,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#283","args":[{"difficulty":{"total":1.2},"combination":{"total":1.1},"execution":1.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#284","args":[{"difficulty":{"total":0},"execution":1.55,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#285","args":[{"difficulty":{"total":1},"combination":{"total":0.1},"execution":3.05,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#286","args":[{"difficulty":{"total":2},"combination":{"total":1.3},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#287","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#288","args":[{"difficulty":{"total":3.2},"combination":{"total":0.4},"execution":0.85,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#289","args":[{"combination":{"total":1.2},"execution":1.75,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#290","args":[{"difficulty":{"total":3.8},"combination":{"total":0.9},"execution":4.2,"originality":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#291","args":[{"difficulty":{"total":0.2},"combination":{"total":0},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#292","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"execution":2.4,"originality":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#293","args":[{"difficulty":{"total":1.6},"combination":{"total":1.7},"execution":"","bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#294","args":[{"difficulty":{"total":1.6},"combination":{"total":0.6},"execution":0.178,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#295","args":[{"combination":{"total":0.9},"execution":4.2,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#296","args":[{"difficulty":{"total":3.2},"combination":{"total":0.7},"execution":0.9,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#297","args":[{"combination":{"total":1.7},"execution":3.3,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#298","args":[{"difficulty":{"total":1.8},"combination":{"total":0.4},"execution":3.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#299","args":[{"difficulty":{"total":3.6},"combination":{"total":1.1},"execution":4.2,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#300","args":[{"difficulty":{"total":0.4},"combination":{"total":1.5},"execution":1.85,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#301","args":[7],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#302","args":[{"difficulty":{"total":0.2},"combination":{"total":0.4},"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#303","args":[{"difficulty":{"total":3},"combination":{"total":1.1},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#304","args":[{"difficulty":{"total":3.6},"combination":{"total":0.2},"execution":0.037,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#305","args":[7],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#306","args":[{"difficulty":{"total":3.2},"combination":{"total":1.1},"execution":0.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#307","args":[{"difficulty":{"total":1},"execution":0.85,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#308","args":[{"difficulty":{"total":2.8},"combination":{"total":1.1},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#309","args":[{}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#310","args":[{"difficulty":{"total":4.2},"execution":1.95,"bonus":0.1}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#311","args":[{"difficulty":{"total":4.2},"combination":{"total":0.9},"execution":0.09,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#312","args":[{"combination":{"total":0.7},"execution":2.2,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#313","args":[{"difficulty":{"total":3.2},"combination":{"total":0.9},"execution":0.105,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#314","args":[{"difficulty":{"total":4.2},"combination":{"total":0.7},"execution":3.15,"bonus":0.20000000001}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#315","args":[{"combination":{"total":1},"execution":3.85,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#316","args":[{"difficulty":{"total":0},"combination":{"total":0.8},"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#317","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#318","args":[{"difficulty":{"total":0.6},"combination":{"total":1.4},"execution":0.55,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#319","args":[{"combination":{"total":0.2},"execution":3.95,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#320","args":[{"combination":{"total":0.9},"execution":2.95,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#321","args":[{"difficulty":{"total":1.4},"combination":{"total":1},"execution":0.134,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#322","args":[{"difficulty":{"total":3.6},"combination":{"total":0.3},"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#323","args":[{"difficulty":{"total":0},"combination":{"total":0.5},"execution":2.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#324","args":[{"difficulty":{"total":3.4},"combination":{"total":1.5},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#325","args":[{"difficulty":{"total":2.4},"combination":{"total":0.7},"execution":4.05,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#326","args":[{"difficulty":{"total":1.2},"combination":{"total":1},"execution":3.45,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#327","args":[{"difficulty":{"total":1.6},"combination":{"total":0.9},"execution":0.044,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#328","args":[{"difficulty":{"total":3.6},"combination":{"total":1.8},"execution":4.35,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#329","args":[{"difficulty":{"total":1.6},"execution":3.3,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#330","args":[{"difficulty":{"total":4.2},"combination":{"total":1},"execution":2.5,"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#331","args":[{"difficulty":{"total":0.4},"execution":2.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#332","args":[{"difficulty":{"total":3.2},"combination":{"total":0.9},"execution":4.25,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#333","args":[{"difficulty":{"total":0.2},"combination":{"total":0.4},"execution":0.4,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#334","args":["text"],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#335","args":[{"combination":{"total":0.8},"execution":1.65,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#336","args":[{"difficulty":{"total":0.6},"combination":{"total":0.1},"execution":1.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#337","args":[{"difficulty":{"total":3.6},"combination":{"total":0},"execution":1.65,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#338","args":[{"difficulty":{"total":1.8},"combination":{"total":0.6},"execution":2.1,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#339","args":[{"difficulty":{"total":0.2},"combination":{"total":1.6},"execution":4.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#340","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#341","args":[{"difficulty":{"total":1.8},"combination":{"total":0.4},"execution":0.199,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#342","args":[{"combination":{"total":0.8},"execution":0.25,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#343","args":[{"difficulty":{"total":4},"combination":{"total":1.4},"execution":0.09,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#344","args":[{"difficulty":{"total":0.2},"combination":{"total":1.6},"execution":0.043,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#345","args":[{"difficulty":{"total":3.4},"combination":{"total":1.4},"execution":"abc","bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#346","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#347","args":[{"difficulty":{"total":1.8},"combination":{"total":0.7},"execution":2.5,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#348","args":[{"difficulty":{"total":4.2},"combination":{"total":0.5},"execution":2.15,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#349","args":[{"difficulty":{"total":1.2},"combination":{"total":1.4},"execution":3.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#350","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#351","args":[{"difficulty":{"total":1.4},"combination":{"total":0.2},"execution":0.129,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#352","args":[{"difficulty":{"total":2.8},"combination":{"total":1.3},"execution":0.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#353","args":[{"difficulty":{"total":3.8},"combination":{"total":1.4},"execution":0.137,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#354","args":[{"difficulty":{"total":2.6},"combination":{"total":0.3},"execution":0.033,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#355","args":[{"difficulty":{"total":3},"combination":{"total":1.6},"execution":0.157,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#356","args":[7],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#357","args":[{"combination":{"total":0.7},"execution":2,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#358","args":[{"difficulty":{"total":0.6},"combination":{"total":0.8},"execution":1,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#359","args":[{"difficulty":{"total":2.4},"execution":1.4,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#360","args":[{"difficulty":{"total":4.2},"combination":{"total":0.1},"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#361","args":[{"difficulty":{"total":0.2},"combination":{"total":0},"execution":0,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#362","args":[{"difficulty":{"total":0},"combination":{"total":1.7},"execution":0.05,"bonus":0.2}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#363","args":[null],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#364","args":[{"difficulty":{"total":4.2},"combination":{"total":1.4},"bonus":0.2}],"result":{"valid":false,"error":"Difficulty 4.2 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#365","args":[{"difficulty":{"total":3.6},"combination":{"total":0.6},"execution":2.05,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#366","args":[{"difficulty":{"total":0.4},"combination":{"total":0.3},"execution":0.1,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#367","args":[{"difficulty":{"total":1},"combination":{"total":0.8},"execution":1.85,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#368","args":[{"difficulty":{"total":1.8},"execution":2.05,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#369","args":[{"difficulty":{"total":2.4},"combination":{"total":0.2},"execution":2.05,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#370","args":[{"difficulty":{"total":1.4},"combination":{"total":1.7},"execution":3.3,"originality":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#371","args":[{"difficulty":{"total":0.4},"combination":{"total":0.3},"execution":2.25,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#372","args":[{"difficulty":{"total":3.8},"combination":{"total":0.8},"execution":0.05,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#373","args":[{"difficulty":{"total":1.8},"combination":{"total":1.8},"execution":1.5,"originality":0.2}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#374","args":[{}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#375","args":[{"difficulty":{"total":2.6},"combination":{"total":1.5},"execution":0.096,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#376","args":[{"difficulty":{"total":3.4},"combination":{"total":1.3},"execution":"4.4","bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#377","args":[{"difficulty":{"total":0.2},"combination":{"total":0.5},"execution":3.6,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#378","args":[{"difficulty":{"total":0},"combination":{"total":1},"execution":2.9,"originality":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#379","args":[{"difficulty":{"total":1.2},"execution":1.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#380","args":[{"difficulty":{"total":1.8},"combination":{"total":0.7},"execution":1.4,"originality":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#381","args":[{"difficulty":{"total":2.6},"combination":{"total":1.5},"execution":4.6,"bonus":0.2}],"result":{"valid":false,"error":"Execution 4.6 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#382","args":[{"difficulty":{"total":3.8},"execution":1.1,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#383","args":[{"difficulty":{"total":2.6},"combination":{"total":0.6},"execution":4.4,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#384","args":[{"difficulty":{"total":2},"combination":{"total":0},"execution":0.5,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#385","args":[{"difficulty":{"total":3.2},"execution":4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#386","args":[{"difficulty":{"total":1},"combination":{"total":0.2},"execution":0,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#387","args":[{"difficulty":{"total":1},"combination":{"total":1},"execution":0.75,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#388","args":[{"difficulty":{"total":1.6},"combination":{"total":0.4},"execution":3.45,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#389","args":[{"difficulty":{"total":1.6},"combination":{"total":0},"execution":0.003,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#390","args":[{"difficulty":{"total":4},"combination":{"total":1.7},"execution":3.25,"bonus":0}],"result":{"valid":false,"error":"Difficulty 4 exceeds ceiling 3.8"}}
+{"id":"scoring.validateSlipBreakdown#391","args":[{"difficulty":{"total":3.4},"execution":0.05,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#392","args":[{"difficulty":{"total":0.2},"combination":{"total":1.5},"execution":2.65,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#393","args":[{"difficulty":{"total":0.6},"combination":{"total":1.8},"execution":3.75,"bonus":0.1}],"result":{"valid":false,"error":"Combination 1.8 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#394","args":[{"difficulty":{"total":2.6},"combination":{"total":1.5},"execution":0.4,"bonus":0.1}],"result":{"valid":false,"error":"Bonus must be 0 or 0.2 (got 0.1)"}}
+{"id":"scoring.validateSlipBreakdown#395","args":[{"difficulty":{"total":3.6},"combination":{"total":0.6},"execution":1.4,"originality":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#396","args":[{"difficulty":{"total":1},"combination":{"total":0.5},"execution":0.6,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#397","args":[{"difficulty":{"total":0.6},"combination":{"total":1.7},"execution":0.15,"bonus":0}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#398","args":[{"difficulty":{"total":2},"combination":{"total":1},"execution":"abc","bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#399","args":[{"difficulty":{"total":2.4},"combination":{"total":0.6},"execution":3.95,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#400","args":[{"difficulty":{"total":1},"combination":{"total":1.3},"execution":1.9,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#401","args":[{"difficulty":{"total":1.6},"combination":{"total":1.7},"execution":1.4,"bonus":0.20000000001}],"result":{"valid":false,"error":"Combination 1.7 exceeds ceiling 1.6"}}
+{"id":"scoring.validateSlipBreakdown#402","args":[{"combination":{"total":0.9},"execution":4.6,"bonus":0.1}],"result":{"valid":false,"error":"Execution 4.6 exceeds ceiling 4.4"}}
+{"id":"scoring.validateSlipBreakdown#403","args":[{"difficulty":{"total":3.2},"combination":{"total":1.5},"execution":2.7,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#404","args":[{"difficulty":{"total":1.4},"combination":{"total":0.8},"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#405","args":[{"difficulty":{"total":2.6},"combination":{"total":1.1},"execution":3.75,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#406","args":[{"difficulty":{"total":2.4},"combination":{"total":1.5},"execution":4.15,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#407","args":[{"difficulty":{"total":3.6},"combination":{"total":0.4},"execution":2.4,"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#408","args":[{"$":"undefined"}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#409","args":[{"combination":{"total":0.7},"execution":3.45,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#410","args":[{"difficulty":{"total":2.4},"combination":{"total":1.1},"execution":0.14,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#411","args":[{"difficulty":{"total":2.6},"combination":{"total":1},"execution":0.097,"bonus":0}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#412","args":[{"difficulty":{"total":3.2},"combination":{"total":0.4},"bonus":0.20000000001}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#413","args":[{"difficulty":{"total":3.6},"combination":{"total":1.6},"execution":3.15,"bonus":0.2}],"result":{"valid":true,"error":null}}
+{"id":"scoring.validateSlipBreakdown#414","args":[{"difficulty":{"total":1.4},"combination":{"total":1.6},"bonus":0.2}],"result":{"valid":true,"error":null}}

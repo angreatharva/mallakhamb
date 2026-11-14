@@ -114,6 +114,7 @@ module.exports = {
     },
     {
       name: 'checkAgeGroup',
+      deterministic: (args) => Boolean(args[0] && (args[0].cutoffYear != null || (args[0].competition && args[0].competition.startDate))),
       fn: checkAgeGroup,
       fixed: [
         [{ dateOfBirth: '2014-12-31', gender: 'Male', ageGroup: 'Under12', cutoffYear: 2026 }],
@@ -123,6 +124,13 @@ module.exports = {
         [{ dateOfBirth: null, gender: 'Male', ageGroup: 'Under12', cutoffYear: 2026 }],
         [{ dateOfBirth: '2014-12-31', gender: null, ageGroup: 'Under12', cutoffYear: 2026 }],
         [{ dateOfBirth: '2014-12-31', gender: 'Male', ageGroup: null, cutoffYear: 2026 }],
+      ],
+      // COP §1.8.3: for the 2021-2022 year the cut-off is 31 December 2021. Born on or before
+      // 31 December 2008: Under 14. Born on 1 January 2009 or later: Under 12.
+      cop: [
+        { from: 'COP §1.8.3.4', args: [{ dateOfBirth: '2008-12-31', gender: 'Male', ageGroup: 'Under14', cutoffYear: 2021 }] },
+        { from: 'COP §1.8.3.4', args: [{ dateOfBirth: '2008-12-31', gender: 'Male', ageGroup: 'Under12', cutoffYear: 2021 }] },
+        { from: 'COP §1.8.3.5', args: [{ dateOfBirth: '2009-01-01', gender: 'Female', ageGroup: 'Under12', cutoffYear: 2021 }] },
       ],
       gen: (rng) => {
         const args = {

@@ -76,3 +76,28 @@ test('the same seed gives the same random cases', () => {
   assert.deepEqual(draw(), draw());
   assert.deepEqual(draw()[3].slice().sort(), [1, 2, 3, 4, 5]);
 });
+
+test('Node gives the answers printed in the Code of Points for its worked examples', () => {
+  const golden = path.resolve(ROOT, '..', '..', 'golden', 'cop-2022-11');
+  const cases = (file) =>
+    fs.readFileSync(path.join(golden, file), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)).filter((row) => String(row.from).startsWith('COP'));
+
+  const [average, base] = cases('scoring/calculateIndividualScore.jsonl');
+  assert.equal(average.result.executionAverage, 8.1); // §2.1.2
+  assert.equal(base.result.executionAverage, 9.05); // §2.1.3
+  assert.equal(base.result.toleranceUsed, 0.1);
+  assert.equal(base.result.baseScoreApplied, true);
+  assert.equal(base.result.averageMarks, 9.225);
+
+  const [under14, tooYoungAGroup, under12] = cases('eligibility/checkAgeGroup.jsonl');
+  assert.deepEqual([under14.result.ok, under14.result.lowest], [true, 'Under14']); // §1.8.3.4
+  assert.equal(tooYoungAGroup.result.ok, false);
+  assert.deepEqual([under12.result.ok, under12.result.lowest], [true, 'Under12']); // §1.8.3.5
+});
+
+test('the examples taken from the Node tests are current', () => {
+  const file = path.join(ROOT, 'golden', 'examples.json');
+  const committed = fs.readFileSync(file, 'utf8');
+  execFileSync(process.execPath, [path.join(ROOT, 'golden', 'capture-examples.js')], { cwd: ROOT, encoding: 'utf8' });
+  assert.equal(fs.readFileSync(file, 'utf8'), committed, 'examples.json is stale: run "npm run golden:examples" and "npm run golden"');
+});

@@ -7,3 +7,8 @@
 {"id":"eligibility.ageCutoffYear#6","args":[{}],"result":null}
 {"id":"eligibility.ageCutoffYear#7","args":[null],"result":null}
 {"id":"eligibility.ageCutoffYear#8","args":[{"$":"undefined"}],"result":null}
+{"id":"eligibility.ageCutoffYear#9","from":"Server/tests/unit/age-eligibility.test.js","args":[{"startDate":"2022-02-10T00:00:00Z"}],"result":2022}
+{"id":"eligibility.ageCutoffYear#10","from":"Server/tests/unit/age-eligibility.test.js","args":[{"startDate":"2022-02-10T00:00:00Z","ageCutoffYear":2021}],"result":2022}
+{"id":"eligibility.ageCutoffYear#11","from":"Server/tests/unit/age-eligibility.test.js","args":[{"startDate":"2022-02-10T00:00:00Z","ageCutoffYear":null}],"result":2022}
+{"id":"eligibility.ageCutoffYear#12","from":"Server/tests/unit/age-eligibility.test.js","args":[{"startDate":"2026-12-12T00:00:00Z","endDate":"2026-12-13T00:00:00Z"}],"result":2026}
+{"id":"eligibility.ageCutoffYear#13","from":"Server/tests/unit/age-eligibility.test.js","args":[{"startDate":"2027-01-15T00:00:00Z"}],"result":2027}

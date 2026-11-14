@@ -98,7 +98,7 @@ module.exports = {
   engine: 'fees',
   functions: [
     {
-      name: 'resolveFeeWindow',
+      name: 'resolveFeeWindow', deterministic: (args) => args[1] !== undefined,
       fn: fees.resolveFeeWindow,
       fixed: [
         [SIMPLE, new Date('2026-11-30T23:59:59.999Z')],
@@ -113,9 +113,9 @@ module.exports = {
       ],
       gen: windowCall,
     },
-    { name: 'getLateFeePerPlayer', fn: fees.getLateFeePerPlayer, fixed: [[SIMPLE, new Date('2026-12-06T00:00:00.000Z')]], gen: windowCall },
+    { name: 'getLateFeePerPlayer', deterministic: (args) => args[1] !== undefined, fn: fees.getLateFeePerPlayer, fixed: [[SIMPLE, new Date('2026-12-06T00:00:00.000Z')]], gen: windowCall },
     {
-      name: 'assertPaymentWindowOpen',
+      name: 'assertPaymentWindowOpen', deterministic: (args) => args[1] !== undefined,
       fn: fees.assertPaymentWindowOpen,
       fixed: [
         [SIMPLE, new Date('2026-11-30T23:59:59.999Z')],
@@ -136,7 +136,7 @@ module.exports = {
       gen: (rng) => [player(rng), competition(rng).out],
     },
     {
-      name: 'calculatePlayerAdditionAmount',
+      name: 'calculatePlayerAdditionAmount', deterministic: (args) => args[2] !== undefined,
       fn: fees.calculatePlayerAdditionAmount,
       fixed: [[{ apparatus: ['Rope Mallakhamb'] }, SIMPLE, new Date('2026-12-06T00:00:00.000Z')]],
       gen: (rng) => {
@@ -145,7 +145,7 @@ module.exports = {
       },
     },
     {
-      name: 'calculateTeamPaymentAmount',
+      name: 'calculateTeamPaymentAmount', deterministic: (args) => args[2] !== undefined,
       fn: fees.calculateTeamPaymentAmount,
       fixed: [
         [[], SIMPLE, new Date('2026-12-03T00:00:00.000Z')],

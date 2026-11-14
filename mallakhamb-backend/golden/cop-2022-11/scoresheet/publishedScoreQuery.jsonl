@@ -1,0 +1,5 @@
+{"id":"scoresheet.publishedScoreQuery#0","args":[{"$":"undefined"}],"result":{"$or":[{"isLocked":true},{"lockedApparatus.0":{"$exists":true}}]}}
+{"id":"scoresheet.publishedScoreQuery#1","args":[{}],"result":{"$or":[{"isLocked":true},{"lockedApparatus.0":{"$exists":true}}]}}
+{"id":"scoresheet.publishedScoreQuery#2","args":[{"competition":"c1"}],"result":{"competition":"c1","$or":[{"isLocked":true},{"lockedApparatus.0":{"$exists":true}}]}}
+{"id":"scoresheet.publishedScoreQuery#3","args":[{"$or":[{"a":1},{"b":2}]}],"result":{"$or":[{"a":1},{"b":2}],"$and":[{"$or":[{"isLocked":true},{"lockedApparatus.0":{"$exists":true}}]}]}}
+{"id":"scoresheet.publishedScoreQuery#4","args":[{"competition":"c1","$or":[{"a":1}],"$and":[{"c":3}]}],"result":{"competition":"c1","$or":[{"a":1}],"$and":[{"c":3},{"$or":[{"isLocked":true},{"lockedApparatus.0":{"$exists":true}}]}]}}

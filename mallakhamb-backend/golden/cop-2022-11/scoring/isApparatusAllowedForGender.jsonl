@@ -152,3 +152,4 @@
 {"id":"scoring.isApparatusAllowedForGender#151","args":["Pole Rope",null],"result":true}
 {"id":"scoring.isApparatusAllowedForGender#152","args":["Pole Rope",{"$":"undefined"}],"result":true}
 {"id":"scoring.isApparatusAllowedForGender#153","args":["Pole Rope","Other"],"result":true}
+{"id":"scoring.isApparatusAllowedForGender#154","from":"Server/tests/unit/v2-scoring.test.js","args":["Hanging","Female"],"result":false}

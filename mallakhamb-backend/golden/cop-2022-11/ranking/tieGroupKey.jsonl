@@ -2,3 +2,5 @@
 {"id":"ranking.tieGroupKey#1","args":[[]],"result":""}
 {"id":"ranking.tieGroupKey#2","args":[["p10","p2","p1"]],"result":"p1,p10,p2"}
 {"id":"ranking.tieGroupKey#3","args":[[2,10,1]],"result":"1,10,2"}
+{"id":"ranking.tieGroupKey#4","from":"Server/tests/unit/lucky-draw.test.js","args":[["b","a"]],"result":"a,b"}
+{"id":"ranking.tieGroupKey#5","from":"Server/tests/unit/lucky-draw.test.js","args":[["a","b"]],"result":"a,b"}

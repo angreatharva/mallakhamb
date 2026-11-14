@@ -1,0 +1,12 @@
+{"id":"runningorder.alternateRoomId#0","args":["scoring_Male_Under12_competition_1"],"result":"scoring_Male_Under12_Competition I"}
+{"id":"runningorder.alternateRoomId#1","args":["scoring_Male_Under12_Competition I"],"result":"scoring_Male_Under12_competition_1"}
+{"id":"runningorder.alternateRoomId#2","args":["scoring_Female_AllAges_Competition II"],"result":"scoring_Female_AllAges_competition_2"}
+{"id":"runningorder.alternateRoomId#3","args":["scoring_Female_AllAges_Competition III"],"result":"scoring_Female_AllAges_competition_3"}
+{"id":"runningorder.alternateRoomId#4","args":["scoring_Female_AllAges_competition_3"],"result":"scoring_Female_AllAges_Competition III"}
+{"id":"runningorder.alternateRoomId#5","args":["scoring_Male_Under12_unknown"],"result":null}
+{"id":"runningorder.alternateRoomId#6","args":["competition_c1"],"result":null}
+{"id":"runningorder.alternateRoomId#7","args":["scoring_"],"result":null}
+{"id":"runningorder.alternateRoomId#8","args":[""],"result":null}
+{"id":"runningorder.alternateRoomId#9","args":[null],"result":null}
+{"id":"runningorder.alternateRoomId#10","args":[{"$":"undefined"}],"result":null}
+{"id":"runningorder.alternateRoomId#11","args":[7],"result":null}

@@ -1,0 +1,250 @@
+{"id":"runningorder.scoringRoomIds#0","args":["Male","Under12","competition_1"],"result":["scoring_Male_Under12_competition_1","scoring_Male_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#1","args":["Male","Under12","competition_2"],"result":["scoring_Male_Under12_competition_2","scoring_Male_Under12_Competition II"]}
+{"id":"runningorder.scoringRoomIds#2","args":["Male","Under12","competition_3"],"result":["scoring_Male_Under12_competition_3","scoring_Male_Under12_Competition III"]}
+{"id":"runningorder.scoringRoomIds#3","args":["Male","Under12","Competition I"],"result":["scoring_Male_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#4","args":["Male","Under12","Competition II"],"result":["scoring_Male_Under12_Competition II"]}
+{"id":"runningorder.scoringRoomIds#5","args":["Male","Under12","Competition III"],"result":["scoring_Male_Under12_Competition III"]}
+{"id":"runningorder.scoringRoomIds#6","args":["Male","Under12","unknown"],"result":["scoring_Male_Under12_unknown"]}
+{"id":"runningorder.scoringRoomIds#7","args":["Male","Under12",""],"result":["scoring_Male_Under12_","scoring_Male_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#8","args":["Male","Under12",null],"result":["scoring_Male_Under12_null","scoring_Male_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#9","args":["Male","Under12",{"$":"undefined"}],"result":["scoring_Male_Under12_undefined","scoring_Male_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#10","args":["Male","Above18","competition_1"],"result":["scoring_Male_Above18_competition_1","scoring_Male_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#11","args":["Male","Above18","competition_2"],"result":["scoring_Male_Above18_competition_2","scoring_Male_Above18_Competition II"]}
+{"id":"runningorder.scoringRoomIds#12","args":["Male","Above18","competition_3"],"result":["scoring_Male_Above18_competition_3","scoring_Male_Above18_Competition III"]}
+{"id":"runningorder.scoringRoomIds#13","args":["Male","Above18","Competition I"],"result":["scoring_Male_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#14","args":["Male","Above18","Competition II"],"result":["scoring_Male_Above18_Competition II"]}
+{"id":"runningorder.scoringRoomIds#15","args":["Male","Above18","Competition III"],"result":["scoring_Male_Above18_Competition III"]}
+{"id":"runningorder.scoringRoomIds#16","args":["Male","Above18","unknown"],"result":["scoring_Male_Above18_unknown"]}
+{"id":"runningorder.scoringRoomIds#17","args":["Male","Above18",""],"result":["scoring_Male_Above18_","scoring_Male_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#18","args":["Male","Above18",null],"result":["scoring_Male_Above18_null","scoring_Male_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#19","args":["Male","Above18",{"$":"undefined"}],"result":["scoring_Male_Above18_undefined","scoring_Male_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#20","args":["Male","AllAges","competition_1"],"result":["scoring_Male_AllAges_competition_1","scoring_Male_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#21","args":["Male","AllAges","competition_2"],"result":["scoring_Male_AllAges_competition_2","scoring_Male_AllAges_Competition II"]}
+{"id":"runningorder.scoringRoomIds#22","args":["Male","AllAges","competition_3"],"result":["scoring_Male_AllAges_competition_3","scoring_Male_AllAges_Competition III"]}
+{"id":"runningorder.scoringRoomIds#23","args":["Male","AllAges","Competition I"],"result":["scoring_Male_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#24","args":["Male","AllAges","Competition II"],"result":["scoring_Male_AllAges_Competition II"]}
+{"id":"runningorder.scoringRoomIds#25","args":["Male","AllAges","Competition III"],"result":["scoring_Male_AllAges_Competition III"]}
+{"id":"runningorder.scoringRoomIds#26","args":["Male","AllAges","unknown"],"result":["scoring_Male_AllAges_unknown"]}
+{"id":"runningorder.scoringRoomIds#27","args":["Male","AllAges",""],"result":["scoring_Male_AllAges_","scoring_Male_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#28","args":["Male","AllAges",null],"result":["scoring_Male_AllAges_null","scoring_Male_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#29","args":["Male","AllAges",{"$":"undefined"}],"result":["scoring_Male_AllAges_undefined","scoring_Male_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#30","args":["Male","","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#31","args":["Male","","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#32","args":["Male","","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#33","args":["Male","","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#34","args":["Male","","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#35","args":["Male","","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#36","args":["Male","","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#37","args":["Male","",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#38","args":["Male","",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#39","args":["Male","",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#40","args":["Male",null,"competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#41","args":["Male",null,"competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#42","args":["Male",null,"competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#43","args":["Male",null,"Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#44","args":["Male",null,"Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#45","args":["Male",null,"Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#46","args":["Male",null,"unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#47","args":["Male",null,""],"result":[]}
+{"id":"runningorder.scoringRoomIds#48","args":["Male",null,null],"result":[]}
+{"id":"runningorder.scoringRoomIds#49","args":["Male",null,{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#50","args":["Female","Under12","competition_1"],"result":["scoring_Female_Under12_competition_1","scoring_Female_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#51","args":["Female","Under12","competition_2"],"result":["scoring_Female_Under12_competition_2","scoring_Female_Under12_Competition II"]}
+{"id":"runningorder.scoringRoomIds#52","args":["Female","Under12","competition_3"],"result":["scoring_Female_Under12_competition_3","scoring_Female_Under12_Competition III"]}
+{"id":"runningorder.scoringRoomIds#53","args":["Female","Under12","Competition I"],"result":["scoring_Female_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#54","args":["Female","Under12","Competition II"],"result":["scoring_Female_Under12_Competition II"]}
+{"id":"runningorder.scoringRoomIds#55","args":["Female","Under12","Competition III"],"result":["scoring_Female_Under12_Competition III"]}
+{"id":"runningorder.scoringRoomIds#56","args":["Female","Under12","unknown"],"result":["scoring_Female_Under12_unknown"]}
+{"id":"runningorder.scoringRoomIds#57","args":["Female","Under12",""],"result":["scoring_Female_Under12_","scoring_Female_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#58","args":["Female","Under12",null],"result":["scoring_Female_Under12_null","scoring_Female_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#59","args":["Female","Under12",{"$":"undefined"}],"result":["scoring_Female_Under12_undefined","scoring_Female_Under12_Competition I"]}
+{"id":"runningorder.scoringRoomIds#60","args":["Female","Above18","competition_1"],"result":["scoring_Female_Above18_competition_1","scoring_Female_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#61","args":["Female","Above18","competition_2"],"result":["scoring_Female_Above18_competition_2","scoring_Female_Above18_Competition II"]}
+{"id":"runningorder.scoringRoomIds#62","args":["Female","Above18","competition_3"],"result":["scoring_Female_Above18_competition_3","scoring_Female_Above18_Competition III"]}
+{"id":"runningorder.scoringRoomIds#63","args":["Female","Above18","Competition I"],"result":["scoring_Female_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#64","args":["Female","Above18","Competition II"],"result":["scoring_Female_Above18_Competition II"]}
+{"id":"runningorder.scoringRoomIds#65","args":["Female","Above18","Competition III"],"result":["scoring_Female_Above18_Competition III"]}
+{"id":"runningorder.scoringRoomIds#66","args":["Female","Above18","unknown"],"result":["scoring_Female_Above18_unknown"]}
+{"id":"runningorder.scoringRoomIds#67","args":["Female","Above18",""],"result":["scoring_Female_Above18_","scoring_Female_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#68","args":["Female","Above18",null],"result":["scoring_Female_Above18_null","scoring_Female_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#69","args":["Female","Above18",{"$":"undefined"}],"result":["scoring_Female_Above18_undefined","scoring_Female_Above18_Competition I"]}
+{"id":"runningorder.scoringRoomIds#70","args":["Female","AllAges","competition_1"],"result":["scoring_Female_AllAges_competition_1","scoring_Female_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#71","args":["Female","AllAges","competition_2"],"result":["scoring_Female_AllAges_competition_2","scoring_Female_AllAges_Competition II"]}
+{"id":"runningorder.scoringRoomIds#72","args":["Female","AllAges","competition_3"],"result":["scoring_Female_AllAges_competition_3","scoring_Female_AllAges_Competition III"]}
+{"id":"runningorder.scoringRoomIds#73","args":["Female","AllAges","Competition I"],"result":["scoring_Female_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#74","args":["Female","AllAges","Competition II"],"result":["scoring_Female_AllAges_Competition II"]}
+{"id":"runningorder.scoringRoomIds#75","args":["Female","AllAges","Competition III"],"result":["scoring_Female_AllAges_Competition III"]}
+{"id":"runningorder.scoringRoomIds#76","args":["Female","AllAges","unknown"],"result":["scoring_Female_AllAges_unknown"]}
+{"id":"runningorder.scoringRoomIds#77","args":["Female","AllAges",""],"result":["scoring_Female_AllAges_","scoring_Female_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#78","args":["Female","AllAges",null],"result":["scoring_Female_AllAges_null","scoring_Female_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#79","args":["Female","AllAges",{"$":"undefined"}],"result":["scoring_Female_AllAges_undefined","scoring_Female_AllAges_Competition I"]}
+{"id":"runningorder.scoringRoomIds#80","args":["Female","","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#81","args":["Female","","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#82","args":["Female","","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#83","args":["Female","","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#84","args":["Female","","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#85","args":["Female","","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#86","args":["Female","","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#87","args":["Female","",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#88","args":["Female","",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#89","args":["Female","",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#90","args":["Female",null,"competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#91","args":["Female",null,"competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#92","args":["Female",null,"competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#93","args":["Female",null,"Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#94","args":["Female",null,"Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#95","args":["Female",null,"Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#96","args":["Female",null,"unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#97","args":["Female",null,""],"result":[]}
+{"id":"runningorder.scoringRoomIds#98","args":["Female",null,null],"result":[]}
+{"id":"runningorder.scoringRoomIds#99","args":["Female",null,{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#100","args":["","Under12","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#101","args":["","Under12","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#102","args":["","Under12","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#103","args":["","Under12","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#104","args":["","Under12","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#105","args":["","Under12","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#106","args":["","Under12","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#107","args":["","Under12",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#108","args":["","Under12",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#109","args":["","Under12",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#110","args":["","Above18","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#111","args":["","Above18","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#112","args":["","Above18","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#113","args":["","Above18","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#114","args":["","Above18","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#115","args":["","Above18","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#116","args":["","Above18","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#117","args":["","Above18",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#118","args":["","Above18",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#119","args":["","Above18",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#120","args":["","AllAges","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#121","args":["","AllAges","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#122","args":["","AllAges","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#123","args":["","AllAges","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#124","args":["","AllAges","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#125","args":["","AllAges","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#126","args":["","AllAges","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#127","args":["","AllAges",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#128","args":["","AllAges",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#129","args":["","AllAges",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#130","args":["","","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#131","args":["","","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#132","args":["","","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#133","args":["","","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#134","args":["","","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#135","args":["","","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#136","args":["","","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#137","args":["","",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#138","args":["","",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#139","args":["","",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#140","args":["",null,"competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#141","args":["",null,"competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#142","args":["",null,"competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#143","args":["",null,"Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#144","args":["",null,"Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#145","args":["",null,"Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#146","args":["",null,"unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#147","args":["",null,""],"result":[]}
+{"id":"runningorder.scoringRoomIds#148","args":["",null,null],"result":[]}
+{"id":"runningorder.scoringRoomIds#149","args":["",null,{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#150","args":[null,"Under12","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#151","args":[null,"Under12","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#152","args":[null,"Under12","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#153","args":[null,"Under12","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#154","args":[null,"Under12","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#155","args":[null,"Under12","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#156","args":[null,"Under12","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#157","args":[null,"Under12",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#158","args":[null,"Under12",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#159","args":[null,"Under12",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#160","args":[null,"Above18","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#161","args":[null,"Above18","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#162","args":[null,"Above18","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#163","args":[null,"Above18","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#164","args":[null,"Above18","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#165","args":[null,"Above18","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#166","args":[null,"Above18","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#167","args":[null,"Above18",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#168","args":[null,"Above18",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#169","args":[null,"Above18",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#170","args":[null,"AllAges","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#171","args":[null,"AllAges","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#172","args":[null,"AllAges","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#173","args":[null,"AllAges","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#174","args":[null,"AllAges","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#175","args":[null,"AllAges","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#176","args":[null,"AllAges","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#177","args":[null,"AllAges",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#178","args":[null,"AllAges",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#179","args":[null,"AllAges",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#180","args":[null,"","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#181","args":[null,"","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#182","args":[null,"","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#183","args":[null,"","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#184","args":[null,"","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#185","args":[null,"","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#186","args":[null,"","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#187","args":[null,"",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#188","args":[null,"",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#189","args":[null,"",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#190","args":[null,null,"competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#191","args":[null,null,"competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#192","args":[null,null,"competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#193","args":[null,null,"Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#194","args":[null,null,"Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#195","args":[null,null,"Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#196","args":[null,null,"unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#197","args":[null,null,""],"result":[]}
+{"id":"runningorder.scoringRoomIds#198","args":[null,null,null],"result":[]}
+{"id":"runningorder.scoringRoomIds#199","args":[null,null,{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#200","args":[{"$":"undefined"},"Under12","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#201","args":[{"$":"undefined"},"Under12","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#202","args":[{"$":"undefined"},"Under12","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#203","args":[{"$":"undefined"},"Under12","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#204","args":[{"$":"undefined"},"Under12","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#205","args":[{"$":"undefined"},"Under12","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#206","args":[{"$":"undefined"},"Under12","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#207","args":[{"$":"undefined"},"Under12",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#208","args":[{"$":"undefined"},"Under12",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#209","args":[{"$":"undefined"},"Under12",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#210","args":[{"$":"undefined"},"Above18","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#211","args":[{"$":"undefined"},"Above18","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#212","args":[{"$":"undefined"},"Above18","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#213","args":[{"$":"undefined"},"Above18","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#214","args":[{"$":"undefined"},"Above18","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#215","args":[{"$":"undefined"},"Above18","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#216","args":[{"$":"undefined"},"Above18","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#217","args":[{"$":"undefined"},"Above18",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#218","args":[{"$":"undefined"},"Above18",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#219","args":[{"$":"undefined"},"Above18",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#220","args":[{"$":"undefined"},"AllAges","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#221","args":[{"$":"undefined"},"AllAges","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#222","args":[{"$":"undefined"},"AllAges","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#223","args":[{"$":"undefined"},"AllAges","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#224","args":[{"$":"undefined"},"AllAges","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#225","args":[{"$":"undefined"},"AllAges","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#226","args":[{"$":"undefined"},"AllAges","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#227","args":[{"$":"undefined"},"AllAges",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#228","args":[{"$":"undefined"},"AllAges",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#229","args":[{"$":"undefined"},"AllAges",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#230","args":[{"$":"undefined"},"","competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#231","args":[{"$":"undefined"},"","competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#232","args":[{"$":"undefined"},"","competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#233","args":[{"$":"undefined"},"","Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#234","args":[{"$":"undefined"},"","Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#235","args":[{"$":"undefined"},"","Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#236","args":[{"$":"undefined"},"","unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#237","args":[{"$":"undefined"},"",""],"result":[]}
+{"id":"runningorder.scoringRoomIds#238","args":[{"$":"undefined"},"",null],"result":[]}
+{"id":"runningorder.scoringRoomIds#239","args":[{"$":"undefined"},"",{"$":"undefined"}],"result":[]}
+{"id":"runningorder.scoringRoomIds#240","args":[{"$":"undefined"},null,"competition_1"],"result":[]}
+{"id":"runningorder.scoringRoomIds#241","args":[{"$":"undefined"},null,"competition_2"],"result":[]}
+{"id":"runningorder.scoringRoomIds#242","args":[{"$":"undefined"},null,"competition_3"],"result":[]}
+{"id":"runningorder.scoringRoomIds#243","args":[{"$":"undefined"},null,"Competition I"],"result":[]}
+{"id":"runningorder.scoringRoomIds#244","args":[{"$":"undefined"},null,"Competition II"],"result":[]}
+{"id":"runningorder.scoringRoomIds#245","args":[{"$":"undefined"},null,"Competition III"],"result":[]}
+{"id":"runningorder.scoringRoomIds#246","args":[{"$":"undefined"},null,"unknown"],"result":[]}
+{"id":"runningorder.scoringRoomIds#247","args":[{"$":"undefined"},null,""],"result":[]}
+{"id":"runningorder.scoringRoomIds#248","args":[{"$":"undefined"},null,null],"result":[]}
+{"id":"runningorder.scoringRoomIds#249","args":[{"$":"undefined"},null,{"$":"undefined"}],"result":[]}

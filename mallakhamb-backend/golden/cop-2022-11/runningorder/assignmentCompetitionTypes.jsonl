@@ -1,0 +1,7 @@
+{"id":"runningorder.assignmentCompetitionTypes#0","args":[{"$":"undefined"}],"result":["competition_1"]}
+{"id":"runningorder.assignmentCompetitionTypes#1","args":[null],"result":["competition_1"]}
+{"id":"runningorder.assignmentCompetitionTypes#2","args":[[]],"result":["competition_1"]}
+{"id":"runningorder.assignmentCompetitionTypes#3","args":[["competition_2"]],"result":["competition_2"]}
+{"id":"runningorder.assignmentCompetitionTypes#4","args":[["Competition I","competition_3"]],"result":["Competition I","competition_3"]}
+{"id":"runningorder.assignmentCompetitionTypes#5","args":["competition_1"],"result":["competition_1"]}
+{"id":"runningorder.assignmentCompetitionTypes#6","args":[["unknown"]],"result":["unknown"]}

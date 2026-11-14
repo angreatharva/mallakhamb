@@ -91,3 +91,4 @@
 {"id":"eligibility.lowestAgeGroup#90","args":["12","Male"],"result":null}
 {"id":"eligibility.lowestAgeGroup#91","args":[{"$":"NaN"},"Female"],"result":null}
 {"id":"eligibility.lowestAgeGroup#92","args":[{"$":"Infinity"},"Female"],"result":null}
+{"id":"eligibility.lowestAgeGroup#93","from":"Server/tests/unit/age-eligibility.test.js","args":[12,"Other"],"result":null}

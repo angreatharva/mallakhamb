@@ -11,6 +11,7 @@
     "gen:enums": "node gen/gen-enums.js",
     "gen:catalogues": "node gen/gen-catalogues.js",
     "gen": "npm run gen:enums && npm run gen:catalogues",
+    "golden:examples": "node golden/capture-examples.js",
     "golden": "node golden/generate.js",
     "golden:verify": "node golden/generate.js --verify",
     "golden:full": "node golden/generate.js --full",

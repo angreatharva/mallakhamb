@@ -1,0 +1,10 @@
+{"id":"runningorder.normalizeCompetitionType#0","args":["competition_1"],"result":"Competition I"}
+{"id":"runningorder.normalizeCompetitionType#1","args":["competition_2"],"result":"Competition II"}
+{"id":"runningorder.normalizeCompetitionType#2","args":["competition_3"],"result":"Competition III"}
+{"id":"runningorder.normalizeCompetitionType#3","args":["Competition I"],"result":"Competition I"}
+{"id":"runningorder.normalizeCompetitionType#4","args":["Competition II"],"result":"Competition II"}
+{"id":"runningorder.normalizeCompetitionType#5","args":["Competition III"],"result":"Competition III"}
+{"id":"runningorder.normalizeCompetitionType#6","args":["unknown"],"result":"unknown"}
+{"id":"runningorder.normalizeCompetitionType#7","args":[""],"result":"Competition I"}
+{"id":"runningorder.normalizeCompetitionType#8","args":[null],"result":"Competition I"}
+{"id":"runningorder.normalizeCompetitionType#9","args":[{"$":"undefined"}],"result":"Competition I"}

@@ -1,0 +1,4983 @@
+{
+ "eligibility.ageCutoffYear": [
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    {
+     "startDate": "2022-02-10T00:00:00Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    {
+     "startDate": "2022-02-10T00:00:00Z",
+     "ageCutoffYear": 2021
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    {
+     "startDate": "2022-02-10T00:00:00Z",
+     "ageCutoffYear": null
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    {
+     "startDate": "2026-12-12T00:00:00Z",
+     "endDate": "2026-12-13T00:00:00Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    {
+     "startDate": "2027-01-15T00:00:00Z"
+    }
+   ]
+  }
+ ],
+ "eligibility.ageOnCutoff": [
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    "2009-01-01",
+    2021
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    "2009-12-31",
+    2021
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    "2008-12-31",
+    2021
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    null,
+    2021
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    "not a date",
+    2021
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    "2008-06-15",
+    2021
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    "2016-01-01T00:00:00Z",
+    2026
+   ]
+  }
+ ],
+ "eligibility.eligibleAgeGroups": [
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    11,
+    "Male"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    11,
+    "Male",
+    [
+     "Under10",
+     "Under12",
+     "Above18"
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    30,
+    "Female"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    11,
+    "Male",
+    [
+     "Under10"
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    15,
+    "Male"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    15,
+    "Female"
+   ]
+  }
+ ],
+ "eligibility.lowestAgeGroup": [
+  {
+   "from": "Server/tests/unit/age-eligibility.test.js",
+   "args": [
+    12,
+    "Other"
+   ]
+  }
+ ],
+ "fees.applyDiscountCode": [
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    1500,
+    "BRMC@2026",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    1500,
+    "nope",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    1500,
+    "BRMC@2026",
+    {
+     "enabled": false,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    },
+    "BRMC@2026",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "nonsense",
+    "nope",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  }
+ ],
+ "fees.assertDiscountCodeValid": [
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {
+     "enabled": false,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "nope",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  }
+ ],
+ "fees.assertPaymentWindowOpen": [
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2025-06-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2027-01-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-06-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-10T00:00:00.000Z"
+    }
+   ]
+  }
+ ],
+ "fees.calculatePlayerAdditionAmount": [
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "apparatus": {
+      "competition_1": [
+       "Pole Mallakhamb"
+      ]
+     }
+    },
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-06-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "apparatus": {
+      "competition_1": [
+       "Pole Mallakhamb"
+      ]
+     }
+    },
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-06T00:00:00.000Z"
+    }
+   ]
+  }
+ ],
+ "fees.calculatePlayerFee": [
+  {
+   "from": "Server/tests/unit/canonical-apparatus.test.js",
+   "args": [
+    {
+     "apparatus": {
+      "competition_1": [
+       "Pole Mallakhamb",
+       "Rope Mallakhamb"
+      ],
+      "competition_2": [
+       "Pole Mallakhamb",
+       "Rope Mallakhamb"
+      ],
+      "competition_3": [
+       "Pole Mallakhamb",
+       "Rope Mallakhamb"
+      ]
+     }
+    },
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100,
+      "Rope Mallakhamb": 150
+     },
+     "competitionTypes": [
+      "competition_1",
+      "competition_2",
+      "competition_3"
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/canonical-apparatus.test.js",
+   "args": [
+    {
+     "apparatus": [
+      "Pole Mallakhamb",
+      "Rope Mallakhamb"
+     ]
+    },
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100,
+      "Rope Mallakhamb": 150
+     },
+     "competitionTypes": [
+      "competition_1",
+      "competition_2",
+      "competition_3"
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/canonical-apparatus.test.js",
+   "args": [
+    {
+     "apparatus": {
+      "competition_1": [
+       "Pole Mallakhamb"
+      ],
+      "competition_2": [
+       "Pole Mallakhamb"
+      ],
+      "competition_3": [
+       "Pole Mallakhamb"
+      ]
+     }
+    },
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100,
+      "Rope Mallakhamb": 150
+     },
+     "competitionTypes": [
+      "competition_1",
+      "competition_2",
+      "competition_3"
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/canonical-apparatus.test.js",
+   "args": [
+    {
+     "apparatus": "Pole Mallakhamb"
+    },
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100,
+      "Rope Mallakhamb": 150
+     },
+     "competitionTypes": [
+      "competition_1",
+      "competition_2",
+      "competition_3"
+     ]
+    }
+   ]
+  }
+ ],
+ "fees.calculateTeamPaymentAmount": [
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    [
+     {
+      "apparatus": {
+       "competition_1": [
+        "Pole Mallakhamb"
+       ]
+      }
+     },
+     {
+      "apparatus": {}
+     }
+    ],
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-06-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    [
+     {
+      "apparatus": {
+       "competition_1": [
+        "Pole Mallakhamb"
+       ]
+      }
+     },
+     {
+      "apparatus": {}
+     }
+    ],
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-06T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    [],
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-06T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    [
+     {
+      "apparatus": {
+       "competition_1": [
+        "Pole Mallakhamb"
+       ]
+      }
+     },
+     {
+      "apparatus": {}
+     }
+    ],
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     }
+    },
+    {
+     "$date": "2099-01-01T00:00:00.000Z"
+    }
+   ]
+  }
+ ],
+ "fees.getLateFeePerPlayer": [
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 0
+    },
+    {
+     "$date": "2026-12-10T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": -50
+    },
+    {
+     "$date": "2026-12-10T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$": "undefined"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-10T00:00:00.000Z"
+    }
+   ]
+  }
+ ],
+ "fees.isDiscountCodeValid": [
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {
+     "enabled": false,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "",
+    {
+     "enabled": true,
+     "code": ""
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    },
+    {
+     "enabled": true,
+     "code": ""
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    null,
+    {
+     "enabled": true,
+     "code": {
+      "$": "undefined"
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    null,
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    },
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "brmc@2026",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2027",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    " BRMC@2026",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026 ",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026x",
+    {
+     "enabled": true,
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    null
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {
+     "$": "undefined"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {}
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {
+     "enabled": "false",
+     "code": "BRMC@2026"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/discount-code.test.js",
+   "args": [
+    "BRMC@2026",
+    {
+     "enabled": 1,
+     "code": "BRMC@2026"
+    }
+   ]
+  }
+ ],
+ "fees.resolveFeeWindow": [
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2025-12-31T23:59:59.999Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-01-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-05T23:59:59.999Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-06T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-13T23:59:59.999Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-12-14T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2026-06-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$date": "2026-12-13T00:00:00.000Z"
+     },
+     "lateFee": 0
+    },
+    {
+     "$date": "2026-12-10T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     }
+    },
+    {
+     "$date": "2099-01-01T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/late-fee-window.test.js",
+   "args": [
+    {
+     "playerFee": 500,
+     "apparatusFees": {
+      "Pole Mallakhamb": 100
+     },
+     "registrationOpenDate": {
+      "$date": "2026-01-01T00:00:00.000Z"
+     },
+     "feeDueDate": {
+      "$date": "2026-12-05T00:00:00.000Z"
+     },
+     "endDate": {
+      "$": "undefined"
+     },
+     "lateFee": 200
+    },
+    {
+     "$date": "2030-01-01T00:00:00.000Z"
+    }
+   ]
+  }
+ ],
+ "panel.assignmentCoversCategory": [
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    {
+     "_id": "seat",
+     "competition": "comp-1",
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionTypes": [],
+     "apparatus": null,
+     "judgeType": "Scorer",
+     "judgeNo": 2
+    },
+    {
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionType": "competition_3"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    {
+     "_id": "seat",
+     "competition": "comp-1",
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionTypes": [
+      "competition_1"
+     ],
+     "apparatus": null,
+     "judgeType": "Judge 1",
+     "judgeNo": 2
+    },
+    {
+     "competition": "comp-2",
+     "gender": "Male",
+     "ageGroup": "Under14"
+    }
+   ]
+  }
+ ],
+ "panel.competitionsFor": [
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "seat",
+      "competition": "comp-2",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     },
+     {
+      "_id": "seat",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     },
+     {
+      "_id": "seat",
+      "competition": "comp-2",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     }
+    ]
+   ]
+  }
+ ],
+ "panel.hasAnyRole": [
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "seat",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     },
+     {
+      "_id": "seat",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under16",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Senior Judge",
+      "judgeNo": 2
+     }
+    ],
+    [
+     "Senior Judge",
+     "Scorer"
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [],
+    [
+     "Senior Judge"
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    },
+    [
+     "Scorer"
+    ]
+   ]
+  }
+ ],
+ "panel.resolveAssignment": [
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "a",
+      "competition": "comp-1",
+      "gender": "Female",
+      "ageGroup": "Under16",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 2",
+      "judgeNo": 3
+     },
+     {
+      "_id": "b",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Senior Judge",
+      "judgeNo": 1
+     }
+    ],
+    {
+     "competition": "comp-1",
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionType": "competition_1"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "seat",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     }
+    ],
+    {
+     "competition": "comp-1",
+     "gender": "Female",
+     "ageGroup": "Under14"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [],
+    {
+     "gender": "Male",
+     "ageGroup": "Under14"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    },
+    {}
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "seat",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_2"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     }
+    ],
+    {
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionType": "Competition II"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/judge-assignment.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "wide",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": null,
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     },
+     {
+      "_id": "narrow",
+      "competition": "comp-1",
+      "gender": "Male",
+      "ageGroup": "Under14",
+      "competitionTypes": [
+       "competition_1"
+      ],
+      "apparatus": "Rope Mallakhamb",
+      "judgeType": "Judge 1",
+      "judgeNo": 2
+     }
+    ],
+    {
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "apparatus": "Rope Mallakhamb"
+    }
+   ]
+  }
+ ],
+ "panel.seatedPanelSize": [
+  {
+   "from": "Server/tests/unit/seated-panel.util.test.js",
+   "args": [
+    [
+     {
+      "judgeType": "Senior Judge",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Judge 1",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Judge 2",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Scorer",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Time Keeper",
+      "apparatus": null
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/seated-panel.util.test.js",
+   "args": [
+    [
+     {
+      "judgeType": "Senior Judge",
+      "apparatus": "Pole Mallakhamb"
+     },
+     {
+      "judgeType": "Judge 1",
+      "apparatus": "Pole Mallakhamb"
+     },
+     {
+      "judgeType": "Judge 1",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Judge 2",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Judge 3",
+      "apparatus": "Rope Mallakhamb"
+     },
+     {
+      "judgeType": "Judge 4",
+      "apparatus": "Pole Mallakhamb"
+     }
+    ],
+    "Pole Mallakhamb"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/seated-panel.util.test.js",
+   "args": [
+    [
+     {
+      "judgeType": "Senior Judge",
+      "apparatus": "Pole Mallakhamb"
+     },
+     {
+      "judgeType": "Judge 1",
+      "apparatus": "Pole Mallakhamb"
+     },
+     {
+      "judgeType": "Judge 1",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Judge 2",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Judge 3",
+      "apparatus": "Rope Mallakhamb"
+     },
+     {
+      "judgeType": "Judge 4",
+      "apparatus": "Pole Mallakhamb"
+     }
+    ],
+    "Rope Mallakhamb"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/seated-panel.util.test.js",
+   "args": [
+    [
+     {
+      "judgeType": "Senior Judge",
+      "apparatus": null
+     },
+     {
+      "judgeType": "Judge 1",
+      "apparatus": null
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/seated-panel.util.test.js",
+   "args": [
+    null
+   ]
+  }
+ ],
+ "qualification.allRoundAgeGroup": [
+  {
+   "from": "Server/tests/unit/qualification.test.js",
+   "args": [
+    {
+     "Pole": [
+      {
+       "playerId": "a",
+       "playerName": "a",
+       "teamId": "A",
+       "finalScore": 8,
+       "panelSize": 5,
+       "judgeScores": {}
+      },
+      {
+       "playerId": "b",
+       "playerName": "b",
+       "teamId": "A",
+       "finalScore": 7.5,
+       "panelSize": 5,
+       "judgeScores": {}
+      },
+      {
+       "playerId": "c",
+       "playerName": "c",
+       "teamId": "C",
+       "finalScore": 9.6,
+       "panelSize": 5,
+       "judgeScores": {}
+      }
+     ],
+     "Rope": [
+      {
+       "playerId": "a",
+       "playerName": "a",
+       "teamId": "A",
+       "finalScore": 8,
+       "panelSize": 5,
+       "judgeScores": {}
+      },
+      {
+       "playerId": "b",
+       "playerName": "b",
+       "teamId": "A",
+       "finalScore": 7.9,
+       "panelSize": 5,
+       "judgeScores": {}
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/qualification.test.js",
+   "args": [
+    {
+     "Pole": [
+      {
+       "playerId": "a",
+       "playerName": "a",
+       "teamId": "A",
+       "finalScore": 9,
+       "panelSize": 5,
+       "judgeScores": {}
+      },
+      {
+       "playerId": "b",
+       "playerName": "b",
+       "teamId": "B",
+       "finalScore": 8,
+       "panelSize": 5,
+       "judgeScores": {}
+      },
+      {
+       "playerId": "c",
+       "playerName": "c",
+       "teamId": "C",
+       "finalScore": 8,
+       "panelSize": 5,
+       "judgeScores": {}
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/qualification.test.js",
+   "args": [
+    {
+     "Pole": [
+      {
+       "playerId": "a",
+       "playerName": "a",
+       "teamId": "A",
+       "finalScore": 9,
+       "panelSize": 5,
+       "judgeScores": {}
+      },
+      {
+       "playerId": "b",
+       "playerName": "b",
+       "teamId": "B",
+       "finalScore": 8,
+       "panelSize": 5,
+       "judgeScores": {}
+      },
+      {
+       "playerId": "c",
+       "playerName": "c",
+       "teamId": "C",
+       "finalScore": 8,
+       "panelSize": 5,
+       "judgeScores": {}
+      }
+     ]
+    },
+    {
+     "drawOrder": [
+      "c",
+      "b"
+     ]
+    }
+   ]
+  }
+ ],
+ "qualification.apparatusFinal": [
+  {
+   "from": "Server/tests/unit/qualification.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a1",
+      "playerName": "Pa1",
+      "teamId": "A",
+      "rank": 1,
+      "finalScore": 9.9
+     },
+     {
+      "playerId": "a2",
+      "playerName": "Pa2",
+      "teamId": "A",
+      "rank": 2,
+      "finalScore": 9.8
+     },
+     {
+      "playerId": "a3",
+      "playerName": "Pa3",
+      "teamId": "A",
+      "rank": 3,
+      "finalScore": 9.7
+     },
+     {
+      "playerId": "p0",
+      "playerName": "Pp0",
+      "teamId": "T0",
+      "rank": 4,
+      "finalScore": 9.6
+     },
+     {
+      "playerId": "p1",
+      "playerName": "Pp1",
+      "teamId": "T1",
+      "rank": 5,
+      "finalScore": 9.5
+     },
+     {
+      "playerId": "p2",
+      "playerName": "Pp2",
+      "teamId": "T2",
+      "rank": 6,
+      "finalScore": 9.4
+     },
+     {
+      "playerId": "p3",
+      "playerName": "Pp3",
+      "teamId": "T3",
+      "rank": 7,
+      "finalScore": 9.3
+     },
+     {
+      "playerId": "p4",
+      "playerName": "Pp4",
+      "teamId": "T4",
+      "rank": 8,
+      "finalScore": 9.2
+     },
+     {
+      "playerId": "p5",
+      "playerName": "Pp5",
+      "teamId": "T5",
+      "rank": 9,
+      "finalScore": 9.1
+     },
+     {
+      "playerId": "p6",
+      "playerName": "Pp6",
+      "teamId": "T6",
+      "rank": 10,
+      "finalScore": 9
+     },
+     {
+      "playerId": "p7",
+      "playerName": "Pp7",
+      "teamId": "T7",
+      "rank": 11,
+      "finalScore": 8.9
+     },
+     {
+      "playerId": "p8",
+      "playerName": "Pp8",
+      "teamId": "T8",
+      "rank": 12,
+      "finalScore": 8.8
+     },
+     {
+      "playerId": "p9",
+      "playerName": "Pp9",
+      "teamId": "T9",
+      "rank": 13,
+      "finalScore": 8.7
+     },
+     {
+      "playerId": "p10",
+      "playerName": "Pp10",
+      "teamId": "T10",
+      "rank": 14,
+      "finalScore": 8.6
+     },
+     {
+      "playerId": "p11",
+      "playerName": "Pp11",
+      "teamId": "T11",
+      "rank": 15,
+      "finalScore": 8.5
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/qualification.test.js",
+   "args": [
+    [
+     {
+      "playerId": "x",
+      "playerName": "Px",
+      "teamId": "X",
+      "rank": 1,
+      "finalScore": 2.1
+     },
+     {
+      "playerId": "y",
+      "playerName": "Py",
+      "teamId": "Y",
+      "rank": 2,
+      "finalScore": 0.5
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/qualification.test.js",
+   "args": [
+    [
+     {
+      "playerId": "p0",
+      "playerName": "Pp0",
+      "teamId": "T0",
+      "rank": 1,
+      "finalScore": 9.9
+     },
+     {
+      "playerId": "p1",
+      "playerName": "Pp1",
+      "teamId": "T1",
+      "rank": 2,
+      "finalScore": 9.8
+     },
+     {
+      "playerId": "p2",
+      "playerName": "Pp2",
+      "teamId": "T2",
+      "rank": 3,
+      "finalScore": 9.7
+     },
+     {
+      "playerId": "p3",
+      "playerName": "Pp3",
+      "teamId": "T3",
+      "rank": 4,
+      "finalScore": 9.6
+     },
+     {
+      "playerId": "p4",
+      "playerName": "Pp4",
+      "teamId": "T4",
+      "rank": 5,
+      "finalScore": 9.5
+     },
+     {
+      "playerId": "p5",
+      "playerName": "Pp5",
+      "teamId": "T5",
+      "rank": 6,
+      "finalScore": 9.4
+     },
+     {
+      "playerId": "p6",
+      "playerName": "Pp6",
+      "teamId": "T6",
+      "rank": 7,
+      "finalScore": 9.3
+     },
+     {
+      "playerId": "p7",
+      "playerName": "Pp7",
+      "teamId": "T7",
+      "rank": 8,
+      "finalScore": 9.2
+     },
+     {
+      "playerId": "p8",
+      "playerName": "Pp8",
+      "teamId": "T8",
+      "rank": 9,
+      "finalScore": 9.1
+     },
+     {
+      "playerId": "t1",
+      "playerName": "Pt1",
+      "teamId": "U",
+      "rank": 10,
+      "finalScore": 5
+     },
+     {
+      "playerId": "t2",
+      "playerName": "Pt2",
+      "teamId": "V",
+      "rank": 10,
+      "finalScore": 5
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/qualification.test.js",
+   "args": [
+    [
+     {
+      "playerId": "p0",
+      "playerName": "Pp0",
+      "teamId": "T0",
+      "rank": 1,
+      "finalScore": 9.9
+     },
+     {
+      "playerId": "p1",
+      "playerName": "Pp1",
+      "teamId": "T1",
+      "rank": 2,
+      "finalScore": 9.8
+     },
+     {
+      "playerId": "p2",
+      "playerName": "Pp2",
+      "teamId": "T2",
+      "rank": 3,
+      "finalScore": 9.7
+     },
+     {
+      "playerId": "p3",
+      "playerName": "Pp3",
+      "teamId": "T3",
+      "rank": 4,
+      "finalScore": 9.6
+     },
+     {
+      "playerId": "p4",
+      "playerName": "Pp4",
+      "teamId": "T4",
+      "rank": 5,
+      "finalScore": 9.5
+     },
+     {
+      "playerId": "p5",
+      "playerName": "Pp5",
+      "teamId": "T5",
+      "rank": 6,
+      "finalScore": 9.4
+     },
+     {
+      "playerId": "p6",
+      "playerName": "Pp6",
+      "teamId": "T6",
+      "rank": 7,
+      "finalScore": 9.3
+     },
+     {
+      "playerId": "p7",
+      "playerName": "Pp7",
+      "teamId": "T7",
+      "rank": 8,
+      "finalScore": 9.2
+     },
+     {
+      "playerId": "p8",
+      "playerName": "Pp8",
+      "teamId": "T8",
+      "rank": 9,
+      "finalScore": 9.1
+     },
+     {
+      "playerId": "p9",
+      "playerName": "Pp9",
+      "teamId": "T9",
+      "rank": 10,
+      "finalScore": 9
+     },
+     {
+      "playerId": "p10",
+      "playerName": "Pp10",
+      "teamId": "T10",
+      "rank": 11,
+      "finalScore": 8.9
+     },
+     {
+      "playerId": "p11",
+      "playerName": "Pp11",
+      "teamId": "T11",
+      "rank": 12,
+      "finalScore": 8.8
+     }
+    ],
+    {
+     "withdrawn": {
+      "$set": [
+       "p3"
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "ranking.applyTieBreaker": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    [
+     {
+      "finalScore": 8,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 8.1,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     },
+     {
+      "finalScore": 9,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 7,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     },
+     {
+      "finalScore": 8,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 8.4,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    [
+     {
+      "finalScore": 8,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 8.1,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     },
+     {
+      "finalScore": 8,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 8.4,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    [
+     {
+      "finalScore": 8,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     },
+     {
+      "finalScore": 8,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     },
+     {
+      "finalScore": 9,
+      "panelSize": 4,
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8
+      }
+     }
+    ]
+   ]
+  }
+ ],
+ "ranking.areTied": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    }
+   ]
+  }
+ ],
+ "ranking.baseScoreOf": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 9.4,
+      "judge1": 8.9,
+      "judge2": 9.1,
+      "judge3": 9,
+      "judge4": 9.5
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8.3,
+      "judge1": 7.5,
+      "judge2": 7.9,
+      "judge3": 8.3,
+      "judge4": 8.4
+     }
+    }
+   ]
+  }
+ ],
+ "ranking.calculateIndividualRankings": [
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:30",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:30",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:30",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:30",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     }
+    ],
+    "Competition II",
+    {
+     "draws": [
+      {
+       "order": [
+        "b",
+        "a"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:30",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:30",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     },
+     {
+      "playerId": "c",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:20",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     }
+    ],
+    "Competition II",
+    {
+     "draws": [
+      {
+       "order": [
+        "b",
+        "a"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 3,
+      "time": "1:30",
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8
+      }
+     }
+    ],
+    "Competition II",
+    {
+     "draws": [
+      {
+       "order": [
+        "a",
+        "b"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "z",
+      "finalScore": 7.5,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "c",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "z",
+      "finalScore": 7.5,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     }
+    ],
+    "Competition I",
+    {
+     "draws": [
+      {
+       "order": [
+        "c",
+        "a",
+        "b"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "c",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     }
+    ],
+    "Competition III",
+    {
+     "draws": [
+      {
+       "order": [
+        "b",
+        "a"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8.4,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     }
+    ],
+    "Competition II",
+    {
+     "draws": [
+      {
+       "order": [
+        "b",
+        "a"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "p-B",
+      "name": "B",
+      "finalScore": 8.5
+     },
+     {
+      "_id": "p-A",
+      "name": "A",
+      "finalScore": 9.1
+     },
+     {
+      "_id": "p-C",
+      "name": "C",
+      "finalScore": 7.2
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "p-A",
+      "name": "A",
+      "finalScore": 9.1,
+      "chestNo": 42
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "p-A",
+      "name": "A",
+      "finalScore": 5
+     }
+    ]
+   ]
+  }
+ ],
+ "ranking.calculateIndividualRankingsByApparatus": [
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Pole Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "a",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Rope Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     },
+     {
+      "playerId": "b",
+      "finalScore": 8,
+      "panelSize": 5,
+      "apparatus": "Rope Mallakhamb",
+      "judgeScores": {
+       "seniorJudge": 8,
+       "judge1": 8,
+       "judge2": 8,
+       "judge3": 8,
+       "judge4": 8
+      }
+     }
+    ],
+    "Competition II",
+    {
+     "draws": [
+      {
+       "apparatus": "Rope Mallakhamb",
+       "order": [
+        "b",
+        "a"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/ranking-apparatus.test.js",
+   "args": [
+    [
+     {
+      "playerName": "Pole winner",
+      "apparatus": "Pole Mallakhamb",
+      "finalScore": 9.4,
+      "averageMarks": 9.4
+     },
+     {
+      "playerName": "Pole second",
+      "apparatus": "Pole Mallakhamb",
+      "finalScore": 9,
+      "averageMarks": 9
+     },
+     {
+      "playerName": "Rope winner",
+      "apparatus": "Rope Mallakhamb",
+      "finalScore": 8.2,
+      "averageMarks": 8.2
+     },
+     {
+      "playerName": "Rope second",
+      "apparatus": "Rope Mallakhamb",
+      "finalScore": 7.4,
+      "averageMarks": 7.4
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/ranking-apparatus.test.js",
+   "args": [
+    [
+     {
+      "playerName": "Atharva Angre",
+      "apparatus": "Pole Mallakhamb",
+      "finalScore": 9.4,
+      "averageMarks": 9.4
+     },
+     {
+      "playerName": "Atharva Angre",
+      "apparatus": "Rope Mallakhamb",
+      "finalScore": 7.4,
+      "averageMarks": 7.4
+     },
+     {
+      "playerName": "Someone else",
+      "apparatus": "Rope Mallakhamb",
+      "finalScore": 8,
+      "averageMarks": 8
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/ranking-apparatus.test.js",
+   "args": [
+    [
+     {
+      "playerName": "No apparatus",
+      "apparatus": {
+       "$": "undefined"
+      },
+      "finalScore": 8,
+      "averageMarks": 8
+     },
+     {
+      "playerName": "Explicit Pole",
+      "apparatus": "Pole Mallakhamb",
+      "finalScore": 9,
+      "averageMarks": 9
+     }
+    ]
+   ]
+  }
+ ],
+ "ranking.calculateTeamRankings": [
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "team-B",
+      "name": "B",
+      "totalScore": 24.5
+     },
+     {
+      "_id": "team-A",
+      "name": "A",
+      "totalScore": 26.1
+     },
+     {
+      "_id": "team-C",
+      "name": "C",
+      "totalScore": 19
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "team-A",
+      "name": "A",
+      "totalScore": 26.1
+     },
+     {
+      "_id": "team-B",
+      "name": "B",
+      "totalScore": 26.1
+     },
+     {
+      "_id": "team-C",
+      "name": "C",
+      "totalScore": 19
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "team-A",
+      "name": "A",
+      "totalScore": 26.1
+     },
+     {
+      "_id": "team-B",
+      "name": "B",
+      "totalScore": 26.1
+     },
+     {
+      "_id": "team-C",
+      "name": "C",
+      "totalScore": 26.1
+     },
+     {
+      "_id": "team-D",
+      "name": "D",
+      "totalScore": 20
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "team-A",
+      "name": "A",
+      "totalScore": 30
+     },
+     {
+      "_id": "team-B",
+      "name": "B",
+      "totalScore": 20
+     },
+     {
+      "_id": "team-C",
+      "name": "C",
+      "totalScore": 20
+     },
+     {
+      "_id": "team-D",
+      "name": "D",
+      "totalScore": 10
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "name": "A"
+     },
+     {
+      "_id": "team-B",
+      "name": "B",
+      "totalScore": 5
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "team-B",
+      "name": "B",
+      "totalScore": 10
+     },
+     {
+      "_id": "team-A",
+      "name": "A",
+      "totalScore": 20
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/ranking.util.test.js",
+   "args": [
+    [
+     {
+      "_id": "t1",
+      "name": "A",
+      "totalScore": 9,
+      "extra": "kept"
+     }
+    ]
+   ]
+  }
+ ],
+ "ranking.determineTieBreakerWinner": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:28",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:30",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "88",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:30",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:30",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": 90,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:31",
+     "judgeScores": {
+      "seniorJudge": 9.5,
+      "judge1": 8,
+      "judge2": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:29",
+     "judgeScores": {
+      "seniorJudge": 7,
+      "judge1": 8,
+      "judge2": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:30",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:30",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:30",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": "1:28",
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 3,
+     "time": {
+      "$": "undefined"
+     },
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8.5,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8.2,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8.6
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 10
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8.2
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8.4,
+      "judge2": 7.6,
+      "judge3": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 7.6,
+      "judge2": 8.4,
+      "judge3": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8.4,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 7,
+      "judge1": 9,
+      "judge2": 9,
+      "judge3": 9,
+      "judge4": 9
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 7.9,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8.7
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 7,
+      "judge2": 8,
+      "judge3": 8.2,
+      "judge4": 9
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8.1,
+      "judge1": 7.6,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8.6
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "judgeScores": {
+      "seniorJudge": 8.3,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "judgeScores": {
+      "seniorJudge": 8.1,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8,
+      "judge4": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 5,
+     "judgeScores": {
+      "seniorJudge": 8
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "finalScore": 9,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 8,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8
+     }
+    },
+    {
+     "finalScore": 8,
+     "panelSize": 4,
+     "judgeScores": {
+      "seniorJudge": 9,
+      "judge1": 8,
+      "judge2": 8,
+      "judge3": 8
+     }
+    }
+   ]
+  }
+ ],
+ "ranking.tieGroupKey": [
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     "b",
+     "a"
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/lucky-draw.test.js",
+   "args": [
+    [
+     "a",
+     "b"
+    ]
+   ]
+  }
+ ],
+ "runningorder.buildIdentity": [
+  {
+   "from": "Server/tests/unit/performance-order.service.test.js",
+   "args": [
+    "comp-1",
+    {
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionType": "Competition II"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/performance-order.service.test.js",
+   "args": [
+    "comp-1",
+    {
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionType": "competition_1"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/performance-order.service.test.js",
+   "args": [
+    "comp-1",
+    {
+     "gender": "Male"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/performance-order.service.test.js",
+   "args": [
+    null,
+    {
+     "gender": "Male",
+     "ageGroup": "Under14",
+     "competitionType": "competition_1"
+    }
+   ]
+  }
+ ],
+ "scoresheet.breakdownForJudge": [
+  {
+   "from": "Server/tests/unit/utils/scoring/judge-slip.util.test.js",
+   "args": [
+    {
+     "judgeScores": {
+      "seniorJudge": 9,
+      "judge1": 8.9,
+      "judge2": 9.1
+     },
+     "breakdown": {
+      "difficulty": {
+       "aClass": 4,
+       "bClass": 3,
+       "cClass": 3,
+       "total": 3.8
+      },
+      "combination": {
+       "checked": {},
+       "total": 1.6
+      },
+      "execution": 3.6,
+      "bonus": 0
+     },
+     "judgeSlips": [
+      {
+       "judgeRole": "SR_JUDGE",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.6,
+       "bonusScore": 0,
+       "total": 9,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.6,
+        "bonus": 0
+       }
+      },
+      {
+       "judgeRole": "J1",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.5,
+       "bonusScore": 0,
+       "total": 8.9
+      },
+      {
+       "judgeRole": "J2",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.7,
+       "bonusScore": 0,
+       "total": 9.1,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.7,
+        "bonus": 0
+       }
+      }
+     ]
+    },
+    "Judge 2"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/judge-slip.util.test.js",
+   "args": [
+    {
+     "judgeScores": {
+      "seniorJudge": 9,
+      "judge1": 8.9,
+      "judge2": 9.1
+     },
+     "breakdown": {
+      "difficulty": {
+       "aClass": 4,
+       "bClass": 3,
+       "cClass": 3,
+       "total": 3.8
+      },
+      "combination": {
+       "checked": {},
+       "total": 1.6
+      },
+      "execution": 3.6,
+      "bonus": 0
+     },
+     "judgeSlips": [
+      {
+       "judgeRole": "SR_JUDGE",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.6,
+       "bonusScore": 0,
+       "total": 9,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.6,
+        "bonus": 0
+       }
+      },
+      {
+       "judgeRole": "J1",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.5,
+       "bonusScore": 0,
+       "total": 8.9
+      },
+      {
+       "judgeRole": "J2",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.7,
+       "bonusScore": 0,
+       "total": 9.1,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.7,
+        "bonus": 0
+       }
+      }
+     ]
+    },
+    "Senior Judge"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/judge-slip.util.test.js",
+   "args": [
+    {
+     "judgeScores": {
+      "seniorJudge": 9,
+      "judge1": 8.9,
+      "judge2": 9.1
+     },
+     "breakdown": {
+      "difficulty": {
+       "aClass": 4,
+       "bClass": 3,
+       "cClass": 3,
+       "total": 3.8
+      },
+      "combination": {
+       "checked": {},
+       "total": 1.6
+      },
+      "execution": 3.6,
+      "bonus": 0
+     },
+     "judgeSlips": [
+      {
+       "judgeRole": "SR_JUDGE",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.6,
+       "bonusScore": 0,
+       "total": 9,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.6,
+        "bonus": 0
+       }
+      },
+      {
+       "judgeRole": "J1",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.5,
+       "bonusScore": 0,
+       "total": 8.9
+      },
+      {
+       "judgeRole": "J2",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.7,
+       "bonusScore": 0,
+       "total": 9.1,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.7,
+        "bonus": 0
+       }
+      }
+     ]
+    },
+    "Judge 1"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/judge-slip.util.test.js",
+   "args": [
+    {
+     "playerId": "p",
+     "playerName": {
+      "$": "undefined"
+     },
+     "apparatus": "Pole Mallakhamb",
+     "judgeScores": {
+      "judge2": 9.1
+     },
+     "breakdown": {
+      "difficulty": {
+       "aClass": 4,
+       "bClass": 3,
+       "cClass": 3,
+       "total": 3.8
+      },
+      "combination": {
+       "checked": {},
+       "total": 1.6
+      },
+      "execution": 3.7,
+      "bonus": 0
+     }
+    },
+    "Judge 2"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/judge-slip.util.test.js",
+   "args": [
+    {
+     "judgeScores": {
+      "seniorJudge": 9,
+      "judge1": 8.9
+     },
+     "breakdown": {
+      "difficulty": {
+       "aClass": 4,
+       "bClass": 3,
+       "cClass": 3,
+       "total": 3.8
+      },
+      "combination": {
+       "checked": {},
+       "total": 1.6
+      },
+      "execution": 3.6,
+      "bonus": 0
+     }
+    },
+    "Judge 1"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/judge-slip.util.test.js",
+   "args": [
+    {
+     "judgeScores": {
+      "seniorJudge": 9,
+      "judge1": 8.9,
+      "judge2": 9.1
+     },
+     "breakdown": {
+      "difficulty": {
+       "aClass": 4,
+       "bClass": 3,
+       "cClass": 3,
+       "total": 3.8
+      },
+      "combination": {
+       "checked": {},
+       "total": 1.6
+      },
+      "execution": 3.6,
+      "bonus": 0
+     },
+     "judgeSlips": [
+      {
+       "judgeRole": "SR_JUDGE",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.6,
+       "bonusScore": 0,
+       "total": 9,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.6,
+        "bonus": 0
+       }
+      },
+      {
+       "judgeRole": "J1",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.5,
+       "bonusScore": 0,
+       "total": 8.9
+      },
+      {
+       "judgeRole": "J2",
+       "difficultyScore": 3.8,
+       "combinationScore": 1.6,
+       "executionScore": 3.7,
+       "bonusScore": 0,
+       "total": 9.1,
+       "breakdown": {
+        "difficulty": {
+         "aClass": 4,
+         "bClass": 3,
+         "cClass": 3,
+         "total": 3.8
+        },
+        "combination": {
+         "checked": {},
+         "total": 1.6
+        },
+        "execution": 3.7,
+        "bonus": 0
+       }
+      }
+     ]
+    },
+    "Scorer"
+   ]
+  }
+ ],
+ "scoresheet.calculateFinalScore": [
+  {
+   "from": "Server/tests/unit/final-score-deductions.test.js",
+   "args": [
+    {
+     "averageMarks": 8.633,
+     "deduction": 0.3,
+     "otherDeduction": 0.2
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/final-score-deductions.test.js",
+   "args": [
+    {
+     "averageMarks": 9.4
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/final-score-deductions.test.js",
+   "args": [
+    {
+     "averageMarks": 0.4,
+     "deduction": 0.5,
+     "otherDeduction": 0.5
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/final-score-deductions.test.js",
+   "args": [
+    {
+     "averageMarks": 9.4,
+     "deduction": "0.30",
+     "otherDeduction": ""
+    }
+   ]
+  }
+ ],
+ "scoresheet.calculateTimeDeduction": [
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    55
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    "0:57"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    95
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    70
+   ]
+  }
+ ],
+ "scoring.calculateIndividualScore": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 8.3,
+     "judge1": 7.5,
+     "judge2": 7.9,
+     "judge3": 8.3,
+     "judge4": 8.4
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 9.4,
+     "judge1": 8.9,
+     "judge2": 9.1,
+     "judge3": 9,
+     "judge4": 9.5
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 0,
+     "judge1": 7,
+     "judge2": 8,
+     "judge3": 7.5,
+     "judge4": 0
+    },
+    3
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 0.8,
+     "judge1": 0.7,
+     "judge2": 0.9,
+     "judge3": 0,
+     "judge4": 0
+    },
+    3
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 8.5,
+     "judge1": 8,
+     "judge2": 8.2,
+     "judge3": 8.4,
+     "judge4": 0
+    },
+    4
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 9.4,
+     "judge1": 8,
+     "judge2": 8.4,
+     "judge3": 8.6,
+     "judge4": 0
+    },
+    4
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 8.1,
+     "judge1": 8,
+     "judge2": 8.1,
+     "judge3": 8.2,
+     "judge4": 0
+    },
+    4
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "seniorJudge": 8.5,
+     "judge1": 8,
+     "judge2": 8.2,
+     "judge3": 8.4,
+     "judge4": 8.5
+    },
+    5
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "playerId": "p1",
+     "playerName": "Example One",
+     "seniorJudge": 8.3,
+     "judge1": 7.5,
+     "judge2": 7.9,
+     "judge3": 8.3,
+     "judge4": 8.4
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "playerId": "p2",
+     "playerName": "Example Two",
+     "seniorJudge": 9.4,
+     "judge1": 8.9,
+     "judge2": 9.1,
+     "judge3": 9,
+     "judge4": 9.5
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "playerId": "p4",
+     "playerName": "Boundary",
+     "seniorJudge": 8.2,
+     "judge1": 7.9,
+     "judge2": 8,
+     "judge3": 8,
+     "judge4": 8.1
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "playerId": "p5",
+     "playerName": "Boundary Over",
+     "seniorJudge": 8.3,
+     "judge1": 7.9,
+     "judge2": 8,
+     "judge3": 8,
+     "judge4": 8.1
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "panelSize": 3,
+     "judge1": 8.5,
+     "judge2": 8.7,
+     "judge3": 8.9
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "judge1": 8,
+     "judge2": 8.5,
+     "judge3": 9
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "panelSize": 4,
+     "seniorJudge": 9,
+     "judge2": 8.5,
+     "judge3": 8.7,
+     "judge4": 9.2
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "panelSize": 5,
+     "seniorJudge": 9.4,
+     "judge1": 8.9,
+     "judge2": 9.1,
+     "judge3": 9,
+     "judge4": 9.5
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "seniorJudge": 8.5,
+     "judge1": 8.6,
+     "judge2": 8.4
+    },
+    3
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "seniorJudge": 8.5,
+     "judge1": 8.6,
+     "judge2": 8.4
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "seniorJudge": 9.1,
+     "judge1": 8.8,
+     "judge2": 9,
+     "judge3": 9.1,
+     "judge4": 9.4
+    }
+   ]
+  }
+ ],
+ "scoring.getTimeDeduction": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    15
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    20
+   ]
+  }
+ ],
+ "scoring.getTimeDeductionForTime": [
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    45
+   ]
+  }
+ ],
+ "scoring.getTolerance": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    9.5
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    7.5
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    6.5
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    5.5
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    3
+   ]
+  }
+ ],
+ "scoring.isApparatusAllowedForGender": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    "Hanging",
+    "Female"
+   ]
+  }
+ ],
+ "scoring.resolveDifficultyValue": [
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "A": 0,
+     "B": 5,
+     "C": 2
+    },
+    {
+     "A": 4,
+     "B": 6,
+     "C": 1
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "A": 0,
+     "B": 4,
+     "C": 5
+    },
+    {
+     "A": 1,
+     "B": 6,
+     "C": 2
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "A": 2,
+     "B": 6,
+     "C": 2
+    },
+    {
+     "A": 4,
+     "B": 6,
+     "C": 1
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/v2-scoring.test.js",
+   "args": [
+    {
+     "A": 3,
+     "B": 7,
+     "C": 1
+    },
+    {
+     "A": 4,
+     "B": 6,
+     "C": 1
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "A": 0,
+     "B": 1,
+     "C": 3
+    },
+    {
+     "A": 2,
+     "B": 3,
+     "C": 1
+    }
+   ]
+  }
+ ],
+ "scoring.validateExecutionFloor": [
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "execution": 0.05
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "execution": 0.10000000000000003
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "execution": "2.5"
+    }
+   ]
+  }
+ ],
+ "scoring.validateSlipBreakdown": [
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {}
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "difficulty": {
+      "total": 4
+     }
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "execution": 4.5
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "bonus": 0.1
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "bonus": 0.2
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "bonus": 0
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "originality": 0.2
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/calculation.service.test.js",
+   "args": [
+    {
+     "originality": 0.15
+    }
+   ]
+  }
+ ],
+ "team.hasRoomInSquad": [
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    4,
+    [
+     {
+      "player": "p1",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p2",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p3",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p4",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p5",
+      "gender": "Female",
+      "ageGroup": "Under14"
+     }
+    ],
+    "Male",
+    "Under14"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    4,
+    [
+     {
+      "player": "p1",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p2",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p3",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p4",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p5",
+      "gender": "Female",
+      "ageGroup": "Under14"
+     }
+    ],
+    "Female",
+    "Under14"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    4,
+    [
+     {
+      "player": "p1",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p2",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p3",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p4",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p5",
+      "gender": "Female",
+      "ageGroup": "Under14"
+     }
+    ],
+    "Male",
+    "Under16"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    4,
+    [
+     {
+      "player": "p1",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p2",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p3",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p4",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p5",
+      "gender": "Female",
+      "ageGroup": "Under14"
+     }
+    ],
+    "Male",
+    "Under14",
+    "p4"
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    {
+     "$": "undefined"
+    },
+    [
+     {
+      "player": "p1",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p2",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p3",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p4",
+      "gender": "Male",
+      "ageGroup": "Under14"
+     },
+     {
+      "player": "p5",
+      "gender": "Female",
+      "ageGroup": "Under14"
+     }
+    ],
+    "Male",
+    "Under14"
+   ]
+  }
+ ],
+ "team.rankTeamChampionship": [
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    [
+     {
+      "name": "Deep",
+      "maxTeamSize": 6,
+      "performances": [
+       {
+        "playerId": "Pole Mallakhamb-0",
+        "playerName": "Athlete 0",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Pole Mallakhamb-1",
+        "playerName": "Athlete 1",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Pole Mallakhamb-2",
+        "playerName": "Athlete 2",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Pole Mallakhamb-3",
+        "playerName": "Athlete 3",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Pole Mallakhamb-4",
+        "playerName": "Athlete 4",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Pole Mallakhamb-5",
+        "playerName": "Athlete 5",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 5
+       }
+      ]
+     },
+     {
+      "name": "Sharp",
+      "maxTeamSize": 4,
+      "performances": [
+       {
+        "playerId": "Pole Mallakhamb-0",
+        "playerName": "Athlete 0",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 9.9
+       },
+       {
+        "playerId": "Pole Mallakhamb-1",
+        "playerName": "Athlete 1",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 9.9
+       },
+       {
+        "playerId": "Pole Mallakhamb-2",
+        "playerName": "Athlete 2",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 9.9
+       },
+       {
+        "playerId": "Pole Mallakhamb-3",
+        "playerName": "Athlete 3",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 1
+       }
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    [
+     {
+      "name": "A",
+      "maxTeamSize": 4,
+      "performances": [
+       {
+        "playerId": "Pole Mallakhamb-0",
+        "playerName": "Athlete 0",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 9
+       },
+       {
+        "playerId": "Pole Mallakhamb-1",
+        "playerName": "Athlete 1",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Pole Mallakhamb-2",
+        "playerName": "Athlete 2",
+        "apparatus": "Pole Mallakhamb",
+        "finalScore": 7
+       }
+      ]
+     },
+     {
+      "name": "B",
+      "maxTeamSize": 4,
+      "performances": [
+       {
+        "playerId": "Rope Mallakhamb-0",
+        "playerName": "Athlete 0",
+        "apparatus": "Rope Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Rope Mallakhamb-1",
+        "playerName": "Athlete 1",
+        "apparatus": "Rope Mallakhamb",
+        "finalScore": 8
+       },
+       {
+        "playerId": "Rope Mallakhamb-2",
+        "playerName": "Athlete 2",
+        "apparatus": "Rope Mallakhamb",
+        "finalScore": 8
+       }
+      ]
+     },
+     {
+      "name": "C",
+      "maxTeamSize": 4,
+      "performances": [
+       {
+        "playerId": "Rope Mallakhamb-0",
+        "playerName": "Athlete 0",
+        "apparatus": "Rope Mallakhamb",
+        "finalScore": 1
+       }
+      ]
+     }
+    ]
+   ]
+  }
+ ],
+ "team.scoreTeam": [
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    {
+     "maxTeamSize": 4,
+     "performances": [
+      {
+       "playerId": "Pole Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Pole Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 8.5
+      },
+      {
+       "playerId": "Pole Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Pole Mallakhamb-3",
+       "playerName": "Athlete 3",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 7
+      },
+      {
+       "playerId": "Hanging Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Hanging Mallakhamb",
+       "finalScore": 8.8
+      },
+      {
+       "playerId": "Hanging Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Hanging Mallakhamb",
+       "finalScore": 8.2
+      },
+      {
+       "playerId": "Hanging Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Hanging Mallakhamb",
+       "finalScore": 7.9
+      },
+      {
+       "playerId": "Hanging Mallakhamb-3",
+       "playerName": "Athlete 3",
+       "apparatus": "Hanging Mallakhamb",
+       "finalScore": 6
+      },
+      {
+       "playerId": "Rope Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 9.2
+      },
+      {
+       "playerId": "Rope Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 8.1
+      },
+      {
+       "playerId": "Rope Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 7.5
+      },
+      {
+       "playerId": "Rope Mallakhamb-3",
+       "playerName": "Athlete 3",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 7.4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    {
+     "maxTeamSize": 6,
+     "performances": [
+      {
+       "playerId": "Pole Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Pole Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Pole Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 7
+      },
+      {
+       "playerId": "Pole Mallakhamb-3",
+       "playerName": "Athlete 3",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 6
+      },
+      {
+       "playerId": "Pole Mallakhamb-4",
+       "playerName": "Athlete 4",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 5
+      },
+      {
+       "playerId": "Pole Mallakhamb-5",
+       "playerName": "Athlete 5",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 4
+      },
+      {
+       "playerId": "Rope Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Rope Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Rope Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Rope Mallakhamb-3",
+       "playerName": "Athlete 3",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Rope Mallakhamb-4",
+       "playerName": "Athlete 4",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Rope Mallakhamb-5",
+       "playerName": "Athlete 5",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    {
+     "maxTeamSize": 6,
+     "performances": [
+      {
+       "playerId": "Pole Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Pole Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 8
+      },
+      {
+       "playerId": "Pole Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 7
+      },
+      {
+       "playerId": "Pole Mallakhamb-3",
+       "playerName": "Athlete 3",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 6
+      },
+      {
+       "playerId": "Pole Mallakhamb-4",
+       "playerName": "Athlete 4",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 5
+      },
+      {
+       "playerId": "Pole Mallakhamb-5",
+       "playerName": "Athlete 5",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    {
+     "maxTeamSize": 6,
+     "performances": [
+      {
+       "playerId": "Rope Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Rope Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    {
+     "maxTeamSize": 4,
+     "performances": [
+      {
+       "playerId": "Pole Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Pole Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Pole Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Pole Mallakhamb-3",
+       "playerName": "Athlete 3",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 9
+      },
+      {
+       "playerId": "Rope Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Rope Mallakhamb",
+       "finalScore": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "from": "Server/tests/unit/utils/scoring/team-championship.util.test.js",
+   "args": [
+    {
+     "maxTeamSize": 4,
+     "performances": [
+      {
+       "playerId": "Pole Mallakhamb-0",
+       "playerName": "Athlete 0",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 8.1
+      },
+      {
+       "playerId": "Pole Mallakhamb-1",
+       "playerName": "Athlete 1",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 8.2
+      },
+      {
+       "playerId": "Pole Mallakhamb-2",
+       "playerName": "Athlete 2",
+       "apparatus": "Pole Mallakhamb",
+       "finalScore": 8.3
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

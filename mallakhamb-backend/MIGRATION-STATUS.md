@@ -30,7 +30,7 @@ Tracking file for the Spring Boot migration (plan:
 | Port kit: `gen-catalogues`, report mode | **Done** | `tools/node/gen/gen-catalogues.js` → `generated/catalogues.json`, `generated/CATALOGUE-REPORT.md` |
 | Publish the drift report | **Done**, decisions open | See "Open decisions" below |
 | Port kit: `context-pack` | Not started | Needs the call tracer and the corpus |
-| Golden engine vectors (`tools/node/golden`) | **Done**, with gaps listed below | `golden/cop-2022-11/`: 19,585 committed cases; the 700,000-case set is rebuilt on demand and its hashes are committed |
+| Golden engine vectors (`tools/node/golden`) | **Done** | `golden/cop-2022-11/`: 26,178 committed cases in 96 functions; the 1,001,800-case set is rebuilt on demand and its hashes are committed |
 | `twinrun` and the HTTP corpus | Not started | Needs a local MongoDB with seed data |
 | Socket recorder and recordings | Not started | |
 | Call tracer (DI-container proxy) | Not started | |
@@ -57,27 +57,44 @@ Tracking file for the Spring Boot migration (plan:
 
 | Suite | Functions | Committed cases | Full set |
 |---|---|---|---|
-| scoring | 16 | 3,565 | 100,365 |
-| ranking and tie-break | 14 | 4,890 | 100,098 |
-| team championship | 7 | 1,644 | 100,044 |
-| fees | 10 | 2,851 | 100,053 |
-| panel | 13 | 2,134 | 100,134 |
-| eligibility | 9 | 2,282 | 100,282 |
+| scoring | 16 | 3,612 | 100,412 |
+| score sheet (final score, time deduction, slips, published rows) | 10 | 3,673 | 100,081 |
+| ranking and tie-break | 14 | 4,939 | 100,147 |
+| finals qualification | 3 | 1,221 | 100,023 |
+| team championship | 7 | 1,657 | 100,057 |
+| fees | 10 | 2,906 | 100,108 |
+| panel | 13 | 2,151 | 100,151 |
+| eligibility | 9 | 2,304 | 100,304 |
+| running order | 7 | 1,496 | 100,298 |
 | jsnumber (primitives for `JsNumber`) | 7 | 2,219 | 100,219 |
+| **Total** | **96** | **26,178** | **1,001,800** |
 
-Checked: the committed cases replay exactly against Node; two runs give identical hashes; every tie-break step (time, base score, four-judge average, average with Chief, lucky draw) and all four fee phases are reached.
+Each function's cases are, in order: fixed cases, the COP's worked examples, the examples from Node's unit tests, then seeded-random cases.
 
-Differences from 04 §3, and gaps:
+Checked:
+
+- The committed cases replay exactly against Node, and two runs give identical hashes.
+- Every tie-break step (time, base score, four-judge average, average with Chief, lucky draw) and all four fee phases are reached.
+- **Node gives the answers printed in the Code of Points** for its worked examples: §2.1.2 (average 8.10), §2.1.3 (base score 9.225 at tolerance 0.10) and §1.8.3.4–5 (the age cut-off). A test pins this.
+- 223 worked examples come from 17 of Node's unit-test files (`golden/examples.json`, built by `capture-examples.js`). The tests run twice and only inputs seen both times are kept, so nothing built from "now" or a random id gets in.
+
+Differences from 04 §3:
 
 | Item | State |
 |---|---|
 | fast-check | Not used. A seeded generator written in the tool is used instead, so committed vectors don't change when a library is upgraded |
-| 100,000 cases per engine committed | Only the hashes are committed (`manifest.full.json`); the files are 403 MB and are rebuilt with `npm run golden:full` in about 30 seconds |
-| Worked examples from `v2-scoring.test.js` and the COP PDF | Not imported yet. The fixed cases were written from the Node code |
-| Lot draw and running order | Not covered. The draw uses `crypto.randomInt`, so it is checked by invariant in the twin-run (04 §2), and the sequence rules sit inside a service |
-| `qualification.util` (finals qualifiers) | Not covered yet |
-| `buildJudgeSlipPlayerScore`, `published-score.util`, `player-row.util` | Not covered yet |
-| Functions that default to "now" (`resolveFeeWindow`, `checkAgeGroup`) | Always called with an explicit time or year, so no vector depends on the day it was generated |
+| 100,000 cases per engine committed | Only the hashes are committed (`manifest.full.json`); the files are rebuilt with `npm run golden:full` in under a minute |
+| The lot draw | Its result is random, so it can't be a vector. The algorithm is pinned instead: `runningorder/shuffleWith` feeds the real shuffle a recorded list of random numbers. The draw's randomness is checked by invariant in the twin-run (04 §2) |
+| `sortByStoredPosition` | Takes a callback in Node; the vector always sorts unordered rows by `name` |
+| JavaScript runtime errors (a null dereference) | Only the error kind is recorded (`TypeError`), not V8's wording |
+| Functions that default to "now" (`resolveFeeWindow`, `checkAgeGroup`, `buildJudgeSlipPlayerScore`) | Always called with an explicit time or year |
+
+Notes for the Java engines (things the vectors will catch):
+
+- `allRoundAgeGroup` and `sortByStoredPosition` order strings with `localeCompare`. For ids (lower-case hex) that is plain character order; for names it is locale order (`akash` before `Akash`, `Team 10` before `Team 2`), which a Java `String.compareTo` does not give.
+- `calculateTimeDeduction` (service) and `timeInSeconds` (tie-break) parse a time string differently; both are pinned separately.
+
+Still open in Stage 1 for the engines: the rules that live inside services with database access (roster ordering in `getOrderedRoster`, the sequence checks in `setTeamOrder` / `setPlayerOrder`, `getTeamScores`). Those are covered by the twin-run corpus, not by vectors.
 
 ## Open decisions (lead and owner, before milestone 2a)
 

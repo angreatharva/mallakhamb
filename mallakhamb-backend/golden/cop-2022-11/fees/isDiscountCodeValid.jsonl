@@ -8,3 +8,22 @@
 {"id":"fees.isDiscountCodeValid#7","args":["MEET100",{"enabled":true,"code":""}],"result":false}
 {"id":"fees.isDiscountCodeValid#8","args":["MEET100",null],"result":false}
 {"id":"fees.isDiscountCodeValid#9","args":[100,{"enabled":true,"code":100}],"result":true}
+{"id":"fees.isDiscountCodeValid#10","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026",{"enabled":true,"code":"BRMC@2026"}],"result":true}
+{"id":"fees.isDiscountCodeValid#11","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026",{"enabled":false,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#12","from":"Server/tests/unit/discount-code.test.js","args":["",{"enabled":true,"code":""}],"result":false}
+{"id":"fees.isDiscountCodeValid#13","from":"Server/tests/unit/discount-code.test.js","args":[{"$":"undefined"},{"enabled":true,"code":""}],"result":false}
+{"id":"fees.isDiscountCodeValid#14","from":"Server/tests/unit/discount-code.test.js","args":[null,{"enabled":true,"code":{"$":"undefined"}}],"result":false}
+{"id":"fees.isDiscountCodeValid#15","from":"Server/tests/unit/discount-code.test.js","args":["",{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#16","from":"Server/tests/unit/discount-code.test.js","args":[null,{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#17","from":"Server/tests/unit/discount-code.test.js","args":[{"$":"undefined"},{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#18","from":"Server/tests/unit/discount-code.test.js","args":["brmc@2026",{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#19","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2027",{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#20","from":"Server/tests/unit/discount-code.test.js","args":[" BRMC@2026",{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#21","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026 ",{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#22","from":"Server/tests/unit/discount-code.test.js","args":["BRMC",{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#23","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026x",{"enabled":true,"code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#24","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026",null],"result":false}
+{"id":"fees.isDiscountCodeValid#25","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026",{"$":"undefined"}],"result":false}
+{"id":"fees.isDiscountCodeValid#26","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026",{}],"result":false}
+{"id":"fees.isDiscountCodeValid#27","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026",{"enabled":"false","code":"BRMC@2026"}],"result":false}
+{"id":"fees.isDiscountCodeValid#28","from":"Server/tests/unit/discount-code.test.js","args":["BRMC@2026",{"enabled":1,"code":"BRMC@2026"}],"result":false}

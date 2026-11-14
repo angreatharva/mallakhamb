@@ -124,6 +124,13 @@ module.exports = {
         // No Chief on a 5-judge panel.
         [{ judge1: 9.1, judge2: 9.2, judge3: 9.0, judge4: 9.3 }, 5],
       ],
+      // The worked examples printed in the Code of Points (Server/docs/COP Mallakhamb.pdf).
+      cop: [
+        // §2.1.2: the Chief is not counted; the average of the two middle scores of the four judges is 8.10.
+        { from: 'COP §2.1.2', args: [{ seniorJudge: 8.3, judge1: 7.5, judge2: 7.9, judge3: 8.3, judge4: 8.4 }, 5] },
+        // §2.1.3: middle average 9.05, Chief 9.40, difference 0.35 > tolerance 0.10, so the base score (9.05 + 9.40) / 2 = 9.225 applies.
+        { from: 'COP §2.1.3', args: [{ seniorJudge: 9.4, judge1: 8.9, judge2: 9.1, judge3: 9.0, judge4: 9.5 }, 5] },
+      ],
       gen: (rng) => {
         const size = rng.pick([3, 4, 5]);
         const declared = rng.pick([size, size, size, size, undefined, undefined, rng.pick([3, 4, 5]), rng.pick([0, 6, null])]);
