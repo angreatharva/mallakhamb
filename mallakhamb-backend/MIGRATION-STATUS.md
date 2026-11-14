@@ -31,10 +31,10 @@ Tracking file for the Spring Boot migration (plan:
 | Publish the drift report | **Done**, decisions open | See "Open decisions" below |
 | Port kit: `context-pack` | Not started | Needs the call tracer and the corpus |
 | Golden engine vectors (`tools/node/golden`) | **Done** | `golden/cop-2022-11/`: 26,178 committed cases in 96 functions; the 1,001,800-case set is rebuilt on demand and its hashes are committed |
-| `twinrun` and the HTTP corpus | Not started | Needs a local MongoDB with seed data |
+| `twinrun` and the HTTP corpus | **Harness done; corpus 1 of 5 sources** | Recorder, replayer, response and stored-data comparison work. Recorded so far: `testapi` (137 requests, 92 operations). See "Twin-run" below |
 | Socket recorder and recordings | Not started | |
 | Call tracer (DI-container proxy) | Not started | |
-| Contract capture (headers, cookie attributes, CSRF format) | Not started | |
+| Contract capture (headers, cookie attributes, CSRF format) | Partly | Every recorded response keeps all its headers and `Set-Cookie` lines (`twinrun/corpus/*/requests.jsonl`). The summary files under `contract/` are not written yet |
 | `--target` on `testApi.js` | Not started | |
 | Re-run the audit, regenerate `openapi.json` and `API-MATRIX.md` | Not started | Planned for 21 Dec so the December changes are included |
 | Node baseline on the OCI VM shape | **Blocked until 21 Dec** | Runs on the VMs (D2) |
@@ -95,6 +95,36 @@ Notes for the Java engines (things the vectors will catch):
 - `calculateTimeDeduction` (service) and `timeInSeconds` (tie-break) parse a time string differently; both are pinned separately.
 
 Still open in Stage 1 for the engines: the rules that live inside services with database access (roster ordering in `getOrderedRoster`, the sequence checks in `setTeamOrder` / `setPlayerOrder`, `getTeamScores`). Those are covered by the twin-run corpus, not by vectors.
+
+## Twin-run
+
+`tools/node/twinrun` records what Node answers and replays it. Today it replays against Node; in Stage 2 the same command points at Java (`--url`).
+
+| Check | Result |
+|---|---|
+| Corpus `testapi` recorded from `Server/scripts/perf/testApi.js` | 137 requests, 92 distinct operations; the harness itself reported 138 pass, 0 fail, 3 skipped |
+| Replay against Node, run repeatedly | 137/137 requests match, 92/92 operations green, stored data matches, every run |
+| Comparator fails when it should | 11 tests: a changed string, number, type, array order, extra or missing field, key order, status, header, cookie attribute, token claim, stored type, missing `__v`, unhashed password |
+
+How a replay stays comparable:
+
+- **Same start:** the database is restored from the corpus snapshot, and the clock starts at the recorded instant (only `Date` is shifted).
+- **Normalised, nothing else:** generated ids (mapped one-to-one), tokens (claims compared), timestamps.
+- **Invariants** (`twinrun/invariants.json`, each with a reason): `csrfToken`, `correlationId`, the two health endpoints (they report the process's own memory), and stored `password`, `tokenHash`, `family`.
+- **The lot draw** is random, and everything after it follows its order. The replayer checks the rule (same teams and athletes, lots 1..N) and then sets the replay's stored order to the recorded one. No random source is shared between the two sides.
+
+Safety: `Server/.env` points at the Atlas database and a real mail provider. The twin-run sets its own environment first, refuses anything but `mongodb://127.0.0.1/twin_test_*`, uses twin-only secrets, and turns mail, Razorpay and OCR off. The recorded corpus was checked for real keys and addresses: none.
+
+Not done yet:
+
+| Item | State |
+|---|---|
+| Corpus from `setup:api`, `meetDay.js`, `openapi.json` (one request per operation and response code), the security cases | Not recorded. 92 of the 220 operations are covered so far |
+| Stored-data check after **each** write | Done once, at the end of the run. Per-write comparison needs both sides running together (Stage 2) |
+| `allowed-diffs` file | Not created; it starts when there is a Java side to differ |
+| Call tracer and `context-pack` | Not started |
+| Socket recorder | Not started |
+| Multipart uploads (walk-in forms) | The recorder notes them but can't replay them yet; none in `testapi` |
 
 ## Open decisions (lead and owner, before milestone 2a)
 

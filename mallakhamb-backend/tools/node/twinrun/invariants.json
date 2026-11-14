@@ -1,0 +1,44 @@
+{
+  "//": "Values that are random or a measurement, so two runs never agree on them (04 §2, point 5). They are compared by shape, not by value. Every entry needs a reason, and one is added only when a Node-against-Node replay shows the value differs. This is not the place for a Java difference: those go in allowed-diffs.json, with an approval.",
+  "keys": {
+    "csrfToken": {
+      "pair": true,
+      "reason": "Random CSRF token, echoed in the X-CSRF-Token header"
+    },
+    "correlationId": {
+      "reason": "Random per-request id in error bodies"
+    }
+  },
+  "operations": {
+    "GET /api/health": {
+      "body": "shape",
+      "statuses": [
+        200,
+        503
+      ],
+      "reason": "Reports this process's own memory and uptime; answers 503 when its heap is over the threshold"
+    },
+    "GET /api/admin/system/health": {
+      "body": "shape",
+      "reason": "Reports this process's own memory and uptime"
+    },
+    "POST /api/admin/lots/draw": {
+      "align": "lot-draw",
+      "reason": "The draw is random (crypto.randomInt). Checked: same teams and athletes, lots 1..N. Then the replay's stored order is set to the recorded one, so later requests see the same running order"
+    }
+  },
+  "storedKeys": {
+    "password": {
+      "pattern": "^\\$2[aby]\\$12\\$[./A-Za-z0-9]{53}$",
+      "reason": "bcrypt hash with a random salt. Both sides must store a cost-12 bcrypt hash"
+    },
+    "tokenHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "reason": "SHA-256 of a random refresh token"
+    },
+    "family": {
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "reason": "Random UUID naming a refresh-token family"
+    }
+  }
+}

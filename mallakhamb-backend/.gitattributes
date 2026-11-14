@@ -4,3 +4,5 @@
 generated/** text eol=lf
 tools/node/** text eol=lf
 golden/** text eol=lf
+twinrun/** text eol=lf
+*.gz binary

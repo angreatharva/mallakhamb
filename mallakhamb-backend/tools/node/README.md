@@ -28,6 +28,8 @@ cd mallakhamb-backend/tools/node && npm ci
 | `npm run golden` | Writes the committed golden vectors to `golden/cop-2022-11/` |
 | `npm run golden:verify` | Replays the committed vectors against Node; fails on any difference |
 | `npm run golden:full` | Writes the 100,000-per-engine set to `build/golden-full/` (not committed) and records its hashes in `manifest.full.json` |
+| `npm run twin:record -- testapi` | Records a corpus from Node: every request of a Server harness script and Node's answer, the starting database, and the end state |
+| `npm run twin:replay -- testapi` | Restores the starting database, replays the corpus against Node and compares responses and stored data; exits 1 on any difference |
 | `npm test` | Fails if the committed reports are stale, an enum field has no concept, or a golden vector no longer replays |
 
 ## Files
@@ -42,8 +44,19 @@ cd mallakhamb-backend/tools/node && npm ci
 | `golden/suites/*.js` | One file per engine: the functions, their fixed cases and their random input builders |
 | `golden/lib/codec.js` | JSON encoding for `undefined`, `NaN`, `-0`, `Infinity` and dates |
 | `golden/lib/rng.js` | The seeded random source |
+| `twinrun/record.js`, `record-preload.js` | Run a Server harness script under a preload that wraps `fetch`; nothing in `Server/` changes |
+| `twinrun/replay.js` | Replays a corpus against Node (started in-process) or against a running server (`--url`, for Java) |
+| `twinrun/lib/compare.js` | Response comparison: ids, tokens and timestamps normalised, everything else must be equal |
+| `twinrun/lib/dbdiff.js` | Compares the stored data after a replay with the recording's, types included |
+| `twinrun/lib/align.js` | Random operations (the lot draw): check the rule, then give the replay the recorded result |
+| `twinrun/invariants.json` | The values that are random or measured, each with a reason |
+| `twinrun/lib/local.js` | Forces a local `twin_test_*` database, twin-only secrets, and mail, payment and OCR off |
 | `lib/server.js` | Paths, model loading, output writing |
 | `lib/schema-enums.js` | Walks a Mongoose schema for enum fields |
+
+## Twin-run safety
+
+`Server/.env` names the real database and a real mail provider. The twin-run never uses either: it sets its own environment before any Server module loads, refuses any database that is not `mongodb://127.0.0.1` and named `twin_test_*`, signs tokens with a twin-only secret, and sets the email provider to `none`. It needs a MongoDB on `127.0.0.1:27017`.
 
 ## Rules
 
