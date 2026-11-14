@@ -105,6 +105,7 @@ Pick **Gender**, **Age group**, **Competition type** and **Apparatus**. Nothing 
 - **Withdraw** a qualifier before the final's first score; the next in rank takes the place and the coach is emailed. **Reinstate** undoes it.
 - **Finalize all ready finals** shows a summary: every finalist, anyone passed over, and the finals that aren't ready (with the reason). Finalizing enters the finalists for judges, lots, coaches (who are emailed), players and the public results. Each card also has its own **Finalize**. A finalized list is locked; only the Super Admin can **Reopen** it, and only before its first score.
 - If a Competition I score is corrected after a final has started, the list stays as it is and the card warns you.
+- **Demos** (local test copy, Thane meet, Boys Under 12 · Pole): [Competition I → II](../media/finals-competition-1-to-2.gif) and [Competition I → III](../media/finals-competition-1-to-3.gif). Each starts on the Competition I ranking, then opens the final's card and finalizes it. There is no Competition II → III step: both finals come only from Competition I.
 
 <a id="judges"></a>
 ### Judges — staff the panels
