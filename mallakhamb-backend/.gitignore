@@ -35,3 +35,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Port kit ###
+tools/node/node_modules/
+.port/packs/

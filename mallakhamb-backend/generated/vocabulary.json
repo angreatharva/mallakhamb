@@ -1,0 +1,2080 @@
+{
+  "generatedBy": "tools/node/gen/gen-enums.js",
+  "fieldCount": 80,
+  "concepts": [
+    {
+      "name": "Gender",
+      "wireType": "string",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "MALE",
+          "wire": "Male"
+        },
+        {
+          "constant": "FEMALE",
+          "wire": "Female"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.registeredTeams[].players[].gender",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "Competition.ageGroups[].gender",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "Competition.startedAgeGroups[].gender",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "Judge.gender",
+          "file": "Server/src/models/Judge.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "PerformanceOrder.gender",
+          "file": "Server/src/models/PerformanceOrder.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "Player.gender",
+          "file": "Server/src/models/Player.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "Qualification.gender",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "Score.gender",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "Team.sex",
+          "file": "Server/src/models/Team.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "TieBreakDraw.gender",
+          "file": "Server/src/models/TieBreakDraw.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        },
+        {
+          "field": "WalkInRegistration.rows[].gender",
+          "file": "Server/src/models/WalkInRegistration.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "Male",
+            "Female"
+          ]
+        }
+      ],
+      "drift": [
+        {
+          "kind": "name",
+          "field": "Team.sex",
+          "detail": "the field is called `sex`, not `gender`",
+          "proposal": "Java field is always `gender`; `TeamDocument` maps it with `@Field(\"sex\")` (08 §3). Stored name unchanged."
+        }
+      ]
+    },
+    {
+      "name": "AgeGroup",
+      "wireType": "string",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "UNDER_10",
+          "wire": "Under10",
+          "ageRange": {
+            "min": 0,
+            "max": 10
+          }
+        },
+        {
+          "constant": "UNDER_12",
+          "wire": "Under12",
+          "ageRange": {
+            "min": 0,
+            "max": 12
+          }
+        },
+        {
+          "constant": "UNDER_14",
+          "wire": "Under14",
+          "ageRange": {
+            "min": 0,
+            "max": 14
+          }
+        },
+        {
+          "constant": "UNDER_16",
+          "wire": "Under16",
+          "ageRange": {
+            "min": 0,
+            "max": 16
+          }
+        },
+        {
+          "constant": "UNDER_18",
+          "wire": "Under18",
+          "ageRange": {
+            "min": 0,
+            "max": 18
+          }
+        },
+        {
+          "constant": "ABOVE_16",
+          "wire": "Above16",
+          "ageRange": {
+            "min": 17,
+            "max": null
+          }
+        },
+        {
+          "constant": "ABOVE_18",
+          "wire": "Above18",
+          "ageRange": {
+            "min": 19,
+            "max": null
+          }
+        },
+        {
+          "constant": "ALL_AGES",
+          "wire": "AllAges",
+          "ageRange": null
+        }
+      ],
+      "subsets": {
+        "ENTRY": [
+          "Under10",
+          "Under12",
+          "Under14",
+          "Under16",
+          "Under18",
+          "Above16",
+          "Above18"
+        ],
+        "CATEGORY": [
+          "Under10",
+          "Under12",
+          "Under14",
+          "Under16",
+          "Under18",
+          "Above16",
+          "Above18",
+          "AllAges"
+        ]
+      },
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.registeredTeams[].players[].ageGroup",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Competition.ageGroups[].ageGroup",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Competition.startedAgeGroups[].ageGroup",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18",
+            "AllAges"
+          ]
+        },
+        {
+          "field": "Judge.ageGroup",
+          "file": "Server/src/models/Judge.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18",
+            "AllAges"
+          ]
+        },
+        {
+          "field": "PerformanceOrder.ageGroup",
+          "file": "Server/src/models/PerformanceOrder.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18",
+            "AllAges"
+          ]
+        },
+        {
+          "field": "Player.ageGroup",
+          "file": "Server/src/models/Player.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Player.lockedAgeGroup",
+          "file": "Server/src/models/Player.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Qualification.ageGroup",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18",
+            "AllAges"
+          ]
+        },
+        {
+          "field": "Qualification.qualifiers[].sourceAgeGroup",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Qualification.tied[].sourceAgeGroup",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Qualification.skipped[].sourceAgeGroup",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Qualification.slices[].ageGroup",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Qualification.drawOrders[].ageGroup",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "Score.ageGroup",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18",
+            "AllAges"
+          ]
+        },
+        {
+          "field": "Team.teamAgeGroup",
+          "file": "Server/src/models/Team.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "TieBreakDraw.ageGroup",
+          "file": "Server/src/models/TieBreakDraw.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18",
+            "AllAges"
+          ]
+        },
+        {
+          "field": "WalkInRegistration.rows[].writtenAgeGroup",
+          "file": "Server/src/models/WalkInRegistration.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        },
+        {
+          "field": "WalkInRegistration.rows[].ageGroup",
+          "file": "Server/src/models/WalkInRegistration.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "Under10",
+            "Under12",
+            "Under14",
+            "Under16",
+            "Under18",
+            "Above16",
+            "Above18"
+          ],
+          "subset": "ENTRY"
+        }
+      ],
+      "drift": [
+        {
+          "kind": "subset",
+          "field": "Competition.registeredTeams[].players[].ageGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Competition.ageGroups[].ageGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Player.ageGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Player.lockedAgeGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Qualification.qualifiers[].sourceAgeGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Qualification.tied[].sourceAgeGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Qualification.skipped[].sourceAgeGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Qualification.slices[].ageGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Qualification.drawOrders[].ageGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "Team.teamAgeGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "WalkInRegistration.rows[].writtenAgeGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        },
+        {
+          "kind": "subset",
+          "field": "WalkInRegistration.rows[].ageGroup",
+          "detail": "doesn't allow `AllAges` (= named set `ENTRY`)",
+          "proposal": "One enum. `AgeGroup.ENTRY` (athletes, teams, entries) and `AgeGroup.CATEGORY` (panels, score sheets, order, draws) are named sets on it; each document field is validated against the set Node uses (08 §3). Age ranges move to the rulebook (09), not the enum."
+        }
+      ]
+    },
+    {
+      "name": "CompetitionType",
+      "wireType": "string",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "COMPETITION_1",
+          "wire": "competition_1",
+          "display": "Competition I"
+        },
+        {
+          "constant": "COMPETITION_2",
+          "wire": "competition_2",
+          "display": "Competition II"
+        },
+        {
+          "constant": "COMPETITION_3",
+          "wire": "competition_3",
+          "display": "Competition III"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.competitionTypes",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": true,
+          "values": [
+            "competition_1",
+            "competition_2",
+            "competition_3"
+          ]
+        },
+        {
+          "field": "Competition.startedAgeGroups[].competitionType",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "competition_1",
+            "competition_2",
+            "competition_3"
+          ]
+        },
+        {
+          "field": "Judge.competitionTypes",
+          "file": "Server/src/models/Judge.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": true,
+          "values": [
+            "competition_1",
+            "competition_2",
+            "competition_3"
+          ]
+        },
+        {
+          "field": "PerformanceOrder.competitionType",
+          "file": "Server/src/models/PerformanceOrder.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "competition_1",
+            "competition_2",
+            "competition_3"
+          ]
+        },
+        {
+          "field": "Qualification.competitionType",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "competition_2",
+            "competition_3"
+          ],
+          "subset": null
+        },
+        {
+          "field": "Score.competitionType",
+          "file": "Server/src/models/Score.js",
+          "form": "display",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Competition I",
+            "Competition II",
+            "Competition III"
+          ]
+        },
+        {
+          "field": "TieBreakDraw.competitionType",
+          "file": "Server/src/models/TieBreakDraw.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "competition_1",
+            "competition_2",
+            "competition_3"
+          ]
+        }
+      ],
+      "drift": [
+        {
+          "kind": "subset",
+          "field": "Qualification.competitionType",
+          "detail": "doesn't allow `competition_1`",
+          "proposal": "`Qualification.competitionType` keeps Node's restriction as a named set `CompetitionType.FINALS` (Competition II and III)."
+        },
+        {
+          "kind": "form",
+          "field": "Score.competitionType",
+          "detail": "stores the display form (`Competition I`, `Competition II`, `Competition III`) instead of the wire value",
+          "proposal": "One enum; slug is the wire value. `scores.competitionType` is declared `DisplayForm<CompetitionType>` and its converter writes `display()` and reads with `fromAny` (08 §4)."
+        }
+      ]
+    },
+    {
+      "name": "Apparatus",
+      "wireType": "string",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "POLE_MALLAKHAMB",
+          "wire": "Pole Mallakhamb"
+        },
+        {
+          "constant": "HANGING_MALLAKHAMB",
+          "wire": "Hanging Mallakhamb"
+        },
+        {
+          "constant": "ROPE_MALLAKHAMB",
+          "wire": "Rope Mallakhamb"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.apparatusConfig.$*",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": true,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        },
+        {
+          "field": "Competition.apparatusByGender.$*.Male",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": true,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        },
+        {
+          "field": "Competition.apparatusByGender.$*.Female",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": true,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        },
+        {
+          "field": "Qualification.apparatus",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        },
+        {
+          "field": "Score.playerScores[].apparatus",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        },
+        {
+          "field": "Score.playerScores[].elementSelections[].apparatus",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        },
+        {
+          "field": "TieBreakDraw.apparatus",
+          "file": "Server/src/models/TieBreakDraw.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        },
+        {
+          "field": "WalkInRegistration.rows[].apparatus",
+          "file": "Server/src/models/WalkInRegistration.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": true,
+          "values": [
+            "Pole Mallakhamb",
+            "Hanging Mallakhamb",
+            "Rope Mallakhamb"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "JudgeSeat",
+      "wireType": "string",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "SENIOR_JUDGE",
+          "wire": "Senior Judge",
+          "seatNo": 1,
+          "isEvaluator": true,
+          "scoreField": "seniorJudge",
+          "slipRole": "SR_JUDGE",
+          "shareable": false
+        },
+        {
+          "constant": "JUDGE_1",
+          "wire": "Judge 1",
+          "seatNo": 2,
+          "isEvaluator": true,
+          "scoreField": "judge1",
+          "slipRole": "J1",
+          "shareable": false
+        },
+        {
+          "constant": "JUDGE_2",
+          "wire": "Judge 2",
+          "seatNo": 3,
+          "isEvaluator": true,
+          "scoreField": "judge2",
+          "slipRole": "J2",
+          "shareable": false
+        },
+        {
+          "constant": "JUDGE_3",
+          "wire": "Judge 3",
+          "seatNo": 4,
+          "isEvaluator": true,
+          "scoreField": "judge3",
+          "slipRole": "J3",
+          "shareable": false
+        },
+        {
+          "constant": "JUDGE_4",
+          "wire": "Judge 4",
+          "seatNo": 5,
+          "isEvaluator": true,
+          "scoreField": "judge4",
+          "slipRole": "J4",
+          "shareable": false
+        },
+        {
+          "constant": "SCORER",
+          "wire": "Scorer",
+          "seatNo": 6,
+          "isEvaluator": false,
+          "scoreField": null,
+          "slipRole": null,
+          "shareable": true
+        },
+        {
+          "constant": "TIME_KEEPER",
+          "wire": "Time Keeper",
+          "seatNo": 7,
+          "isEvaluator": false,
+          "scoreField": null,
+          "slipRole": null,
+          "shareable": true
+        }
+      ],
+      "subsets": {
+        "EVALUATORS": [
+          "Senior Judge",
+          "Judge 1",
+          "Judge 2",
+          "Judge 3",
+          "Judge 4"
+        ],
+        "RECORDERS": [
+          "Scorer",
+          "Time Keeper"
+        ]
+      },
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Judge.judgeType",
+          "file": "Server/src/models/Judge.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "Senior Judge",
+            "Judge 1",
+            "Judge 2",
+            "Judge 3",
+            "Judge 4",
+            "Scorer",
+            "Time Keeper"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "JudgeRole",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "CHIEF",
+          "wire": "CHIEF"
+        },
+        {
+          "constant": "SR_JUDGE",
+          "wire": "SR_JUDGE"
+        },
+        {
+          "constant": "J1",
+          "wire": "J1"
+        },
+        {
+          "constant": "J2",
+          "wire": "J2"
+        },
+        {
+          "constant": "J3",
+          "wire": "J3"
+        },
+        {
+          "constant": "J4",
+          "wire": "J4"
+        },
+        {
+          "constant": "J5",
+          "wire": "J5"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Score.playerScores[].judgeSlips[].judgeRole",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "CHIEF",
+            "SR_JUDGE",
+            "J1",
+            "J2",
+            "J3",
+            "J4",
+            "J5"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "Role",
+      "wireType": "string",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "PLAYER",
+          "wire": "player",
+          "rank": 1
+        },
+        {
+          "constant": "COACH",
+          "wire": "coach",
+          "rank": 2
+        },
+        {
+          "constant": "JUDGE",
+          "wire": "judge",
+          "rank": 3
+        },
+        {
+          "constant": "ADMIN",
+          "wire": "admin",
+          "rank": 4
+        },
+        {
+          "constant": "SUPERADMIN",
+          "wire": "superadmin",
+          "rank": 5
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "AccountRequest.userType",
+          "file": "Server/src/models/AccountRequest.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "player",
+            "coach",
+            "admin",
+            "judge"
+          ],
+          "subset": null
+        },
+        {
+          "field": "AccountRequest.decidedBy.userType",
+          "file": "Server/src/models/AccountRequest.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "coach",
+            "superadmin"
+          ],
+          "subset": null
+        },
+        {
+          "field": "Admin.role",
+          "file": "Server/src/models/Admin.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "admin",
+            "superadmin"
+          ],
+          "subset": null
+        },
+        {
+          "field": "AuditLog.adminType",
+          "file": "Server/src/models/AuditLog.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "admin",
+            "superadmin",
+            "coach",
+            "player"
+          ],
+          "subset": null
+        },
+        {
+          "field": "RefreshToken.userType",
+          "file": "Server/src/models/RefreshToken.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "player",
+            "coach",
+            "admin",
+            "judge",
+            "superadmin"
+          ]
+        }
+      ],
+      "drift": [
+        {
+          "kind": "subset",
+          "field": "AccountRequest.userType",
+          "detail": "doesn't allow `superadmin`",
+          "proposal": "One `Role` enum. Each field keeps Node's allowed list as a named set (`Role.ACCOUNT_REQUESTERS`, `Role.ADMIN_ROLES`, `Role.AUDITED`, `Role.REQUEST_DECIDERS`), so a value Node would refuse is still refused (08 §1)."
+        },
+        {
+          "kind": "subset",
+          "field": "AccountRequest.decidedBy.userType",
+          "detail": "doesn't allow `player`, `judge`, `admin`",
+          "proposal": "One `Role` enum. Each field keeps Node's allowed list as a named set (`Role.ACCOUNT_REQUESTERS`, `Role.ADMIN_ROLES`, `Role.AUDITED`, `Role.REQUEST_DECIDERS`), so a value Node would refuse is still refused (08 §1)."
+        },
+        {
+          "kind": "subset",
+          "field": "Admin.role",
+          "detail": "doesn't allow `player`, `coach`, `judge`",
+          "proposal": "One `Role` enum. Each field keeps Node's allowed list as a named set (`Role.ACCOUNT_REQUESTERS`, `Role.ADMIN_ROLES`, `Role.AUDITED`, `Role.REQUEST_DECIDERS`), so a value Node would refuse is still refused (08 §1)."
+        },
+        {
+          "kind": "subset",
+          "field": "AuditLog.adminType",
+          "detail": "doesn't allow `judge`",
+          "proposal": "One `Role` enum. Each field keeps Node's allowed list as a named set (`Role.ACCOUNT_REQUESTERS`, `Role.ADMIN_ROLES`, `Role.AUDITED`, `Role.REQUEST_DECIDERS`), so a value Node would refuse is still refused (08 §1)."
+        }
+      ]
+    },
+    {
+      "name": "CompetitionLevel",
+      "wireType": "string",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "DISTRICT",
+          "wire": "district"
+        },
+        {
+          "constant": "ZONAL",
+          "wire": "zonal"
+        },
+        {
+          "constant": "STATE",
+          "wire": "state"
+        },
+        {
+          "constant": "NATIONAL",
+          "wire": "national"
+        },
+        {
+          "constant": "INTERNATIONAL",
+          "wire": "international"
+        },
+        {
+          "constant": "UNIVERSITY",
+          "wire": "university"
+        },
+        {
+          "constant": "DSO",
+          "wire": "dso"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.level",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "district",
+            "zonal",
+            "state",
+            "national",
+            "international",
+            "university",
+            "dso"
+          ]
+        },
+        {
+          "field": "Player.levelTeams[].level",
+          "file": "Server/src/models/Player.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "district",
+            "zonal",
+            "state",
+            "national",
+            "international",
+            "university",
+            "dso"
+          ]
+        },
+        {
+          "field": "PlayerTeamConflict.level",
+          "file": "Server/src/models/PlayerTeamConflict.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "district",
+            "zonal",
+            "state",
+            "national",
+            "international",
+            "university",
+            "dso"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "ChampionshipType",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "NATIONAL",
+          "wire": "national"
+        },
+        {
+          "constant": "KHELO_INDIA",
+          "wire": "khelo_india"
+        },
+        {
+          "constant": "NATIONAL_GAMES",
+          "wire": "national_games"
+        },
+        {
+          "constant": "INVITATIONAL",
+          "wire": "invitational"
+        },
+        {
+          "constant": "DISTRICT_STATE",
+          "wire": "district_state"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.championshipType",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "national",
+            "khelo_india",
+            "national_games",
+            "invitational",
+            "district_state"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "CompetitionStatus",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "UPCOMING",
+          "wire": "upcoming"
+        },
+        {
+          "constant": "ONGOING",
+          "wire": "ongoing"
+        },
+        {
+          "constant": "COMPLETED",
+          "wire": "completed"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.status",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "upcoming",
+            "ongoing",
+            "completed"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "PaymentStatus",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "PENDING",
+          "wire": "pending"
+        },
+        {
+          "constant": "COMPLETED",
+          "wire": "completed"
+        },
+        {
+          "constant": "FAILED",
+          "wire": "failed"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.registeredTeams[].paymentStatus",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "pending",
+            "completed",
+            "failed"
+          ]
+        },
+        {
+          "field": "Transaction.paymentStatus",
+          "file": "Server/src/models/Transaction.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "pending",
+            "completed",
+            "failed"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "PaymentGateway",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "RAZORPAY",
+          "wire": "razorpay"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.registeredTeams[].paymentGateway",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "razorpay"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "TransactionSource",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "COACH",
+          "wire": "coach"
+        },
+        {
+          "constant": "SUPERADMIN",
+          "wire": "superadmin"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Transaction.source",
+          "file": "Server/src/models/Transaction.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "coach",
+            "superadmin"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "TransactionType",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "TEAM_SUBMISSION",
+          "wire": "team_submission"
+        },
+        {
+          "constant": "PLAYER_ADD",
+          "wire": "player_add"
+        },
+        {
+          "constant": "OTHER",
+          "wire": "other"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Transaction.type",
+          "file": "Server/src/models/Transaction.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "team_submission",
+            "player_add",
+            "other"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "AccountRequestKind",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "EMAIL_CHANGE",
+          "wire": "email-change"
+        },
+        {
+          "constant": "PASSWORD_RESET",
+          "wire": "password-reset"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "AccountRequest.kind",
+          "file": "Server/src/models/AccountRequest.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "email-change",
+            "password-reset"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "AccountRequestStatus",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "AWAITING_CODE",
+          "wire": "awaiting-code"
+        },
+        {
+          "constant": "AWAITING_COACH",
+          "wire": "awaiting-coach"
+        },
+        {
+          "constant": "APPROVED",
+          "wire": "approved"
+        },
+        {
+          "constant": "DONE",
+          "wire": "done"
+        },
+        {
+          "constant": "REJECTED",
+          "wire": "rejected"
+        },
+        {
+          "constant": "EXPIRED",
+          "wire": "expired"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "AccountRequest.status",
+          "file": "Server/src/models/AccountRequest.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "awaiting-code",
+            "awaiting-coach",
+            "approved",
+            "done",
+            "rejected",
+            "expired"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "EmailType",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "SELF",
+          "wire": "self"
+        },
+        {
+          "constant": "GUARDIAN",
+          "wire": "guardian"
+        },
+        {
+          "constant": "NONE",
+          "wire": "none"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "AccountRequest.newEmailType",
+          "file": "Server/src/models/AccountRequest.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "self",
+            "guardian"
+          ],
+          "subset": null
+        },
+        {
+          "field": "Player.emailType",
+          "file": "Server/src/models/Player.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "self",
+            "guardian",
+            "none"
+          ]
+        }
+      ],
+      "drift": [
+        {
+          "kind": "subset",
+          "field": "AccountRequest.newEmailType",
+          "detail": "doesn't allow `none`",
+          "proposal": "`AccountRequest.newEmailType` keeps Node's restriction as a named set `EmailType.CHANGEABLE_TO` (a change request can't move to `none`)."
+        }
+      ]
+    },
+    {
+      "name": "QualificationStatus",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "WAITING",
+          "wire": "waiting"
+        },
+        {
+          "constant": "WAITING_DRAW",
+          "wire": "waiting_draw"
+        },
+        {
+          "constant": "SET",
+          "wire": "set"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Qualification.status",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "waiting",
+            "waiting_draw",
+            "set"
+          ]
+        },
+        {
+          "field": "Qualification.slices[].status",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "waiting",
+            "waiting_draw",
+            "set"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "SkipReason",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "TEAM_CAP",
+          "wire": "team_cap"
+        },
+        {
+          "constant": "WITHDRAWN",
+          "wire": "withdrawn"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Qualification.skipped[].reason",
+          "file": "Server/src/models/Qualification.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "team_cap",
+            "withdrawn"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "WalkInStatus",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "DRAFT",
+          "wire": "draft"
+        },
+        {
+          "constant": "SUBMITTED",
+          "wire": "submitted"
+        },
+        {
+          "constant": "PAID",
+          "wire": "paid"
+        },
+        {
+          "constant": "CANCELLED",
+          "wire": "cancelled"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "WalkInRegistration.status",
+          "file": "Server/src/models/WalkInRegistration.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "draft",
+            "submitted",
+            "paid",
+            "cancelled"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "RowSource",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "OCR",
+          "wire": "ocr"
+        },
+        {
+          "constant": "MANUAL",
+          "wire": "manual"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "WalkInRegistration.rows[].source",
+          "file": "Server/src/models/WalkInRegistration.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "ocr",
+            "manual"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "MatchChoice",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "EXISTING",
+          "wire": "existing"
+        },
+        {
+          "constant": "NEW",
+          "wire": "new"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "WalkInRegistration.rows[].matchChoice",
+          "file": "Server/src/models/WalkInRegistration.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "existing",
+            "new"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "ElementPhase",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "MOUNT",
+          "wire": "MOUNT"
+        },
+        {
+          "constant": "HOLD",
+          "wire": "HOLD"
+        },
+        {
+          "constant": "ACROBATIC",
+          "wire": "ACROBATIC"
+        },
+        {
+          "constant": "CATCH",
+          "wire": "CATCH"
+        },
+        {
+          "constant": "DISMOUNT",
+          "wire": "DISMOUNT"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Score.playerScores[].elementSelections[].phase",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "MOUNT",
+            "HOLD",
+            "ACROBATIC",
+            "CATCH",
+            "DISMOUNT"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "ElementClass",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "A",
+          "wire": "A"
+        },
+        {
+          "constant": "B",
+          "wire": "B"
+        },
+        {
+          "constant": "C",
+          "wire": "C"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Score.playerScores[].elementSelections[].class",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "A",
+            "B",
+            "C"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "CertificationLevel",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "INTERNATIONAL",
+          "wire": "International"
+        },
+        {
+          "constant": "NATIONAL",
+          "wire": "National"
+        },
+        {
+          "constant": "STATE",
+          "wire": "State"
+        },
+        {
+          "constant": "DISTRICT",
+          "wire": "District"
+        },
+        {
+          "constant": "CLUB",
+          "wire": "Club"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "JudgeAccount.certificationLevel",
+          "file": "Server/src/models/JudgeAccount.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "International",
+            "National",
+            "State",
+            "District",
+            "Club"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "SlipAttribution",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "RECORDED",
+          "wire": "recorded"
+        },
+        {
+          "constant": "INFERRED",
+          "wire": "inferred"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Score.playerScores[].judgeSlips[].attribution",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": true,
+          "isArray": false,
+          "values": [
+            "recorded",
+            "inferred"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "TeamSize",
+      "wireType": "number",
+      "canonicalSource": "node-config",
+      "values": [
+        {
+          "constant": "SIZE_4",
+          "wire": 4,
+          "countedPerApparatus": 3
+        },
+        {
+          "constant": "SIZE_6",
+          "wire": 6,
+          "countedPerApparatus": 5
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Competition.maxTeamSize",
+          "file": "Server/src/models/Competition.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            4,
+            6
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "LevelSetBy",
+      "wireType": "string",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "PLAYER",
+          "wire": "player"
+        },
+        {
+          "constant": "COACH",
+          "wire": "coach"
+        },
+        {
+          "constant": "ADMIN",
+          "wire": "admin"
+        },
+        {
+          "constant": "SUPERADMIN",
+          "wire": "superadmin"
+        },
+        {
+          "constant": "SYSTEM",
+          "wire": "system"
+        }
+      ],
+      "subsets": {},
+      "unlisted": null,
+      "usages": [
+        {
+          "field": "Player.levelTeams[].setByType",
+          "file": "Server/src/models/Player.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            "player",
+            "coach",
+            "admin",
+            "superadmin",
+            "system"
+          ]
+        }
+      ],
+      "drift": []
+    },
+    {
+      "name": "PanelSize",
+      "wireType": "number",
+      "canonicalSource": "union-of-fields",
+      "values": [
+        {
+          "constant": "JUDGES_3",
+          "wire": 3
+        },
+        {
+          "constant": "JUDGES_4",
+          "wire": 4
+        },
+        {
+          "constant": "JUDGES_5",
+          "wire": 5
+        }
+      ],
+      "subsets": {},
+      "unlisted": "Not in the plan's 28 (08 §3). Proposed: a 29th kernel enum `PanelSize` (3, 4, 5); which calculation method each size uses stays in the rulebook (09).",
+      "usages": [
+        {
+          "field": "Score.playerScores[].panelSize",
+          "file": "Server/src/models/Score.js",
+          "form": "wire",
+          "nullable": false,
+          "isArray": false,
+          "values": [
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "drift": []
+    }
+  ],
+  "ruleDataFields": [
+    {
+      "field": "Score.playerScores[].judgeSlips[].bonusScore",
+      "values": [
+        0,
+        0.2
+      ],
+      "rulebook": "bonus values"
+    },
+    {
+      "field": "Score.playerScores[].elementSelections[].value",
+      "values": [
+        0.2,
+        0.4,
+        0.6
+      ],
+      "rulebook": "element class values (A/B/C)"
+    }
+  ]
+}

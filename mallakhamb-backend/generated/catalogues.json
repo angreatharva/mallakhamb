@@ -1,0 +1,4375 @@
+{
+  "generatedBy": "tools/node/gen/gen-catalogues.js",
+  "filesScanned": 238,
+  "declaredErrorCodes": [
+    "VALIDATION_ERROR",
+    "INVALID_INPUT",
+    "MISSING_REQUIRED_FIELD",
+    "INVALID_FORMAT",
+    "AUTHENTICATION_ERROR",
+    "INVALID_CREDENTIALS",
+    "TOKEN_EXPIRED",
+    "TOKEN_INVALID",
+    "ACCOUNT_LOCKED",
+    "AUTHORIZATION_ERROR",
+    "ACCESS_DENIED",
+    "INSUFFICIENT_PERMISSIONS",
+    "NOT_FOUND",
+    "RESOURCE_NOT_FOUND",
+    "ROUTE_NOT_FOUND",
+    "CONFLICT",
+    "DUPLICATE_ENTRY",
+    "RESOURCE_ALREADY_EXISTS",
+    "BUSINESS_RULE_VIOLATION",
+    "INVALID_STATE",
+    "OPERATION_NOT_ALLOWED",
+    "INTERNAL_SERVER_ERROR",
+    "DATABASE_ERROR",
+    "EXTERNAL_SERVICE_ERROR"
+  ],
+  "declaredEvents": {
+    "CONNECTION": "connection",
+    "DISCONNECT": "disconnect",
+    "ERROR": "error",
+    "JOIN_SCORING_ROOM": "join_scoring_room",
+    "LEAVE_SCORING_ROOM": "leave_scoring_room",
+    "JOIN_COMPETITION_ROOM": "join_competition_room",
+    "LEAVE_COMPETITION_ROOM": "leave_competition_room",
+    "ROOM_JOINED": "room_joined",
+    "ROOM_LEFT": "room_left",
+    "SCORE_UPDATE": "score_update",
+    "SCORE_UPDATED": "score_updated",
+    "SCORE_SAVED": "score_saved",
+    "SCORES_SAVED": "scores_saved",
+    "SCORES_SAVED_NOTIFICATION": "scores_saved_notification",
+    "SCORE_SUBMITTED": "score_submitted",
+    "SCORE_DELETED": "score_deleted",
+    "PERFORMANCE_ORDER_UPDATED": "performance_order_updated",
+    "TIME_RECORD": "time_record",
+    "TIME_RECORDED": "time_recorded",
+    "NOTIFICATION": "notification",
+    "COMPETITION_UPDATE": "competition_update",
+    "TEAM_UPDATE": "team_update",
+    "PLAYER_UPDATE": "player_update",
+    "TEAM_CREATED": "team_created",
+    "TEAM_UPDATED": "team_updated",
+    "TEAM_PLAYER_ADDED": "team_player_added",
+    "TEAM_PLAYER_REMOVED": "team_player_removed",
+    "COMPETITION_CREATED": "competition_created",
+    "COMPETITION_UPDATED": "competition_updated",
+    "COMPETITION_STATUS_UPDATED": "competition_status_updated",
+    "TEAM_APPROVED": "team_approved",
+    "TEAM_REJECTED": "team_rejected",
+    "PLAYER_STATUS_UPDATED": "player_status_updated",
+    "SCORE_SAVED_REST": "score_saved",
+    "SCORES_UNLOCKED": "scores_unlocked",
+    "SCORES_LOCKED": "scores_locked",
+    "AGE_GROUP_STARTED": "age_group_started",
+    "AGE_GROUP_ENDED": "age_group_ended"
+  },
+  "errorClasses": {
+    "AuthenticationError": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:110",
+        "Server/src/services/auth/authentication.service.js:157",
+        "Server/src/services/auth/authentication.service.js:166",
+        "Server/src/services/auth/authentication.service.js:178",
+        "Server/src/services/auth/authentication.service.js:203",
+        "Server/src/services/auth/authentication.service.js:205",
+        "Server/src/services/auth/authentication.service.js:244",
+        "Server/src/services/auth/token.service.js:114",
+        "Server/src/services/auth/token.service.js:118",
+        "Server/src/services/auth/token.service.js:121",
+        "Server/src/services/auth/token.service.js:274",
+        "Server/src/services/auth/token.service.js:284",
+        "Server/src/services/auth/token.service.js:289",
+        "Server/src/services/auth/token.service.js:297",
+        "Server/src/services/payment/payment.service.js:38",
+        "Server/src/services/payment/payment.service.js:82",
+        "Server/src/services/user/coach-player.service.js:83",
+        "Server/src/services/user/judge-account.service.js:221",
+        "Server/src/services/user/judge.service.js:133",
+        "Server/src/services/user/judge.service.js:141",
+        "Server/src/services/user/judge.service.js:153",
+        "Server/src/services/user/judge.service.js:175",
+        "Server/src/services/user/judge.service.js:177",
+        "Server/src/services/user/user.service.js:203"
+      ]
+    },
+    "AuthorizationError": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:172",
+        "Server/src/services/auth/account-request.service.js:177",
+        "Server/src/services/auth/account-request.service.js:180",
+        "Server/src/services/auth/account-request.service.js:183",
+        "Server/src/services/auth/authentication.service.js:589",
+        "Server/src/services/auth/authentication.service.js:604",
+        "Server/src/services/competition/performance-order.service.js:114",
+        "Server/src/services/competition/performance-order.service.js:142",
+        "Server/src/services/competition/registration.service.js:274",
+        "Server/src/services/competition/registration.service.js:387",
+        "Server/src/services/competition/registration.service.js:553",
+        "Server/src/services/stats/stats.service.js:311",
+        "Server/src/services/user/coach.service.js:195",
+        "Server/src/services/user/judge.service.js:305",
+        "Server/src/services/user/judge.service.js:355",
+        "Server/src/services/user/judge.service.js:419",
+        "Server/src/services/user/judge.service.js:437",
+        "Server/src/services/user/judge.service.js:445",
+        "Server/src/services/walk-in/walk-in.service.js:152"
+      ]
+    },
+    "BaseError": {
+      "sites": [
+        "Server/src/services/walk-in/ocr.client.js:121"
+      ]
+    },
+    "BusinessRuleError": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:260",
+        "Server/src/services/competition/competition.service.js:787",
+        "Server/src/services/competition/competition.service.js:794",
+        "Server/src/services/competition/registration.service.js:75",
+        "Server/src/services/competition/registration.service.js:84",
+        "Server/src/services/competition/registration.service.js:178",
+        "Server/src/services/competition/registration.service.js:187",
+        "Server/src/services/competition/registration.service.js:199",
+        "Server/src/services/competition/registration.service.js:269",
+        "Server/src/services/competition/registration.service.js:380",
+        "Server/src/services/competition/registration.service.js:456",
+        "Server/src/services/scoring/qualification.service.js:390",
+        "Server/src/services/scoring/qualification.service.js:419",
+        "Server/src/services/scoring/qualification.service.js:428",
+        "Server/src/services/scoring/qualification.service.js:466",
+        "Server/src/services/scoring/qualification.service.js:500",
+        "Server/src/services/scoring/qualification.service.js:502",
+        "Server/src/services/scoring/scoring.service.js:225",
+        "Server/src/services/scoring/scoring.service.js:297",
+        "Server/src/services/scoring/scoring.service.js:1720",
+        "Server/src/services/superadmin/accounts-admin.service.js:249",
+        "Server/src/services/superadmin/accounts-admin.service.js:278",
+        "Server/src/services/superadmin/accounts-admin.service.js:280",
+        "Server/src/services/superadmin/accounts-admin.service.js:281",
+        "Server/src/services/superadmin/correction.service.js:189",
+        "Server/src/services/superadmin/correction.service.js:190",
+        "Server/src/services/superadmin/entries-admin.service.js:119",
+        "Server/src/services/superadmin/entries-admin.service.js:135",
+        "Server/src/services/superadmin/entries-admin.service.js:140",
+        "Server/src/services/superadmin/entries-admin.service.js:159",
+        "Server/src/services/superadmin/entries-admin.service.js:188",
+        "Server/src/services/superadmin/entries-admin.service.js:190",
+        "Server/src/services/superadmin/team-admin.service.js:125",
+        "Server/src/services/superadmin/team-admin.service.js:145",
+        "Server/src/services/superadmin/team-admin.service.js:146",
+        "Server/src/services/superadmin/team-admin.service.js:199",
+        "Server/src/services/superadmin/team-admin.service.js:273",
+        "Server/src/services/superadmin/team-admin.service.js:311",
+        "Server/src/services/superadmin/team-admin.service.js:401",
+        "Server/src/services/team/player-team-admin.service.js:176",
+        "Server/src/services/team/player-team-admin.service.js:181",
+        "Server/src/services/team/player-team-admin.service.js:192",
+        "Server/src/services/team/player-team-admin.service.js:218",
+        "Server/src/services/team/player-team-admin.service.js:252",
+        "Server/src/services/team/player-team-admin.service.js:259",
+        "Server/src/services/team/player-team-admin.service.js:265",
+        "Server/src/services/team/player-team.service.js:76",
+        "Server/src/services/team/player-team.service.js:125",
+        "Server/src/services/team/team.service.js:146",
+        "Server/src/services/team/team.service.js:229",
+        "Server/src/services/team/team.service.js:239",
+        "Server/src/services/team/team.service.js:396",
+        "Server/src/services/team/team.service.js:413",
+        "Server/src/services/team/team.service.js:488",
+        "Server/src/services/team/team.service.js:506",
+        "Server/src/services/team/team.service.js:512",
+        "Server/src/services/user/admin.service.js:1262",
+        "Server/src/services/user/admin.service.js:1501",
+        "Server/src/services/user/admin.service.js:1504",
+        "Server/src/services/user/judge-panel.service.js:261",
+        "Server/src/services/user/judge-panel.service.js:269",
+        "Server/src/services/user/judge-panel.service.js:327",
+        "Server/src/services/walk-in/walk-in.service.js:157",
+        "Server/src/services/walk-in/walk-in.service.js:170",
+        "Server/src/services/walk-in/walk-in.service.js:328",
+        "Server/src/services/walk-in/walk-in.service.js:425",
+        "Server/src/services/walk-in/walk-in.service.js:454",
+        "Server/src/services/walk-in/walk-in.service.js:463",
+        "Server/src/services/walk-in/walk-in.service.js:468",
+        "Server/src/services/walk-in/walk-in.service.js:535",
+        "Server/src/services/walk-in/walk-in.service.js:905",
+        "Server/src/services/walk-in/walk-in.service.js:908",
+        "Server/src/services/walk-in/walk-in.service.js:1000",
+        "Server/src/services/walk-in/walk-in.service.js:1002"
+      ]
+    },
+    "ConflictError": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:321",
+        "Server/src/services/auth/account.service.js:341",
+        "Server/src/services/auth/authentication.service.js:281",
+        "Server/src/services/competition/competition.service.js:115",
+        "Server/src/services/competition/registration.service.js:100",
+        "Server/src/services/competition/registration.service.js:296",
+        "Server/src/services/superadmin/accounts-admin.service.js:169",
+        "Server/src/services/superadmin/team-admin.service.js:111",
+        "Server/src/services/superadmin/team-admin.service.js:148",
+        "Server/src/services/team/player-team.service.js:55",
+        "Server/src/services/team/player-team.service.js:144",
+        "Server/src/services/team/team.service.js:76",
+        "Server/src/services/team/team.service.js:163",
+        "Server/src/services/user/coach-player.service.js:145",
+        "Server/src/services/user/coach-player.service.js:151",
+        "Server/src/services/user/judge-account.service.js:79",
+        "Server/src/services/user/user.service.js:134",
+        "Server/src/services/walk-in/walk-in.service.js:337",
+        "Server/src/services/walk-in/walk-in.service.js:394",
+        "Server/src/services/walk-in/walk-in.service.js:911",
+        "Server/src/services/walk-in/walk-in.service.js:914"
+      ]
+    },
+    "NotFoundError": {
+      "sites": [
+        "Server/src/services/auth/account-request.service.js:195",
+        "Server/src/services/auth/account-request.service.js:250",
+        "Server/src/services/auth/account.service.js:102",
+        "Server/src/services/auth/authentication.service.js:572",
+        "Server/src/services/auth/authentication.service.js:651",
+        "Server/src/services/competition/competition.service.js:181",
+        "Server/src/services/competition/competition.service.js:251",
+        "Server/src/services/competition/competition.service.js:270",
+        "Server/src/services/competition/competition.service.js:308",
+        "Server/src/services/competition/competition.service.js:313",
+        "Server/src/services/competition/competition.service.js:351",
+        "Server/src/services/competition/competition.service.js:426",
+        "Server/src/services/competition/competition.service.js:560",
+        "Server/src/services/competition/performance-order.service.js:300",
+        "Server/src/services/competition/performance-order.service.js:451",
+        "Server/src/services/competition/registration.service.js:55",
+        "Server/src/services/competition/registration.service.js:65",
+        "Server/src/services/competition/registration.service.js:155",
+        "Server/src/services/competition/registration.service.js:168",
+        "Server/src/services/competition/registration.service.js:252",
+        "Server/src/services/competition/registration.service.js:261",
+        "Server/src/services/competition/registration.service.js:315",
+        "Server/src/services/competition/registration.service.js:366",
+        "Server/src/services/competition/registration.service.js:375",
+        "Server/src/services/competition/registration.service.js:440",
+        "Server/src/services/competition/registration.service.js:449",
+        "Server/src/services/competition/registration.service.js:533",
+        "Server/src/services/competition/registration.service.js:541",
+        "Server/src/services/competition/registration.service.js:589",
+        "Server/src/services/scoring/qualification.service.js:383",
+        "Server/src/services/scoring/scoring.service.js:128",
+        "Server/src/services/scoring/scoring.service.js:147",
+        "Server/src/services/scoring/scoring.service.js:219",
+        "Server/src/services/scoring/scoring.service.js:291",
+        "Server/src/services/scoring/scoring.service.js:349",
+        "Server/src/services/scoring/scoring.service.js:429",
+        "Server/src/services/scoring/scoring.service.js:465",
+        "Server/src/services/scoring/scoring.service.js:1050",
+        "Server/src/services/scoring/scoring.service.js:1117",
+        "Server/src/services/scoring/scoring.service.js:1124",
+        "Server/src/services/scoring/scoring.service.js:1163",
+        "Server/src/services/scoring/scoring.service.js:1169",
+        "Server/src/services/scoring/scoring.service.js:1264",
+        "Server/src/services/scoring/scoring.service.js:1311",
+        "Server/src/services/scoring/scoring.service.js:1413",
+        "Server/src/services/scoring/scoring.service.js:1421",
+        "Server/src/services/scoring/tie-break-draw.service.js:149",
+        "Server/src/services/superadmin/accounts-admin.service.js:78",
+        "Server/src/services/superadmin/correction.service.js:186",
+        "Server/src/services/superadmin/entries-admin.service.js:45",
+        "Server/src/services/superadmin/entries-admin.service.js:51",
+        "Server/src/services/superadmin/entries-admin.service.js:133",
+        "Server/src/services/superadmin/entries-admin.service.js:143",
+        "Server/src/services/superadmin/entries-admin.service.js:157",
+        "Server/src/services/superadmin/entries-admin.service.js:174",
+        "Server/src/services/superadmin/entries-admin.service.js:182",
+        "Server/src/services/superadmin/score-correction.service.js:107",
+        "Server/src/services/superadmin/score-correction.service.js:109",
+        "Server/src/services/superadmin/team-admin.service.js:48",
+        "Server/src/services/superadmin/team-admin.service.js:55",
+        "Server/src/services/superadmin/team-admin.service.js:201",
+        "Server/src/services/superadmin/team-admin.service.js:233",
+        "Server/src/services/superadmin/team-admin.service.js:268",
+        "Server/src/services/team/player-team-admin.service.js:97",
+        "Server/src/services/team/player-team-admin.service.js:173",
+        "Server/src/services/team/player-team-admin.service.js:251",
+        "Server/src/services/team/player-team.service.js:75",
+        "Server/src/services/team/player-team.service.js:117",
+        "Server/src/services/team/team.service.js:140",
+        "Server/src/services/team/team.service.js:223",
+        "Server/src/services/team/team.service.js:299",
+        "Server/src/services/team/team.service.js:390",
+        "Server/src/services/team/team.service.js:404",
+        "Server/src/services/team/team.service.js:482",
+        "Server/src/services/team/team.service.js:496",
+        "Server/src/services/team/team.service.js:636",
+        "Server/src/services/user/admin.service.js:144",
+        "Server/src/services/user/admin.service.js:180",
+        "Server/src/services/user/admin.service.js:196",
+        "Server/src/services/user/admin.service.js:251",
+        "Server/src/services/user/admin.service.js:312",
+        "Server/src/services/user/admin.service.js:366",
+        "Server/src/services/user/admin.service.js:428",
+        "Server/src/services/user/admin.service.js:439",
+        "Server/src/services/user/admin.service.js:486",
+        "Server/src/services/user/admin.service.js:497",
+        "Server/src/services/user/admin.service.js:571",
+        "Server/src/services/user/admin.service.js:893",
+        "Server/src/services/user/admin.service.js:1258",
+        "Server/src/services/user/admin.service.js:1307",
+        "Server/src/services/user/admin.service.js:1400",
+        "Server/src/services/user/admin.service.js:1441",
+        "Server/src/services/user/admin.service.js:1493",
+        "Server/src/services/user/admin.service.js:1496",
+        "Server/src/services/user/admin.service.js:1755",
+        "Server/src/services/user/admin.service.js:1764",
+        "Server/src/services/user/admin.service.js:1838",
+        "Server/src/services/user/admin.service.js:2011",
+        "Server/src/services/user/coach-player.service.js:241",
+        "Server/src/services/user/coach.service.js:191",
+        "Server/src/services/user/coach.service.js:205",
+        "Server/src/services/user/coach.service.js:306",
+        "Server/src/services/user/coach.service.js:520",
+        "Server/src/services/user/coach.service.js:530",
+        "Server/src/services/user/coach.service.js:539",
+        "Server/src/services/user/coach.service.js:561",
+        "Server/src/services/user/coach.service.js:712",
+        "Server/src/services/user/coach.service.js:722",
+        "Server/src/services/user/coach.service.js:731",
+        "Server/src/services/user/coach.service.js:789",
+        "Server/src/services/user/coach.service.js:796",
+        "Server/src/services/user/coach.service.js:882",
+        "Server/src/services/user/coach.service.js:922",
+        "Server/src/services/user/coach.service.js:1004",
+        "Server/src/services/user/coach.service.js:1010",
+        "Server/src/services/user/coach.service.js:1018",
+        "Server/src/services/user/coach.service.js:1024",
+        "Server/src/services/user/coach.service.js:1135",
+        "Server/src/services/user/coach.service.js:1143",
+        "Server/src/services/user/coach.service.js:1248",
+        "Server/src/services/user/coach.service.js:1414",
+        "Server/src/services/user/coach.service.js:1450",
+        "Server/src/services/user/coach.service.js:1467",
+        "Server/src/services/user/coach.service.js:1520",
+        "Server/src/services/user/judge-account.service.js:117",
+        "Server/src/services/user/judge-account.service.js:171",
+        "Server/src/services/user/judge-account.service.js:213",
+        "Server/src/services/user/judge-panel.service.js:266",
+        "Server/src/services/user/judge-panel.service.js:390",
+        "Server/src/services/user/judge-panel.service.js:466",
+        "Server/src/services/user/judge-panel.service.js:746",
+        "Server/src/services/user/judge-panel.service.js:749",
+        "Server/src/services/user/judge.service.js:310",
+        "Server/src/services/user/judge.service.js:360",
+        "Server/src/services/user/judge.service.js:406",
+        "Server/src/services/user/player.service.js:106",
+        "Server/src/services/user/player.service.js:125",
+        "Server/src/services/user/player.service.js:160",
+        "Server/src/services/user/player.service.js:167",
+        "Server/src/services/user/player.service.js:272",
+        "Server/src/services/user/player.service.js:308",
+        "Server/src/services/user/player.service.js:325",
+        "Server/src/services/user/player.service.js:388",
+        "Server/src/services/user/super-admin.service.js:197",
+        "Server/src/services/user/super-admin.service.js:223",
+        "Server/src/services/user/super-admin.service.js:255",
+        "Server/src/services/user/super-admin.service.js:530",
+        "Server/src/services/user/super-admin.service.js:564",
+        "Server/src/services/user/super-admin.service.js:577",
+        "Server/src/services/user/super-admin.service.js:581",
+        "Server/src/services/user/super-admin.service.js:599",
+        "Server/src/services/user/super-admin.service.js:638",
+        "Server/src/services/user/super-admin.service.js:835",
+        "Server/src/services/user/super-admin.service.js:842",
+        "Server/src/services/user/super-admin.service.js:850",
+        "Server/src/services/user/super-admin.service.js:1030",
+        "Server/src/services/user/user.service.js:54",
+        "Server/src/services/user/user.service.js:106",
+        "Server/src/services/user/user.service.js:144",
+        "Server/src/services/user/user.service.js:192",
+        "Server/src/services/user/user.service.js:253",
+        "Server/src/services/user/user.service.js:301",
+        "Server/src/services/walk-in/walk-in.service.js:155",
+        "Server/src/services/walk-in/walk-in.service.js:165",
+        "Server/src/services/walk-in/walk-in.service.js:167",
+        "Server/src/services/walk-in/walk-in.service.js:291",
+        "Server/src/services/walk-in/walk-in.service.js:307",
+        "Server/src/services/walk-in/walk-in.service.js:331",
+        "Server/src/services/walk-in/walk-in.service.js:584",
+        "Server/src/services/walk-in/walk-in.service.js:585",
+        "Server/src/services/walk-in/walk-in.service.js:933"
+      ]
+    },
+    "OcrUnavailableError": {
+      "sites": [
+        "Server/src/services/walk-in/ocr.client.js:77",
+        "Server/src/services/walk-in/ocr.client.js:101",
+        "Server/src/services/walk-in/ocr.client.js:114",
+        "Server/src/services/walk-in/ocr.client.js:124",
+        "Server/src/services/walk-in/ocr.client.js:131"
+      ]
+    },
+    "ValidationError": {
+      "sites": [
+        "Server/src/config/payment.config.js:107",
+        "Server/src/config/payment.config.js:112",
+        "Server/src/config/payment.config.js:213",
+        "Server/src/config/payment.config.js:217",
+        "Server/src/config/payment.config.js:224",
+        "Server/src/config/payment.config.js:230",
+        "Server/src/middleware/validation.middleware.js:41",
+        "Server/src/services/auth/account-request.service.js:259",
+        "Server/src/services/auth/account-request.service.js:293",
+        "Server/src/services/auth/account-request.service.js:301",
+        "Server/src/services/auth/account-request.service.js:311",
+        "Server/src/services/auth/account.service.js:165",
+        "Server/src/services/auth/account.service.js:190",
+        "Server/src/services/auth/account.service.js:226",
+        "Server/src/services/auth/account.service.js:230",
+        "Server/src/services/auth/account.service.js:235",
+        "Server/src/services/auth/account.service.js:268",
+        "Server/src/services/auth/account.service.js:272",
+        "Server/src/services/auth/account.service.js:278",
+        "Server/src/services/auth/authentication.service.js:421",
+        "Server/src/services/auth/authentication.service.js:437",
+        "Server/src/services/auth/authentication.service.js:455",
+        "Server/src/services/auth/authentication.service.js:458",
+        "Server/src/services/auth/authentication.service.js:468",
+        "Server/src/services/auth/authentication.service.js:509",
+        "Server/src/services/auth/otp.service.js:410",
+        "Server/src/services/auth/otp.service.js:415",
+        "Server/src/services/auth/otp.service.js:420",
+        "Server/src/services/competition/competition.service.js:549",
+        "Server/src/services/competition/competition.service.js:742",
+        "Server/src/services/competition/competition.service.js:746",
+        "Server/src/services/competition/competition.service.js:750",
+        "Server/src/services/competition/performance-order.service.js:79",
+        "Server/src/services/competition/performance-order.service.js:82",
+        "Server/src/services/competition/performance-order.service.js:368",
+        "Server/src/services/competition/performance-order.service.js:383",
+        "Server/src/services/competition/performance-order.service.js:386",
+        "Server/src/services/competition/performance-order.service.js:442",
+        "Server/src/services/competition/performance-order.service.js:445",
+        "Server/src/services/competition/performance-order.service.js:460",
+        "Server/src/services/competition/performance-order.service.js:463",
+        "Server/src/services/competition/registration.service.js:467",
+        "Server/src/services/competition/registration.service.js:668",
+        "Server/src/services/payment/payment.service.js:37",
+        "Server/src/services/payment/razorpay.gateway.js:53",
+        "Server/src/services/payment/razorpay.gateway.js:113",
+        "Server/src/services/payment/razorpay.gateway.js:146",
+        "Server/src/services/payment/razorpay.gateway.js:172",
+        "Server/src/services/payment/razorpay.gateway.js:188",
+        "Server/src/services/payment/razorpay.gateway.js:208",
+        "Server/src/services/public/public.service.js:95",
+        "Server/src/services/scoring/qualification.service.js:391",
+        "Server/src/services/scoring/qualification.service.js:429",
+        "Server/src/services/scoring/qualification.service.js:430",
+        "Server/src/services/scoring/qualification.service.js:433",
+        "Server/src/services/scoring/scoring.service.js:529",
+        "Server/src/services/scoring/scoring.service.js:608",
+        "Server/src/services/scoring/scoring.service.js:1522",
+        "Server/src/services/scoring/scoring.service.js:1585",
+        "Server/src/services/scoring/scoring.service.js:1678",
+        "Server/src/services/scoring/scoring.service.js:1855",
+        "Server/src/services/scoring/scoring.service.js:1876",
+        "Server/src/services/scoring/scoring.service.js:1897",
+        "Server/src/services/scoring/scoring.service.js:2040",
+        "Server/src/services/scoring/tie-break-draw.service.js:46",
+        "Server/src/services/scoring/tie-break-draw.service.js:49",
+        "Server/src/services/scoring/tie-break-draw.service.js:89",
+        "Server/src/services/scoring/tie-break-draw.service.js:92",
+        "Server/src/services/scoring/tie-break-draw.service.js:104",
+        "Server/src/services/scoring/tie-break-draw.service.js:143",
+        "Server/src/services/stats/stats.service.js:308",
+        "Server/src/services/superadmin/accounts-admin.service.js:67",
+        "Server/src/services/superadmin/accounts-admin.service.js:76",
+        "Server/src/services/superadmin/accounts-admin.service.js:105",
+        "Server/src/services/superadmin/accounts-admin.service.js:152",
+        "Server/src/services/superadmin/accounts-admin.service.js:161",
+        "Server/src/services/superadmin/accounts-admin.service.js:162",
+        "Server/src/services/superadmin/accounts-admin.service.js:170",
+        "Server/src/services/superadmin/correction.service.js:29",
+        "Server/src/services/superadmin/entries-admin.service.js:43",
+        "Server/src/services/superadmin/entries-admin.service.js:103",
+        "Server/src/services/superadmin/entries-admin.service.js:104",
+        "Server/src/services/superadmin/entries-admin.service.js:106",
+        "Server/src/services/superadmin/entries-admin.service.js:110",
+        "Server/src/services/superadmin/entries-admin.service.js:131",
+        "Server/src/services/superadmin/entries-admin.service.js:214",
+        "Server/src/services/superadmin/entries-admin.service.js:217",
+        "Server/src/services/superadmin/entries-admin.service.js:242",
+        "Server/src/services/superadmin/entries-admin.service.js:244",
+        "Server/src/services/superadmin/score-correction.service.js:38",
+        "Server/src/services/superadmin/score-correction.service.js:71",
+        "Server/src/services/superadmin/score-correction.service.js:105",
+        "Server/src/services/superadmin/score-correction.service.js:115",
+        "Server/src/services/superadmin/score-correction.service.js:120",
+        "Server/src/services/superadmin/score-correction.service.js:124",
+        "Server/src/services/superadmin/score-correction.service.js:128",
+        "Server/src/services/superadmin/score-correction.service.js:137",
+        "Server/src/services/superadmin/score-correction.service.js:146",
+        "Server/src/services/superadmin/score-correction.service.js:161",
+        "Server/src/services/superadmin/team-admin.service.js:46",
+        "Server/src/services/superadmin/team-admin.service.js:53",
+        "Server/src/services/superadmin/team-admin.service.js:108",
+        "Server/src/services/superadmin/team-admin.service.js:109",
+        "Server/src/services/superadmin/team-admin.service.js:142",
+        "Server/src/services/superadmin/team-admin.service.js:266",
+        "Server/src/services/superadmin/team-admin.service.js:270",
+        "Server/src/services/team/player-team-admin.service.js:170",
+        "Server/src/services/team/player-team-admin.service.js:171",
+        "Server/src/services/team/player-team-admin.service.js:215",
+        "Server/src/services/team/player-team-admin.service.js:254",
+        "Server/src/services/team/team.service.js:61",
+        "Server/src/services/user/admin.service.js:188",
+        "Server/src/services/user/admin.service.js:206",
+        "Server/src/services/user/admin.service.js:259",
+        "Server/src/services/user/admin.service.js:269",
+        "Server/src/services/user/admin.service.js:1788",
+        "Server/src/services/user/coach-player.service.js:126",
+        "Server/src/services/user/coach-player.service.js:136",
+        "Server/src/services/user/coach-player.service.js:206",
+        "Server/src/services/user/coach.service.js:86",
+        "Server/src/services/user/coach.service.js:93",
+        "Server/src/services/user/coach.service.js:153",
+        "Server/src/services/user/coach.service.js:564",
+        "Server/src/services/user/coach.service.js:612",
+        "Server/src/services/user/coach.service.js:670",
+        "Server/src/services/user/coach.service.js:820",
+        "Server/src/services/user/coach.service.js:917",
+        "Server/src/services/user/coach.service.js:1112",
+        "Server/src/services/user/coach.service.js:1129",
+        "Server/src/services/user/coach.service.js:1175",
+        "Server/src/services/user/coach.service.js:1221",
+        "Server/src/services/user/coach.service.js:1230",
+        "Server/src/services/user/coach.service.js:1285",
+        "Server/src/services/user/coach.service.js:1459",
+        "Server/src/services/user/coach.service.js:1476",
+        "Server/src/services/user/coach.service.js:1526",
+        "Server/src/services/user/judge-account.service.js:74",
+        "Server/src/services/user/judge-account.service.js:225",
+        "Server/src/services/user/judge-panel.service.js:343",
+        "Server/src/services/user/player.service.js:42",
+        "Server/src/services/user/player.service.js:49",
+        "Server/src/services/user/player.service.js:317",
+        "Server/src/services/user/player.service.js:336",
+        "Server/src/services/user/player.service.js:346",
+        "Server/src/services/user/player.service.js:394",
+        "Server/src/services/user/super-admin.service.js:48",
+        "Server/src/services/user/super-admin.service.js:85",
+        "Server/src/services/user/super-admin.service.js:104",
+        "Server/src/services/user/super-admin.service.js:121",
+        "Server/src/services/user/super-admin.service.js:124",
+        "Server/src/services/user/super-admin.service.js:127",
+        "Server/src/services/user/super-admin.service.js:137",
+        "Server/src/services/user/super-admin.service.js:208",
+        "Server/src/services/user/super-admin.service.js:227",
+        "Server/src/services/user/super-admin.service.js:231",
+        "Server/src/services/user/super-admin.service.js:235",
+        "Server/src/services/user/super-admin.service.js:256",
+        "Server/src/services/user/super-admin.service.js:284",
+        "Server/src/services/user/super-admin.service.js:462",
+        "Server/src/services/user/super-admin.service.js:471",
+        "Server/src/services/user/super-admin.service.js:537",
+        "Server/src/services/user/super-admin.service.js:546",
+        "Server/src/services/user/super-admin.service.js:856",
+        "Server/src/services/user/super-admin.service.js:945",
+        "Server/src/services/user/super-admin.service.js:963",
+        "Server/src/services/user/super-admin.service.js:981",
+        "Server/src/services/user/super-admin.service.js:1005",
+        "Server/src/services/user/super-admin.service.js:1014",
+        "Server/src/services/user/super-admin.service.js:1053",
+        "Server/src/services/user/super-admin.service.js:1113",
+        "Server/src/services/user/super-admin.service.js:1119",
+        "Server/src/services/user/super-admin.service.js:1136",
+        "Server/src/services/user/super-admin.service.js:1142",
+        "Server/src/services/user/super-admin.service.js:1155",
+        "Server/src/services/user/super-admin.service.js:1159",
+        "Server/src/services/user/super-admin.service.js:1162",
+        "Server/src/services/user/super-admin.service.js:1165",
+        "Server/src/services/user/user.service.js:208",
+        "Server/src/services/walk-in/walk-in.service.js:333",
+        "Server/src/services/walk-in/walk-in.service.js:456",
+        "Server/src/services/walk-in/walk-in.service.js:537",
+        "Server/src/services/walk-in/walk-in.service.js:901",
+        "Server/src/utils/data/age-eligibility.util.js:64",
+        "Server/src/utils/data/competition-apparatus.util.js:56",
+        "Server/src/utils/data/competition-apparatus.util.js:64",
+        "Server/src/utils/data/competition-apparatus.util.js:74",
+        "Server/src/utils/data/competition-apparatus.util.js:81",
+        "Server/src/utils/data/competition-apparatus.util.js:85",
+        "Server/src/utils/data/competition-apparatus.util.js:89",
+        "Server/src/utils/data/competition-apparatus.util.js:96"
+      ]
+    }
+  },
+  "authCookies": {
+    "base": {
+      "ACCESS_TOKEN": "access_token",
+      "REFRESH_TOKEN": "refresh_token"
+    },
+    "perRole": {
+      "player": {
+        "access": "access_token_player",
+        "refresh": "refresh_token_player"
+      },
+      "coach": {
+        "access": "access_token_coach",
+        "refresh": "refresh_token_coach"
+      },
+      "judge": {
+        "access": "access_token_judge",
+        "refresh": "refresh_token_judge"
+      },
+      "admin": {
+        "access": "access_token_admin",
+        "refresh": "refresh_token_admin"
+      },
+      "superadmin": {
+        "access": "access_token_superadmin",
+        "refresh": "refresh_token_superadmin"
+      }
+    }
+  },
+  "codes": {
+    "ACCOUNT_INACTIVE": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:240"
+      ],
+      "statuses": [
+        401
+      ]
+    },
+    "AUTHENTICATION_ERROR": {
+      "sites": [
+        "Server/src/errors/authentication.error.js:16"
+      ],
+      "statuses": []
+    },
+    "AUTHORIZATION_ERROR": {
+      "sites": [
+        "Server/src/errors/authorization.error.js:16"
+      ],
+      "statuses": []
+    },
+    "AUTH_ERROR": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:329"
+      ],
+      "statuses": [
+        500
+      ]
+    },
+    "AUTH_RATE_LIMIT_EXCEEDED": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:410",
+        "Server/src/middleware/security.middleware.js:426",
+        "Server/src/middleware/security.middleware.js:488",
+        "Server/src/middleware/security.middleware.js:505",
+        "Server/src/middleware/security.middleware.js:566"
+      ],
+      "statuses": [
+        429
+      ]
+    },
+    "AUTH_REQUIRED": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:353"
+      ],
+      "statuses": [
+        401
+      ]
+    },
+    "BAD_HOST": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:50"
+      ],
+      "statuses": [
+        400
+      ]
+    },
+    "BUSINESS_RULE_VIOLATION": {
+      "sites": [
+        "Server/src/errors/business-rule.error.js:17"
+      ],
+      "statuses": []
+    },
+    "COMPETITION_ACCESS_DENIED": {
+      "sites": [
+        "Server/src/middleware/competition-context.middleware.js:79",
+        "Server/src/middleware/competition-context.middleware.js:117"
+      ],
+      "statuses": [
+        403
+      ]
+    },
+    "COMPETITION_CONTEXT_REQUIRED": {
+      "sites": [
+        "Server/src/middleware/competition-context.middleware.js:62"
+      ],
+      "statuses": [
+        400
+      ]
+    },
+    "CONFLICT": {
+      "sites": [
+        "Server/src/errors/conflict.error.js:17"
+      ],
+      "statuses": []
+    },
+    "DUPLICATE_ENTRY": {
+      "sites": [
+        "Server/src/middleware/error.middleware.js:175"
+      ],
+      "statuses": []
+    },
+    "EDIT_LIMIT_REACHED": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1722"
+      ],
+      "statuses": []
+    },
+    "FORBIDDEN": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:470",
+        "Server/src/controllers/admin.controller.js:490",
+        "Server/src/controllers/admin.controller.js:546"
+      ],
+      "statuses": [
+        403
+      ]
+    },
+    "IDENTITY_MISMATCH": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:178"
+      ],
+      "statuses": [
+        401
+      ]
+    },
+    "INSUFFICIENT_PERMISSIONS": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:372"
+      ],
+      "statuses": [
+        403
+      ]
+    },
+    "INVALID_INPUT": {
+      "sites": [
+        "Server/src/middleware/error.middleware.js:169"
+      ],
+      "statuses": []
+    },
+    "NOT_FOUND": {
+      "sites": [
+        "Server/src/errors/not-found.error.js:20"
+      ],
+      "statuses": []
+    },
+    "NO_REFRESH_TOKEN": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:217",
+        "Server/src/controllers/auth.controller.js:238"
+      ],
+      "statuses": [
+        401
+      ]
+    },
+    "NO_TOKEN": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:83"
+      ],
+      "statuses": [
+        401
+      ]
+    },
+    "RATE_LIMIT_EXCEEDED": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:226",
+        "Server/src/middleware/security.middleware.js:242",
+        "Server/src/middleware/security.middleware.js:382"
+      ],
+      "statuses": [
+        429
+      ]
+    },
+    "ROUTE_NOT_FOUND": {
+      "sites": [
+        "Server/src/middleware/error.middleware.js:45"
+      ],
+      "statuses": []
+    },
+    "SUPER_ADMIN_REQUIRED": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:490"
+      ],
+      "statuses": [
+        403
+      ]
+    },
+    "TEAM_NOT_FOUND": {
+      "sites": [
+        "Server/src/controllers/team.controller.js:31",
+        "Server/src/controllers/team.controller.js:108"
+      ],
+      "statuses": [
+        404
+      ]
+    },
+    "TOKEN_EXPIRED": {
+      "sites": [
+        "Server/src/middleware/error.middleware.js:189"
+      ],
+      "statuses": []
+    },
+    "TOKEN_INVALID": {
+      "sites": [
+        "Server/src/middleware/error.middleware.js:184"
+      ],
+      "statuses": []
+    },
+    "TOKEN_INVALIDATED_LOGOUT": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:203"
+      ],
+      "statuses": [
+        401
+      ]
+    },
+    "USER_NOT_FOUND": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:224"
+      ],
+      "statuses": [
+        401
+      ]
+    },
+    "USER_RATE_LIMIT_EXCEEDED": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:331",
+        "Server/src/middleware/security.middleware.js:353"
+      ],
+      "statuses": [
+        429
+      ]
+    },
+    "VALIDATION_ERROR": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:341",
+        "Server/src/controllers/admin.controller.js:358",
+        "Server/src/controllers/admin.controller.js:363",
+        "Server/src/controllers/admin.controller.js:504",
+        "Server/src/controllers/admin.controller.js:600",
+        "Server/src/errors/validation.error.js:17",
+        "Server/src/middleware/error.middleware.js:160",
+        "Server/src/routes/team.routes.js:43"
+      ],
+      "statuses": [
+        400
+      ]
+    }
+  },
+  "statuses": {
+    "200": {
+      "sites": [
+        "Server/src/controllers/health.controller.js:61",
+        "Server/src/controllers/payment.controller.js:31",
+        "Server/src/controllers/payment.controller.js:33"
+      ]
+    },
+    "201": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:76",
+        "Server/src/controllers/admin.controller.js:280",
+        "Server/src/controllers/coach-player.controller.js:41",
+        "Server/src/controllers/coach.controller.js:32",
+        "Server/src/controllers/coach.controller.js:66",
+        "Server/src/controllers/competition.controller.js:25",
+        "Server/src/controllers/judge.controller.js:54",
+        "Server/src/controllers/player.controller.js:30",
+        "Server/src/controllers/super-admin.controller.js:49",
+        "Server/src/controllers/super-admin.controller.js:128",
+        "Server/src/controllers/super-admin.controller.js:205",
+        "Server/src/controllers/super-admin.controller.js:211",
+        "Server/src/controllers/team.controller.js:43"
+      ]
+    },
+    "304": {
+      "sites": [
+        "Server/src/controllers/public.controller.js:91"
+      ]
+    },
+    "400": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:341",
+        "Server/src/controllers/admin.controller.js:358",
+        "Server/src/controllers/admin.controller.js:363",
+        "Server/src/controllers/admin.controller.js:502",
+        "Server/src/controllers/admin.controller.js:596",
+        "Server/src/infrastructure/createApp.js:50",
+        "Server/src/middleware/competition-context.middleware.js:58",
+        "Server/src/routes/team.routes.js:39"
+      ]
+    },
+    "401": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:213",
+        "Server/src/controllers/auth.controller.js:236",
+        "Server/src/middleware/auth.middleware.js:78",
+        "Server/src/middleware/auth.middleware.js:113",
+        "Server/src/middleware/auth.middleware.js:171",
+        "Server/src/middleware/auth.middleware.js:198",
+        "Server/src/middleware/auth.middleware.js:219",
+        "Server/src/middleware/auth.middleware.js:235",
+        "Server/src/middleware/auth.middleware.js:349",
+        "Server/src/middleware/metrics-auth.middleware.js:66"
+      ]
+    },
+    "403": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:466",
+        "Server/src/controllers/admin.controller.js:486",
+        "Server/src/controllers/admin.controller.js:542",
+        "Server/src/middleware/auth.middleware.js:368",
+        "Server/src/middleware/auth.middleware.js:486",
+        "Server/src/middleware/competition-context.middleware.js:75",
+        "Server/src/middleware/competition-context.middleware.js:113",
+        "Server/src/middleware/csrf.middleware.js:201",
+        "Server/src/routes/coach.routes.js:201"
+      ]
+    },
+    "404": {
+      "sites": [
+        "Server/src/controllers/team.controller.js:31",
+        "Server/src/controllers/team.controller.js:108",
+        "Server/src/middleware/metrics-auth.middleware.js:50"
+      ]
+    },
+    "429": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:238",
+        "Server/src/middleware/security.middleware.js:349",
+        "Server/src/middleware/security.middleware.js:422",
+        "Server/src/middleware/security.middleware.js:501",
+        "Server/src/middleware/security.middleware.js:564"
+      ]
+    },
+    "500": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:324"
+      ]
+    },
+    "503": {
+      "sites": [
+        "Server/src/controllers/health.controller.js:64",
+        "Server/src/controllers/health.controller.js:79",
+        "Server/src/controllers/health.controller.js:94"
+      ]
+    }
+  },
+  "messages": {
+    "A judge can only change their own score, not another judge's": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:469"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "A lucky draw needs at least two athletes": {
+      "sites": [
+        "Server/src/services/scoring/tie-break-draw.service.js:89"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "A player with this name and date of birth is already registered": {
+      "sites": [
+        "Server/src/services/user/coach-player.service.js:151"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "A registered judge must be selected for this slot": {
+      "sites": [
+        "Server/src/services/user/judge-panel.service.js:343"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "A valid per-player fee (INR) is required for each competition": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:462",
+        "Server/src/services/user/super-admin.service.js:546"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Access denied. Super Admin privileges required.": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:489"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Account is inactive": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:237",
+        "Server/src/middleware/auth.middleware.js:239",
+        "Server/src/services/auth/authentication.service.js:166",
+        "Server/src/services/user/judge.service.js:141"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Account type must be one of {0}": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:67"
+      ],
+      "args": [
+        "TYPES.join(', ')"
+      ],
+      "via": "ValidationError"
+    },
+    "Add the parent's or guardian's name and phone to your profile first": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:235"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Add your phone number to your profile first — it is the contact for players you register": {
+      "sites": [
+        "Server/src/services/user/coach-player.service.js:206"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Admin assigned successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:102"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Admin assigned to competition successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:162"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Admin created successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:49"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Admin deleted successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:63"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Admin removed from competition successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:170"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Admin removed successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:108"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Admin updated successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:57"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Age group {0} for {1} is not available in this competition": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:1136"
+      ],
+      "args": [
+        "ageGroup",
+        "gender"
+      ],
+      "via": "ValidationError"
+    },
+    "An athlete appears more than once in the draw": {
+      "sites": [
+        "Server/src/services/scoring/tie-break-draw.service.js:92"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Attach a photo of the form page": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:456"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Authentication failed": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:326",
+        "Server/src/middleware/auth.middleware.js:328"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Authentication required": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:352",
+        "Server/src/services/competition/performance-order.service.js:114"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Authentication service is not configured": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:86",
+        "Server/src/services/user/coach.service.js:93",
+        "Server/src/services/user/player.service.js:42",
+        "Server/src/services/user/player.service.js:49"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Bad Host header": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:50"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Bonus is 0 or 0.20": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:124"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "CORS test successful": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:220"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Cannot delete competition that has started or completed": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:261"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot delete locked score": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:297"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot delete team with players. Remove all players first.": {
+      "sites": [
+        "Server/src/services/team/team.service.js:240"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot modify submitted registration": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:269",
+        "Server/src/services/competition/registration.service.js:380"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot remove competitions from super admin": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:259"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Cannot set status to completed before end date": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:795"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot set status to ongoing before start date": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:788"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot submit registration without players": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:456"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot unregister after payment is completed. Please contact admin for refund.": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:200"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot unregister from competition that has started": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:188"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Cannot update locked score": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:225"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Change undone.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:45"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Choose Male or Female": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:103"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Choose a competition": {
+      "sites": [
+        "Server/src/services/stats/stats.service.js:308",
+        "Server/src/services/superadmin/score-correction.service.js:71"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Choose a competition level": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:270",
+        "Server/src/services/team/player-team-admin.service.js:170",
+        "Server/src/services/team/player-team-admin.service.js:215"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Choose a player": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:131"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Choose an age group": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:104"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Choose one of the teams that entered the player at this level": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:254"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Choose payment or refund": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:242"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Choose whether the old coach stays as co-coach or is removed": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:142"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Coach changed.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:101"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Coach does not own this team": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:75",
+        "Server/src/services/competition/registration.service.js:178"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Coach is already assigned to a team": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1459"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Coach is not assigned to any team": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1526"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Coach status updated successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:79"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Coaches cannot be deactivated": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:278",
+        "Server/src/services/user/super-admin.service.js:284"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Competition ID is required": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:599"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition III ties are drawn on the Competition I standing (Scores tab)": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:429"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Competition already assigned to this admin": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:206"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Competition context is required. Please set a competition first.": {
+      "sites": [
+        "Server/src/middleware/competition-context.middleware.js:61"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition context set successfully": {
+      "sites": [
+        "Server/src/controllers/judge.controller.js:130"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition created successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:25"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition created successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:128"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition deleted successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:94"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition deleted successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:154"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition is not assigned to this admin": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:269"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Competition is not open for registration": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:85"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Competition is required": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:79",
+        "Server/src/services/scoring/tie-break-draw.service.js:46"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Competition not found": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:1113"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Competition restored.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:54"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition selected successfully. You can now add players.": {
+      "sites": [
+        "Server/src/controllers/coach.controller.js:130"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition status updated successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:88"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition updated successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:79"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition updated successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:148"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Competition with same name, year, and place already exists": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:115"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "Confirm that a parent or guardian agreed for every player under 18": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:905"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Correct {0} through its slip, so the slip and the total stay the same": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:137"
+      ],
+      "args": [
+        "field"
+      ],
+      "via": "ValidationError"
+    },
+    "Could not save scores because another judge is submitting for the same performer. Please try again.": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:2041"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Could not tell which page this is. Choose the page number and photograph it again.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:468"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Create the coach's team first": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:333"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Create your team before registering players": {
+      "sites": [
+        "Server/src/services/user/coach-player.service.js:126"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Created: {0}, Updated: {1}, Errors: {2}": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:260"
+      ],
+      "args": [
+        "result.created.length",
+        "result.updated.length",
+        "result.errors.length"
+      ],
+      "via": "response"
+    },
+    "Current password is incorrect": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:110",
+        "Server/src/services/user/coach-player.service.js:83",
+        "Server/src/services/user/judge-account.service.js:221",
+        "Server/src/services/user/user.service.js:203"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Date of birth is not a valid date": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:152"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Default player password saved. Players you register from now on start with it.": {
+      "sites": [
+        "Server/src/controllers/coach-player.controller.js:31"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Discount code applied. Team submitted successfully.": {
+      "sites": [
+        "Server/src/controllers/coach.controller.js:190"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Discount codes are not being accepted for this event": {
+      "sites": [
+        "Server/src/config/payment.config.js:107"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Email already registered": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:281",
+        "Server/src/services/user/judge-account.service.js:79",
+        "Server/src/services/user/user.service.js:134"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "Email change cancelled.": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:182"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Email is required": {
+      "sites": [
+        "Server/src/services/user/judge-account.service.js:74",
+        "Server/src/services/user/super-admin.service.js:1159"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "End date cannot be before start date": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:750"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Enter an amount in rupees": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:244"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Execution must be in steps of 0.05": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:120"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Fix the rows marked in red first": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:908"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Give a reason (at least 5 characters)": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:171"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Give a reason (at least {0} characters)": {
+      "sites": [
+        "Server/src/services/superadmin/correction.service.js:29"
+      ],
+      "args": [
+        "MIN_REASON"
+      ],
+      "via": "ValidationError"
+    },
+    "Give the drawn order of the tied players": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:430"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "If an account with that email or Player ID has an email address, a code has been sent to it.": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:49"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Invalid Razorpay webhook signature": {
+      "sites": [
+        "Server/src/services/payment/payment.service.js:82"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Invalid account id": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:76"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid age group and gender combination for this competition": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:669"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid apparatus \"{0}\" for {1} {2}": {
+      "sites": [
+        "Server/src/utils/data/competition-apparatus.util.js:85"
+      ],
+      "args": [
+        "unknown",
+        "TYPE_LABELS[type]",
+        "gender"
+      ],
+      "via": "ValidationError"
+    },
+    "Invalid coach id": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:53"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid competition id": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:43"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid competition type in apparatusByGender: {0}": {
+      "sites": [
+        "Server/src/utils/data/competition-apparatus.util.js:64"
+      ],
+      "args": [
+        "key"
+      ],
+      "via": "ValidationError"
+    },
+    "Invalid credentials": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:157",
+        "Server/src/services/auth/authentication.service.js:205",
+        "Server/src/services/user/judge.service.js:133",
+        "Server/src/services/user/judge.service.js:177"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Invalid end date": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:746"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid payment status": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:467"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid player id": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:266"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid refresh token": {
+      "sites": [
+        "Server/src/services/auth/token.service.js:274"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Invalid score": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:105"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid score for {0}: {1}": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1585"
+      ],
+      "args": [
+        "playerScore.playerName || playerScore.playerId",
+        "capCheck.error"
+      ],
+      "via": "ValidationError"
+    },
+    "Invalid score or player id": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:341",
+        "Server/src/controllers/admin.controller.js:358"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Invalid start date": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:742"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid status": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:549"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid team id": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:46"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Invalid token": {
+      "sites": [
+        "Server/src/services/auth/token.service.js:118"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Judge account repository is not configured": {
+      "sites": [
+        "Server/src/services/user/judge-panel.service.js:261"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Judge created successfully": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:280"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Judge deleted successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:120"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Judge is not assigned to a competition": {
+      "sites": [
+        "Server/src/services/user/judge.service.js:419",
+        "Server/src/services/user/judge.service.js:437"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "Judge removed from the panel": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:301"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Judge updated successfully": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:288"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Late fee must be a number of rupees, zero or more": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:85"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Logged out successfully.": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:196"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Login failed": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:244"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Lots drawn successfully": {
+      "sites": [
+        "Server/src/controllers/performance-order.controller.js:116"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Lucky draw cleared": {
+      "sites": [
+        "Server/src/controllers/tie-break-draw.controller.js:71"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Lucky draw recorded": {
+      "sites": [
+        "Server/src/controllers/tie-break-draw.controller.js:56"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Missing Razorpay signature": {
+      "sites": [
+        "Server/src/services/payment/payment.service.js:38"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Missing required fields: {0}": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1522"
+      ],
+      "args": [
+        "missingFields.join(', ')"
+      ],
+      "via": "ValidationError"
+    },
+    "Missing required payment details": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1129",
+        "Server/src/services/user/super-admin.service.js:963"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "New password must be at least 8 characters": {
+      "sites": [
+        "Server/src/services/user/user.service.js:208"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "New password must be different from the current one": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:190",
+        "Server/src/services/user/judge-account.service.js:225"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "No email change is waiting for a code. Start again from your profile.": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:268"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "No refresh token provided": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:216",
+        "Server/src/controllers/auth.controller.js:238"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "No token, authorization denied": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:80",
+        "Server/src/middleware/auth.middleware.js:82"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "No {0} slip on this score": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:115"
+      ],
+      "args": [
+        "edit.judgeRole"
+      ],
+      "via": "ValidationError"
+    },
+    "None of the selected apparatus is offered for {0} athletes in this competition": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:671"
+      ],
+      "args": [
+        "gender"
+      ],
+      "via": "ValidationError"
+    },
+    "Not allowed by CORS": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:172"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "Not assigned to this competition": {
+      "sites": [
+        "Server/src/services/user/judge.service.js:305",
+        "Server/src/services/user/judge.service.js:355"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "Not found": {
+      "sites": [
+        "Server/src/middleware/metrics-auth.middleware.js:50"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Nothing to change": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:162",
+        "Server/src/services/superadmin/entries-admin.service.js:217",
+        "Server/src/services/superadmin/score-correction.service.js:146",
+        "Server/src/services/superadmin/team-admin.service.js:109"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "OTP verification failed": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:437"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Only a panel judge or an admin can submit a judge slip": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:489"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Only a rename can be undone from History": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:401"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Only players have a Player ID": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:161"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Only the Senior Judge can Final Submit and lock scores": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:545"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Only the Senior Judge or Scorer assigned to this category can set its running order": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:143"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "Only the player’s coach or a super admin can decide this": {
+      "sites": [
+        "Server/src/services/auth/account-request.service.js:180"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "Only the team's main coach can remove a co-coach": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:199"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Only the team’s main coach can remove a co-coach": {
+      "sites": [
+        "Server/src/routes/coach.routes.js:201"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Parent/guardian name and phone are required for a player without their own email": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:1162"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Parent/guardian name and phone are required for this account": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:165"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Password changed successfully": {
+      "sites": [
+        "Server/src/controllers/judge.controller.js:80"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Password must be at least 8 characters long": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:455",
+        "Server/src/services/user/super-admin.service.js:235"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Password must contain at least one uppercase letter, one lowercase letter, and one number": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:458"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Password reset successfully. You can now log in.": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:66"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Password reset. You can now sign in with your Player ID.": {
+      "sites": [
+        "Server/src/controllers/account-request.controller.js:51"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Pay from your dashboard (Pay Fees).": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:1000"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Payment status is pending, completed or failed": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:214"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: Amount mismatch": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1285",
+        "Server/src/services/user/super-admin.service.js:1053"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: Configuration error": {
+      "sites": [
+        "Server/src/services/payment/razorpay.gateway.js:113"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: Invalid signature": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1175",
+        "Server/src/services/user/super-admin.service.js:981"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: Order mismatch": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1230",
+        "Server/src/services/user/super-admin.service.js:1014"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: Unable to verify payment status": {
+      "sites": [
+        "Server/src/services/payment/razorpay.gateway.js:146"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: Unable to verify the order": {
+      "sites": [
+        "Server/src/services/payment/razorpay.gateway.js:172"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: this payment has already been used": {
+      "sites": [
+        "Server/src/services/payment/razorpay.gateway.js:208"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment verification failed: this payment was made for a different registration": {
+      "sites": [
+        "Server/src/services/payment/razorpay.gateway.js:188"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Payment {0}. Please try again or contact support.": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1221",
+        "Server/src/services/user/super-admin.service.js:1005"
+      ],
+      "args": [
+        "paymentDetails.status"
+      ],
+      "via": "ValidationError"
+    },
+    "Player added successfully with payment verification.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:205"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player added to team successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:171"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player added to team successfully.": {
+      "sites": [
+        "Server/src/controllers/coach.controller.js:149"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player age group ({0}) does not match team age group ({1})": {
+      "sites": [
+        "Server/src/services/user/player.service.js:336"
+      ],
+      "args": [
+        "player.ageGroup",
+        "team.ageGroup"
+      ],
+      "via": "ValidationError"
+    },
+    "Player age group does not match team age group": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1501"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Player assigned to team successfully": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:236"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player gender ({0}) does not match team gender ({1})": {
+      "sites": [
+        "Server/src/services/user/player.service.js:346"
+      ],
+      "args": [
+        "player.gender",
+        "team.gender"
+      ],
+      "via": "ValidationError"
+    },
+    "Player gender does not match team gender": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1504"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Player is already assigned to a team": {
+      "sites": [
+        "Server/src/services/user/player.service.js:317"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Player is already in this registration": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:296"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "Player is already on another team. Remove from current team first.": {
+      "sites": [
+        "Server/src/services/team/team.service.js:414"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Player is not assigned to any team": {
+      "sites": [
+        "Server/src/services/user/player.service.js:394"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Player is not on this team": {
+      "sites": [
+        "Server/src/services/team/team.service.js:506"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Player moved.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:110"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player order updated": {
+      "sites": [
+        "Server/src/controllers/performance-order.controller.js:157"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player removed from team successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:180"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player removed from team successfully.": {
+      "sites": [
+        "Server/src/controllers/coach.controller.js:159"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player scores validation failed": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:608"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Player status updated successfully": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:228"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Player with this email already exists": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:1165"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Player {0} appears more than once in the order": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:463"
+      ],
+      "args": [
+        "id"
+      ],
+      "via": "ValidationError"
+    },
+    "Player {0} is not on this team in this category": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:460"
+      ],
+      "args": [
+        "id"
+      ],
+      "via": "ValidationError"
+    },
+    "Players from this form are already registered; it cannot be cancelled. Finish it, or remove the players from the coach's entry.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:425"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Profile updated successfully": {
+      "sites": [
+        "Server/src/controllers/judge.controller.js:70"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Profile updated.": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:139"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Razorpay secret is not configured": {
+      "sites": [
+        "Server/src/services/payment/payment.service.js:37"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Refresh token expired": {
+      "sites": [
+        "Server/src/services/auth/token.service.js:289"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Refresh token reuse detected. Please log in again.": {
+      "sites": [
+        "Server/src/services/auth/token.service.js:284"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Registration for this competition closed at the end of {0}. Payment is no longer accepted.": {
+      "sites": [
+        "Server/src/config/payment.config.js:218"
+      ],
+      "args": [
+        "day(window.closesAt)"
+      ],
+      "via": "ValidationError"
+    },
+    "Registration for this competition opens on {0}. Payment is not accepted yet.": {
+      "sites": [
+        "Server/src/config/payment.config.js:214"
+      ],
+      "args": [
+        "day(window.opensAt)"
+      ],
+      "via": "ValidationError"
+    },
+    "Request turned down.": {
+      "sites": [
+        "Server/src/controllers/account-request.controller.js:39"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Saved.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:67"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Score corrected.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:119"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Score validation failed": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:529"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Scores are locked and cannot be modified": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1855"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Scores for {0} are finalized and locked": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1679"
+      ],
+      "args": [
+        "existingPlayerScore.playerName || 'this player'"
+      ],
+      "via": "ValidationError"
+    },
+    "Scores for {0} are locked and cannot be modified": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1877"
+      ],
+      "args": [
+        "blocked.join(', ')"
+      ],
+      "via": "ValidationError"
+    },
+    "Select at least one apparatus for {0}": {
+      "sites": [
+        "Server/src/utils/data/competition-apparatus.util.js:96"
+      ],
+      "args": [
+        "TYPE_LABELS[type]"
+      ],
+      "via": "ValidationError"
+    },
+    "Send between 0 and {0} rows": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:537"
+      ],
+      "args": [
+        "MAX_ROWS"
+      ],
+      "via": "ValidationError"
+    },
+    "Session ended. Please log in again.": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:200",
+        "Server/src/middleware/auth.middleware.js:202"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Session expired. Please log in again.": {
+      "sites": [
+        "Server/src/services/auth/token.service.js:297"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Set a last date to pay fees before setting a late fee amount": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:137"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Set your default player password on your profile first": {
+      "sites": [
+        "Server/src/services/user/coach-player.service.js:136"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Signed out everywhere.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:75"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Sports Event API is running!": {
+      "sites": [
+        "Server/src/routes/index.js:301"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Submit the form before taking payment.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:1002"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Successfully joined team.": {
+      "sites": [
+        "Server/src/controllers/player.controller.js:65"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Super admins have access to all competitions": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:188"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Team already has a coach assigned": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:1476"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Team approved successfully": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:182"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team created successfully. You can now register it for competitions.": {
+      "sites": [
+        "Server/src/controllers/coach.controller.js:69"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team data is required": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:153"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Team deleted successfully": {
+      "sites": [
+        "Server/src/controllers/team.controller.js:57"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team deleted successfully.": {
+      "sites": [
+        "Server/src/controllers/super-admin.controller.js:114"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team does not belong to the specified competition": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:1119"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Team has not been submitted by coach yet": {
+      "sites": [
+        "Server/src/services/user/judge.service.js:445"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "Team is already approved": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1262"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "Team is already registered for this competition": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:100"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "Team name is required": {
+      "sites": [
+        "Server/src/services/team/team.service.js:61"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Team name must be at least 2 characters": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:108"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Team not found": {
+      "sites": [
+        "Server/src/controllers/team.controller.js:31",
+        "Server/src/controllers/team.controller.js:108"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team order updated": {
+      "sites": [
+        "Server/src/controllers/performance-order.controller.js:136"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team registered for competition successfully.": {
+      "sites": [
+        "Server/src/controllers/coach.controller.js:114"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team registered successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:121"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team rejected": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:189"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team submitted successfully.": {
+      "sites": [
+        "Server/src/controllers/coach.controller.js:204"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team unregistered successfully": {
+      "sites": [
+        "Server/src/controllers/competition.controller.js:129"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Team with this name already exists for this coach": {
+      "sites": [
+        "Server/src/services/team/team.service.js:76",
+        "Server/src/services/team/team.service.js:163"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "Team {0} appears more than once in the order": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:386"
+      ],
+      "args": [
+        "id"
+      ],
+      "via": "ValidationError"
+    },
+    "Team {0} is not registered in this category": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:383"
+      ],
+      "args": [
+        "id"
+      ],
+      "via": "ValidationError"
+    },
+    "Temporary password set.": {
+      "sites": [
+        "Server/src/routes/superadmin-corrections.routes.js:71"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "That code has expired. Start the change again to get a new one.": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:272"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "That discount code is not valid": {
+      "sites": [
+        "Server/src/config/payment.config.js:112"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "That email is already registered to another account": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:321",
+        "Server/src/services/auth/account.service.js:341"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "That email or Player ID is already used by another account": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:169"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "That is already the email on this account": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:230"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "That judge account is deactivated": {
+      "sites": [
+        "Server/src/services/user/judge-panel.service.js:269"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "That judge is already on this panel as {0}": {
+      "sites": [
+        "Server/src/services/user/judge-panel.service.js:328"
+      ],
+      "args": [
+        "clash.judgeType"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "That player is not a qualifier of this final": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:391"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "The Senior Judge has not marked {0} yet. Lock & Submit waits for every Senior Judge mark.": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1898"
+      ],
+      "args": [
+        "waiting.join(', ')"
+      ],
+      "via": "ValidationError"
+    },
+    "The Super Admin account cannot be deactivated": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:280",
+        "Server/src/services/user/super-admin.service.js:231"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "The Super Admin account cannot be deleted": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:256"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "The Super Admin password is changed from your own profile": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:249"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "The competition level is missing": {
+      "sites": [
+        "Server/src/services/team/player-team.service.js:76"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "The competition opening date must be before the competition start date": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:121"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "The draw must name exactly the tied players": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:433"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "The form reader could not be reached. Enter the form by hand, or try again.": {
+      "sites": [
+        "Server/src/services/walk-in/ocr.client.js:131"
+      ],
+      "args": [],
+      "via": "OcrUnavailableError"
+    },
+    "The form reader is busy. Try again in a moment.": {
+      "sites": [
+        "Server/src/services/walk-in/ocr.client.js:77",
+        "Server/src/services/walk-in/ocr.client.js:114"
+      ],
+      "args": [],
+      "via": "OcrUnavailableError"
+    },
+    "The form reader is not set up on this server. Enter the form by hand.": {
+      "sites": [
+        "Server/src/services/walk-in/ocr.client.js:101"
+      ],
+      "args": [],
+      "via": "OcrUnavailableError"
+    },
+    "The last date to pay fees cannot be before the competition opening date": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:104"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "The last date to pay fees must be before the competition end date": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:127"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "The last date to pay fees must be before the competition start date": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:124"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "The {0} {1} squad is full ({2}). Tick \"allow a full squad\" to add anyway.": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:140"
+      ],
+      "args": [
+        "body.gender",
+        "groupLabel(body.ageGroup)",
+        "meet.maxTeamSize"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "The {0} {1} squad is full. Tick \"allow a full squad\" to move anyway.": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:190"
+      ],
+      "args": [
+        "next.gender",
+        "groupLabel(next.ageGroup)"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "There are no players on this form": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:901"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "These athletes are not a tie that awaits a lucky draw in this standing. Refresh the results and try again.": {
+      "sites": [
+        "Server/src/services/scoring/tie-break-draw.service.js:105"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "This athlete already has scores here. Correct the score, or move them with \"Move a player\".": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:159"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This athlete already has scores in their current age group; their category cannot change now.": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:188"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This change cannot be undone from History. Correct it the same way it was made.": {
+      "sites": [
+        "Server/src/services/superadmin/correction.service.js:189"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This change was already undone.": {
+      "sites": [
+        "Server/src/services/superadmin/correction.service.js:190"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This coach already has a team with that name": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:111"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "This coach's team is already submitted for this competition.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:911"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "This competition does not have a valid per-player fee. Set it when creating or editing the competition.": {
+      "sites": [
+        "Server/src/config/payment.config.js:225",
+        "Server/src/config/payment.config.js:231"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "This competition has ended and can no longer be changed.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:157"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This competition is not taking entries right now.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:328"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This conflict is already resolved.": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:252"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This discount code does not cover the full fee — pay through checkout instead": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:917"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "This final has started and can no longer be reopened.": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:502"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This final has started.": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:419"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This final has started; a withdrawal can no longer be replaced.": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:390"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This final is already finalized.": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:428"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This final is not finalized.": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:500"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This form is already submitted.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:454",
+        "Server/src/services/walk-in/walk-in.service.js:535"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This form is being submitted from another screen. Wait a moment and refresh.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:914"
+      ],
+      "args": [],
+      "via": "ConflictError"
+    },
+    "This is an older version of the walk-in form. Print the current form (Print blank form) and copy the players onto it, or type them in.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:463"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This player is not on your team": {
+      "sites": [
+        "Server/src/services/auth/account-request.service.js:183"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "This player's team at that level changed meanwhile. Reload and try again.": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:192",
+        "Server/src/services/team/player-team-admin.service.js:265"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This player's team is final for a level they are registered at. Only the Super Admin can change it.": {
+      "sites": [
+        "Server/src/services/team/team.service.js:512"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "This player’s requests are decided by their coach": {
+      "sites": [
+        "Server/src/services/auth/account-request.service.js:177"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "This registration is already {0}.": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:170"
+      ],
+      "args": [
+        "draft.status"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "This request has nothing left to approve": {
+      "sites": [
+        "Server/src/services/auth/account-request.service.js:259"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "This team has already been submitted": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:820"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Token has expired": {
+      "sites": [
+        "Server/src/services/auth/token.service.js:114"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Token refreshed successfully.": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:244"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Token verification failed": {
+      "sites": [
+        "Server/src/services/auth/token.service.js:121"
+      ],
+      "args": [],
+      "via": "AuthenticationError"
+    },
+    "Too many authentication attempts, please try again later": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:425"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Too many login attempts for this account, please try again later": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:504"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Too many requests from this IP, please try again later": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:241"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Too many requests from this account, please try again later": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:352"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Type at least two characters": {
+      "sites": [
+        "Server/src/services/superadmin/accounts-admin.service.js:105"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Unauthorized": {
+      "sites": [
+        "Server/src/middleware/metrics-auth.middleware.js:66"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Unknown apparatus: {0}": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:110"
+      ],
+      "args": [
+        "name"
+      ],
+      "via": "ValidationError"
+    },
+    "Unknown judge seat": {
+      "sites": [
+        "Server/src/controllers/admin.controller.js:363"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "User not found": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:221",
+        "Server/src/middleware/auth.middleware.js:223"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "Validation error": {
+      "sites": [
+        "Server/src/middleware/validation.middleware.js:41"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "Validation failed": {
+      "sites": [
+        "Server/src/routes/team.routes.js:42"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "We sent a 6-digit code to {0}.": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:164"
+      ],
+      "args": [
+        "data.newEmail"
+      ],
+      "via": "response"
+    },
+    "Webhook processed successfully.": {
+      "sites": [
+        "Server/src/controllers/payment.controller.js:33"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "You are not assigned to this competition": {
+      "sites": [
+        "Server/src/services/stats/stats.service.js:311"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "You are not assigned to this competition.": {
+      "sites": [
+        "Server/src/middleware/competition-context.middleware.js:78",
+        "Server/src/middleware/competition-context.middleware.js:116",
+        "Server/src/services/auth/authentication.service.js:604",
+        "Server/src/services/walk-in/walk-in.service.js:152"
+      ],
+      "args": [],
+      "via": "response"
+    },
+    "You can only add players to your own teams": {
+      "sites": [
+        "Server/src/services/team/team.service.js:396"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "You can only change your own team's squad": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:274",
+        "Server/src/services/competition/registration.service.js:387"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "You can only delete your own teams": {
+      "sites": [
+        "Server/src/services/team/team.service.js:229"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "You can only remove players from your own teams": {
+      "sites": [
+        "Server/src/services/team/team.service.js:488"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "You can only update your own teams": {
+      "sites": [
+        "Server/src/services/team/team.service.js:146"
+      ],
+      "args": [],
+      "via": "BusinessRuleError"
+    },
+    "You cannot view this team registration": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:553"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "You do not have permission to register this team": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:195"
+      ],
+      "args": [],
+      "via": "AuthorizationError"
+    },
+    "You have used all {0} edits for {1}. Ask the admin to restore your edits.": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1721"
+      ],
+      "args": [
+        "SLIP_EDIT_LIMIT",
+        "existingPlayerScore.playerName || 'this athlete'"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "apparatusByGender must be an object keyed by competition type": {
+      "sites": [
+        "Server/src/utils/data/competition-apparatus.util.js:56"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "apparatusByGender.{0} must be { Male: [...], Female: [...] }": {
+      "sites": [
+        "Server/src/utils/data/competition-apparatus.util.js:74"
+      ],
+      "args": [
+        "type"
+      ],
+      "via": "ValidationError"
+    },
+    "apparatusByGender.{0}.{1} must be a list": {
+      "sites": [
+        "Server/src/utils/data/competition-apparatus.util.js:81"
+      ],
+      "args": [
+        "type",
+        "gender"
+      ],
+      "via": "ValidationError"
+    },
+    "competitionId is required": {
+      "sites": [
+        "Server/src/services/public/public.service.js:95"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "emailType must be one of: {0}": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:1155"
+      ],
+      "args": [
+        "EMAIL_TYPES.join(', ')"
+      ],
+      "via": "ValidationError"
+    },
+    "emailType must be self or guardian": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:226"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "gender, ageGroup and competitionType are all required": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:82"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "gender, ageGroup, competitionType and apparatus are all required": {
+      "sites": [
+        "Server/src/services/scoring/tie-break-draw.service.js:49"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "groupKey is required": {
+      "sites": [
+        "Server/src/services/scoring/tie-break-draw.service.js:143"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "playerIds must be a non-empty array": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:445"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "teamId is required": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:442"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "teamIds must be a non-empty array": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:368"
+      ],
+      "args": [],
+      "via": "ValidationError"
+    },
+    "{0} ({1}) is not run at this competition": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:106"
+      ],
+      "args": [
+        "groupLabel(ageGroup)",
+        "gender"
+      ],
+      "via": "ValidationError"
+    },
+    "{0} already coaches {1}": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:145"
+      ],
+      "args": [
+        "personName(next)",
+        "team.name"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} already has a team called {1}": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:148"
+      ],
+      "args": [
+        "personName(next)",
+        "team.name"
+      ],
+      "via": "ConflictError"
+    },
+    "{0} already has a team for {1} — use Correct instead.": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:259"
+      ],
+      "args": [
+        "nameOf(player)",
+        "levelLabel(conflict.level)"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} cannot be finalized yet: {1}": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:466"
+      ],
+      "args": [
+        "finalLabel(doc)",
+        "blockers.join(' · ')"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} for {1} {2} has already been started": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1788"
+      ],
+      "args": [
+        "competitionType",
+        "gender",
+        "ageGroup"
+      ],
+      "via": "ValidationError"
+    },
+    "{0} has no team for {1}.": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:218"
+      ],
+      "args": [
+        "nameOf(player)",
+        "levelLabel(level)"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} is already entered in this competition{1}. Use \"Move a player\" to change teams.": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:135"
+      ],
+      "args": [
+        "personName(player)",
+        "same(elsewhere.team, teamId) ? '' : ' for another team'"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} is already with {1} for {2}": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:273"
+      ],
+      "args": [
+        "personName(player)",
+        "to.name",
+        "levelLabel(level)"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} is already with {1} for {2}.": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:176"
+      ],
+      "args": [
+        "nameOf(player)",
+        "team.name",
+        "levelLabel(level)"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} is already with {1}. A team can register them only at a level where they have no team yet, from that competition.": {
+      "sites": [
+        "Server/src/services/team/player-team.service.js:145"
+      ],
+      "args": [
+        "name",
+        "teamName"
+      ],
+      "via": "ConflictError"
+    },
+    "{0} is not on this team.": {
+      "sites": [
+        "Server/src/services/team/player-team.service.js:125"
+      ],
+      "args": [
+        "name"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} is not part of the {1} events (COP §11)": {
+      "sites": [
+        "Server/src/utils/data/competition-apparatus.util.js:89"
+      ],
+      "args": [
+        "barred",
+        "gender.toLowerCase()"
+      ],
+      "via": "ValidationError"
+    },
+    "{0} is registered with {1} for {2}. A player's team is final for each level — if this is a different child, ask the competition admin to register them.": {
+      "sites": [
+        "Server/src/services/user/coach-player.service.js:146"
+      ],
+      "args": [
+        "taken.name",
+        "taken.heldAtLevel.name",
+        "levelLabel(level)"
+      ],
+      "via": "ConflictError"
+    },
+    "{0} is registered with {1} for {2}. A player's team is final for each level; only the Super Admin can correct it.": {
+      "sites": [
+        "Server/src/services/team/player-team.service.js:56"
+      ],
+      "args": [
+        "name",
+        "teamName",
+        "levelLabel(level)"
+      ],
+      "via": "ConflictError"
+    },
+    "{0} is registered. Player ID: {1}": {
+      "sites": [
+        "Server/src/controllers/coach-player.controller.js:44"
+      ],
+      "args": [
+        "data.player.firstName",
+        "data.player.loginId"
+      ],
+      "via": "response"
+    },
+    "{0} is still entered for their current {1} team in {2} open competition(s). Remove them from those squads first.": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:182"
+      ],
+      "args": [
+        "nameOf(player)",
+        "levelLabel(level)",
+        "blocking.length"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} is {1} on 31 Dec {2}, too old for {3}. Tick \"allow outside the age rule\" to enter anyway.": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:120"
+      ],
+      "args": [
+        "personName(player)",
+        "age.age",
+        "age.cutoffYear",
+        "groupLabel(ageGroup)"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0} is {1} on 31 Dec {2}, too old for {3}. {4}": {
+      "sites": [
+        "Server/src/utils/data/age-eligibility.util.js:65"
+      ],
+      "args": [
+        "nameOf(player)",
+        "result.age",
+        "result.cutoffYear",
+        "groupLabel(ageGroup)",
+        "hint"
+      ],
+      "via": "ValidationError"
+    },
+    "{0} must be a valid date": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:48"
+      ],
+      "args": [
+        "field"
+      ],
+      "via": "ValidationError"
+    },
+    "{0} must be between 0 and {1}": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:38"
+      ],
+      "args": [
+        "label",
+        "max"
+      ],
+      "via": "ValidationError"
+    },
+    "{0}'s account is deactivated": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:146"
+      ],
+      "args": [
+        "personName(next)"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0}'s squad is full in {1}. Tick \"allow a full squad\" to move anyway.": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:312"
+      ],
+      "args": [
+        "to.name",
+        "full.map((c) => c.name).join(', ')"
+      ],
+      "via": "BusinessRuleError"
+    },
+    "{0}'s total cannot exceed 10": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:128"
+      ],
+      "args": [
+        "edit.judgeRole"
+      ],
+      "via": "ValidationError"
+    }
+  },
+  "notFoundResources": {
+    "Account": {
+      "sites": [
+        "Server/src/services/auth/account.service.js:102"
+      ]
+    },
+    "Admin": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:313",
+        "Server/src/services/user/admin.service.js:144",
+        "Server/src/services/user/admin.service.js:180",
+        "Server/src/services/user/admin.service.js:251",
+        "Server/src/services/user/admin.service.js:312",
+        "Server/src/services/user/admin.service.js:366",
+        "Server/src/services/user/admin.service.js:428",
+        "Server/src/services/user/admin.service.js:486",
+        "Server/src/services/user/super-admin.service.js:223",
+        "Server/src/services/user/super-admin.service.js:255",
+        "Server/src/services/user/super-admin.service.js:581"
+      ]
+    },
+    "Age group": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1421"
+      ]
+    },
+    "Age group {0} {1} not found in competition": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1764"
+      ]
+    },
+    "Co-coach": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:201",
+        "Server/src/services/superadmin/team-admin.service.js:233"
+      ]
+    },
+    "Coach": {
+      "sites": [
+        "Server/src/services/superadmin/team-admin.service.js:55",
+        "Server/src/services/user/coach-player.service.js:241",
+        "Server/src/services/user/coach.service.js:1414",
+        "Server/src/services/user/coach.service.js:1450",
+        "Server/src/services/user/coach.service.js:1520",
+        "Server/src/services/walk-in/walk-in.service.js:291",
+        "Server/src/services/walk-in/walk-in.service.js:307",
+        "Server/src/services/walk-in/walk-in.service.js:331"
+      ]
+    },
+    "Coach not found": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:882",
+        "Server/src/services/user/coach.service.js:1004"
+      ]
+    },
+    "Competition": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:572",
+        "Server/src/services/competition/competition.service.js:181",
+        "Server/src/services/competition/competition.service.js:251",
+        "Server/src/services/competition/competition.service.js:270",
+        "Server/src/services/competition/competition.service.js:308",
+        "Server/src/services/competition/competition.service.js:351",
+        "Server/src/services/competition/competition.service.js:426",
+        "Server/src/services/competition/competition.service.js:560",
+        "Server/src/services/competition/registration.service.js:55",
+        "Server/src/services/competition/registration.service.js:155",
+        "Server/src/services/competition/registration.service.js:252",
+        "Server/src/services/competition/registration.service.js:366",
+        "Server/src/services/competition/registration.service.js:440",
+        "Server/src/services/competition/registration.service.js:533",
+        "Server/src/services/competition/registration.service.js:589",
+        "Server/src/services/scoring/scoring.service.js:128",
+        "Server/src/services/scoring/scoring.service.js:1264",
+        "Server/src/services/scoring/scoring.service.js:1311",
+        "Server/src/services/scoring/scoring.service.js:1413",
+        "Server/src/services/superadmin/entries-admin.service.js:45",
+        "Server/src/services/user/admin.service.js:196",
+        "Server/src/services/user/admin.service.js:571",
+        "Server/src/services/user/admin.service.js:1755",
+        "Server/src/services/user/admin.service.js:1838",
+        "Server/src/services/user/coach.service.js:205",
+        "Server/src/services/user/coach.service.js:306",
+        "Server/src/services/user/coach.service.js:530",
+        "Server/src/services/user/coach.service.js:722",
+        "Server/src/services/user/judge-panel.service.js:749",
+        "Server/src/services/user/judge.service.js:310",
+        "Server/src/services/user/judge.service.js:360",
+        "Server/src/services/user/super-admin.service.js:530",
+        "Server/src/services/user/super-admin.service.js:577",
+        "Server/src/services/user/super-admin.service.js:599",
+        "Server/src/services/user/super-admin.service.js:638",
+        "Server/src/services/walk-in/walk-in.service.js:155"
+      ]
+    },
+    "Competition not found": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:789",
+        "Server/src/services/user/coach.service.js:1010",
+        "Server/src/services/user/coach.service.js:1135",
+        "Server/src/services/user/super-admin.service.js:835",
+        "Server/src/services/user/super-admin.service.js:1030"
+      ]
+    },
+    "Conflict": {
+      "sites": [
+        "Server/src/services/team/player-team-admin.service.js:251"
+      ]
+    },
+    "Deleted competition": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:564"
+      ]
+    },
+    "Final": {
+      "sites": [
+        "Server/src/services/scoring/qualification.service.js:383"
+      ]
+    },
+    "History entry": {
+      "sites": [
+        "Server/src/services/superadmin/correction.service.js:186"
+      ]
+    },
+    "Judge": {
+      "sites": [
+        "Server/src/services/user/judge-panel.service.js:390",
+        "Server/src/services/user/judge-panel.service.js:466",
+        "Server/src/services/user/judge-panel.service.js:746"
+      ]
+    },
+    "Judge account": {
+      "sites": [
+        "Server/src/services/user/judge-account.service.js:117",
+        "Server/src/services/user/judge-account.service.js:171",
+        "Server/src/services/user/judge-account.service.js:213",
+        "Server/src/services/user/judge-panel.service.js:266"
+      ]
+    },
+    "Lucky draw for this group": {
+      "sites": [
+        "Server/src/services/scoring/tie-break-draw.service.js:149"
+      ]
+    },
+    "Player": {
+      "sites": [
+        "Server/src/services/auth/account-request.service.js:250",
+        "Server/src/services/superadmin/entries-admin.service.js:133",
+        "Server/src/services/superadmin/entries-admin.service.js:182",
+        "Server/src/services/superadmin/team-admin.service.js:268",
+        "Server/src/services/team/player-team-admin.service.js:97",
+        "Server/src/services/team/player-team.service.js:75",
+        "Server/src/services/team/player-team.service.js:117",
+        "Server/src/services/team/team.service.js:404",
+        "Server/src/services/team/team.service.js:496",
+        "Server/src/services/user/admin.service.js:1400",
+        "Server/src/services/user/admin.service.js:1441",
+        "Server/src/services/user/admin.service.js:1493",
+        "Server/src/services/user/coach.service.js:561",
+        "Server/src/services/user/player.service.js:106",
+        "Server/src/services/user/player.service.js:125",
+        "Server/src/services/user/player.service.js:160",
+        "Server/src/services/user/player.service.js:272",
+        "Server/src/services/user/player.service.js:308",
+        "Server/src/services/user/player.service.js:388",
+        "Server/src/services/walk-in/walk-in.service.js:933"
+      ]
+    },
+    "Player score": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1124",
+        "Server/src/services/scoring/scoring.service.js:1169"
+      ]
+    },
+    "Registered team for this competition": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:539",
+        "Server/src/services/user/coach.service.js:731"
+      ]
+    },
+    "Registration": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:168"
+      ]
+    },
+    "Request": {
+      "sites": [
+        "Server/src/services/auth/account-request.service.js:195"
+      ]
+    },
+    "Score": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:219",
+        "Server/src/services/scoring/scoring.service.js:291",
+        "Server/src/services/scoring/scoring.service.js:349",
+        "Server/src/services/scoring/scoring.service.js:429",
+        "Server/src/services/scoring/scoring.service.js:465",
+        "Server/src/services/scoring/scoring.service.js:1050",
+        "Server/src/services/scoring/scoring.service.js:1117",
+        "Server/src/services/scoring/scoring.service.js:1163"
+      ]
+    },
+    "Score row": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:109"
+      ]
+    },
+    "Score sheet": {
+      "sites": [
+        "Server/src/services/superadmin/score-correction.service.js:107"
+      ]
+    },
+    "Squad entry": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:157",
+        "Server/src/services/superadmin/entries-admin.service.js:174"
+      ]
+    },
+    "Submitted teams for this category": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:300"
+      ]
+    },
+    "Super admin account": {
+      "sites": [
+        "Server/src/services/user/super-admin.service.js:197"
+      ]
+    },
+    "Team": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:65",
+        "Server/src/services/scoring/scoring.service.js:147",
+        "Server/src/services/superadmin/team-admin.service.js:48",
+        "Server/src/services/team/player-team-admin.service.js:173",
+        "Server/src/services/team/team.service.js:140",
+        "Server/src/services/team/team.service.js:223",
+        "Server/src/services/team/team.service.js:299",
+        "Server/src/services/team/team.service.js:390",
+        "Server/src/services/team/team.service.js:482",
+        "Server/src/services/team/team.service.js:636",
+        "Server/src/services/user/admin.service.js:893",
+        "Server/src/services/user/admin.service.js:1258",
+        "Server/src/services/user/admin.service.js:1307",
+        "Server/src/services/user/admin.service.js:1496",
+        "Server/src/services/user/coach.service.js:191",
+        "Server/src/services/user/coach.service.js:520",
+        "Server/src/services/user/coach.service.js:712",
+        "Server/src/services/user/coach.service.js:1467",
+        "Server/src/services/user/judge.service.js:406",
+        "Server/src/services/user/player.service.js:167",
+        "Server/src/services/user/player.service.js:325"
+      ]
+    },
+    "Team in this category": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:451"
+      ]
+    },
+    "Team not found": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:922",
+        "Server/src/services/user/coach.service.js:1024",
+        "Server/src/services/user/coach.service.js:1248",
+        "Server/src/services/user/super-admin.service.js:850"
+      ]
+    },
+    "Team not registered for this competition": {
+      "sites": [
+        "Server/src/services/user/coach.service.js:796",
+        "Server/src/services/user/coach.service.js:1018",
+        "Server/src/services/user/coach.service.js:1143",
+        "Server/src/services/user/super-admin.service.js:842"
+      ]
+    },
+    "Team registration": {
+      "sites": [
+        "Server/src/services/competition/registration.service.js:261",
+        "Server/src/services/competition/registration.service.js:315",
+        "Server/src/services/competition/registration.service.js:375",
+        "Server/src/services/competition/registration.service.js:449",
+        "Server/src/services/competition/registration.service.js:541"
+      ]
+    },
+    "This team has no entry in this competition": {
+      "sites": [
+        "Server/src/services/superadmin/entries-admin.service.js:51",
+        "Server/src/services/superadmin/entries-admin.service.js:143"
+      ]
+    },
+    "Transaction": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:2011"
+      ]
+    },
+    "User": {
+      "sites": [
+        "Server/src/services/auth/authentication.service.js:651"
+      ]
+    },
+    "Walk-in registration": {
+      "sites": [
+        "Server/src/services/walk-in/walk-in.service.js:165",
+        "Server/src/services/walk-in/walk-in.service.js:167",
+        "Server/src/services/walk-in/walk-in.service.js:584",
+        "Server/src/services/walk-in/walk-in.service.js:585"
+      ]
+    },
+    "{0} not found": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:439",
+        "Server/src/services/user/admin.service.js:497",
+        "Server/src/services/user/user.service.js:54",
+        "Server/src/services/user/user.service.js:106",
+        "Server/src/services/user/user.service.js:144",
+        "Server/src/services/user/user.service.js:192",
+        "Server/src/services/user/user.service.js:253",
+        "Server/src/services/user/user.service.js:301"
+      ]
+    }
+  },
+  "eventsOut": {
+    "age_group_ended": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1439"
+      ],
+      "literalSites": []
+    },
+    "age_group_started": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1801"
+      ],
+      "literalSites": []
+    },
+    "competition_created": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:142"
+      ],
+      "literalSites": []
+    },
+    "competition_status_updated": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:583"
+      ],
+      "literalSites": []
+    },
+    "competition_update": {
+      "sites": [
+        "Server/src/socket/handlers/notification.handler.js:148"
+      ],
+      "literalSites": []
+    },
+    "competition_updated": {
+      "sites": [
+        "Server/src/services/competition/competition.service.js:213"
+      ],
+      "literalSites": []
+    },
+    "edits_restored": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1207"
+      ],
+      "literalSites": [
+        "Server/src/services/scoring/scoring.service.js:1207"
+      ]
+    },
+    "error": {
+      "sites": [
+        "Server/src/socket/socket.manager.js:523",
+        "Server/src/socket/socket.manager.js:575"
+      ],
+      "literalSites": [
+        "Server/src/socket/socket.manager.js:523",
+        "Server/src/socket/socket.manager.js:575"
+      ]
+    },
+    "notification": {
+      "sites": [
+        "Server/src/socket/handlers/notification.handler.js:110",
+        "Server/src/socket/handlers/notification.handler.js:129"
+      ],
+      "literalSites": []
+    },
+    "performance_order_updated": {
+      "sites": [
+        "Server/src/services/competition/performance-order.service.js:553",
+        "Server/src/services/competition/performance-order.service.js:556"
+      ],
+      "literalSites": []
+    },
+    "player_status_updated": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1454"
+      ],
+      "literalSites": []
+    },
+    "player_update": {
+      "sites": [
+        "Server/src/socket/handlers/notification.handler.js:186"
+      ],
+      "literalSites": []
+    },
+    "room_joined": {
+      "sites": [
+        "Server/src/socket/handlers/notification.handler.js:76",
+        "Server/src/socket/handlers/scoring.handler.js:184",
+        "Server/src/socket/socket.manager.js:412"
+      ],
+      "literalSites": [
+        "Server/src/socket/socket.manager.js:412"
+      ]
+    },
+    "room_left": {
+      "sites": [
+        "Server/src/socket/handlers/notification.handler.js:98",
+        "Server/src/socket/handlers/scoring.handler.js:206"
+      ],
+      "literalSites": []
+    },
+    "score_deleted": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:307"
+      ],
+      "literalSites": []
+    },
+    "score_saved": {
+      "sites": [
+        "Server/src/socket/handlers/scoring.handler.js:301"
+      ],
+      "literalSites": []
+    },
+    "score_submitted": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:173"
+      ],
+      "literalSites": []
+    },
+    "score_updated": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:249",
+        "Server/src/services/scoring/scoring.service.js:2074",
+        "Server/src/socket/handlers/scoring.handler.js:294",
+        "Server/src/socket/handlers/scoring.handler.js:298"
+      ],
+      "literalSites": [
+        "Server/src/services/scoring/scoring.service.js:2074"
+      ]
+    },
+    "scores_locked": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1325"
+      ],
+      "literalSites": []
+    },
+    "scores_saved_notification": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1236",
+        "Server/src/services/scoring/scoring.service.js:2097",
+        "Server/src/socket/handlers/scoring.handler.js:444",
+        "Server/src/socket/handlers/scoring.handler.js:448"
+      ],
+      "literalSites": [
+        "Server/src/services/scoring/scoring.service.js:1236",
+        "Server/src/services/scoring/scoring.service.js:2097"
+      ]
+    },
+    "scores_unlocked": {
+      "sites": [
+        "Server/src/services/scoring/scoring.service.js:1280"
+      ],
+      "literalSites": []
+    },
+    "team_approved": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1275"
+      ],
+      "literalSites": []
+    },
+    "team_created": {
+      "sites": [
+        "Server/src/services/team/team.service.js:98"
+      ],
+      "literalSites": []
+    },
+    "team_player_added": {
+      "sites": [
+        "Server/src/services/team/team.service.js:444"
+      ],
+      "literalSites": []
+    },
+    "team_player_removed": {
+      "sites": [
+        "Server/src/services/team/team.service.js:531"
+      ],
+      "literalSites": []
+    },
+    "team_rejected": {
+      "sites": [
+        "Server/src/services/user/admin.service.js:1321"
+      ],
+      "literalSites": []
+    },
+    "team_update": {
+      "sites": [
+        "Server/src/socket/handlers/notification.handler.js:168"
+      ],
+      "literalSites": []
+    },
+    "team_updated": {
+      "sites": [
+        "Server/src/services/team/team.service.js:185"
+      ],
+      "literalSites": []
+    },
+    "time_recorded": {
+      "sites": [
+        "Server/src/socket/handlers/scoring.handler.js:387",
+        "Server/src/socket/handlers/scoring.handler.js:390",
+        "Server/src/socket/handlers/scoring.handler.js:393"
+      ],
+      "literalSites": []
+    }
+  },
+  "eventsIn": {
+    "disconnect": {
+      "sites": [
+        "Server/src/socket/socket.manager.js:246"
+      ]
+    }
+  },
+  "cookies": {
+    "csrf-token": {
+      "sites": [
+        "Server/src/middleware/csrf.middleware.js:182",
+        "Server/src/middleware/csrf.middleware.js:224"
+      ]
+    }
+  },
+  "headers": {
+    "authorization": {
+      "sites": [
+        "Server/src/controllers/auth.controller.js:186",
+        "Server/src/middleware/auth.middleware.js:65",
+        "Server/src/middleware/auth.middleware.js:149",
+        "Server/src/middleware/csrf.middleware.js:217",
+        "Server/src/middleware/metrics-auth.middleware.js:53",
+        "Server/src/middleware/security.middleware.js:303"
+      ]
+    },
+    "cache-control": {
+      "sites": [
+        "Server/src/controllers/coach-player.controller.js:19",
+        "Server/src/controllers/coach-player.controller.js:27",
+        "Server/src/controllers/public.controller.js:88",
+        "Server/src/controllers/walk-in.controller.js:29",
+        "Server/src/controllers/walk-in.controller.js:34",
+        "Server/src/controllers/walk-in.controller.js:65",
+        "Server/src/controllers/walk-in.controller.js:82",
+        "Server/src/infrastructure/createApp.js:75",
+        "Server/src/middleware/metrics-auth.middleware.js:47",
+        "Server/src/routes/health.routes.js:37"
+      ]
+    },
+    "content-disposition": {
+      "sites": [
+        "Server/src/controllers/walk-in.controller.js:46"
+      ]
+    },
+    "content-security-policy": {
+      "sites": [
+        "Server/src/routes/docs.routes.js:102"
+      ]
+    },
+    "content-type": {
+      "sites": [
+        "Server/src/controllers/walk-in.controller.js:45",
+        "Server/src/infrastructure/createApp.js:74"
+      ]
+    },
+    "cookie": {
+      "sites": [
+        "Server/src/socket/socket.manager.js:128",
+        "Server/src/socket/socket.manager.js:131"
+      ]
+    },
+    "etag": {
+      "sites": [
+        "Server/src/controllers/public.controller.js:87"
+      ]
+    },
+    "host": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:48"
+      ]
+    },
+    "if-none-match": {
+      "sites": [
+        "Server/src/controllers/public.controller.js:90"
+      ]
+    },
+    "origin": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:142",
+        "Server/src/infrastructure/createApp.js:221",
+        "Server/src/socket/socket.manager.js:71"
+      ]
+    },
+    "user-agent": {
+      "sites": [
+        "Server/src/middleware/audit.middleware.js:74",
+        "Server/src/middleware/audit.middleware.js:93",
+        "Server/src/middleware/correlation.middleware.js:70",
+        "Server/src/middleware/error.middleware.js:109"
+      ]
+    },
+    "www-authenticate": {
+      "sites": [
+        "Server/src/middleware/metrics-auth.middleware.js:65"
+      ]
+    },
+    "x-competition-id": {
+      "sites": [
+        "Server/src/controllers/coach-player.controller.js:39",
+        "Server/src/middleware/competition-context.middleware.js:53",
+        "Server/src/middleware/request-coalescing.middleware.js:101"
+      ]
+    },
+    "x-correlation-id": {
+      "sites": [
+        "Server/src/middleware/correlation.middleware.js:30",
+        "Server/src/middleware/correlation.middleware.js:43"
+      ]
+    },
+    "x-csrf-token": {
+      "sites": [
+        "Server/src/middleware/csrf.middleware.js:227"
+      ]
+    },
+    "x-forwarded-for": {
+      "sites": [
+        "Server/src/middleware/security.middleware.js:376"
+      ]
+    },
+    "x-forwarded-proto": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:47"
+      ]
+    },
+    "x-new-token": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:299"
+      ]
+    },
+    "x-razorpay-signature": {
+      "sites": [
+        "Server/src/controllers/payment.controller.js:26"
+      ]
+    },
+    "x-request-id": {
+      "sites": [
+        "Server/src/middleware/correlation.middleware.js:31"
+      ]
+    },
+    "x-user-type": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:97"
+      ]
+    }
+  },
+  "env": {
+    "ACCOUNT_RATE_LIMIT_ENABLED": {
+      "sites": [
+        "Server/src/utils/security/login-security.util.js:88"
+      ]
+    },
+    "ALLOW_LOSSY_SCORE_MIGRATION": {
+      "sites": [
+        "Server/src/migrations/003_score_competition_type_identity.js:101"
+      ]
+    },
+    "ALLOW_LOSSY_TRANSACTION_DEDUP": {
+      "sites": [
+        "Server/src/migrations/011_transaction_webhook_idempotency.js:71"
+      ]
+    },
+    "ALLOW_TEST_TOKEN": {
+      "sites": [
+        "Server/src/middleware/auth.middleware.js:93"
+      ]
+    },
+    "API_PUBLIC_URL": {
+      "sites": [
+        "Server/src/routes/docs.routes.js:77"
+      ]
+    },
+    "CLIENT_URL": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:229"
+      ]
+    },
+    "ENABLE_API_DOCS": {
+      "sites": [
+        "Server/src/routes/index.js:101"
+      ]
+    },
+    "ENABLE_DEBUG_ROUTES": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:215"
+      ]
+    },
+    "JWT_SECRET": {
+      "sites": [
+        "Server/src/middleware/csrf.middleware.js:102"
+      ]
+    },
+    "LOG_DIR": {
+      "sites": [
+        "Server/src/infrastructure/logger.js:92"
+      ]
+    },
+    "NODE_ENV": {
+      "sites": [
+        "Server/src/infrastructure/createApp.js:39",
+        "Server/src/infrastructure/createApp.js:187",
+        "Server/src/infrastructure/createApp.js:215",
+        "Server/src/infrastructure/createApp.js:228",
+        "Server/src/infrastructure/health-monitor.js:513",
+        "Server/src/middleware/auth.middleware.js:92",
+        "Server/src/middleware/csrf.middleware.js:183",
+        "Server/src/middleware/error.middleware.js:125",
+        "Server/src/routes/index.js:101"
+      ]
+    }
+  }
+}

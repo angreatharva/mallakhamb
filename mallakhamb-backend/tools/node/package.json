@@ -1,0 +1,20 @@
+{
+  "name": "mallakhamb-backend-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Port kit for the Spring Boot migration: generators that read the live Node backend (docs/springboot-migration/07).",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "gen:enums": "node gen/gen-enums.js",
+    "gen:catalogues": "node gen/gen-catalogues.js",
+    "gen": "npm run gen:enums && npm run gen:catalogues",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.26.0",
+    "@babel/traverse": "^7.26.0"
+  }
+}
