@@ -17,6 +17,7 @@
     "golden:full": "node golden/generate.js --full",
     "twin:record": "node twinrun/record.js",
     "twin:replay": "node twinrun/replay.js",
+    "twin:coverage": "node twinrun/coverage.js",
     "test": "node --test"
   },
   "dependencies": {

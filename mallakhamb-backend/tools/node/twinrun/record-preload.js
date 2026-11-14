@@ -59,7 +59,26 @@ const headersOf = (headers) => {
   return out;
 };
 
-globalThis.fetch = async function recordingFetch(input, init = {}) {
+/** Text bodies are kept as text; anything else (a PDF, an image) as base64, so no byte is lost. */
+async function bodyOf(response) {
+  const type = response.headers.get('content-type') || '';
+  if (type === '' || /json|text|xml|javascript|urlencoded/.test(type)) return { body: await response.text() };
+  return { body: null, bodyBase64: Buffer.from(await response.arrayBuffer()).toString('base64') };
+}
+
+/**
+ * One request at a time. A load script (meetDay.js) sends requests concurrently, and the order the
+ * API handles them in would then be chance. Queued, the recorded order is the order they were served
+ * in, which a replay can repeat.
+ */
+let queue = Promise.resolve();
+globalThis.fetch = function queuedFetch(input, init) {
+  const result = queue.then(() => recordingFetch(input, init));
+  queue = result.catch(() => {});
+  return result;
+};
+
+async function recordingFetch(input, init = {}) {
   await snapshotOnce();
   const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
   const entry = {
@@ -80,8 +99,8 @@ globalThis.fetch = async function recordingFetch(input, init = {}) {
     status: response.status,
     headers,
     setCookie: response.headers.getSetCookie ? response.headers.getSetCookie() : [],
-    body: await response.clone().text(),
+    ...(await bodyOf(response.clone())),
   };
   fs.appendFileSync(requestsFile, `${JSON.stringify(entry)}\n`);
   return response;
-};
+}

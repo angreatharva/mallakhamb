@@ -193,7 +193,8 @@ class Comparison {
    */
   response(operation, recorded, replayed) {
     const diffs = [];
-    const rule = invariants.operations[operation] || {};
+    // /api/v1 is an alias of /api: one rule covers both.
+    const rule = invariants.operations[operation.replace(' /api/v1/', ' /api/')] || {};
     const statusAllowed = rule.statuses && rule.statuses.includes(recorded.status) && rule.statuses.includes(replayed.status);
     if (recorded.status !== replayed.status && !statusAllowed) diffs.push(`status: ${recorded.status} vs ${replayed.status}`);
 
@@ -209,6 +210,17 @@ class Comparison {
       else if (a !== undefined && header === 'x-new-token') this.value(a, b, ['header', header], diffs);
     }
     this.cookies(recorded.setCookie || [], replayed.setCookie || [], diffs);
+
+    if (recorded.bodyBase64 !== undefined || replayed.bodyBase64 !== undefined) {
+      const bytes = (side) => (side.bodyBase64 === undefined ? null : Buffer.from(side.bodyBase64, 'base64'));
+      const a = bytes(recorded);
+      const b = bytes(replayed);
+      if (!a || !b) diffs.push('body: binary on one side only');
+      else if (rule.body === 'pdf') {
+        if (!(a.subarray(0, 5).toString() === '%PDF-' && b.subarray(0, 5).toString() === '%PDF-')) diffs.push('body: not a PDF on both sides');
+      } else if (!a.equals(b)) diffs.push(`body: binary differs (${a.length} vs ${b.length} bytes)`);
+      return diffs;
+    }
 
     const parse = (text) => {
       try {

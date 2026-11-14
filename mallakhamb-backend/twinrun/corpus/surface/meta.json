@@ -1,0 +1,14 @@
+{
+  "corpus": "surface",
+  "startedAt": "2026-11-14T11:41:42.243Z",
+  "snapshot": {
+    "admins": 2,
+    "coaches": 6,
+    "competitions": 1,
+    "judgeassignments": 216,
+    "judges": 6,
+    "players": 24,
+    "scores": 24,
+    "teams": 6
+  }
+}

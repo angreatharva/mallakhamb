@@ -121,8 +121,7 @@ test('only a twin test database on this machine is accepted', () => {
 });
 
 test('every recorded response matches itself, and stops matching when one value changes', () => {
-  const file = path.resolve(__dirname, '..', '..', '..', 'twinrun', 'corpus', 'testapi', 'requests.jsonl');
-  const entries = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  const entries = require('../twinrun/lib/corpus').readRequests('testapi');
   assert.ok(entries.length > 100);
   let mutated = 0;
   for (const entry of entries) {
@@ -135,4 +134,14 @@ test('every recorded response matches itself, and stops matching when one value 
     mutated++;
   }
   assert.ok(mutated > 100);
+});
+
+test('the corpora ask every operation in the API spec, and the coverage report is current', () => {
+  const { execFileSync } = require('node:child_process');
+  const report = path.resolve(__dirname, '..', '..', '..', 'generated', 'TWINRUN-COVERAGE.md');
+  const committed = fs.readFileSync(report, 'utf8');
+  const output = execFileSync(process.execPath, [path.join(__dirname, '..', 'twinrun', 'coverage.js')], { encoding: 'utf8' });
+  assert.equal(fs.readFileSync(report, 'utf8'), committed, 'TWINRUN-COVERAGE.md is stale: run "npm run twin:coverage"');
+  const [, asked, total] = /coverage: (\d+)\/(\d+) operations asked/.exec(output);
+  assert.equal(asked, total, 'an operation in the spec has no recorded request');
 });

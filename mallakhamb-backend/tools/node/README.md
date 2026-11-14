@@ -28,8 +28,9 @@ cd mallakhamb-backend/tools/node && npm ci
 | `npm run golden` | Writes the committed golden vectors to `golden/cop-2022-11/` |
 | `npm run golden:verify` | Replays the committed vectors against Node; fails on any difference |
 | `npm run golden:full` | Writes the 100,000-per-engine set to `build/golden-full/` (not committed) and records its hashes in `manifest.full.json` |
-| `npm run twin:record -- testapi` | Records a corpus from Node: every request of a Server harness script and Node's answer, the starting database, and the end state |
-| `npm run twin:replay -- testapi` | Restores the starting database, replays the corpus against Node and compares responses and stored data; exits 1 on any difference |
+| `npm run twin:coverage` | Writes `generated/TWINRUN-COVERAGE.md`: which of the 220 operations the corpora ask, and with which answers |
+| `npm run twin:record -- <testapi|meetday|surface>` | Records a corpus from Node: every request of a Server harness script and Node's answer, the starting database, and the end state |
+| `npm run twin:replay -- <corpus>` | Restores the starting database, replays the corpus against Node and compares responses and stored data; exits 1 on any difference |
 | `npm test` | Fails if the committed reports are stale, an enum field has no concept, or a golden vector no longer replays |
 
 ## Files
@@ -45,6 +46,8 @@ cd mallakhamb-backend/tools/node && npm ci
 | `golden/lib/codec.js` | JSON encoding for `undefined`, `NaN`, `-0`, `Infinity` and dates |
 | `golden/lib/rng.js` | The seeded random source |
 | `twinrun/record.js`, `record-preload.js` | Run a Server harness script under a preload that wraps `fetch`; nothing in `Server/` changes |
+| `twinrun/drivers/surface.js` | Asks every operation in `openapi.json` as an anonymous caller and as each role |
+| `twinrun/coverage.js`, `lib/corpus.js` | Coverage against the API spec; reading and gzipping a corpus |
 | `twinrun/replay.js` | Replays a corpus against Node (started in-process) or against a running server (`--url`, for Java) |
 | `twinrun/lib/compare.js` | Response comparison: ids, tokens and timestamps normalised, everything else must be equal |
 | `twinrun/lib/dbdiff.js` | Compares the stored data after a replay with the recording's, types included |

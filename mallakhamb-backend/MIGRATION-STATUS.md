@@ -31,7 +31,7 @@ Tracking file for the Spring Boot migration (plan:
 | Publish the drift report | **Done**, decisions open | See "Open decisions" below |
 | Port kit: `context-pack` | Not started | Needs the call tracer and the corpus |
 | Golden engine vectors (`tools/node/golden`) | **Done** | `golden/cop-2022-11/`: 26,178 committed cases in 96 functions; the 1,001,800-case set is rebuilt on demand and its hashes are committed |
-| `twinrun` and the HTTP corpus | **Harness done; corpus 1 of 5 sources** | Recorder, replayer, response and stored-data comparison work. Recorded so far: `testapi` (137 requests, 92 operations). See "Twin-run" below |
+| `twinrun` and the HTTP corpus | **Harness done; corpus 3 of 5 sources** | 2,741 requests; all 220 operations asked, 123 with a working answer. See "Twin-run" below |
 | Socket recorder and recordings | Not started | |
 | Call tracer (DI-container proxy) | Not started | |
 | Contract capture (headers, cookie attributes, CSRF format) | Partly | Every recorded response keeps all its headers and `Set-Cookie` lines (`twinrun/corpus/*/requests.jsonl`). The summary files under `contract/` are not written yet |
@@ -100,31 +100,50 @@ Still open in Stage 1 for the engines: the rules that live inside services with 
 
 `tools/node/twinrun` records what Node answers and replays it. Today it replays against Node; in Stage 2 the same command points at Java (`--url`).
 
-| Check | Result |
+| Corpus | Source | Requests | Operations | Replay against Node |
+|---|---|---|---|---|
+| `testapi` | `Server/scripts/perf/testApi.js`: the main flows in competition order | 137 | 88 | all match, stored data matches |
+| `meetday` | `Server/scripts/perf/meetDay.js`: 4 panels × 7 seats polling, 57 judge slips, spectators | 889 | 12 | all match, stored data matches |
+| `surface` | `twinrun/drivers/surface.js`: every operation in `openapi.json`, asked by an anonymous caller and by each of the five roles | 1,715 | 220 | all match, stored data matches |
+
+Every corpus was replayed at least twice with no difference. Coverage, from `generated/TWINRUN-COVERAGE.md`:
+
+| Measure | Count |
 |---|---|
-| Corpus `testapi` recorded from `Server/scripts/perf/testApi.js` | 137 requests, 92 distinct operations; the harness itself reported 138 pass, 0 fail, 3 skipped |
-| Replay against Node, run repeatedly | 137/137 requests match, 92/92 operations green, stored data matches, every run |
-| Comparator fails when it should | 11 tests: a changed string, number, type, array order, extra or missing field, key order, status, header, cookie attribute, token claim, stored type, missing `__v`, unhashed password |
+| Operations with at least one recorded request | **220 of 220** |
+| Operations with a successful (2xx) answer recorded | **123 of 220** |
+| Write operations with a successful answer recorded | **32 of 122** |
+| Answers recorded | 200 ×1,280, 201 ×5, 400 ×258, 401 ×350, 403 ×754, 404 ×89, 409 ×1, 422 ×1 |
+
+So the refusals are well covered (who gets 401, 403, 404, 400 on every route, for every role), and the working paths of 97 operations are not yet. Those are mostly super admin corrections (22), the walk-in desk (16), coach registration and payment (14), and running order writes (7).
 
 How a replay stays comparable:
 
 - **Same start:** the database is restored from the corpus snapshot, and the clock starts at the recorded instant (only `Date` is shifted).
+- **Same order:** the recorder sends one request at a time, so a concurrent load script is recorded in the order the API served it.
 - **Normalised, nothing else:** generated ids (mapped one-to-one), tokens (claims compared), timestamps.
-- **Invariants** (`twinrun/invariants.json`, each with a reason): `csrfToken`, `correlationId`, the two health endpoints (they report the process's own memory), and stored `password`, `tokenHash`, `family`.
-- **The lot draw** is random, and everything after it follows its order. The replayer checks the rule (same teams and athletes, lots 1..N) and then sets the replay's stored order to the recorded one. No random source is shared between the two sides.
+- **Invariants** (`twinrun/invariants.json`, each with a reason): `csrfToken`, `correlationId`, `uptime`, `stack` (sent only in development mode), the two health endpoints, the walk-in form PDF (checked to be a PDF), and stored `password`, `tokenHash`, `family`.
+- **The lot draw** is random, and everything after it follows its order. The replayer checks the rule (same teams and athletes, lots 1..N) and then sets the replay's stored order to the recorded one.
 
-Safety: `Server/.env` points at the Atlas database and a real mail provider. The twin-run sets its own environment first, refuses anything but `mongodb://127.0.0.1/twin_test_*`, uses twin-only secrets, and turns mail, Razorpay and OCR off. The recorded corpus was checked for real keys and addresses: none.
+Found while recording:
+
+- `testApi.js` asks three routes that are not in the API spec: `GET /api/admin/dashboard/competition/:id`, `GET /api/judge/scores/my`, `GET /api/judge/teams`. They are recorded with what Node answers.
+- In development mode Node sends a JavaScript stack trace in error bodies. The harness runs in that mode, so the corpus has them; they are an invariant.
+- No request in any corpus got a 5xx.
+
+Safety: `Server/.env` points at the Atlas database and a real mail provider. The twin-run sets its own environment first, refuses anything but `mongodb://127.0.0.1/twin_test_*`, uses twin-only secrets, and turns mail, Razorpay and OCR off. The recorded corpora were checked for real keys and addresses: none.
 
 Not done yet:
 
 | Item | State |
 |---|---|
-| Corpus from `setup:api`, `meetDay.js`, `openapi.json` (one request per operation and response code), the security cases | Not recorded. 92 of the 220 operations are covered so far |
+| Working paths of the 97 operations above | Need flows with valid data: the `setup:api` chain (about 25 minutes, several processes, some steps write to the database directly), and hand-written flows for corrections, the walk-in desk and payments |
+| The `tests/security` scenarios as raw requests | Not recorded. The `surface` corpus covers role refusals on every route, but not the scenario-specific cases (another coach's team, another meet's admin, PII in a response) |
+| Multipart uploads (walk-in forms) | The recorder notes them but can't replay them yet |
 | Stored-data check after **each** write | Done once, at the end of the run. Per-write comparison needs both sides running together (Stage 2) |
 | `allowed-diffs` file | Not created; it starts when there is a Java side to differ |
 | Call tracer and `context-pack` | Not started |
 | Socket recorder | Not started |
-| Multipart uploads (walk-in forms) | The recorder notes them but can't replay them yet; none in `testapi` |
 
 ## Open decisions (lead and owner, before milestone 2a)
 

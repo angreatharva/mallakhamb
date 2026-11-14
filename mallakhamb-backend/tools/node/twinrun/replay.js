@@ -46,6 +46,13 @@ function parseArgs(argv) {
 /** `GET /api/teams/6af8…/players?page=2` → `GET /api/teams/:id/players` */
 const operationOf = (request) => `${request.method} ${request.path.split('?')[0].replace(/[0-9a-f]{24}/g, ':id')}`;
 
+/** Same split as the recorder: text as text, anything else as base64. */
+async function bodyOf(response) {
+  const type = response.headers.get('content-type') || '';
+  if (type === '' || /json|text|xml|javascript|urlencoded/.test(type)) return { body: await response.text() };
+  return { body: null, bodyBase64: Buffer.from(await response.arrayBuffer()).toString('base64') };
+}
+
 async function send(baseUrl, request, comparison) {
   const headers = { ...request.headers };
   for (const name of REWRITTEN_HEADERS) if (headers[name]) headers[name] = comparison.rewrite(headers[name]);
@@ -63,7 +70,7 @@ async function send(baseUrl, request, comparison) {
     status: response.status,
     headers: responseHeaders,
     setCookie: response.headers.getSetCookie ? response.headers.getSetCookie() : [],
-    body: await response.text(),
+    ...(await bodyOf(response)),
   };
 }
 
@@ -71,7 +78,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const dir = corpusDir(options.corpus);
   const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
-  const entries = fs.readFileSync(path.join(dir, 'requests.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  const entries = require('./lib/corpus').readRequests(options.corpus);
   assertLocal(dbUri(options.db));
 
   if (options.restore) await restore(path.join(dir, 'snapshot.ejson.gz'), options.db);

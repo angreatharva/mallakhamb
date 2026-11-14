@@ -7,6 +7,12 @@
     },
     "correlationId": {
       "reason": "Random per-request id in error bodies"
+    },
+    "uptime": {
+      "reason": "Seconds since this process started"
+    },
+    "stack": {
+      "reason": "A JavaScript stack trace, sent in error bodies only when NODE_ENV is development (the harness runs that way). File paths and line numbers; the frames vary between runs"
     }
   },
   "operations": {
@@ -25,6 +31,14 @@
     "POST /api/admin/lots/draw": {
       "align": "lot-draw",
       "reason": "The draw is random (crypto.randomInt). Checked: same teams and athletes, lots 1..N. Then the replay's stored order is set to the recorded one, so later requests see the same running order"
+    },
+    "GET /api/desk/form": {
+      "body": "pdf",
+      "reason": "A generated PDF carries a random document id and a creation time, and the Java side will build it with another library. Checked: status, headers, and that the body is a PDF"
+    },
+    "POST /api/superadmin/lots/draw": {
+      "align": "lot-draw",
+      "reason": "The super admin alias of the lot draw; same rule"
     }
   },
   "storedKeys": {

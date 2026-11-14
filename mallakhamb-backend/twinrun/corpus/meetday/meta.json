@@ -1,0 +1,14 @@
+{
+  "corpus": "meetday",
+  "startedAt": "2026-11-14T11:39:01.643Z",
+  "snapshot": {
+    "admins": 2,
+    "coaches": 8,
+    "competitions": 1,
+    "judgeassignments": 216,
+    "judges": 6,
+    "players": 32,
+    "scores": 0,
+    "teams": 8
+  }
+}
