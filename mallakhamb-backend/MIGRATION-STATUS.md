@@ -72,9 +72,12 @@ Proposals are in the reports; none changes a stored or wire value.
 
 ## Blockers
 
-| Blocker | Needed for | Who |
-|---|---|---|
-| JDK 25 is not installed on the dev machine (only JDK 17) | Any Gradle build: Stage 2 onward | Owner approves the install |
+None.
+
+Resolved: JDK 25 (Eclipse Temurin 25.0.5+8) installed on the dev machine on 2026-11-14 at
+`C:Program FilesEclipse Adoptiumjdk-25.0.5.8-hotspot`. `gradlew build` of the
+unmodified Initializr project passes on it (compile, context-load test, `bootWar`).
+JDK 17 is still installed; Gradle picks 25 through the toolchain setting in `build.gradle`.
 
 ## Module table
 
