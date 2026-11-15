@@ -239,6 +239,37 @@ const TimeLockButton = ({ locked, name, onToggle, disabled }) => {
   );
 };
 
+/*
+ * "Mark Absent" for one athlete on the Scorer's sheet (user rule 2026-11-16:
+ * the Scorer, like the Senior Judge, can mark an athlete who did not perform).
+ * The caller confirms and saves; an athlete already absent shows a tag instead.
+ */
+const AbsentButton = ({ name, absent, onMark, disabled }) => (absent ? (
+  <span data-testid="absent-tag" style={{
+    display: 'inline-flex', alignItems: 'center', minHeight: 24, padding: '2px 8px', marginTop: 6,
+    borderRadius: 'var(--radius-control)', fontSize: 11, fontWeight: 700,
+    border: '1px solid rgb(var(--danger-fg) / 0.45)', color: 'rgb(var(--danger-fg))',
+  }}>
+    Absent
+  </span>
+) : (
+  <button
+    type="button"
+    onClick={onMark}
+    disabled={disabled}
+    aria-label={`Mark ${name} absent`}
+    className="tap-safe disabled:opacity-40 disabled:cursor-not-allowed"
+    style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 32,
+      padding: '4px 8px', marginTop: 6, borderRadius: 'var(--radius-control)', fontSize: 11, fontWeight: 700,
+      whiteSpace: 'nowrap', border: '1px solid rgb(var(--danger-fg) / 0.45)',
+      background: 'rgb(var(--danger-fg) / 0.08)', color: 'rgb(var(--danger-fg))',
+    }}
+  >
+    Mark Absent
+  </button>
+));
+
 // ─── ResponsiveScoringTable ───────────────────────────────────────────────────
 //
 // `editableFields` (optional): the only fields this viewer may type in. The
@@ -247,6 +278,9 @@ const TimeLockButton = ({ locked, name, onToggle, disabled }) => {
 //
 // `lockedRows` / `onToggleRowLock` (optional): per-athlete time lock, see
 // TimeLockButton. Without `onToggleRowLock` no lock button is drawn.
+// `onMarkAbsent(player)` (optional): a "Mark Absent" button under each
+// athlete's name (the Scorer's sheet); `canMarkAbsent(player)` may hide it per
+// row. An athlete whose score row is absent shows an "Absent" tag.
 export const ResponsiveScoringTable = ({
   players = [],
   scores = {},
@@ -257,6 +291,8 @@ export const ResponsiveScoringTable = ({
   editableFields,
   lockedRows,
   onToggleRowLock,
+  onMarkAbsent,
+  canMarkAbsent,
   className = '',
   ...props
 }) => {
@@ -275,6 +311,15 @@ export const ResponsiveScoringTable = ({
       disabled={isLocked}
     />
   ) : null);
+  const absentAction = (player) => {
+    const absent = Boolean(scores[player.id]?.isAbsent);
+    if (!onMarkAbsent && !absent) return null;
+    if (!absent && canMarkAbsent && !canMarkAbsent(player)) return null;
+    return (
+      <AbsentButton name={player.name} absent={absent} disabled={isLocked}
+        onMark={() => onMarkAbsent?.(player)} />
+    );
+  };
   /*
    * Cards below 1024, the table from 1024 up. Measured (e2e/responsive-score-
    * sheet.spec.js): at 768 the eleven divided columns leave every field too
@@ -314,7 +359,8 @@ export const ResponsiveScoringTable = ({
   const panelSize = seatedPanelSize || judges.length || undefined;
   // Until every seated judge has marked there is no average to show: the
   // server stores none either (see panelMarksComplete).
-  const marksIn = (playerId) => panelMarksComplete(scores[playerId] || {}, panelSize);
+  // An absent athlete (every mark 0) is complete: average and final read 0.00.
+  const marksIn = (playerId) => Boolean(scores[playerId]?.isAbsent) || panelMarksComplete(scores[playerId] || {}, panelSize);
   const WAITING = '—';
 
   if (useCards) {
@@ -328,6 +374,7 @@ export const ResponsiveScoringTable = ({
               <div style={{ borderBottom: `1px solid ${border}`, paddingBottom: 12, marginBottom: 14 }}>
                 <p style={{ fontWeight: 700, color: textPrimary, fontSize: 15 }}>{player.name}</p>
                 {player.teamName && <p style={{ fontSize: 12, color: textSecondary, marginTop: 2 }}>{player.teamName}</p>}
+                {absentAction(player)}
               </div>
 
               {/* Time */}
@@ -494,6 +541,7 @@ export const ResponsiveScoringTable = ({
                 <td style={{ padding: '12px 8px', overflowWrap: 'break-word' }}>
                   <p style={{ fontWeight: 600, color: textPrimary, fontSize: 13 }}>{player.name}</p>
                   {player.teamName && <p style={{ fontSize: 11, color: textSecondary }}>{player.teamName}</p>}
+                  {absentAction(player)}
                 </td>
                 <td style={{ padding: '12px 8px' }}>
                   {/* Field over button: the column is one equal share wide. */}

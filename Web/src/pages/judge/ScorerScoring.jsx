@@ -236,6 +236,8 @@ const ScorerScoring = () => {
   const [competitionType, setCompetitionType] = useState('Competition I');
   const [calculatedScores, setCalculatedScores] = useState([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  // The athlete the Scorer is about to mark absent (confirm dialog), or null.
+  const [absentTarget, setAbsentTarget] = useState(null);
   const [confirmDialogConfig, setConfirmDialogConfig] = useState({ title: '', message: '', shouldLock: false });
 
   // Get judge info from storage
@@ -705,12 +707,51 @@ const ScorerScoring = () => {
   }), [judgeInfo, selectedGender, selectedAgeGroup, selectedCompetitionType]);
   const runningOrder = useRunningOrder(orderCategory);
   const orderedPlayers = useOrderedTeamRows(players, selectedTeam?._id, runningOrder);
+  // An absent athlete is tagged "Absent" by the table itself (onMarkAbsent).
   const tableRows = useMemo(
-    () => orderedPlayers.map(({ teamName: _teamName, lotNo: _lot, runningPosition: _pos, ...row }) => (
-      scores[row.id]?.isAbsent ? { ...row, name: `${row.name} (Absent)` } : row
-    )),
-    [orderedPlayers, scores],
+    () => orderedPlayers.map(({ teamName: _teamName, lotNo: _lot, runningPosition: _pos, ...row }) => row),
+    [orderedPlayers],
   );
+
+  /*
+   * ABSENT from the Scorer's sheet (user rule 2026-11-16): the Scorer, like
+   * the Senior Judge, marks an athlete who did not perform. The server
+   * overrides every scoring rule and saves 0.00 for every judge, time 0, no
+   * deduction, final score 0, finalized for the whole panel. Offered only
+   * while the Senior Judge has no mark on the athlete (a final panel score is
+   * the admin's to reopen). Throws so the confirm dialog stays open and says why.
+   */
+  const canMarkAbsent = (row) => !readOnly && !(parseFloat(scores[row.id]?.seniorJudge) > 0);
+  const markAbsent = async () => {
+    const row = absentTarget;
+    if (!row) return;
+    try {
+      await scorerAPI.saveScores({
+        markAbsent: true,
+        playerId: row.playerId,
+        playerName: row.name,
+        teamId: selectedTeam._id,
+        gender: selectedGender.value,
+        ageGroup: selectedAgeGroup.value,
+        competitionType: selectedCompetitionType?.value || competitionType,
+        competitionId: judgeInfo?.competition?._id || judgeInfo?.competition,
+        apparatus: row.apparatus,
+      });
+    } catch (error) {
+      throw new Error(error.response?.data?.error?.message || 'Could not mark the athlete absent. Please try again.');
+    }
+    setScores((prev) => ({
+      ...prev,
+      [row.id]: {
+        ...(prev[row.id] || {}),
+        isAbsent: true, time: '0', seniorJudge: '0', judge1: '0', judge2: '0', judge3: '0', judge4: '0',
+        deduction: '0', otherDeduction: '0',
+      },
+    }));
+    setAbsentTarget(null);
+    toast.success(`${row.name} marked absent: 0.00 saved for the whole panel`);
+    fetchScoringData?.();
+  };
 
   const calculateFinalScore = (ps) => {
     const r = panelAverage(ps);
@@ -1101,7 +1142,8 @@ const ScorerScoring = () => {
                 the Chief's copy on a 4-judge panel, and the size is what picks
                 the averaging rule. */}
             <ResponsiveScoringTable players={tableRows} scores={scores} judges={sheetSeats} panelSize={seatedPanelSize} onScoreChange={handleScoreChange} isLocked={readOnly}
-              editableFields={SCORER_EDITABLE_FIELDS} lockedRows={timeLocks} onToggleRowLock={toggleTimeLock} />
+              editableFields={SCORER_EDITABLE_FIELDS} lockedRows={timeLocks} onToggleRowLock={toggleTimeLock}
+              onMarkAbsent={(row) => setAbsentTarget(row)} canMarkAbsent={canMarkAbsent} />
           </div>
         ) : (
           <div className="rounded-2xl border p-8 text-center bg-surface border-line">
@@ -1165,6 +1207,17 @@ const ScorerScoring = () => {
         judgeNameMap={judgeNameMap}
         viewer="scorer"
         athleteName={shownToleranceHit?.name}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(absentTarget)}
+        onClose={() => setAbsentTarget(null)}
+        onConfirm={markAbsent}
+        title={`Mark ${absentTarget?.name || 'this athlete'} absent?`}
+        message={'Every judge\'s score, the time and every deduction are saved as 0, and the final score is 0.00.\nThe athlete is locked for the whole panel; only the admin can reopen them.'}
+        confirmText="Mark Absent"
+        cancelText="Cancel"
+        variant="danger"
       />
 
       <ConfirmDialog

@@ -477,18 +477,18 @@ function createAdminController(container) {
       }
 
       /*
-       * ABSENT (user rule 2026-11-15): the Senior Judge (or an admin) marks
-       * an athlete who did not perform. It overrides every scoring rule - the
-       * server writes the whole row itself (all marks, time, deductions and
-       * the final score 0, finalized for every judge); nothing else from the
-       * body is used. Never from a Scorer or another panel judge.
+       * ABSENT (user rules 2026-11-15, 2026-11-16): the Senior Judge, the
+       * Scorer or an admin marks an athlete who did not perform. It overrides
+       * every scoring rule - the server writes the whole row itself (all
+       * marks, time, deductions and the final score 0, finalized for every
+       * judge); nothing else from the body is used. Never from Judges 1-4.
        */
       scoreData.markAbsent = false;
       if (req.body.markAbsent === true) {
-        if (!isSeniorJudge && !isAdmin) {
+        if (!isSeniorJudge && !isScorer && !isAdmin) {
           return res.status(403).json({
             success: false,
-            error: { message: 'Only the Senior Judge can mark an athlete absent', code: 'FORBIDDEN' },
+            error: { message: 'Only the Senior Judge or the Scorer can mark an athlete absent', code: 'FORBIDDEN' },
           });
         }
         if (!req.body.playerId) {
@@ -598,7 +598,10 @@ function createAdminController(container) {
       // the Senior Judge's Final Submit. Scorers and Admins work downstream of that
       // lock — they record time/deductions/remarks and lock the sheet — so a finalized
       // player must not block them. (isScorer / isAdmin are resolved above.)
-      scoreData.allowFinalizedEdit = isScorer || isAdmin;
+      // ...except an absent mark: like the Senior Judge, a Scorer cannot mark
+      // absent an athlete whose panel score is already final - the admin
+      // unlocks the athlete first.
+      scoreData.allowFinalizedEdit = isAdmin || (isScorer && !scoreData.markAbsent);
 
       // An ADMIN's Lock & Submit publishes the sheet. "Unlock all for judges"
       // clears every athlete's Final Submit (user rule 2026-11-08), so an
@@ -616,7 +619,8 @@ function createAdminController(container) {
       // deductions stay as stored (user rule 2026-11-08, see
       // ScoringService.saveScores). Always assigned, so a body cannot carry
       // its own value; an admin keeps full control of the sheet.
-      scoreData.scorerTimeOnly = isScorer && !isAdmin;
+      // An absent mark is written whole by the server, not a time edit.
+      scoreData.scorerTimeOnly = isScorer && !isAdmin && !scoreData.markAbsent;
 
       // "Edit My Score" is limited to SLIP_EDIT_LIMIT per slip for every panel
       // judge (user rule 2026-11-09). Only their own single-slip saves count;

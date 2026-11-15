@@ -258,3 +258,51 @@ describe('the sheet waits for every seated judge', () => {
     expect(screen.getByTestId('waiting-for-marks')).toBeTruthy();
   });
 });
+
+// User rule 2026-11-16: the Scorer, like the Senior Judge, can mark an athlete
+// who did not perform absent, from a button on the athlete's row.
+describe('Mark Absent on the Scorer sheet', () => {
+  const absentSheet = (marks, props = {}) => render(
+    <ResponsiveScoringTable
+      players={[PLAYER]}
+      scores={{ [PLAYER.id]: marks }}
+      judges={mirrorChiefSeat(FOUR)}
+      panelSize={4}
+      onScoreChange={() => {}}
+      {...props}
+    />
+  );
+
+  it.each([false, true])('offers the button and hands back the athlete (mobile: %s)', (isMobile) => {
+    responsive.isMobile = isMobile;
+    const onMarkAbsent = vi.fn();
+    absentSheet({ ...MARKS, seniorJudge: '' }, { onMarkAbsent });
+    fireEvent.click(screen.getByRole('button', { name: 'Mark Atharva Angre absent' }));
+    expect(onMarkAbsent).toHaveBeenCalledWith(PLAYER);
+  });
+
+  it('draws no button without onMarkAbsent (the admin sheet)', () => {
+    absentSheet(MARKS);
+    expect(screen.queryByRole('button', { name: /absent/i })).toBeNull();
+  });
+
+  it('hides the button where the caller says no (the Senior Judge has marked)', () => {
+    absentSheet(MARKS, { onMarkAbsent: vi.fn(), canMarkAbsent: () => false });
+    expect(screen.queryByRole('button', { name: /absent/i })).toBeNull();
+  });
+
+  it('shows an Absent tag instead of the button once the athlete is absent', () => {
+    const zero = { time: '0', seniorJudge: '0', judge1: '0', judge2: '0', judge3: '0', judge4: '0', deduction: '0', otherDeduction: '0' };
+    absentSheet({ ...zero, isAbsent: true }, { onMarkAbsent: vi.fn() });
+    // Complete at 0.00, not "waiting for marks".
+    expect(screen.queryByTestId('waiting-for-marks')).toBeNull();
+    expect(screen.getAllByText('0.00').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('absent-tag').textContent).toBe('Absent');
+    expect(screen.queryByRole('button', { name: /absent/i })).toBeNull();
+  });
+
+  it('is disabled on a locked sheet', () => {
+    absentSheet({ ...MARKS, seniorJudge: '' }, { onMarkAbsent: vi.fn(), isLocked: true });
+    expect(screen.getByRole('button', { name: 'Mark Atharva Angre absent' }).disabled).toBe(true);
+  });
+});

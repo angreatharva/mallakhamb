@@ -250,6 +250,38 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect((await post(tokenFor(j2), slip({ score: 7 }))).status).not.toBe(200);
   });
 
+  // User rule 2026-11-16: the Scorer can mark an athlete absent too, from the
+  // sheet; the server writes the whole row, time 0, every judge 0.00.
+  test('the Scorer marks an athlete absent; every value is 0 for the whole panel', async () => {
+    const scorer = await createJudge({ judgeNo: 6, judgeType: 'Scorer', name: 'Score Keeper', email: 'sc@club.in' });
+    expect((await post(tokenFor(j1), slip({ score: 8.1 }))).status).toBe(200);
+
+    const res = await post(tokenFor(scorer), {
+      ...slip(), markAbsent: true, score: undefined, time: '1:20',
+    });
+    expect(res.status).toBe(200);
+    const row = (await Score.findOne({ teamId, competition: competitionId })).playerScores[0];
+    expect(row).toMatchObject({ isAbsent: true, isFinalized: true, finalScore: 0, time: '0', deduction: 0, otherDeduction: 0 });
+    expect(Object.values(row.judgeScores.toObject ? row.judgeScores.toObject() : row.judgeScores).every((v) => v === 0)).toBe(true);
+    // Locked for the panel from now on.
+    expect((await post(tokenFor(j2), slip({ score: 7 }))).status).not.toBe(200);
+  });
+
+  test('the Scorer cannot mark absent an athlete whose panel score is already final', async () => {
+    const scorer = await createJudge({ judgeNo: 6, judgeType: 'Scorer', name: 'Score Keeper', email: 'sc@club.in' });
+    expect((await post(tokenFor(j1), slip({ score: 8.1 }))).status).toBe(200);
+    expect((await post(tokenFor(j2), slip({ score: 8.3 }))).status).toBe(200);
+    expect((await post(tokenFor(senior), slip({ score: 8.2 }))).status).toBe(200);
+    expect((await post(tokenFor(senior), { ...slip({ score: 8.2 }), isFinalSubmit: true, panelSize: 3 })).status).toBe(200);
+
+    const res = await post(tokenFor(scorer), { ...slip(), markAbsent: true, score: undefined });
+    expect(res.status).toBe(400);
+    expect(res.body.error?.message || res.body.message).toMatch(/already final/);
+    const row = (await Score.findOne({ teamId, competition: competitionId })).playerScores[0];
+    expect(row.isAbsent).toBeFalsy();
+    expect(row.judgeScores.judge1).toBe(8.1);
+  });
+
   // User rule 2026-11-08: the Scorer's sheet posts the whole panel back, but
   // the server takes only the time from it — not the judges' marks, and not
   // a body that claims the Scorer may write them.
