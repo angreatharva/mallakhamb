@@ -196,10 +196,13 @@ function baseCookieOptions(isProduction, overrides = {}) {
  * @param {string} token - JWT access token
  * @param {boolean} isProduction
  * @param {number} [maxAgeMs] - Cookie max-age in milliseconds (default: 15 min)
+ * @param {string|null} [role] - the session's role when it is not the token's
+ *   own userType: the Super Admin's token says 'admin' (an Admin document) but
+ *   its session lives under the 'superadmin' cookies.
  */
-function setAccessTokenCookie(res, token, isProduction, maxAgeMs = 15 * 60 * 1000) {
-  // Named after the role IN the token, so every caller writes the right one.
-  res.cookie(accessCookieName(roleOfToken(token)), token, baseCookieOptions(isProduction, {
+function setAccessTokenCookie(res, token, isProduction, maxAgeMs = 15 * 60 * 1000, role = null) {
+  // Named after the session's role, else the role IN the token.
+  res.cookie(accessCookieName(ROLES.includes(role) ? role : roleOfToken(token)), token, baseCookieOptions(isProduction, {
     maxAge: maxAgeMs,
   }));
 }

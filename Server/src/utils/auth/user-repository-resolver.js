@@ -44,6 +44,9 @@ function createUserRepositoryResolver(repositories) {
       case 'coach':
         return coachRepository;
       case 'admin':
+      // A Super Admin is an Admin document. Tokens say 'admin' since 2026-11-15,
+      // but a 'superadmin' one issued before then must still resolve.
+      case 'superadmin':
         return adminRepository;
       case 'judge': {
         const repository = judgeAccountRepository || judgeRepository;

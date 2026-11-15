@@ -38,7 +38,9 @@ async function sendLoginResponse({
 }) {
   // 1. Set access token cookie
   if (data.token) {
-    setAccessTokenCookie(res, data.token, isProduction);
+    // Under this login's role: a Super Admin's token says 'admin', and writing
+    // it to access_token_admin would replace an admin's session in another tab.
+    setAccessTokenCookie(res, data.token, isProduction, undefined, userType);
   }
 
   // 2. Generate and set refresh token cookie

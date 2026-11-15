@@ -191,7 +191,9 @@ function createAuthController(container) {
 
       // Clear THIS role's httpOnly cookies; other roles signed in in other
       // tabs keep their sessions.
-      clearAuthCookies(res, isProduction, req.userType);
+      // The session's role (X-User-Type / path), not the token's type: the
+      // Super Admin's token says 'admin' but its cookies are 'superadmin'.
+      clearAuthCookies(res, isProduction, requestRole(req) || req.userType);
 
       res.json({ success: true, message: 'Logged out successfully.' });
     }),
@@ -219,20 +221,20 @@ function createAuthController(container) {
         });
       }
 
-      const {
-        accessToken,
-        refreshToken: newRefreshToken,
-      } = await tokenService.rotateRefreshToken(refreshTokenValue);
+      const rotated = await tokenService.rotateRefreshToken(refreshTokenValue);
+      const { accessToken, refreshToken: newRefreshToken } = rotated;
 
-      // Set both new cookies
-      setAccessTokenCookie(res, accessToken, isProduction);
-      setRefreshTokenCookie(res, newRefreshToken, isProduction, undefined, roleOfToken(accessToken));
+      // Set both new cookies, under the session's role (the Super Admin's
+      // token says 'admin', its session is 'superadmin').
+      const sessionRole = rotated.role || roleOfToken(accessToken);
+      setAccessTokenCookie(res, accessToken, isProduction, undefined, sessionRole);
+      setRefreshTokenCookie(res, newRefreshToken, isProduction, undefined, sessionRole);
 
       // Asked for one role, got another: that was an older single-session
       // refresh cookie. Its new cookies are stored under their own role, but
       // this tab's role has no session to hand back.
       const asked = requestRole(req);
-      if (asked && roleOfToken(accessToken) && roleOfToken(accessToken) !== asked) {
+      if (asked && sessionRole && sessionRole !== asked) {
         return res.status(401).json({
           success: false,
           error: { message: 'No refresh token provided', code: 'NO_REFRESH_TOKEN' },

@@ -34,6 +34,15 @@ const REFRESH_TOKEN_DAYS = 7;
  */
 const MAX_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * The access token's userType for a session role. The Super Admin signs in as
+ * an Admin document, so its token says 'admin' while its session (cookies,
+ * refresh record) is 'superadmin'. Every other role is its own type.
+ * @param {string} role
+ * @returns {string}
+ */
+const identityTypeOf = (role) => (role === 'superadmin' ? 'admin' : role);
+
 class TokenService {
   /**
    * Create a token service
@@ -300,10 +309,14 @@ class TokenService {
     // Mark old token as used
     await this.refreshTokenRepository.markUsed(tokenHash);
 
-    // Issue new access + refresh tokens in the same family
+    // Issue new access + refresh tokens in the same family. The record's
+    // userType is the SESSION role; the access token carries the IDENTITY type,
+    // which for the Super Admin is 'admin' (an Admin document) — the same type
+    // its login issued. A 'superadmin' access token made every Super Admin
+    // request a 500 after the first refresh (bug 2026-11-15).
     const accessToken = this.generateToken(
       tokenRecord.userId.toString(),
-      tokenRecord.userType,
+      identityTypeOf(tokenRecord.userType),
       tokenRecord.competitionId ? tokenRecord.competitionId.toString() : null,
       { authTime: Math.floor(authTime.getTime() / 1000) },
     );
@@ -328,6 +341,8 @@ class TokenService {
       family,
       userId: tokenRecord.userId,
       userType: tokenRecord.userType,
+      // The session role, for naming the cookies this rotation sets.
+      role: tokenRecord.userType,
     };
   }
 
