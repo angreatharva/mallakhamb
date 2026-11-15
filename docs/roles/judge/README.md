@@ -1,6 +1,6 @@
 # Judge — complete role guide
 
-> Mallakhamb India competition platform · reference for every panel seat: Senior Judge, Judges 1–4, Scorer and Time Keeper · up to date with `master` on 11 Nov 2026.
+> Mallakhamb India competition platform · reference for every panel seat: Senior Judge, Judges 1–4, Scorer and Time Keeper · up to date with `master` on 15 Nov 2026.
 > Related guides: [Admin](../admin/README.md) · [Super Admin](../superadmin/README.md) · [Coach](../coach/README.md) · [Player](../player/README.md) · [All roles](../README.md)
 
 ## 1. Who a Judge is
@@ -82,7 +82,7 @@ Each slip is out of **10.00** and has four parts. The **Final Score** at the top
 | --- | --- | --- |
 | **Difficulty** | 3.80 | For classes A (0.20 each), B (0.40) and C (0.60), tap how many elements were performed, or use − / +. Each row shows what the class scores **against its maximum**: Competition I A 0.80, B 2.40, C 0.60; Competition II/III A 0.20, B 2.40, C 1.20. **An extra element fills one empty lower slot at that slot's value**: an extra C fills an empty B slot (0.40) or else an A slot (0.20); an extra B fills an empty A slot (0.20). Tapping the chosen number keeps it; only − clears it. |
 | **Combination** | 1.60 | The apparatus's requirements, worded as in the Code of Points. Tick each one met, or use **Select all**. |
-| **Execution** | 4.40 | Type the mark. It rounds to one decimal, half **down** (2.05 → 2.00, 2.06 → 2.10). **At least 0.10 is required before you can submit.** |
+| **Execution** | 4.40 | Type the mark. Digits without a point read as d.dd, so **220 is 2.20**, 010 is 0.10 and 440 is 4.40; typing the point (2.20) works too, and a single digit is a whole mark (3 → 3.00). It rounds to one decimal, half **down** (2.05 → 2.00, 2.06 → 2.10). **At least 0.10 is required before you can submit.** |
 | **Originality** | 0.20 | **None** or **+0.20**. |
 
 **Steps**
@@ -126,6 +126,11 @@ After the Senior Judge acknowledges it, the button reads **Final Submit with Bas
 1. Wait until every judge has submitted ("Final Submit unlocks when all N judges have submitted").
 2. Settle any mismatch: each judge fixes their own slip with **Edit My Score**. While a mismatch remains, Final Submit stays locked.
 3. **Final Submit**. The athlete shows **FINALIZED** on every judge's screen, and the judges' totals appear on the Scorer's sheet.
+
+**Senior Judge: Mark Absent**
+- An athlete who did not perform: on their slip, under "Athlete did not perform?", tap **Mark Absent** and confirm.
+- The athlete is **0.00 for every judge**, with no time and no deduction, and is final for the whole panel: every screen shows **Absent**. No judge slip, Scorer entry or admin save changes it.
+- Only the Senior Judge sees the button, and only while the athlete is not yet final. To undo it, an Admin or the Super Admin unlocks that athlete.
 
 **How the panel score is worked out**
 
@@ -209,6 +214,7 @@ Open it from the account menu (on the dashboard only; scoring screens don't show
 | Mark your own slip; edit it up to 3 times | ✔ |
 | Edit another judge's slip | ✘ |
 | Final Submit | Senior Judge only |
+| Mark an athlete Absent | Senior Judge only (before the athlete is final) |
 | Set the running order | Senior Judge and Scorer only |
 | Edit Time and Other deduction; Lock & Submit | Scorer only (after the Senior Judge has marked everyone) |
 | Unlock a finalized score or restore edits | ✘ (an Admin or the Super Admin does) |
@@ -227,5 +233,6 @@ Open it from the account menu (on the dashboard only; scoring screens don't show
 | **Save Draft** instead of Lock & Submit (Scorer) | The Senior Judge hasn't marked every athlete yet. |
 | "Waiting for marks" (Scorer) | A seated judge hasn't marked that athlete yet. |
 | A finalized athlete reopens | An admin unlocked it for corrections. Fix your slip; the Senior Judge then submits again. |
+| **Absent** on an athlete | The Senior Judge marked them absent: 0.00, final. Only an admin's per-athlete unlock clears it. |
 
 **Competition-day tips:** check the **LIVE** tag before the first athlete, and choose the right category. Senior Judge: settle mismatches before **Final Submit**. Scorer: lock each athlete's time as soon as they've performed.

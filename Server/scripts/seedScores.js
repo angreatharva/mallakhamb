@@ -67,7 +67,7 @@ const { JUDGES_PATH } = require('./lib/judges');
 
 const API = (process.env.SEED_API_URL || 'http://127.0.0.1:5000/api').replace(/\/$/, '');
 const PLAN_PATH = path.join(__dirname, 'seed', 'panel-plan.json');
-const { panelsForType } = require('./lib/panel-plan');
+const { panelsForType, finalsPanelSeats } = require('./lib/panel-plan');
 const CAPTURE_PATH = path.join(__dirname, 'seed', 'registrations.generated.json');
 
 /** Evaluation seats in slot order. The Scorer is not one of them. */
@@ -525,6 +525,20 @@ async function main(extraArgv = []) {
     ? {}
     : await signInSeats(meetPlan, await judgePasswords(), competitionId);
 
+  // Competition II is judged by the panel the admin seated after Finalize —
+  // the meet's own six or a relief panel (scripts/lib/panel-plan#finalsPanelSeats).
+  let finalsTokens = null;
+  const tokensOf = async (slug) => {
+    if (slug !== 'competition_2' || args.dryRun) return tokens;
+    const finalsPanel = finalsPanelSeats(plan, place);
+    if (!finalsPanel.relief) return tokens;
+    if (!finalsTokens) {
+      console.log(`  Competition II judged by a relief panel: ${finalsPanel.from}'s judges`);
+      finalsTokens = await signInSeats({ seats: finalsPanel.seats }, await judgePasswords(), competitionId);
+    }
+    return finalsTokens;
+  };
+
   // The meet's own competitions; Competition I and the finals are separate
   // stages because a final has nobody in it until it is finalized.
   const meetTypes = competition.competitionTypes?.length ? competition.competitionTypes : ['competition_1', 'competition_2'];
@@ -532,10 +546,10 @@ async function main(extraArgv = []) {
     && (!args.type || t.slug === args.type)
     && (args.stage !== 'one' || t.slug === 'competition_1')
     && (args.stage !== 'finals' || t.slug !== 'competition_1'));
-  // Competition I's panels are per age group; Competition II's are one
-  // "All ages" final per gender (scripts/lib/panel-plan#panelsForType). Types
-  // run in order, so every Competition I sheet is locked — which is what
-  // fills the finals — before a final is judged.
+  // Every competition's panels are per age group (Competition II too since
+  // 2026-11-14; scripts/lib/panel-plan#panelsForType). Types run in order, so
+  // every Competition I sheet is locked — which is what fills the finals —
+  // before a final is judged.
   const panelsOf = (slug) => panelsForType(meetPlan, slug).filter((p) =>
     (!args.gender || p.gender === args.gender) && (!args.age || p.ageGroup === args.age || p.ageGroup === 'AllAges'));
 
@@ -543,8 +557,12 @@ async function main(extraArgv = []) {
   let finalized = 0;
   let skipped = 0;
   const problems = [];
+  // One absence per meet; a re-run finds it already final and skips it.
+  let absentMarked = false;
+  const absentees = [];
 
   for (const type of types) {
+    const tokens = await tokensOf(type.slug);
     for (const panel of panelsOf(type.slug)) {
       const label = `${type.display} · ${panel.gender} ${panel.ageGroup} · ${panel.size}-judge`;
 
@@ -583,6 +601,25 @@ async function main(extraArgv = []) {
           playerName: spot.playerName,
           panelSize: panel.size,
         };
+
+        // 0. ABSENT (user rule 2026-11-15): once per meet, in Competition I's
+        //    first category, the last athlete did not perform. Only the Senior
+        //    Judge may mark it; the row is then 0.00 and final for the whole
+        //    panel, and no judge slip changes it.
+        if (type.slug === 'competition_1' && !absentMarked && places.length >= 2 && index === places.length - 1) {
+          absentMarked = true;
+          const refusal = async (seat, body) => {
+            try { await call(SLIP_PATH, { method: 'POST', token: tokens[seat], competitionId, body }); return null; } catch (error) { return error.message; }
+          };
+          const byJudge1 = await refusal(evaluators[0], { ...base, markAbsent: true });
+          if (!/-> 403/.test(byJudge1 || '')) problems.push(`${label}: Judge 1 marking an athlete absent was not refused (${byJudge1 || 'accepted'})`);
+          await call(SLIP_PATH, { method: 'POST', token: tokens[CHIEF], competitionId, body: { ...base, markAbsent: true } });
+          const lateSlip = await refusal(evaluators[0], { ...base, ...buildSlip(type.slug, spot.apparatus, athletePlan.evaluatorExecution, []) });
+          if (!lateSlip) problems.push(`${label}: a judge slip after Absent was accepted`);
+          absentees.push({ playerId: String(spot.playerId), apparatus: spot.apparatus, type: type.slug, label: `${label} ${spot.playerName} (${spot.apparatus})` });
+          scoredHere += 1;
+          continue;
+        }
 
         // 1. Every evaluator marks the routine as they saw it.
         for (const seat of evaluators) {
@@ -641,7 +678,9 @@ async function main(extraArgv = []) {
   }
 
   console.log(`\n  ${slips} slip(s), ${finalized} athlete(s) finalized`
-    + `${skipped ? `, ${skipped} already done` : ''}`);
+    + `${skipped ? `, ${skipped} already done` : ''}`
+    + `${absentees.length ? `, ${absentees.length} marked Absent by the Senior Judge` : ''}`);
+  if (problems.some((p) => /Absent/.test(p))) process.exitCode = 1;
 
   /*
    * Check what was actually stored.
@@ -673,6 +712,12 @@ async function main(extraArgv = []) {
             if (entry.gender !== panel.gender || (panel.ageGroup !== 'AllAges' && entry.ageGroup !== panel.ageGroup)) continue;
             if (!entry.isFinalized) continue;
             const value = Number(entry.finalScore);
+            const marked = absentees.find((a) => a.type === type.slug && a.playerId === String(entry.player?._id || entry.player)
+              && (!entry.apparatus || entry.apparatus === a.apparatus));
+            if (entry.isAbsent || marked) {
+              if (!(entry.isAbsent && value === 0)) bad.push(`${marked?.label || entry.player?.firstName}: marked Absent but stored ${value}${entry.isAbsent ? '' : ', not absent'}`);
+              continue;
+            }
             if (!legal.has(Number(value.toFixed(2)))) {
               bad.push(`${type.display} ${panel.gender} ${panel.ageGroup} `
                 + `${entry.player?.firstName} ${entry.player?.lastName}: ${value}`);
@@ -763,6 +808,15 @@ async function runScorer({ competitionId, panel, type, places, tokens }) {
     if (!byTeam.has(spot.teamId)) byTeam.set(spot.teamId, []);
     byTeam.get(spot.teamId).push(spot);
   }
+  /*
+   * The finals' team cap must actually keep somebody out (roster-generated.js
+   * DEEP). Times are dealt by a row's place in its team, so every team's third
+   * took the biggest deduction and ranked last — the cap never mattered. The
+   * first team with three in one category gets the clean time (85 s) on all
+   * three, so its third ties for first and the cap passes them over inside the
+   * top 10.
+   */
+  const deepTeam = [...byTeam].find(([, teamPlaces]) => new Set(teamPlaces.map((p) => String(p.playerId))).size >= 3)?.[0] ?? null;
 
   for (const [teamId, teamPlaces] of byTeam) {
     // Read back what the panel actually stored, so the Scorer works from the
@@ -792,7 +846,7 @@ async function runScorer({ competitionId, panel, type, places, tokens }) {
     if (teamPlaces.every((spot) => lockedHere.has(spot.apparatus))) continue;
 
     const playerScores = (team.scores || []).map((row, index) => {
-      const seconds = Number(TIME_BANDS[index % TIME_BANDS.length]);
+      const seconds = Number(TIME_BANDS[String(teamId) === String(deepTeam) ? 0 : index % TIME_BANDS.length]);
       const deduction = getTimeDeductionForTime(seconds);
       const computed = calculateIndividualScore(row.judgeScores, panel.size);
       const average = computed.averageMarks;

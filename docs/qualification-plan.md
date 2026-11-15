@@ -22,7 +22,7 @@ Product decisions settled with the owner on 2026-10-29 (Q&A); the three open dec
 - **No minimum score** (the COP's 60% does not apply).
 - **Ties at the last place:** the COP tie-break, as the rankings already use: base score → average of 4 judges → (average + Chief)/2 → a lucky draw the admin records. For II the same steps run on the sums.
 - **Which finals run:** the meet's own competition types, set by the Super Admin (I only, I+II, I+III, I+II+III). With I+III, players go straight from I to III.
-- **When:** automatically, the moment the Senior Judge and the Scorer save and lock the Competition I scores a final depends on, the same moment the public scores publish. A III final needs its age group's Comp I scores on that apparatus; II takes each age group's top 2 as soon as that age group is finished on every apparatus.
+- **When:** automatically, the moment the Senior Judge and the Scorer save and lock the Competition I scores a final depends on, the same moment the public scores publish. A III final needs its age group's Comp I scores on that apparatus; II takes the age group's top 10 (at most 2 per team) as soon as that age group is finished on every apparatus.
 - **Corrections:** if a Competition I score is unlocked and changed, the qualifiers recompute automatically **until the first score of that final is saved**. After that the list is frozen, and the admin is warned if a correction would have changed it.
 - **Withdrawal:** the admin marks a qualifier withdrawn and the **next in rank fills in** (respecting the III team cap). The coach is emailed.
 - **No extra fee.**
@@ -38,7 +38,7 @@ Product decisions settled with the owner on 2026-10-29 (Q&A); the three open dec
 `utils/scoring/qualification.util.js`, unit-tested on its own:
 
 - **III:** published Comp I rows of (gender, age group, apparatus) → COP rank (existing `ranking.util` / `tie-breaker.util` + recorded draws) → walk down the ranking, skipping a team's 3rd player → the first 10.
-- **II:** per (gender, age group): sum each player's published Comp I final scores over the gender's apparatus → rank (tie-break on the summed parts) → the top 2.
+- **II:** per (gender, age group): sum each player's published Comp I final scores over the gender's apparatus → rank (tie-break on the summed parts) → walk down it, skipping a team's 3rd player → the first 10 (`ALL_ROUND_PER_AGE_GROUP`, `ALL_ROUND_TEAM_CAP`; top 2 with no team cap until 2026-11-15).
 - Reports **"waiting"** while a needed Comp I score is not locked, or a cut-line tie needs a lucky draw the admin has not recorded.
 
 ### 2. Where qualifiers live
@@ -55,6 +55,8 @@ Finals do **not** use team squads (`registeredTeams.players`). Competition II/II
 - **Withdrawal** (admin) → recompute that final, filling from the next in rank; email the coach.
 
 ### 4. The "All ages" category (Competition II)
+
+*Historic since 2026-11-14: Competition II is a final per age group; "All ages" survives only on a meet whose All-ages final had already started (`Competition.allAgesFinals`).*
 
 A new age-group value, used only by Competition II, in the Score, panel (Judge), running order (PerformanceOrder) and tie-break keys, and in the Web pickers. Socket rooms already key on age group, so they follow.
 

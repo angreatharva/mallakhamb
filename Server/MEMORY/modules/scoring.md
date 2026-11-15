@@ -14,7 +14,7 @@ Owner rules and decisions: `docs/qualification-plan.md`. As built:
 
 - **Engine (pure):** `utils/scoring/qualification.util.js`. `apparatusFinal` (III:
   top 10 by Comp I rank, at most 2 per team; a tie across the cut →
-  `waiting_draw`) and `allRoundAgeGroup` (II: top 2 per age group by the SUM over
+  `waiting_draw`) and `allRoundAgeGroup` (II: top 10 per age group, max 2 per team, by the SUM over
   the gender's apparatus, ties by summed base → avg4 → avg4+Chief → the final's
   own `drawOrders`). No minimum score.
 - **Service:** `services/scoring/qualification.service.js`.
@@ -55,9 +55,10 @@ Owner rules and decisions: `docs/qualification-plan.md`. As built:
 - **Seed chain:** meets.json gives each meet `competitionTypes` (rotating
   I+II+III, I+II, I+III, I). setupApi/setupAll: `scores --stage=one` →
   `results one` → corrections → `finals` (finalize-all + rule checks + reopen) →
-  `finals-scores` → `results finals`. setupUi: score-all SCORE_STAGE=one →
-  finalize-finals.spec → SCORE_STAGE=finals. `scripts/lib/panel-plan#panelsForType` (II = one All-ages panel
-  per gender, sized like that gender's Under 14 panel); seatPanels,
+  `finals-panels` (Competition II seated after Finalize) → `finals-scores` → `results finals`. setupUi: score-all SCORE_STAGE=one →
+  finalize-finals.spec → SCORE_STAGE=finals. `scripts/lib/panel-plan#panelsForType` (every type per age group);
+  Competition II is seated after `finals` (`seatPanels.js --finals`, step
+  `finals-panels`, own or relief judges via `finalsPanelSeats`); seatPanels,
   seedScores, seedCompetitionDay (`checkFinals`) and verifySeed use it.
 
 The full scoring-engine narrative (COP rules, calculation math, ranking,

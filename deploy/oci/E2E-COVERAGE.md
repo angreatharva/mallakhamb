@@ -34,6 +34,21 @@ The run's last step, `coverage` (`Server/scripts/e2eCoverage.js`), compares ever
 
 **Known defects are checked every run.** A defect the run has found but nobody has fixed is listed in `KNOWN_DEFECTS` in the script: while it reproduces it prints `KNOWN` and the run stays green; the day it stops reproducing the check **fails**, so the entry gets removed and the check becomes an ordinary one. Nothing found can go quiet.
 
+## Finals and the 14–15 Nov rules — built (2026-11-15, branch `test/e2e-full-lifecycle`)
+
+| What | How the run covers it |
+|---|---|
+| Competition II per gender + **age group**, **top 10, at most 2 per team** | `finals` recomputes every Competition II final from the PUBLIC Competition I results (sum over every apparatus, walk down skipping a team's 3rd, first 10; a level total at the cut is left to the tie-break) and compares with the engine. The roster has a **deep category** (7 university teams × 3 in Male Above 18 — `roster-generated.js DEEP`), so at Varanasi and Bhopal the team cap AND the cut at 10 both decide who qualifies; before it no final ever had more than 4 qualifiers |
+| Competition II judges **seated after Finalize**, may be other people | new step `finals-panels` (`seatPanels.js --finals`, after `finals`): seats each finalized Competition II final's age group, every apparatus; every other meet a **relief panel** of another meet's judges (`lib/panel-plan#finalsPanelSeats`). Checks the Competition II seats hold those people and the slot's **Competition I panel is unchanged** (the bug 743ec2d fixed). `finals-scores` signs in the same people. The `panels` step no longer seats Competition II |
+| **Mark Absent** (Senior Judge) | `scores`: once per meet, the last athlete of the first category — Judge 1 trying it is refused (403), the Senior Judge marks it, a later judge slip is refused, the stored row is 0.00 / absent / final, and the Scorer still locks the sheet (defect 7) |
+| Relief judges' own screens | `judge-screens`: a relief judge is offered the extra meet, opens it, and holds Competition II seats only there |
+| The rules are exercised at all | `finals` fails unless, across the season, some Competition II and some Competition III final is full (10) AND in some the cap keeps a player out of the top 10 (local run: II 2 full / 8 capped, III 2 full / 7 capped) |
+| Comp I → II, I → III, I → II + III, I only | unchanged: meets rotate I+II+III / I+II / I+III / I |
+
+**Noticed, not changed (owner's call):** the engine labels EVERY team's third athlete "passed over for the team cap" (`qualification.util` counts teammates ranked above, not teammates who qualified). Who qualifies is right — anyone the cap keeps out inside the top 10 always leaves their team with two — but the Finals card can list players below the cut as passed over for the cap (Varanasi Boys Above 18 · Pole listed seven, none of whom could have made the ten). The run checks only the ones inside the list's reach.
+
+Not covered by the browser chain (`setup:ui`): it still seats Competition II with the other panels through the admin screen; a "Finals → Seat judges" spec is a follow-up.
+
 ## Found by the run
 
 | # | Defect | Effect | Status |
@@ -44,6 +59,7 @@ The run's last step, `coverage` (`Server/scripts/e2eCoverage.js`), compares ever
 | 4 | **"End age group" always answers 404** (`scoring.service.endAgeGroup` looks for `ag.name`; age groups are `{gender, ageGroup}`) | the route cannot work | unused by any screen → on the removal list below |
 | 5 | The seeder posted judge slips to `/judge/scores/save`; the judge screens use **`/public/save-score`** (same controller, a different guard) | 7,400 slips a night never went through the judges' real write path | **fixed**: `seedScores.js` posts slips where the screens do |
 | 6 | The seeder's Scorer pass ignored the per-apparatus lock on a re-run | a second `seed:scores` on a scored meet failed | **fixed** |
+| 7 | **The Scorer could never lock a sheet with an absent athlete** (`scoring.service.saveScores`: Lock & Submit waits for a Senior Judge mark above 0 — rule 2026-11-11 — and Mark Absent, 2026-11-15, makes every value 0) | the Scorer's screen counted the absentee as marked and offered Lock & Submit; the server answered 400 "The Senior Judge has not marked … yet", so that category could never publish | **fixed on `test/e2e-full-lifecycle`** (2026-11-15): an absent row counts as marked, as the screen already did; two tests in `tests/integration/mark-absent.test.js` |
 
 ## Accounts and money — the improved plan
 

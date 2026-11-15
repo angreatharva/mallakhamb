@@ -1937,13 +1937,19 @@ class ScoringService {
          * Senior Judge's mark on the stored row; the Scorer's own payload is
          * never trusted for marks (see `scorerTimeOnly`). Draft saves are
          * unaffected. Admin locks are not Scorer saves and are not gated.
+         *
+         * An athlete the Senior Judge marked ABSENT is marked (user rule
+         * 2026-11-15): every value on that row is 0 by design, so a mark
+         * "above 0" never comes and the sheet could never be locked. The
+         * Scorer's screen already counts it as marked (Web scorerRows.js
+         * `athletesAwaitingSeniorJudge`); the e2e found the server did not.
          */
         if (scorerTimeOnly && scoreData.isLocked) {
           const stored = existingScore?.playerScores || [];
           const waiting = processedPlayerScores
             .filter((ps) => {
               const i = findSquadPlace(stored, ps);
-              return !(i >= 0 && Number(stored[i].judgeScores?.seniorJudge) > 0);
+              return !(i >= 0 && (stored[i].isAbsent || Number(stored[i].judgeScores?.seniorJudge) > 0));
             })
             .map((ps) => ps.playerName || 'an athlete');
           if (waiting.length > 0) {

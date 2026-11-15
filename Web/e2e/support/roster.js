@@ -339,7 +339,11 @@ export const squadAt = (teamName, meetIndex, people = ROSTER) => {
     const key = `${p.gender}/${p.ageGroup}`;
     byCategory.set(key, [...(byCategory.get(key) || []), p]);
   }
-  return [...byCategory.values()].map((sharing) => sharing[meetIndex % sharing.length]);
+  // A DEEP category (roster-generated.js) enters everyone, every meet: it is
+  // what makes the finals' team cap and cut at 10 actually decide anything.
+  return [...byCategory.values()].flatMap((sharing) => (sharing.some((p) => p.deep)
+    ? sharing
+    : [sharing[meetIndex % sharing.length]]));
 };
 
 for (const player of ROSTER) {

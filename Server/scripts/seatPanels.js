@@ -8,6 +8,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
  *   SEED_ADMIN_PASSWORD=... node scripts/seatPanels.js --place=Mumbai --dry-run
  *   SEED_ADMIN_PASSWORD=... node scripts/seatPanels.js --only=Male/Under10
  *   SEED_ADMIN_PASSWORD=... node scripts/seatPanels.js --apparatus="Rope Mallakhamb"
+ *   SEED_ADMIN_PASSWORD=... node scripts/seatPanels.js --finals   # Competition II, after Finalize
  *
  * The sizes come from `scripts/seed/panel-plan.json`, drawn once by
  * `planPanels.js`. Nothing here decides one — that separation is the point.
@@ -19,17 +20,18 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
  *
  * WHAT A "COMPETITION II PANEL" ACTUALLY IS — the thing worth reading twice.
  *
- * There is no such document. Judge's unique indexes are
- * `{gender, ageGroup, apparatus, judgeNo, competition}` and
- * `{gender, ageGroup, apparatus, judgeType, competition}`, and NEITHER includes
- * `competitionTypes`. One meet therefore holds one panel per
- * (gender, ageGroup, APPARATUS) no matter how many competition types run on it,
- * and seating a "second panel" for Competition II collides with the first.
+ * Since migration 017 (owner, 2026-11-14) it is its own seats. Judge's unique
+ * indexes are `{gender, ageGroup, apparatus, judgeNo|judgeType, competition,
+ * competitionTypes}`, so a slot holds one panel PER COMPETITION TYPE, and
+ * `saveJudges` matches an existing seat only within the same type. Each type is
+ * seated as its own pass with `competitionTypes: [type]`, as the Judges tab does.
  *
- * `competitionTypes` is an array for this reason, and admin.service merges it
- * on update rather than replacing it. So Competition II is enabled by seating
- * the SAME seats again with `competition_2`, which turns `['competition_1']`
- * into `['competition_1', 'competition_2']`.
+ * Competition II is not seated by the default run: the admin seats it once the
+ * finals are confirmed (Finals tab → Seat judges), so `--finals` seats it for
+ * each finalized Competition II final — the meet's own judges or a relief panel
+ * (lib/panel-plan#finalsPanelSeats) — and checks the slot's Competition I panel
+ * is untouched. (Before 017 there was one seat for every type, and seating
+ * Competition II replaced the Competition I judge.)
  *
  * Scores stay separate regardless: a Score document's identity is
  * `{teamId, gender, ageGroup, competition, competitionType}`, so one panel
@@ -69,7 +71,7 @@ const {
   findCompetition,
   resolveSeatAccounts,
 } = require('./lib/admin-api');
-const { readPlan, planForPlace, seatsFor, withTimeKeeper } = require('./lib/panel-plan');
+const { readPlan, planForPlace, seatsFor, withTimeKeeper, finalsPanelSeats } = require('./lib/panel-plan');
 
 function parseArgs(argv) {
   const value = (name) => {
@@ -81,7 +83,18 @@ function parseArgs(argv) {
     only: value('only'), // e.g. --only=Male/Under10
     apparatus: value('apparatus'), // e.g. --apparatus="Rope Mallakhamb"
     dryRun: argv.includes('--dry-run'),
+    // Competition II is seated AFTER its finals are confirmed (owner, 2026-11-14):
+    // the default run seats every other competition, `--finals` seats Competition II.
+    finals: argv.includes('--finals'),
   };
+}
+
+/** The age groups whose Competition II final is finalized (the admin's Finals tab). */
+async function finalizedAllRound(competition) {
+  const response = await call('/admin/finals', { competitionId: competition._id });
+  return new Set((response.data?.finals || [])
+    .filter((f) => f.competitionType === 'competition_2' && ['finalized', 'started'].includes(f.status) && (f.qualifiers || []).length)
+    .map((f) => `${f.gender}/${f.ageGroup}`));
 }
 
 /**
@@ -184,7 +197,7 @@ const vacate = (judgeId, csrfToken, competitionId) =>
  * @param {{only: string|null, apparatus: string|null, dryRun: boolean}} options
  * @returns {Promise<number>} how many panels failed
  */
-async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusOnly, dryRun }) {
+async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusOnly, dryRun, finals }) {
   for (const seat of REQUIRED_SEATS) {
     if (!meetPlan.seats[seat]) {
       throw new Error(`${meetPlan.place} is missing the required seat "${seat}"`);
@@ -192,9 +205,21 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
   }
 
   const competition = await findCompetition(meetPlan.place);
-  console.log(`\n🏆 ${competition.name} — ${competition.place} ${competition.year} [${meetPlan.level}]`);
+  // The MEET's competitions (I only, I+II, I+III or I+II+III), not the plan's.
+  const ownTypes = competition.competitionTypes?.length ? competition.competitionTypes : plan.competitionTypes;
+  // Competition II is seated after Finalize (`--finals`); everything else now.
+  const meetTypes = finals
+    ? ownTypes.filter((t) => t === 'competition_2')
+    : ownTypes.filter((t) => t !== 'competition_2');
+  if (meetTypes.length === 0) {
+    console.log(`\n🏆 ${competition.place}: ${finals ? 'no Competition II' : 'nothing but Competition II'} — nothing to seat`);
+    return 0;
+  }
+  const finalsPanel = finals ? finalsPanelSeats(plan, meetPlan.place) : null;
+  console.log(`\n🏆 ${competition.name} — ${competition.place} ${competition.year} [${meetPlan.level}]`
+    + `${finals ? ` · Competition II finals, ${finalsPanel.relief ? `relief panel (${finalsPanel.from}'s judges)` : 'the meet\'s own judges'}` : ''}`);
 
-  const seatHolders = withTimeKeeper(meetPlan.seats);
+  const seatHolders = withTimeKeeper(finals ? finalsPanel.seats : meetPlan.seats);
   const accountId = await resolveSeatAccounts(seatHolders);
   for (const [seat, email] of Object.entries(seatHolders)) {
     console.log(`   ${seat.padEnd(13)} ${email}`);
@@ -203,16 +228,24 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
 
   /*
    * Each panel with the competition types it judges. Every competition is per
-   * age group (Competition II too since 2026-11-14), so one panel per age
-   * group judges all of the meet's competitions.
+   * age group (Competition II too since 2026-11-14). Competition II's panel is
+   * its own seats (migration 017 put competitionTypes in the unique keys), so
+   * it can be other people; it is seated only for the age groups whose final
+   * the admin has finalized.
    */
-  // The MEET's competitions (I only, I+II, I+III or I+II+III), not the plan's.
-  const meetTypes = competition.competitionTypes?.length ? competition.competitionTypes : plan.competitionTypes;
-  const all = meetPlan.panels.map((p) => ({ ...p, types: meetTypes }));
+  const ready = finals ? await finalizedAllRound(competition) : null;
+  const all = meetPlan.panels
+    .filter((p) => !ready || ready.has(`${p.gender}/${p.ageGroup}`))
+    .map((p) => ({ ...p, types: meetTypes }));
   const wanted = only
     ? all.filter((p) => `${p.gender}/${p.ageGroup}` === only)
     : all;
+  if (finals && wanted.length === 0) {
+    console.log(`   no finalized Competition II final at ${competition.place} — nothing to seat`);
+    return 0;
+  }
   if (wanted.length === 0) throw new Error(`--only=${only} matched no panel in the plan`);
+  const ownHolders = finals ? await resolveSeatAccounts(withTimeKeeper(meetPlan.seats)) : null;
 
   /*
    * Which apparatus a panel is needed for, per competition type.
@@ -261,7 +294,10 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
         // was supposed to follow, and because a person moved between seats needs
         // their old one empty before the one-person-one-seat check will let them
         // take the new one.
-        const staffed = await seatedIn(competition, panel, apparatus);
+        // Only the seats of the competitions being seated: a Competition I seat
+        // in the same slot is another panel since migration 017, never in the way.
+        const staffed = (await seatedIn(competition, panel, apparatus))
+          .filter((s) => s.types.length === 0 || s.types.some((t) => meetTypes.includes(t)));
         let vacated = 0;
         for (const seat of staffed) {
           /*
@@ -289,8 +325,8 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
 
         // ── Seat the plan, once per competition type ────────────────────────
         //
-        // The passes write the SAME seats; each after the first only widens
-        // `competitionTypes`. See the header on why that is one panel, not two.
+        // One pass per type: each writes that type's own seats (header: since
+        // migration 017 a slot holds one panel per competition type).
         let created = 0;
         let updated = 0;
         for (const [competitionType, list] of apparatusByType) {
@@ -324,6 +360,18 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
           }
           created += made.length;
           updated += changed.length;
+        }
+
+        // Seating Competition II must leave the slot's Competition I panel as it
+        // was — before migration 017 it replaced those judges with the new ones.
+        if (finals) {
+          const after = await seatedIn(competition, panel, apparatus);
+          const ii = after.filter((s) => s.types.includes('competition_2'));
+          const one = after.filter((s) => s.types.includes('competition_1'));
+          const wrongII = ii.filter((s) => s.accountId !== String(accountId[s.judgeType]));
+          const movedI = one.filter((s) => s.accountId !== String(ownHolders[s.judgeType]));
+          if (ii.length !== seats.length || wrongII.length) throw new Error(`Competition II panel is ${ii.length} seat(s), ${wrongII.length} not the people seated`);
+          if (one.length !== seats.length || movedI.length) throw new Error(`seating Competition II changed the Competition I panel (${movedI.map((s) => s.judgeType).join(', ') || `${one.length} seats`})`);
         }
 
         summary.push({
@@ -367,7 +415,7 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
  * after fixing the first — the exit code still reports it.
  */
 async function seatAll() {
-  const { place, only, apparatus: apparatusOnly, dryRun } = parseArgs(process.argv.slice(2));
+  const { place, only, apparatus: apparatusOnly, dryRun, finals } = parseArgs(process.argv.slice(2));
   const plan = readPlan();
 
   const meets = place
@@ -384,7 +432,7 @@ async function seatAll() {
 
   for (const meetPlan of meets) {
     try {
-      failedPanels += await seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusOnly, dryRun });
+      failedPanels += await seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusOnly, dryRun, finals });
     } catch (error) {
       failedMeets.push(meetPlan.place);
       console.error(`❌ ${meetPlan.place} — ${error.message}`);

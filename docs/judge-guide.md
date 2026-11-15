@@ -101,7 +101,7 @@ Scorer and Time Keeper held by the same person: a second window, **Select Your R
 
 ## Finals (Competition II and III)
 
-After you choose a Competition II or III category, the dashboard lists the **finalists themselves**, in running order, each with a small team tag (and their age group in the All-ages Competition II final). Tap a player to open their slip. A Scorer or Time Keeper tapping a player opens that player's team sheet, which holds only the team's finalists. Competition II's category is **All ages**.
+After you choose a Competition II or III category, the dashboard lists the **finalists themselves**, in running order, each with a small team tag (and their age group in an older meet's All-ages final). Tap a player to open their slip. A Scorer or Time Keeper tapping a player opens that player's team sheet, which holds only the team's finalists. Competition II's categories are the age groups, as in Competition I (**All ages** only on an older meet whose All-ages final had already started).
 
 ## Running order (Senior Judge and Scorer)
 

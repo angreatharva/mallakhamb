@@ -138,11 +138,14 @@ Since 2026-10 a player registration under 18 needs `guardianConsent: true`;
 Competition I) → `results one` → `corrections` → **`finals`**
 (`seedCompetitionDay.js finals`: finalize-all as the admin, II/III rule
 checks, ties drawn, squads = qualifiers, admin reopen refused, Super Admin
-reopen + re-finalize, lots) → **`finals-scores`** (`seed:scores --
+reopen + re-finalize, lots) → **`finals-panels`** (`seed:panels -- --finals`:
+Competition II seated after Finalize) → **`finals-scores`** (`seed:scores --
 --stage=finals`) → **`finals-results`** (`results finals`: every judged final
 started, no reopen) → `judge-screens` → `mail` → `coverage`. Panels:
-`lib/panel-plan#panelsForType` (II = one All-ages panel per gender sized like
-Under 14). Local run: launch config `api-e2e-local` (port 5001,
+`lib/panel-plan#panelsForType` (every type per age group). Competition II is
+seated AFTER `finals` by `finals-panels` (`seatPanels.js --finals`): the meet's
+own judges or, every other meet, a relief panel (`lib/panel-plan#finalsPanelSeats`),
+and the slot's Competition I panel must stay as it was. Local run: launch config `api-e2e-local` (port 5001,
 `mallakhamb_local_e2e`) — **drop that DB first**; a stale DB keeps the old
 meet types and finals already started. Last full local run: 21/21 steps, 320
 categories.

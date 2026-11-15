@@ -52,7 +52,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const { ApiClient, DEFAULT_BASE } = require('./perf/lib/client');
 const roster = require('./lib/roster');
 const { allMeets, competitionTypesOf } = require('./lib/meets');
-const { readPlan, withTimeKeeper, seatsFor, panelsForType } = require('./lib/panel-plan');
+const { readPlan, withTimeKeeper, seatsFor, panelsForType, finalsPanelSeats } = require('./lib/panel-plan');
 const { offeredApparatus } = require('../src/utils/data/competition-apparatus.util');
 const { getTimeDeductionForTime } = require('../src/config/cop-rules');
 
@@ -419,9 +419,10 @@ async function stepResults() {
  *    on the Competition I standing; II: the draw on the final's card);
  *  - finalize-all as the ADMIN: every final with qualifiers is finalized and
  *    nothing is left "not ready";
- *  - Competition II recomputed here from the PUBLIC Competition I results (top
- *    2 of every age group by the sum over every apparatus); Competition III
- *    from the admin standing (top 10, at most 2 per team, by rank);
+ *  - Competition II recomputed here from the PUBLIC Competition I results (one
+ *    final per age group: top 10 by the sum over every apparatus, at most 2 per
+ *    team); Competition III from the admin standing (top 10, at most 2 per
+ *    team, by rank);
  *  - every final category's squad is exactly its qualifiers, the public page
  *    lists the finalized finals, the admin cannot reopen one and the Super
  *    Admin can (and finalizes it again), a second finalize-all finds nothing;
@@ -444,7 +445,7 @@ async function squadOf(admin, gender, ageGroup, competitionType) {
     .flatMap((t) => (t.players || []).map((e) => String(e.player?._id || e.player)));
 }
 
-/** The final categories of a meet: II one All-ages per gender, III per age group. */
+/** The final categories of a meet: II and III both per gender + age group. */
 const finalCategories = (meet) => finalTypesOf(meet)
   .flatMap((type) => categoriesOf(meet, type).map((cat) => ({ ...cat, type })));
 
@@ -474,33 +475,70 @@ async function settleTies(admin, finals, where) {
   return settled;
 }
 
-/** Competition II: the top 2 of every age group, by the sum over every apparatus (public results). */
+/**
+ * Competition II (owner, 2026-11-14 / 2026-11-15): one final per gender + age
+ * group; the TOP 10 of the age group by the sum of their Competition I scores
+ * over every apparatus, AT MOST 2 PER TEAM — recomputed here from the PUBLIC
+ * Competition I results, independently of the engine.
+ */
 async function checkAllRound(pub, meet, final, where) {
   const competitionId = String(meet.competition._id);
-  const want = [];
-  const ageGroups = categoriesOf(meet).filter((c) => c.gender === final.gender);
-  for (const age of ageGroups) {
-    const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId, gender: final.gender, ageGroup: age.ageGroup, competitionType: 'competition_1' } }));
-    const totals = new Map();
-    for (const row of docs.flatMap((d) => d.playerScores || [])) {
-      totals.set(String(row.playerId), round2((totals.get(String(row.playerId)) || 0) + Number(row.finalScore || 0)));
+  const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId, gender: final.gender, ageGroup: final.ageGroup, competitionType: 'competition_1' } }));
+  const totals = new Map();
+  const teamOf = new Map();
+  for (const doc of docs) {
+    const team = String(doc.teamId?._id || doc.teamId || doc.teamName);
+    for (const row of doc.playerScores || []) {
+      // An athlete marked Absent never qualifies on that apparatus (a5fdcff).
+      if (row.isAbsent) continue;
+      const id = String(row.playerId);
+      totals.set(id, round2((totals.get(id) || 0) + Number(row.finalScore || 0)));
+      teamOf.set(id, team);
     }
-    const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
-    // Top two; a level total at the cut is the tie-break's (or the draw's) to settle.
-    const cut = ranked[1]?.[1];
-    const levelAtCut = ranked.filter(([, t]) => t === cut).length > 1;
-    want.push(...ranked.filter(([, total], i) => i < 2 && !(levelAtCut && total === cut)).map(([id]) => id));
   }
+  const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+  // Walk down the ranking: a team's third player is passed over, the next one gets the place.
+  const perTeam = new Map();
+  const taken = [];
+  const cappedAt = new Map(); // team -> totals of players the cap passed over
+  for (const [id, total] of ranked) {
+    if (taken.length === 10) break;
+    const team = teamOf.get(id);
+    const n = perTeam.get(team) || 0;
+    if (n === 2) { cappedAt.set(team, [...(cappedAt.get(team) || []), total]); continue; }
+    perTeam.set(team, n + 1);
+    taken.push([id, total]);
+  }
+  // A level total at the last place is the tie-break's (or the draw's) to settle,
+  // and so is WHICH of a team's level players the cap passes over.
+  const cut = taken.length === 10 ? taken[9][1] : null;
+  const contested = cut !== null && ranked.some(([id, t]) => t === cut && !taken.some(([x]) => x === id) && (perTeam.get(teamOf.get(id)) || 0) < 2);
+  const want = taken
+    .filter(([, t]) => !(contested && t === cut))
+    .filter(([id, t]) => !(cappedAt.get(teamOf.get(id)) || []).includes(t))
+    .map(([id]) => id);
+
   const got = final.qualifiers.map((q) => String(q.player));
   const missing = want.filter((id) => !got.includes(id));
-  expectThat(missing.length === 0, `${where}: the top 2 of every age group qualified (sum of every apparatus)`, `${missing.length} missing of ${want.length}`);
-  expectThat(got.length <= 2 * ageGroups.length, `${where}: at most 2 per age group`, `${got.length}`);
+  expectThat(final.ageGroup && final.ageGroup !== 'AllAges', `${where}: a final per age group, not "All ages"`, String(final.ageGroup));
+  expectThat(missing.length === 0, `${where}: the top 10 of the age group by the sum of every apparatus, at most 2 per team`,
+    `${missing.length} missing of ${want.length}`);
+  const teams = new Map();
+  for (const q of final.qualifiers) teams.set(String(q.team?._id || q.team), (teams.get(String(q.team?._id || q.team)) || 0) + 1);
+  expectThat(got.length <= 10 && [...teams.values()].every((n) => n <= 2), `${where}: never more than 10, never 3 from one team`,
+    `${got.length} qualifiers, most from one team ${Math.max(0, ...teams.values())}`);
+  const lastRank = Math.max(0, ...final.qualifiers.map((q) => Number(q.rank) || 0));
+  return { full: got.length === 10, capped: final.skipped.filter((sk) => sk.reason === 'team_cap' && (Number(sk.rank) || 0) <= lastRank).length };
 }
 
 /** Competition III: top 10 on the apparatus, at most 2 per team, in rank order. */
-async function checkApparatusFinal(admin, final, where) {
+async function checkApparatusFinal(admin, pub, meet, final, where) {
   const base = { gender: final.gender, ageGroup: final.ageGroup, competitionType: 'competition_1', apparatus: final.apparatus };
+  // Absent athletes (the Senior Judge's Mark Absent) never qualify: read them from the public results.
+  const absent = new Set(listOf(await pub.get('/api/public/scores', { query: { competitionId: String(meet.competition._id), gender: final.gender, ageGroup: final.ageGroup, competitionType: 'competition_1' } }))
+    .flatMap((d) => d.playerScores || []).filter((r) => r.isAbsent && r.apparatus === final.apparatus).map((r) => String(r.playerId)));
   const rows = standing(dataOf(await admin.get('/api/admin/scores/individual', { query: base })), final.apparatus)
+    .filter((r) => !absent.has(r.playerId))
     .sort((a, b) => a.rank - b.rank);
   const perTeam = new Map();
   const want = [];
@@ -514,15 +552,28 @@ async function checkApparatusFinal(admin, final, where) {
   const got = final.qualifiers.map((q) => String(q.player));
   expectThat(same([...got].sort(), [...want].sort()), `${where}: top 10 by rank, at most 2 per team`,
     `want ${want.length}, got ${got.length}, ${want.filter((id) => !got.includes(id)).length} differ`);
+  // Keyed by the team's id as a string: `team` arrives as an id or as a
+  // populated document. (It was keyed on `team?._id`, which is undefined for a
+  // bare id — every qualifier shared one key, and the check passed only while
+  // finals happened to hold exactly two.)
+  const teamKey = (t) => String(t?._id || t);
   const teams = new Map();
-  for (const q of final.qualifiers) teams.set(q.team?._id, (teams.get(q.team?._id) || 0) + 1);
+  for (const q of final.qualifiers) teams.set(teamKey(q.team), (teams.get(teamKey(q.team)) || 0) + 1);
   expectThat(got.length <= 10 && [...teams.values()].every((n) => n <= 2), `${where}: never more than 10, never 3 from one team`,
     `${got.length} qualifiers, most from one team ${Math.max(0, ...teams.values())}`);
-  const capped = final.skipped.filter((s) => s.reason === 'team_cap');
-  expectThat(capped.every((s) => (teams.get(s.team?._id) || 0) === 2), `${where}: a passed-over player's team has its two`, `${capped.length} passed over`);
+  // The engine marks EVERY team's third as 'team_cap', also below the cut where
+  // they were out anyway; the rule is about the ones the cap kept out of the
+  // list — ranked at or above the last qualifier — and their team has its two.
+  const lastRank = Math.max(0, ...final.qualifiers.map((q) => Number(q.rank) || 0));
+  const capped = final.skipped.filter((s) => s.reason === 'team_cap' && (Number(s.rank) || 0) <= lastRank);
+  expectThat(capped.every((s) => (teams.get(teamKey(s.team)) || 0) === 2), `${where}: a player the cap kept out has a team with its two`, `${capped.length} kept out by the cap`);
+  return { full: got.length === 10, capped: capped.length };
 }
 
 async function stepFinals() {
+  // Does the season exercise the rules at all? (A cut at 10 nobody reaches and
+  // a cap that never keeps anybody out are untested rules that look green.)
+  const exercised = { competition_2: { full: 0, capped: 0 }, competition_3: { full: 0, capped: 0 } };
   const admin = await asAdmin();
   const superadmin = await asSuperAdmin();
   const pub = new ApiClient({ baseUrl: BASE_URL, label: 'public' });
@@ -567,8 +618,11 @@ async function stepFinals() {
 
     for (const final of live) {
       const where = `${meet.place} ${final.label}`;
-      if (final.competitionType === 'competition_2') await checkAllRound(pub, meet, final, where);
-      else await checkApparatusFinal(admin, final, where);
+      const seen = final.competitionType === 'competition_2'
+        ? await checkAllRound(pub, meet, final, where)
+        : await checkApparatusFinal(admin, pub, meet, final, where);
+      if (seen?.full) exercised[final.competitionType].full += 1;
+      if (seen?.capped) exercised[final.competitionType].capped += 1;
     }
 
     // Each final category's squad is exactly the qualifiers of its finals.
@@ -610,6 +664,11 @@ async function stepFinals() {
     }
     say('ok', meet.place, `${shape}: ${live.length} finals finalized${ties ? `, ${ties} tie(s) drawn` : ''}, ${drawn} final orders drawn`);
   }
+  for (const [type, seen] of Object.entries(exercised)) {
+    expectThat(seen.full > 0, `${DISPLAY[type]}: some final is full (10 qualifiers), so the cut at 10 decides who is in`, `${seen.full} full`);
+    expectThat(seen.capped > 0, `${DISPLAY[type]}: in some final the team cap keeps a player out of the top 10`, `${seen.capped} finals`);
+  }
+  say('ok', 'season', `finals exercised — II: ${exercised.competition_2.full} full, ${exercised.competition_2.capped} capped; III: ${exercised.competition_3.full} full, ${exercised.competition_3.capped} capped`);
 }
 
 /** After the finals are judged: each one has started, and nobody can reopen it now. */
@@ -779,15 +838,42 @@ async function stepJudges() {
       seatsOf.set(email, [...(seatsOf.get(email) || []), { meet, seat }]);
     }
   }
+  // Relief panels (finals-panels): another meet's judges seated on this meet's
+  // Competition II finals after Finalize. They hold only Competition II seats here.
+  const reliefOf = new Map();  // email → [{meet, seat}]
+  const plan = readPlan();
+  for (const meet of meets.filter((m) => competitionTypesOf(m).includes('competition_2'))) {
+    const finalsPanel = finalsPanelSeats(plan, meet.place);
+    if (!finalsPanel.relief) continue;
+    for (const [seat, email] of Object.entries(withTimeKeeper(finalsPanel.seats))) {
+      reliefOf.set(email, [...(reliefOf.get(email) || []), { meet, seat }]);
+    }
+  }
   let checked = 0;
   let passwords = 0;
   for (const judge of await roster.allJudges()) {
     const mine = seatsOf.get(judge.email) || [];
     const { client } = await asJudge(judge.email);
+    const relief = reliefOf.get(judge.email) || [];
     const offered = listOf(await client.get('/api/judge/competitions')).map((c) => c.place).sort();
     const expected = [...new Set(mine.map((m) => m.meet.place))].sort();
+    const expectedAll = [...new Set([...expected, ...relief.map((m) => m.meet.place)])].sort();
     if (!process.env.PLACE) {
-      expectThat(same(offered, expected), `${judge.email}: offered exactly the meets they are seated at`, `offered ${offered.join(',')} / plan ${expected.join(',')}`);
+      expectThat(same(offered, expectedAll), `${judge.email}: offered exactly the meets they are seated at`, `offered ${offered.join(',')} / plan + relief ${expectedAll.join(',')}`);
+    }
+    // At a relief meet: the Competition II seat, and the meet opens.
+    for (const reliefPlace of [...new Set(relief.map((m) => m.meet.place))].filter((p) => !expected.includes(p))) {
+      const meet = meets.find((m) => m.place === reliefPlace);
+      const id = String(meet.competition._id);
+      const refused = await switchMeet(client, id);
+      if (!expectThat(!refused, `${judge.email} @ ${reliefPlace} (relief): opens the meet`, refused ? reasonOf(refused) : '')) continue;
+      const held = listOf(await client.get('/api/judge/assignments')).filter((a) => String(a.competition?._id || a.competition) === id);
+      const wantSeats = relief.filter((m) => m.meet.place === reliefPlace).map((m) => m.seat);
+      const onlyII = held.every((a) => (a.competitionTypes || []).every((t) => t === 'competition_2'));
+      expectThat(held.length > 0 && onlyII && wantSeats.every((seat) => held.some((a) => a.judgeType === seat)),
+        `${judge.email} @ ${reliefPlace} (relief): holds a Competition II seat only`,
+        `${[...new Set(held.map((a) => `${a.judgeType}:${(a.competitionTypes || []).join('+')}`))].join(', ') || 'no seat'} vs ${wantSeats.join('+')}`);
+      checked += 1;
     }
     for (const meetPlace of expected) {
       const meet = meets.find((m) => m.place === meetPlace);

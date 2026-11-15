@@ -207,7 +207,36 @@ function panelsForType(meetPlan, _competitionType) {
   return meetPlan.panels;
 }
 
+/**
+ * Who judges a meet's Competition II finals.
+ *
+ * Owner, 2026-11-14: "once the finals are confirmed there must be a provision
+ * to add judges to Competition II" — the admin seats that panel after
+ * Finalize, and it may be other people than Competition I's. The seeders
+ * exercise both: every other meet in plan order keeps its own six, the rest
+ * borrow a RELIEF panel — the seats of the next meet in the plan that shares
+ * nobody with this one. Deterministic, so `seatPanels.js --finals` (which seats
+ * them) and `seedScores.js` (which signs them in) always agree, and nothing new
+ * is written into the frozen plan.
+ *
+ * @returns {{seats: Object, relief: boolean, from: string|null}}
+ */
+function finalsPanelSeats(plan, place) {
+  const index = plan.meets.findIndex((m) => m.place === place);
+  const meet = planForPlace(plan, place);
+  if (index % 2 === 0) return { seats: meet.seats, relief: false, from: null };
+  const own = new Set(Object.values(meet.seats));
+  for (let step = 1; step < plan.meets.length; step += 1) {
+    const other = plan.meets[(index + step) % plan.meets.length];
+    if (Object.values(other.seats).every((email) => !own.has(email))) {
+      return { seats: other.seats, relief: true, from: other.place };
+    }
+  }
+  throw new Error(`${place}: no other meet's panel shares nobody with it, so there is no relief panel for Competition II`);
+}
+
 module.exports = {
+  finalsPanelSeats,
   panelsForType,
   PLAN_PATH,
   SIZES,

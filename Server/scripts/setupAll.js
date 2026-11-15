@@ -190,7 +190,7 @@ const STEPS = [
     needsEnv: ['SEED_ADMIN_PASSWORD'],
     title: 'Judging panels',
     command: ['npm', 'run', 'seed:panels'],
-    why: 'Seats judges on every category of every meet, to the sizes fixed in '
+    why: 'Seats judges on every category of every meet (Competition I and III; Competition II after Finalize, by finals-panels), to the sizes fixed in '
       + 'scripts/seed/panel-plan.json. District keeps its frozen sizes and seats '
       + '(the scoring specs run against one); the other seventeen meets were drawn. '
       + 'A panel missing any of Senior Judge, Judge 1, Judge 2 or Scorer is '
@@ -266,10 +266,23 @@ const STEPS = [
     command: ['node', 'scripts/seedCompetitionDay.js', 'finals'],
     why: 'The admin\'s "Finalize all ready finals" at every meet, after Competition I '
       + 'is locked and corrected: nobody is entered before it; ties at a cut drawn '
-      + 'as the admin does; II = top 2 of every age group by the sum (recomputed '
-      + 'from the public results), III = top 10 per apparatus, max 2 per team; '
+      + 'as the admin does; II = top 10 of each age group by the sum, max 2 per '
+      + 'team (recomputed from the public results), III = top 10 per apparatus, '
+      + 'max 2 per team; '
       + 'squads = qualifiers; the admin cannot reopen, the Super Admin can; lots '
       + 'drawn. Meets run I only, I+II, I+III and I+II+III.',
+  },
+  {
+    id: 'finals-panels',
+    where: 'server',
+    needsApi: true,
+    needsEnv: ['SEED_ADMIN_PASSWORD'],
+    title: 'Competition II judges, seated after Finalize',
+    command: ['npm', 'run', 'seed:panels', '--', '--finals'],
+    why: 'Owner, 2026-11-14: the Competition II panel is seated once its finals are '
+      + 'confirmed and may be other people. POST /admin/judges/bulk per finalized '
+      + 'age group and apparatus — every other meet a relief panel of other judges '
+      + '— and the Competition I panel of that slot must be left exactly as it was.',
   },
   {
     id: 'finals-scores',
@@ -277,8 +290,9 @@ const STEPS = [
     needsApi: true,
     title: 'Judging the finals',
     command: ['npm', 'run', 'seed:scores', '--', '--stage=finals'],
-    why: 'The panels judge Competition II (All ages) and Competition III (per '
-      + 'apparatus) of every meet that runs them — only the finalized finalists.',
+    why: 'The panels judge Competition II (per age group, by the panel seated after '
+      + 'Finalize) and Competition III (per apparatus) of every meet that runs them '
+      + '— only the finalized finalists.',
   },
   {
     id: 'finals-results',

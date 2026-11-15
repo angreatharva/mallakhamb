@@ -109,6 +109,17 @@ const ENTRIES = [
   { firstName: 'Rupesh', lastName: 'Kokate', phone: '8669027413', teamName: 'DSOM-B', level: 'dso', teamDescription: 'DSO School Team B' },
   { firstName: 'Manoj', lastName: 'Tawde', phone: '7720915348', teamName: 'DSOM-C', level: 'dso', teamDescription: 'DSO School Team C' },
   { firstName: 'Sharad', lastName: 'Pingle', phone: '9370642185', teamName: 'DSOM-D', level: 'dso', teamDescription: 'DSO School Team D' },
+
+  // ── university, continued — the finals' depth (2026-11-15) ─────────────────
+  // Competition II became the top 10 of an age group, at most 2 per team. With
+  // four teams a category tops out at 8 eligible, so the cut at 10 never bit.
+  // Seven university teams, each fielding three in Male Above 18
+  // (roster-generated.js DEEP), give 21 entrants and 14 eligible: the team cap
+  // AND the cut at 10 both decide who qualifies at Varanasi and Bhopal.
+  // Last, and generated after every earlier pass, so no existing name moves.
+  { firstName: 'Omkar', lastName: 'Tambe', phone: '9421730658', teamName: 'AIUM-E', level: 'university', teamDescription: 'AIUM Team E' },
+  { firstName: 'Yogesh', lastName: 'Kulkarni', phone: '8806152947', teamName: 'AIUM-F', level: 'university', teamDescription: 'AIUM Team F' },
+  { firstName: 'Hemant', lastName: 'Lokhande', phone: '7709386214', teamName: 'AIUM-G', level: 'university', teamDescription: 'AIUM Team G' },
 ];
 
 export const COACH_ROSTER = derive(ENTRIES);

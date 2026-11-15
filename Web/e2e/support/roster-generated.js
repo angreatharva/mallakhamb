@@ -119,6 +119,22 @@ const NO_EMAIL_SLOTS = {
 const HAND_WRITTEN_TEAMS = new Set(['SGAM-A', 'SGAM-B', 'SGAM-C']);
 
 /**
+ * Teams added after the extras pass existed (2026-11-15). Generated in a pass
+ * of their own AFTER every earlier one, because the names come from one
+ * running counter: putting them in the first loop would rename every extra.
+ */
+const LATE_TEAMS = new Set(['AIUM-E', 'AIUM-F', 'AIUM-G']);
+
+/**
+ * The finals' depth (owner rule 2026-11-15: Competition II = the top 10 of an
+ * age group, at most 2 per team). Every team of the level fields THREE in this
+ * category, all entered at every meet (`squadAt`), so a team's third is passed
+ * over for the cap and the cut at 10 falls inside the field — 7 teams, 21
+ * entrants, 14 eligible.
+ */
+const DEEP = { level: 'university', gender: 'Male', ageGroup: 'Above18', perTeam: 3 };
+
+/**
  * Phone numbers, from a block no hand-written entry uses.
  *
  * Ten digits with a leading 6-9, which is what the server's `phone()` validator
@@ -133,9 +149,11 @@ const PHONE_BASE = 7300000000;
  *   dateOfBirth: string, phone: string, teamName: string, ageGroup: string}>}
  */
 function build() {
-  const teams = COACH_ROSTER
+  const generatedTeams = COACH_ROSTER
     .map((coach) => coach.teamName)
     .filter((teamName) => !HAND_WRITTEN_TEAMS.has(teamName));
+  const teams = generatedTeams.filter((teamName) => !LATE_TEAMS.has(teamName));
+  const lateTeams = generatedTeams.filter((teamName) => LATE_TEAMS.has(teamName));
 
   const entries = [];
 
@@ -147,11 +165,12 @@ function build() {
    */
   const counters = { Male: 0, Female: 0 };
 
-  const add = (teamName, gender, firstNames, slot, extra = false) => {
+  const add = (teamName, gender, firstNames, slot, extra = false, deep = false) => {
     const index = counters[gender];
     const phone = String(PHONE_BASE + entries.length);
     const kind = extra ? null : NO_EMAIL_SLOTS[`${teamName}/${gender}/${slot.ageGroup}`];
     entries.push({
+      ...(deep ? { deep: true } : {}),
       firstName: firstNames[index % firstNames.length],
       lastName: SURNAMES[Math.floor(index / firstNames.length) % SURNAMES.length],
       gender,
@@ -188,6 +207,29 @@ function build() {
     add(teamName, 'Male', MALE_FIRST_NAMES, MALE_SLOTS[index % MALE_SLOTS.length], true);
     add(teamName, 'Female', FEMALE_FIRST_NAMES, FEMALE_SLOTS[(index + 2) % FEMALE_SLOTS.length], true);
   });
+
+  // The late teams: their ten, then their extras, continuing the slot rotation.
+  for (const teamName of lateTeams) {
+    for (const slot of MALE_SLOTS) add(teamName, 'Male', MALE_FIRST_NAMES, slot);
+    for (const slot of FEMALE_SLOTS) add(teamName, 'Female', FEMALE_FIRST_NAMES, slot);
+  }
+  lateTeams.forEach((teamName, i) => {
+    const index = teams.length + i;
+    add(teamName, 'Male', MALE_FIRST_NAMES, MALE_SLOTS[index % MALE_SLOTS.length], true);
+    add(teamName, 'Female', FEMALE_FIRST_NAMES, FEMALE_SLOTS[(index + 2) % FEMALE_SLOTS.length], true);
+  });
+
+  // The finals' depth: every team of DEEP.level brought up to DEEP.perTeam in that category.
+  const deepSlot = (DEEP.gender === 'Male' ? MALE_SLOTS : FEMALE_SLOTS).find((s) => s.ageGroup === DEEP.ageGroup);
+  const deepNames = DEEP.gender === 'Male' ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES;
+  for (const coach of COACH_ROSTER.filter((c) => c.level === DEEP.level && !HAND_WRITTEN_TEAMS.has(c.teamName))) {
+    const have = entries.filter((e) => e.teamName === coach.teamName && e.gender === DEEP.gender && e.ageGroup === DEEP.ageGroup).length;
+    for (let n = have; n < DEEP.perTeam; n += 1) add(coach.teamName, DEEP.gender, deepNames, deepSlot, true, true);
+  }
+  for (const entry of entries) {
+    if (COACH_ROSTER.find((c) => c.teamName === entry.teamName)?.level === DEEP.level
+      && entry.gender === DEEP.gender && entry.ageGroup === DEEP.ageGroup) entry.deep = true;
+  }
 
   const capacity = {
     Male: MALE_FIRST_NAMES.length * SURNAMES.length,

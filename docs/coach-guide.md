@@ -146,7 +146,7 @@ A player's team is final at each level (District, State, National, …). If a ch
 
 You only enter players for **Competition I**. Players move into the finals automatically from Competition I's results; once the organiser finalizes a final, your qualifiers are entered and you are emailed:
 
-- **Competition II (All Round):** the top 2 of each age group (sum of every apparatus), one final for all ages.
+- **Competition II (All Round):** a final per age group: the top 10 by the sum of every apparatus, at most 2 from one team.
 - **Competition III (Apparatus):** the top 10 per apparatus in each age group, at most 2 from one team.
 
 Your qualifiers are listed under **Finals: your qualifiers** on the team dashboard. There is no extra fee for the finals.

@@ -118,4 +118,30 @@ describe('marking an athlete absent', () => {
     await service.saveScores(slip(ASHA, 'Asha', 'judge1', 'J1', 8.2));
     expect(rowOf(await stored(), ASHA).judgeScores.judge1).toBe(8.2);
   });
+
+  // Found by the e2e (2026-11-15): the Scorer's Lock & Submit waits for a
+  // Senior Judge mark above 0 (rule 2026-11-11), which an absent row never has.
+  const scorerLock = (...rows) => ({
+    ...category, allowFinalizedEdit: true, scorerTimeOnly: true, isLocked: true,
+    playerScores: rows.map(([playerId, playerName]) => ({ playerId, playerName, apparatus: 'Pole Mallakhamb', time: '0:40' })),
+  });
+
+  it('the Scorer can Lock & Submit a sheet with an absent athlete', async () => {
+    const service = buildService();
+    await service.saveScores(slip(MEERA, 'Meera', 'judge1', 'J1', 7.6));
+    await service.saveScores({ ...slip(MEERA, 'Meera', 'seniorJudge', 'SR_JUDGE', 7.8), isFinalSubmit: true });
+    await service.saveScores(absent(ASHA, 'Asha'));
+    await service.saveScores(scorerLock([MEERA, 'Meera'], [ASHA, 'Asha']));
+    const doc = await stored();
+    expect(doc.lockedApparatus).toHaveLength(1);
+    expect(rowOf(doc, ASHA)).toMatchObject({ isAbsent: true, finalScore: 0, time: '0' });
+  });
+
+  it('an absent athlete does not excuse another the Senior Judge has not marked', async () => {
+    const service = buildService();
+    await service.saveScores(slip(MEERA, 'Meera', 'judge1', 'J1', 7.6));
+    await service.saveScores(absent(ASHA, 'Asha'));
+    await expect(service.saveScores(scorerLock([MEERA, 'Meera'], [ASHA, 'Asha'])))
+      .rejects.toThrow(/Senior Judge has not marked Meera yet/);
+  });
 });
