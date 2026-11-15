@@ -3,6 +3,7 @@ import { Trophy, UserPlus, Search, Trash2, Check, CheckCircle, Save, GripVertica
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coachAPI } from '@/services/api';
+import { COACH_PAPER_FORM_ENABLED } from '@/config/features';
 import { useAgeGroups, useAgeGroupValues, ageGroupLabel } from '../../hooks/useAgeGroups';
 import Dropdown from '@/components/auth/Dropdown';
 import { useCompetition } from '../../contexts/CompetitionContext';
@@ -589,11 +590,13 @@ const CoachDashboard = () => {
               <Button variant="line" icon={UserPlus} onClick={() => setShowRegisterPlayer(true)}>
                 Register Player
               </Button>
-              {/* A filled paper form, photographed: Player IDs + squad places in one go. */}
-              <Button variant="line" icon={ScanLine} onClick={() => navigate('/coach/paper-form')} disabled={feesPaid}
-                title={feesPaid ? paidTitle : 'Register players from a photographed paper form'}>
-                Scan Paper Form
-              </Button>
+              {/* A filled paper form, photographed: Player IDs + squad places in one go. Off unless the build flag is set. */}
+              {COACH_PAPER_FORM_ENABLED && (
+                <Button variant="line" icon={ScanLine} onClick={() => navigate('/coach/paper-form')} disabled={feesPaid}
+                  title={feesPaid ? paidTitle : 'Register players from a photographed paper form'}>
+                  Scan Paper Form
+                </Button>
+              )}
               <Button
                 icon={team?.isSubmitted ? CheckCircle : Trophy}
                 aria-disabled={team?.isSubmitted ? 'true' : undefined}

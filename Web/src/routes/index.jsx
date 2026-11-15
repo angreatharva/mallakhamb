@@ -6,6 +6,7 @@ import RouteContext from '@/contexts/RouteContext';
 import ErrorBoundary from '@/components/layout/ErrorBoundary';
 import CompetitionSelectionScreen from '@/components/competition/CompetitionSelectionScreen';
 import LevelSelectionScreen from '@/components/competition/LevelSelectionScreen';
+import { COACH_PAPER_FORM_ENABLED } from '@/config/features';
 import { CoachPlayerPasswordGate, CoachPlayerPasswordSetup } from '@/pages/coach/CoachPlayerPasswordGate';
 import {
   Home,
@@ -181,7 +182,7 @@ export default function AppRoutes({ location }) {
           <Route path="select-competition" element={<CompetitionSelectionScreen userType="coach" onCompetitionSelected={() => {}} />} />
           <Route path="dashboard" element={<CoachDashboard />} />
           <Route path="payment" element={<CoachPayment />} />
-          <Route path="paper-form" element={<CoachPaperForm />} />
+          {COACH_PAPER_FORM_ENABLED && <Route path="paper-form" element={<CoachPaperForm />} />}
           <Route path="profile" element={<AccountProfile />} />
         </Route>
 

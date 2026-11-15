@@ -448,6 +448,15 @@ function createCoachRoutes(container) {
   const paperForm = [authMiddleware, coachAuth, validateCompetitionContext];
   const paperWrite = [...paperForm, requireUnlockedCompetition()];
   const deskRules = (chains) => [...chains, handleValidationErrors];
+  /*
+   * Off unless COACH_PAPER_FORM_ENABLED=true: every route below answers 404,
+   * as if it did not exist. Read per request, so the flag is the only switch.
+   * The admin / super admin walk-in desk has its own routes and stays on.
+   */
+  router.use('/paper-form', (req, res, next) => {
+    if (container.resolve('config').get('features.coachPaperForm') === true) return next();
+    return res.status(404).json({ success: false, message: 'Not found' });
+  });
   router.get('/paper-form/form', authMiddleware, coachAuth, walkIn('formPdf'));
   router.get('/paper-form/ocr/status', authMiddleware, coachAuth, walkIn('ocrStatus'));
   router.get('/paper-form/draft', ...paperForm, walkIn('coachCurrentDraft'));
