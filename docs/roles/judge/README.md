@@ -51,7 +51,7 @@ Home page → **Judge** → **Register**. The page says an organiser will add yo
 **Select Judging Category** (a window over the dashboard). Choose in order:
 1. **Competition**: every meet where you hold a seat, with its place and level.
 2. **Gender** and **Age group**: filled in from your seat when only one answer fits.
-3. **Competition type**: I, II or III. Competition II's age group is **All ages**.
+3. **Competition type**: I, II or III. Competition II is a final per age group, like the others.
 4. **Apparatus**: Pole, Hanging or Rope, as the meet offers it for that gender.
 5. **Continue to Dashboard**.
 

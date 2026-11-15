@@ -69,7 +69,7 @@ const {
   findCompetition,
   resolveSeatAccounts,
 } = require('./lib/admin-api');
-const { readPlan, planForPlace, seatsFor, withTimeKeeper, panelsForType } = require('./lib/panel-plan');
+const { readPlan, planForPlace, seatsFor, withTimeKeeper } = require('./lib/panel-plan');
 
 function parseArgs(argv) {
   const value = (name) => {
@@ -202,20 +202,13 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
   console.log();
 
   /*
-   * Each panel with the competition types it judges. Competition II is ONE
-   * "All ages" final per gender since automatic finals
-   * (docs/qualification-plan.md), so the per-age panels judge Competition I
-   * (and III) and an "All ages" panel per gender judges Competition II.
+   * Each panel with the competition types it judges. Every competition is per
+   * age group (Competition II too since 2026-11-14), so one panel per age
+   * group judges all of the meet's competitions.
    */
   // The MEET's competitions (I only, I+II, I+III or I+II+III), not the plan's.
   const meetTypes = competition.competitionTypes?.length ? competition.competitionTypes : plan.competitionTypes;
-  const perAgeTypes = meetTypes.filter((t) => t !== 'competition_2');
-  const all = [
-    ...(perAgeTypes.length ? meetPlan.panels.map((p) => ({ ...p, types: perAgeTypes })) : []),
-    ...(meetTypes.includes('competition_2')
-      ? panelsForType(meetPlan, 'competition_2').map((p) => ({ ...p, types: ['competition_2'] }))
-      : []),
-  ];
+  const all = meetPlan.panels.map((p) => ({ ...p, types: meetTypes }));
   const wanted = only
     ? all.filter((p) => `${p.gender}/${p.ageGroup}` === only)
     : all;

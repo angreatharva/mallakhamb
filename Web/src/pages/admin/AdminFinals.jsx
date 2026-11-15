@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
-import { CheckCheck, Lock, RefreshCw, RotateCcw, UserMinus, Undo2 } from 'lucide-react';
+import { CheckCheck, Lock, RefreshCw, RotateCcw, UserMinus, Undo2, Users } from 'lucide-react';
 import { adminAPI } from '@/services/user/admin.api';
 import { superAdminAPI } from '@/services/user/super-admin.api';
-import { ageGroupMapping } from '@/hooks/useAgeGroups';
+import { ageGroupMapping, ALL_AGES } from '@/hooks/useAgeGroups';
+import { useRouteContext } from '@/contexts/RouteContext';
 import {
   Button, ConfirmDialog, EmptyState, Heading, Notice, Panel, Segmented, Spinner, StatusTag, Tag,
 } from '@/components/ui';
@@ -42,12 +44,15 @@ const AllRoundDraw = ({ final, ageGroup, onDraw }) => {
 };
 AllRoundDraw.propTypes = { final: PropTypes.object.isRequired, ageGroup: PropTypes.string.isRequired, onDraw: PropTypes.func.isRequired };
 
-const FinalCard = ({ final, onWithdraw, onReinstate, onDraw, onFinalize, onReopen }) => {
+const FinalCard = ({ final, onWithdraw, onReinstate, onDraw, onFinalize, onReopen, onSeatJudges }) => {
   const status = STATUS[final.status] || STATUS.waiting;
   const isII = final.competitionType === 'competition_2';
   const started = final.status === 'started';
   const ready = final.status === 'set' && !(final.blockers || []).length;
   const drawGroups = isII ? [...new Set(final.tied.map((t) => t.ageGroup))] : [];
+  // Only the old one-final-per-gender Competition II mixes age groups.
+  const mixedAges = isII && final.ageGroup === ALL_AGES;
+  const confirmed = ['finalized', 'started'].includes(final.status);
   return (
     <Panel className="grid gap-3 p-4" data-testid="final-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -71,7 +76,7 @@ const FinalCard = ({ final, onWithdraw, onReinstate, onDraw, onFinalize, onReope
               <span className="type-body-s min-w-0">
                 <strong>{q.playerName}</strong>{' '}
                 <Tag>{q.team?.name || 'Team'}</Tag>
-                {isII && <span className="text-fg-muted"> · {ageLabel(q.ageGroup)}</span>}
+                {mixedAges && <span className="text-fg-muted"> · {ageLabel(q.ageGroup)}</span>}
                 <span className="text-fg-muted"> · {isII ? 'total' : 'Comp I'} {Number(q.score ?? 0).toFixed(2)}</span>
                 {q.replacement && <span className="text-fg-muted"> · replacement</span>}
               </span>
@@ -109,6 +114,11 @@ const FinalCard = ({ final, onWithdraw, onReinstate, onDraw, onFinalize, onReope
         {final.status === 'finalized' && onReopen && (
           <Button size="sm" variant="ghost" icon={RotateCcw} onClick={() => onReopen(final)}>Reopen</Button>
         )}
+        {/* Once a Competition II final is confirmed its judges are seated
+            (owner, 2026-11-14) — a panel of its own per apparatus. */}
+        {isII && confirmed && onSeatJudges && (
+          <Button size="sm" variant="line" icon={Users} onClick={() => onSeatJudges(final)}>Seat judges</Button>
+        )}
       </div>
       {final.status === 'waiting_draw' && !isII && (
         <p className="type-caption m-0">Record the lucky draw on the Competition I standing (Scores tab); this final updates by itself.</p>
@@ -119,7 +129,7 @@ const FinalCard = ({ final, onWithdraw, onReinstate, onDraw, onFinalize, onReope
 };
 FinalCard.propTypes = {
   final: PropTypes.object.isRequired, onWithdraw: PropTypes.func.isRequired, onReinstate: PropTypes.func.isRequired, onDraw: PropTypes.func.isRequired,
-  onFinalize: PropTypes.func.isRequired, onReopen: PropTypes.func,
+  onFinalize: PropTypes.func.isRequired, onReopen: PropTypes.func, onSeatJudges: PropTypes.func,
 };
 
 /** What "Finalize all" is about to enter, shown before it does. */
@@ -153,11 +163,21 @@ FinalizeSummary.propTypes = { finals: PropTypes.array.isRequired };
 
 /**
  * Admin / Super Admin → Finals: who moved from Competition I into Competition
- * II (All Round, all ages) and III (Apparatus, per age group), automatically
- * as Competition I is locked (docs/qualification-plan.md).
+ * II (All Round) and III (Apparatus), each a final per gender + age group,
+ * automatically as Competition I is locked (docs/qualification-plan.md).
  */
 const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = null }) => {
   const api = (isSuperAdmin ? superAdminAPI : adminAPI).finals;
+  const navigate = useNavigate();
+  const { routePrefix } = useRouteContext();
+  // Judges tab, with this final's category already chosen (AdminJudges reads it).
+  const seatJudges = (final) => navigate(`${routePrefix || (isSuperAdmin ? '/superadmin' : '/admin')}/dashboard/judges`, {
+    state: {
+      judgesPreset: {
+        competitionId, gender: final.gender, ageGroup: final.ageGroup, competitionType: final.competitionType, label: final.label,
+      },
+    },
+  });
   const [finals, setFinals] = useState(null);
   const [type, setType] = useState('competition_3');
   const [gender, setGender] = useState('Male');
@@ -217,7 +237,7 @@ const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = 
         <div className="grid gap-1">
           <Heading level={2} step="display-m">Finals</Heading>
           <p className="type-body-s text-fg-muted m-0">
-            Filled automatically when Competition I is locked. Competition III: top 10 per apparatus and age group, at most 2 per team. Competition II: the top 2 of each age group, all ages together.
+            Filled automatically when Competition I is locked. Competition III: top 10 per apparatus and age group, at most 2 per team. Competition II: the top 2 of each age group, a final per age group. Once a final is finalized, seat its judges.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -246,6 +266,7 @@ const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = 
             : <div className="grid gap-3 lg:grid-cols-2">{shown.map((f) => (
               <FinalCard key={f._id} final={f}
                 onFinalize={(final) => setFinalizing(final)}
+                onSeatJudges={seatJudges}
                 onReopen={isSuperAdmin ? (final) => act(() => api.reopen(final._id, competitionId), 'Final reopened') : null}
                 onWithdraw={(final, q) => setWithdrawing({ final, q })}
                 onReinstate={(final, playerId) => act(() => api.reinstate(final._id, { playerId, competitionId }), 'Reinstated')}

@@ -8,6 +8,8 @@ import { adminAPI } from '@/services/user/admin.api';
 import { withAllAges, typesForAgeGroup, ageMatches } from '@/hooks/useAgeGroups';
 import AdminFinals from './AdminFinals';
 
+const navigate = vi.fn();
+vi.mock('react-router-dom', () => ({ useNavigate: () => navigate }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/services/user/admin.api', () => ({
   adminAPI: { finals: { list: vi.fn(), recompute: vi.fn(), withdraw: vi.fn(), reinstate: vi.fn(), draw: vi.fn(), finalize: vi.fn(), finalizeAll: vi.fn(), reopen: vi.fn() } },
@@ -65,6 +67,29 @@ describe('AdminFinals', () => {
     expect(screen.queryByRole('button', { name: 'Finalize' })).toBeNull();
   });
 
+  it('a finalized Competition II final opens the Judges tab on its category to seat its judges', async () => {
+    const ii = {
+      ...final, _id: 'f3', competitionType: 'competition_2', ageGroup: 'Under14', apparatus: null,
+      label: 'Competition II (All Round) — Boys Under 14', status: 'finalized', skipped: [],
+    };
+    adminAPI.finals.list.mockResolvedValue({ data: { data: { finals: [final, ii] } } });
+    render(<AdminFinals competitionId="c1" />);
+    fireEvent.click(await screen.findByText('II · All Round'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Seat judges' }));
+    expect(navigate).toHaveBeenCalledWith('/admin/dashboard/judges', {
+      state: { judgesPreset: { competitionId: 'c1', gender: 'Male', ageGroup: 'Under14', competitionType: 'competition_2', label: ii.label } },
+    });
+    // A per-age final does not repeat the age group on every qualifier.
+    expect(screen.queryByText(/· Under 14$/)).toBeNull();
+  });
+
+  it('a final not yet finalized offers no Seat judges', async () => {
+    render(<AdminFinals competitionId="c1" />);
+    fireEvent.click(await screen.findByText('II · All Round'));
+    await screen.findByText('Under 12: SGAM has not locked Competition I Pole');
+    expect(screen.queryByRole('button', { name: 'Seat judges' })).toBeNull();
+  });
+
   it('a waiting Competition II final says what it waits for', async () => {
     render(<AdminFinals competitionId="c1" />);
     fireEvent.click(await screen.findByText('II · All Round'));
@@ -72,18 +97,24 @@ describe('AdminFinals', () => {
   });
 });
 
-describe('All ages in category pickers', () => {
+describe('Competition II categories (a final per gender + age group since 2026-11-14)', () => {
   const meet = { competitionTypes: ['competition_1', 'competition_2'] };
+  const oldAllAgesMeet = { ...meet, allAgesFinals: true };
   const types = [{ value: 'competition_1' }, { value: 'competition_2' }];
 
-  it('adds All ages only to a meet running Competition II (not a legacy one)', () => {
-    expect(withAllAges([{ value: 'Under14' }], meet).map((o) => o.value)).toEqual(['Under14', 'AllAges']);
+  it('a meet running Competition II offers its own age groups only — no All ages', () => {
+    expect(withAllAges([{ value: 'Under14' }], meet).map((o) => o.value)).toEqual(['Under14']);
     expect(withAllAges([{ value: 'Under14' }], { ...meet, legacyFinals: true }).map((o) => o.value)).toEqual(['Under14']);
   });
 
-  it('All ages is Competition II only, and Competition II is All ages only', () => {
-    expect(typesForAgeGroup(types, { value: 'AllAges' }, meet).map((o) => o.value)).toEqual(['competition_2']);
-    expect(typesForAgeGroup(types, { value: 'Under14' }, meet).map((o) => o.value)).toEqual(['competition_1']);
+  it('every age group offers Competition II (its judges are seated there)', () => {
+    expect(typesForAgeGroup(types, { value: 'Under14' }, meet).map((o) => o.value)).toEqual(['competition_1', 'competition_2']);
+  });
+
+  it('a meet whose All-ages final had started keeps All ages, Competition II only', () => {
+    expect(withAllAges([{ value: 'Under14' }], oldAllAgesMeet).map((o) => o.value)).toEqual(['Under14', 'AllAges']);
+    expect(typesForAgeGroup(types, { value: 'AllAges' }, oldAllAgesMeet).map((o) => o.value)).toEqual(['competition_2']);
+    expect(typesForAgeGroup(types, { value: 'Under14' }, oldAllAgesMeet).map((o) => o.value)).toEqual(['competition_1']);
   });
 
   it('every age group belongs to All ages', () => {

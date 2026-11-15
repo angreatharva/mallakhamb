@@ -61,7 +61,7 @@ Pick **Gender** and **Age group**; the teams load ("Showing Female — Above 16 
 
 <a id="lots"></a>
 ### Lots — running order
-1. Pick **Gender**, **Age group** and **Competition type**. Only the types the meet runs are offered; Competition II uses the age group **All ages**.
+1. Pick **Gender**, **Age group** and **Competition type**. Only the types the meet runs are offered. Competition II is a final per gender and age group, so it uses the ordinary age groups.
 2. **Draw Lots** gives every submitted team in that category a lot number, and every athlete inside each team a position. Confirm in the dialog.
 3. A stamp reads "Lots drawn <date, time> by <you>". The button becomes **Redraw Lots** (use it after withdrawals).
 4. Drag a team by its grip to change the order; its lot number stays with it. The athlete icon opens **Athlete order**, which you drag the same way. Dragging pauses while the search box is in use.
@@ -93,7 +93,7 @@ Pick **Gender**, **Age group**, **Competition type** and **Apparatus**. Nothing 
 <a id="finals"></a>
 ### Finals (Competition II and III)
 - The lists are built **automatically** from locked Competition I results. You never pick the finalists.
-  - **Competition II (All Round):** one final per gender with **all ages together**: the top 2 of each age group, by the sum of their Competition I scores on every apparatus.
+  - **Competition II (All Round):** one final per gender **and age group**: the top 2 of the age group, by the sum of their Competition I scores on every apparatus. Once a Competition II final is finalized, its card has **Seat judges**, which opens the Judges tab on that category; pick the apparatus and staff its panel. A Competition II panel is its own panel: it can be different people from the age group's Competition I panel.
   - **Competition III (Apparatus):** per age group and apparatus, the top 10, with **at most 2 from one team**. A team's third player is passed over, and the card says who.
 - Card status:
   - **Waiting for Competition I** (it names the team that hasn't locked yet)
@@ -112,7 +112,7 @@ Pick **Gender**, **Age group**, **Competition type** and **Apparatus**. Nothing 
 Judges register themselves. You **assign** registered judges to seats; you never create a judge or set their password.
 
 **Add Judge**
-1. Choose **Judge action → Add Judge**, then **Gender**, **Age group**, **Competition type** and **Apparatus**. There is one panel per apparatus, so staff each one separately. Competition II uses **All ages**.
+1. Choose **Judge action → Add Judge**, then **Gender**, **Age group**, **Competition type** and **Apparatus**. There is one panel per apparatus, so staff each one separately. Each competition type has its own panel too, so Competition II's judges are seated under the age group with **Competition II** chosen.
 2. Fill the seven seats:
 
 | Seat | Required |

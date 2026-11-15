@@ -164,9 +164,9 @@ async function season() {
 }
 
 /**
- * The categories a competition type is judged in: Competition I per age group,
- * Competition II as one "All ages" final per gender (automatic finals,
- * docs/qualification-plan.md). See scripts/lib/panel-plan#panelsForType.
+ * The categories a competition type is judged in: per age group, Competition
+ * II included since 2026-11-14 (docs/qualification-plan.md). See
+ * scripts/lib/panel-plan#panelsForType.
  */
 const categoriesOf = (meet, type = 'competition_1') => panelsForType(meet.plan, type)
   .map((p) => ({ gender: p.gender, ageGroup: p.ageGroup, size: p.size }));
@@ -803,7 +803,8 @@ async function stepJudges() {
       expectThat(same(gotSeats, wantSeats), `${judge.email} @ ${meetPlace}: holds the plan's seat`, `${gotSeats.join('+')} vs plan ${wantSeats.join('+')}`);
       // Judge 3 sits only on 4- and 5-judge panels, Judge 4 only on 5s: every panel that HAS the seat.
       const panels = new Set(assignments.map((a) => `${a.gender}/${a.ageGroup}`));
-      const owed = [...meet.plan.panels, ...(competitionTypesOf(meet).includes('competition_2') ? panelsForType(meet.plan, 'competition_2') : [])]
+      // One panel per age group judges every competition of the meet.
+      const owed = meet.plan.panels
         .filter((p) => wantSeats.some((seat) => seatsFor(p.size).includes(seat)));
       expectThat(panels.size === owed.length, `${judge.email} @ ${meetPlace}: seated on every panel with their seat`, `${panels.size}/${owed.length}`);
       const comp = await there.get(`/api/judge/competition/${id}`);

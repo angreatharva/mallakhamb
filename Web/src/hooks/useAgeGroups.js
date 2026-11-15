@@ -113,18 +113,27 @@ export const getFilteredAgeGroups = (competition, gender) => {
     .sort((a, b) => allowed.indexOf(a.value) - allowed.indexOf(b.value));
 };
 
-/** Does this meet run Competition II's one "All ages" final per gender? */
+/**
+ * Does this meet run Competition II as the old one "All ages" final per gender?
+ *
+ * Competition II is a final per gender + age group since 2026-11-14, so a
+ * Competition II category is an ordinary age group. Only a meet whose All-ages
+ * final had already started (`allAgesFinals`, Server migration 017) keeps it.
+ */
 export const runsAllAges = (competition) =>
-  (competition?.competitionTypes || []).includes('competition_2') && !competition?.legacyFinals;
+  (competition?.competitionTypes || []).includes('competition_2')
+  && !competition?.legacyFinals
+  && competition?.allAgesFinals === true;
 
-/** A category picker's age groups, plus "All ages" when the meet runs Competition II. */
+/** A category picker's age groups, plus "All ages" on an `allAgesFinals` meet. */
 export const withAllAges = (options, competition) =>
   (runsAllAges(competition) ? [...(options || []), ageGroupMapping.AllAges] : options || []);
 
 /**
- * The competition types a category of this age group can be: "All ages" is
- * Competition II only, and (on a meet with automatic finals) Competition II is
- * "All ages" only. Options may be `{value}` objects or plain slugs.
+ * The competition types a category of this age group can be. On an
+ * `allAgesFinals` meet "All ages" is Competition II only and Competition II is
+ * "All ages" only; everywhere else every age group offers every competition.
+ * Options may be `{value}` objects or plain slugs.
  */
 export const typesForAgeGroup = (typeOptions, ageGroup, competition) => {
   const value = ageGroup?.value ?? ageGroup;

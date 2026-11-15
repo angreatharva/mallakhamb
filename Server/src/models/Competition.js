@@ -132,6 +132,17 @@ const competitionSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  /*
+   * Competition II ran as ONE "All ages" final per gender here — the rule
+   * before 2026-11-14, when the owner made Competition II a final per gender
+   * AND age group. Set by migration 017 only on meets whose All-ages final had
+   * already started; those keep it, every other meet runs one final per age
+   * group (docs/qualification-plan.md).
+   */
+  allAgesFinals: {
+    type: Boolean,
+    default: false
+  },
   // Ages are measured on 31 December of the year the meet is held — always
   // derived from `startDate` (cop-rules#ageCutoffYear). The old per-meet
   // `ageCutoffYear` override is gone (migration 015 removed saved values).

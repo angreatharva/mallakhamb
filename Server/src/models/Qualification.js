@@ -4,9 +4,10 @@
  * services/scoring/qualification.service.
  *
  *  - Competition III: one document per gender × age group × apparatus.
- *  - Competition II: one document per gender, age group `AllAges`, with a
- *    `slices` entry per age group (each age group's top two join as soon as
- *    that age group's Competition I is locked).
+ *  - Competition II: one document per gender × age group (owner, 2026-11-14),
+ *    with one `slices` entry. A meet whose Competition II had already started
+ *    under the old rule (`Competition.allAgesFinals`) keeps its one document
+ *    per gender, age group `AllAges`, with a slice per age group.
  *
  * `frozenAt` is set the moment the final's first score exists: after that a
  * Competition I correction no longer changes the list, it only sets

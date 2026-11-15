@@ -1,7 +1,11 @@
 /**
- * A category's age group and who is in it — with Competition II's "All ages"
- * (docs/qualification-plan.md): one final per gender holding every age
- * group's qualifiers.
+ * A category's age group and who is in it.
+ *
+ * Competition II is a final per gender AND age group (owner, 2026-11-14), so a
+ * Competition II category is an ordinary age group. The one exception is a
+ * meet whose Competition II had already started as ONE "All ages" final per
+ * gender (`allAgesFinals`, migration 017): it keeps that category, which holds
+ * every age group's qualifiers (docs/qualification-plan.md).
  *
  * @module utils/data/category.util
  */
@@ -28,11 +32,17 @@ function entryInCompetition(entry, competitionType, apparatus = null) {
   return apparatus ? list.includes(apparatus) : list.length > 0;
 }
 
-/** The meet's category age groups for a gender: its own, plus All ages when it runs Competition II. */
-function categoryAgeGroups(competition, gender) {
-  const own = (competition?.ageGroups || []).filter((g) => !gender || g.gender === gender).map((g) => g.ageGroup);
-  const runsII = (competition?.competitionTypes || []).includes('competition_2') && !competition?.legacyFinals;
-  return runsII ? [...own, ALL_AGES] : own;
+/** Does this meet run Competition II as the old one "All ages" final per gender? */
+function runsAllAges(competition) {
+  return (competition?.competitionTypes || []).includes('competition_2')
+    && !competition?.legacyFinals
+    && competition?.allAgesFinals === true;
 }
 
-module.exports = { ageMatches, entryInCompetition, categoryAgeGroups, ALL_AGES };
+/** The meet's category age groups for a gender: its own, plus All ages on an `allAgesFinals` meet. */
+function categoryAgeGroups(competition, gender) {
+  const own = (competition?.ageGroups || []).filter((g) => !gender || g.gender === gender).map((g) => g.ageGroup);
+  return runsAllAges(competition) ? [...own, ALL_AGES] : own;
+}
+
+module.exports = { ageMatches, entryInCompetition, categoryAgeGroups, runsAllAges, ALL_AGES };

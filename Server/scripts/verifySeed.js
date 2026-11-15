@@ -252,7 +252,7 @@ async function verify() {
       continue;
     }
 
-    // Competition II is one "All ages" panel per gender (automatic finals).
+    // Every competition is per age group (Competition II too since 2026-11-14).
     // The MEET's own competitions (I, I+II, I+III or I+II+III).
     const panelsHere = [...new Set(typesOfMeet(competition).flatMap((type) => panelsForType(meetPlan, type)))];
     for (const panel of panelsHere) {
@@ -326,7 +326,7 @@ async function verify() {
     }
   }
 
-  // Per type: Competition I per age group, Competition II one "All ages" final per gender.
+  // Per type, every competition per age group (Competition II too since 2026-11-14).
   // Competition III per age group too, each meet by its own competitions.
   const expectedCategories = competitions.reduce((total, competition) => {
     let meetPlan;

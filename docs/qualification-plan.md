@@ -2,13 +2,18 @@
 
 Product decisions settled with the owner on 2026-10-29 (Q&A); the three open decisions were confirmed the same day. **Built on `feature/qualification-finals` (2026-10-30).** As built, the qualifiers are kept in `Qualification` documents AND written into each qualifier's squad entry as their Competition II / III apparatus (the engine owns those two keys), so panels, lots, scoring and public results use their existing paths; see `Server/MEMORY/modules/scoring.md`.
 
+## Change 2026-11-14 (owner)
+
+- **"Finals must not be on gender, but on gender + age group":** Competition II is one final per gender × age group, still the top 2 of the age group by the sum of every apparatus. The "All ages" category below is kept only for a meet whose All-ages final had already started (`Competition.allAgesFinals`, migration 017).
+- **"Once the finals are confirmed there must be a provision to add judges to Competition II":** a judge seat's unique keys now include `competitionTypes`, so an age group's Competition II panel is its own (other people allowed); the Finals tab's **Seat judges** on a finalized Competition II final opens the Judges tab on its category.
+
 ## Rules
 
 **Names follow the COP; the numbers are the owner's.**
 
 | | Competition II — All Round Individual | Competition III — Apparatus Championship |
 |---|---|---|
-| One final per | gender (boys and girls never combined), **all age groups together** | gender × age group × apparatus |
+| One final per | gender × **age group** (owner, 2026-11-14; was all age groups together) | gender × age group × apparatus |
 | Who qualifies | the **top 2 of each age group** (U10, U12, U14, U18, A18 boys → 10 boys) | the **top 10** on that apparatus in that age group |
 | Ranked by | the **sum** of the player's Competition I final scores on every apparatus of their gender (an apparatus not performed counts 0) | the player's Competition I final score on that apparatus |
 | Team cap | none: both of an age group's top 2 may be from one team | **at most 2 per registered team**: a 3rd player from the same team is skipped and the next eligible player gets the place |

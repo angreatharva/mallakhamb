@@ -7,7 +7,11 @@
  *
  *  - every Competition III final of that gender + age group (one per apparatus
  *    the meet runs in Competition III for the gender);
- *  - the gender's Competition II final (that age group's slice).
+ *  - the Competition II final of that gender + age group (owner, 2026-11-14:
+ *    "finals must not be on gender, but on gender + age group"). A meet whose
+ *    Competition II had already started as one "All ages" final per gender
+ *    (`allAgesFinals`, migration 017) keeps that one final, fed by every age
+ *    group.
  *
  * A final takes players only from Competition I scores that are PUBLISHED —
  * saved and locked by the Senior Judge and the Scorer, the same moment the
@@ -36,6 +40,7 @@
 const { NotFoundError, BusinessRuleError, ValidationError } = require('../../errors');
 const { ALL_AGES, apparatusKey, toCompetitionTypeDisplay } = require('../../config/cop-rules');
 const { offeredApparatus } = require('../../utils/data/competition-apparatus.util');
+const { runsAllAges } = require('../../utils/data/category.util');
 const { apparatusList, toCanonicalApparatus } = require('../../utils/data/apparatus.util');
 const { isSubmittedRegistration } = require('../../utils/data/team-visibility.util');
 const { publishedPlayerScores } = require('../../utils/scoring/published-score.util');
@@ -48,7 +53,13 @@ const groupLabel = (g) => (g === ALL_AGES ? 'All ages' : String(g || '').replace
 const genderWord = (g) => (g === 'Male' ? 'Boys' : 'Girls');
 const shortApparatus = (a) => String(a || '').replace(' Mallakhamb', '');
 
-/** "Competition III — Boys Under 14 · Pole", "Competition II — Girls All ages". */
+/**
+ * The age group a final's recompute is scoped to: its own, or every age group
+ * of the gender for an old "All ages" Competition II final.
+ */
+const recomputeScope = (doc) => (doc.ageGroup === ALL_AGES ? null : doc.ageGroup);
+
+/** "Competition III — Boys Under 14 · Pole", "Competition II — Girls Under 14". */
 function finalLabel(doc) {
   const type = doc.competitionType === 'competition_2' ? 'Competition II (All Round)' : 'Competition III (Apparatus)';
   return `${type} — ${genderWord(doc.gender)} ${groupLabel(doc.ageGroup)}${doc.apparatus ? ` · ${shortApparatus(doc.apparatus)}` : ''}`;
@@ -89,7 +100,7 @@ class QualificationService {
       for (const g of genders) {
         const groups = ageGroup ? [ageGroup] : this._ageGroups(competition, g);
         for (const group of groups) await this._recomputeCategory(competition, g, group);
-        if ((competition.competitionTypes || []).includes('competition_2')) await this._recomputeAllRound(competition, g);
+        if ((competition.competitionTypes || []).includes('competition_2')) await this._recomputeAllRound(competition, g, ageGroup);
         await this._syncEntries(competitionId, g);
       }
     } catch (error) {
@@ -242,9 +253,29 @@ class QualificationService {
 
   // ── Competition II ──────────────────────────────────────────────────────
 
-  /** @private */
-  async _recomputeAllRound(competition, gender) {
-    const identity = { competition: competition._id, competitionType: 'competition_2', gender, ageGroup: ALL_AGES, apparatus: null };
+  /**
+   * One Competition II final per gender + age group; on an `allAgesFinals`
+   * meet, the old single "All ages" final of the gender instead.
+   * @private
+   */
+  async _recomputeAllRound(competition, gender, onlyAgeGroup = null) {
+    const groups = this._ageGroups(competition, gender);
+    if (runsAllAges(competition)) {
+      await this._recomputeAllRoundFinal(competition, gender, ALL_AGES, groups);
+      return;
+    }
+    for (const ageGroup of onlyAgeGroup ? [onlyAgeGroup] : groups) {
+      await this._recomputeAllRoundFinal(competition, gender, ageGroup, [ageGroup]);
+    }
+  }
+
+  /**
+   * One Competition II final: the top of each source age group by the sum of
+   * their Competition I scores over the gender's apparatus.
+   * @private
+   */
+  async _recomputeAllRoundFinal(competition, gender, finalAgeGroup, sourceAgeGroups) {
+    const identity = { competition: competition._id, competitionType: 'competition_2', gender, ageGroup: finalAgeGroup, apparatus: null };
     const existing = await this.qualifications.findOne(identity);
     const withdrawn = new Set((existing?.withdrawn || []).map((w) => idOf(w.player)));
     const apparatusOfGender = offeredApparatus(competition, 'competition_1', gender);
@@ -254,10 +285,20 @@ class QualificationService {
     const skipped = [];
     const waitingFor = [];
 
-    for (const ageGroup of this._ageGroups(competition, gender)) {
+    for (const ageGroup of sourceAgeGroups) {
       const inputs = await this._categoryInputs(competition, gender, ageGroup);
       const blocking = Object.entries(inputs.missing).filter(([, teams]) => teams.length);
-      if (!inputs.expected.size) continue; // nobody entered in this age group
+      if (!inputs.expected.size) {
+        // Nobody entered in this age group. On a per-age final that is no
+        // final at all: none is listed (one left from an earlier entry goes,
+        // unless it was already finalized or started).
+        if (sourceAgeGroups.length === 1) {
+          if (existing && !existing.finalizedAt && !existing.frozenAt) await this.qualifications.model.deleteOne({ _id: existing._id });
+          if (!existing || (!existing.finalizedAt && !existing.frozenAt)) return;
+          waitingFor.push('Nobody is entered in this age group in Competition I');
+        }
+        continue;
+      }
       if (blocking.length) {
         const names = await this._teamNames(blocking.flatMap(([, t]) => t));
         const reasons = blocking.flatMap(([key, teams]) => teams.map((t) => `${groupLabel(ageGroup)}: ${names.get(t)?.name || 'a team'} has not locked Competition I ${shortApparatus(key)}`));
@@ -345,8 +386,9 @@ class QualificationService {
     const competition = await this.competitions.findById(competitionId);
     // Only a FINALIZED final is entered (owner, 2026-10-30).
     const docs = (await this.qualifications.find({ competition: competitionId, gender }) || []).filter((d) => d.finalizedAt);
-    const ii = docs.find((d) => d.competitionType === 'competition_2');
-    const allRound = new Set((ii?.qualifiers || []).map((q) => idOf(q.player)));
+    // One Competition II final per age group (or the old All-ages one).
+    const allRound = new Set(docs.filter((d) => d.competitionType === 'competition_2')
+      .flatMap((d) => (d.qualifiers || []).map((q) => idOf(q.player))));
     const iiApparatus = offeredApparatus(competition, 'competition_2', gender);
     const apparatusOf = new Map(); // player → [III apparatus]
     for (const doc of docs.filter((d) => d.competitionType === 'competition_3')) {
@@ -404,7 +446,7 @@ class QualificationService {
   async _recomputeKeepingFinalized(doc) {
     const finalized = doc.finalizedAt ? { finalizedAt: doc.finalizedAt, finalizedBy: doc.finalizedBy } : null;
     if (finalized) await this.qualifications.updateById(doc._id, { finalizedAt: null, staleSince: null, staleNote: '' });
-    await this.onCompetitionOneChange(doc.competition, doc.gender, doc.competitionType === 'competition_3' ? doc.ageGroup : null);
+    await this.onCompetitionOneChange(doc.competition, doc.gender, recomputeScope(doc));
     if (!finalized) return;
     const fresh = await this.qualifications.findById(doc._id);
     if (fresh.status !== 'set') return;
@@ -435,7 +477,7 @@ class QualificationService {
     const drawOrders = (doc.drawOrders || []).filter((d) => d.ageGroup !== ageGroup);
     drawOrders.push({ ageGroup, order, by: actor?.id || null, at: new Date() });
     await this.qualifications.updateById(doc._id, { drawOrders });
-    await this.onCompetitionOneChange(doc.competition, doc.gender, null);
+    await this.onCompetitionOneChange(doc.competition, doc.gender, recomputeScope(doc));
     return this.qualifications.findById(doc._id);
   }
 
@@ -460,7 +502,7 @@ class QualificationService {
   async finalize(actor, qualificationId, { competitionId = null } = {}) {
     // Recompute first, so the check runs on Competition I as it is now.
     const before = await this._final(qualificationId, competitionId);
-    await this.onCompetitionOneChange(before.competition, before.gender, before.competitionType === 'competition_3' ? before.ageGroup : null);
+    await this.onCompetitionOneChange(before.competition, before.gender, recomputeScope(before));
     const doc = await this._final(qualificationId, competitionId);
     const blockers = this._blockers(doc);
     if (blockers.length) throw new BusinessRuleError(`${finalLabel(doc)} cannot be finalized yet: ${blockers.join(' · ')}`, { reason: 'NOT_READY', blockers });
@@ -502,7 +544,7 @@ class QualificationService {
       throw new BusinessRuleError('This final has started and can no longer be reopened.');
     }
     await this.qualifications.updateById(doc._id, { finalizedAt: null, finalizedBy: null, staleSince: null, staleNote: '' });
-    await this.onCompetitionOneChange(doc.competition, doc.gender, doc.competitionType === 'competition_3' ? doc.ageGroup : null);
+    await this.onCompetitionOneChange(doc.competition, doc.gender, recomputeScope(doc));
     return this.qualifications.findById(doc._id);
   }
 
