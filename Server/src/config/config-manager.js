@@ -164,7 +164,14 @@ class ConfigManager {
       },
       features: {
         enableCaching: this.getBoolean('ENABLE_CACHING', true),
-        enableMetrics: this.getBoolean('ENABLE_METRICS', true)
+        enableMetrics: this.getBoolean('ENABLE_METRICS', true),
+        /**
+         * The coach's own paper-form (OCR) routes, /api/coaches/paper-form/*.
+         * Off by default: they answer 404. The web build has the matching
+         * VITE_COACH_PAPER_FORM. The admin / super admin walk-in desk is a
+         * separate surface and is not behind this flag.
+         */
+        coachPaperForm: this.getBoolean('COACH_PAPER_FORM_ENABLED', false)
       },
       redis: {
         url: this.getString('REDIS_URL', ''),

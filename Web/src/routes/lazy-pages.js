@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import { COACH_PAPER_FORM_ENABLED } from '@/config/features';
 
 export const Home = lazy(() => import('@/pages/public/Home'));
 export const PlayerLogin = lazy(() => import('@/pages/player/PlayerLogin'));
@@ -8,7 +9,8 @@ export const CoachLogin = lazy(() => import('@/pages/coach/CoachLogin'));
 export const CoachCreateTeam = lazy(() => import('@/pages/coach/CoachCreateTeam'));
 export const CoachDashboard = lazy(() => import('@/pages/coach/CoachDashboard'));
 export const CoachPayment = lazy(() => import('@/pages/coach/CoachPayment'));
-export const CoachPaperForm = lazy(() => import('@/pages/coach/CoachPaperForm'));
+// Off by default (config/features.js): a constant-false branch, so the build drops the chunk.
+export const CoachPaperForm = COACH_PAPER_FORM_ENABLED ? lazy(() => import('@/pages/coach/CoachPaperForm')) : null;
 export const AdminLogin = lazy(() => import('@/pages/admin/AdminLogin'));
 export const AdminRegister = lazy(() => import('@/pages/admin/AdminRegister'));
 export const SuperAdminLogin = lazy(() => import('@/pages/superadmin/SuperAdminLogin'));

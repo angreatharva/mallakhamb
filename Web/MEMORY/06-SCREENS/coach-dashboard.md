@@ -113,7 +113,7 @@ Re-fetched whenever `currentCompetition._id` changes (`:173-177`, from
 - The age rule is the COP util (`utils/competition/ageEligibility.js`); older
   entries breaking it show the server's `players[].ageIssue` in red; a refusal
   shows the server's reason.
-- "Scan Paper Form" → `/coach/paper-form` — [superadmin-player-teams.md](superadmin-player-teams.md).
+- "Scan Paper Form" → `/coach/paper-form` (button and route exist only when the build sets `VITE_COACH_PAPER_FORM=1`, see `src/config/features.js`; off by default, and the server's `COACH_PAPER_FORM_ENABLED` 404s the API) — [superadmin-player-teams.md](superadmin-player-teams.md).
 
 ## Since the last pass (2026-11-11, against `f5465b4`)
 
