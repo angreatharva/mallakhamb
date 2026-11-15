@@ -4,7 +4,7 @@ Product decisions settled with the owner on 2026-10-29 (Q&A); the three open dec
 
 ## Change 2026-11-14 (owner)
 
-- **"Finals must not be on gender, but on gender + age group":** Competition II is one final per gender × age group, still the top 2 of the age group by the sum of every apparatus. The "All ages" category below is kept only for a meet whose All-ages final had already started (`Competition.allAgesFinals`, migration 017).
+- **"Finals must not be on gender, but on gender + age group":** Competition II is one final per gender × age group. On 2026-11-15 the owner set its size: the **top 10, at most 2 per team**, by the sum of every apparatus (Competition III unchanged). The "All ages" category below is kept only for a meet whose All-ages final had already started (`Competition.allAgesFinals`, migration 017).
 - **"Once the finals are confirmed there must be a provision to add judges to Competition II":** a judge seat's unique keys now include `competitionTypes`, so an age group's Competition II panel is its own (other people allowed); the Finals tab's **Seat judges** on a finalized Competition II final opens the Judges tab on its category.
 
 ## Rules
@@ -14,9 +14,9 @@ Product decisions settled with the owner on 2026-10-29 (Q&A); the three open dec
 | | Competition II — All Round Individual | Competition III — Apparatus Championship |
 |---|---|---|
 | One final per | gender × **age group** (owner, 2026-11-14; was all age groups together) | gender × age group × apparatus |
-| Who qualifies | the **top 2 of each age group** (U10, U12, U14, U18, A18 boys → 10 boys) | the **top 10** on that apparatus in that age group |
+| Who qualifies | the **top 10** of the age group (was the top 2 until 2026-11-15) | the **top 10** on that apparatus in that age group |
 | Ranked by | the **sum** of the player's Competition I final scores on every apparatus of their gender (an apparatus not performed counts 0) | the player's Competition I final score on that apparatus |
-| Team cap | none: both of an age group's top 2 may be from one team | **at most 2 per registered team**: a 3rd player from the same team is skipped and the next eligible player gets the place |
+| Team cap | **at most 2 per registered team** (since 2026-11-15) | **at most 2 per registered team**: a 3rd player from the same team is skipped and the next eligible player gets the place |
 | What they perform | every apparatus the meet runs for their gender in Competition II | that apparatus |
 
 - **No minimum score** (the COP's 60% does not apply).

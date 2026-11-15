@@ -237,7 +237,7 @@ const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = 
         <div className="grid gap-1">
           <Heading level={2} step="display-m">Finals</Heading>
           <p className="type-body-s text-fg-muted m-0">
-            Filled automatically when Competition I is locked. Competition III: top 10 per apparatus and age group, at most 2 per team. Competition II: the top 2 of each age group, a final per age group. Once a final is finalized, seat its judges.
+            Filled automatically when Competition I is locked. Competition III: top 10 per apparatus and age group, at most 2 per team. Competition II: top 10 per age group by the sum of every apparatus, at most 2 per team. Once a final is finalized, seat its judges.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -308,7 +308,7 @@ const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = 
           setWithdrawing(null);
           await act(() => api.withdraw(final._id, { playerId: q.player, competitionId }), 'Withdrawn: the next in rank fills the place');
         }}>
-        The next player in the Competition I ranking takes the place{withdrawing?.final?.competitionType === 'competition_3' ? ' (still at most 2 per team)' : ''}. Their coach is emailed.
+        The next player in the Competition I ranking takes the place (still at most 2 per team). Their coach is emailed.
       </ConfirmDialog>
     </div>
   );

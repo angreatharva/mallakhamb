@@ -8,10 +8,13 @@
  *    apparatus, the TOP 10 on that apparatus in Competition I, at most TWO from
  *    one registered team (a team's third player is passed over and the next
  *    player gets the place). No minimum score.
- *  - Competition II (All Round Individual): per gender, ONE final with the TOP 2
- *    of every age group, ranked on the SUM of their Competition I final scores
- *    over every apparatus of their gender (an apparatus not performed counts 0).
- *    No team cap. No minimum score.
+ *  - Competition II (All Round Individual): per gender × age group (owner,
+ *    2026-11-15; was one final per gender with the top 2 of each age group),
+ *    the TOP 10, at most TWO from one registered team, ranked on the SUM of
+ *    their Competition I final scores over every apparatus of their gender (an
+ *    apparatus not performed counts 0). No minimum score. A meet still on the
+ *    old one "All ages" final takes the same top 10 / 2 per team from each age
+ *    group.
  *
  * Ties at the cut line follow the COP tie-break. For III the Competition I
  * standing already carries it (ranking.util + recorded lucky draws), so a tie
@@ -30,7 +33,8 @@ const { baseScoreOf, fourJudgeAverageOf, fourJudgeAverageWithChiefOf } = require
 
 const APPARATUS_FINAL_SIZE = 10;
 const APPARATUS_TEAM_CAP = 2;
-const ALL_ROUND_PER_AGE_GROUP = 2;
+const ALL_ROUND_PER_AGE_GROUP = 10;
+const ALL_ROUND_TEAM_CAP = 2;
 const EPSILON = 1e-6;
 
 const idOf = (value) => (value?._id ?? value)?.toString?.() ?? null;
@@ -95,18 +99,21 @@ function apparatusFinal(ranked, { size = APPARATUS_FINAL_SIZE, teamCap = APPARAT
 }
 
 /**
- * Competition II: one age group's top two by the sum over every apparatus.
+ * Competition II: one age group's top 10 by the sum over every apparatus, at
+ * most two from one team (a team's third is passed over and the next player
+ * gets the place — the same walk as Competition III).
  *
  * @param {Object<string, Array<Object>>} rowsByApparatus - published
  *   Competition I rows of this gender + age group, keyed by apparatus
  * @param {Object} [options]
- * @param {number} [options.size=2]
+ * @param {number} [options.size=10]
+ * @param {number} [options.teamCap=2]
  * @param {Set<string>} [options.withdrawn]
  * @param {Array<string>} [options.drawOrder] - player ids in the order the
  *   admin drew them, for a tie the rules cannot break
  * @returns {{status: 'ready'|'waiting_draw', qualifiers: Array, skipped: Array, tied: Array, standing: Array}}
  */
-function allRoundAgeGroup(rowsByApparatus, { size = ALL_ROUND_PER_AGE_GROUP, withdrawn = new Set(), drawOrder = [] } = {}) {
+function allRoundAgeGroup(rowsByApparatus, { size = ALL_ROUND_PER_AGE_GROUP, teamCap = ALL_ROUND_TEAM_CAP, withdrawn = new Set(), drawOrder = [] } = {}) {
   const players = new Map();
   for (const [apparatus, rows] of Object.entries(rowsByApparatus || {})) {
     for (const row of rows || []) {
@@ -144,11 +151,18 @@ function allRoundAgeGroup(rowsByApparatus, { size = ALL_ROUND_PER_AGE_GROUP, wit
   });
 
   const skipped = [];
+  const perTeam = new Map();
   const eligible = standing.filter((p) => {
     if (withdrawn.has(p.playerId)) {
       skipped.push({ playerId: p.playerId, playerName: p.playerName, teamId: p.teamId, reason: 'withdrawn' });
       return false;
     }
+    const count = perTeam.get(p.teamId) || 0;
+    if (teamCap && count >= teamCap) {
+      skipped.push({ playerId: p.playerId, playerName: p.playerName, teamId: p.teamId, reason: 'team_cap', rank: p.rank });
+      return false;
+    }
+    perTeam.set(p.teamId, count + 1);
     return true;
   });
   const qualifiers = eligible.slice(0, size);
@@ -193,4 +207,5 @@ module.exports = {
   APPARATUS_FINAL_SIZE,
   APPARATUS_TEAM_CAP,
   ALL_ROUND_PER_AGE_GROUP,
+  ALL_ROUND_TEAM_CAP,
 };

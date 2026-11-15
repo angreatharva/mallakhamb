@@ -166,7 +166,7 @@ At **23:59 UTC on the end date** a competition becomes read-only for admins, jud
 - Team Championship (Competition I): per apparatus, the best 3 (team size 4) or best 5 (team size 6) scores are summed.
 
 ### 9.4 Finals
-Competition II is a final per gender **and age group**: the top 2 of the age group, by the sum of every apparatus; once finalized, **Seat judges** on its card seats its own panel. Competition III is the top 10 per gender, age group and apparatus, with at most 2 from one team. Nobody is entered until a final is **finalized**. Only the Super Admin can **Reopen** a finalized final, and only before its first score.
+Competition II is a final per gender **and age group**: the top 10, at most 2 from one team, by the sum of every apparatus; once finalized, **Seat judges** on its card seats its own panel. Competition III is the top 10 per gender, age group and apparatus, with at most 2 from one team. Nobody is entered until a final is **finalized**. Only the Super Admin can **Reopen** a finalized final, and only before its first score.
 
 ## 10. Your profile
 

@@ -331,6 +331,17 @@ class QualificationService {
   /** @private */
   async _store(identity, existing, next) {
     const started = await this._started(identity.competition, identity.competitionType, identity.gender, identity.ageGroup, identity.apparatus);
+    // A final that has a list keeps it once started or finalized. One that
+    // started before any list was ever computed (a score saved before its
+    // final existed) gets its list now, frozen — leaving it empty for good
+    // showed "Final started" with nobody in it.
+    const hasList = Boolean(existing?.computedAt);
+    if (!hasList && started) {
+      await this.qualifications.upsertFinal(identity, {
+        ...next, computedAt: new Date(), frozenAt: existing?.frozenAt || new Date(), staleSince: null, staleNote: '',
+      });
+      return;
+    }
     if (started || existing?.finalizedAt) {
       // Finalized (or already started): the list stays; a different result
       // only warns the admin.

@@ -93,7 +93,7 @@ Pick **Gender**, **Age group**, **Competition type** and **Apparatus**. Nothing 
 <a id="finals"></a>
 ### Finals (Competition II and III)
 - The lists are built **automatically** from locked Competition I results. You never pick the finalists.
-  - **Competition II (All Round):** one final per gender **and age group**: the top 2 of the age group, by the sum of their Competition I scores on every apparatus. Once a Competition II final is finalized, its card has **Seat judges**, which opens the Judges tab on that category; pick the apparatus and staff its panel. A Competition II panel is its own panel: it can be different people from the age group's Competition I panel.
+  - **Competition II (All Round):** one final per gender **and age group**: the top 10, at most 2 from one team, by the sum of their Competition I scores on every apparatus. Once a Competition II final is finalized, its card has **Seat judges**, which opens the Judges tab on that category; pick the apparatus and staff its panel. A Competition II panel is its own panel: it can be different people from the age group's Competition I panel.
   - **Competition III (Apparatus):** per age group and apparatus, the top 10, with **at most 2 from one team**. A team's third player is passed over, and the card says who.
 - Card status:
   - **Waiting for Competition I** (it names the team that hasn't locked yet)

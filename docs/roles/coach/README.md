@@ -139,7 +139,7 @@ Each competition has its **own** squad and payment. Use the **Competition** swit
 ## 7. Finals (Competition II and III)
 
 You enter players for **Competition I only**. The finals fill automatically from the Competition I results, and nobody is entered until the organisers **finalize** a final. When they do, you're emailed and the players appear under **Finals: your qualifiers**. There's **no extra fee** for finals.
-- **Competition II (All Round):** the top 2 of each age group, by the sum of every apparatus; a final per age group.
+- **Competition II (All Round):** a final per age group: the top 10, at most 2 from one team, by the sum of every apparatus.
 - **Competition III (Apparatus):** the top 10 per apparatus in each age group, with at most 2 from one team.
 
 ## 8. Requests from your players

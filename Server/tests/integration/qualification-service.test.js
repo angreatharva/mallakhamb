@@ -123,7 +123,7 @@ describe('qualification service', () => {
     expect(otpService.notifyCoachOfQualifiers).toHaveBeenCalled();
   });
 
-  test('II: a final per gender + age group, the top 2 of the age group by the sum of every apparatus', async () => {
+  test('II: a final per gender + age group, the top 10 by the sum of every apparatus, at most 2 per team', async () => {
     const { service } = build();
     const a = await team('Alpha2');
     const [y1, y2, y3, o1, o2] = [await player('Y1', 11), await player('Y2', 11), await player('Y3', 11), await player('O1', 13), await player('O2', 13)];
@@ -138,7 +138,8 @@ describe('qualification service', () => {
     const ii = (ageGroup) => finals.find((f) => f.competitionType === 'competition_2' && f.ageGroup === ageGroup);
     expect(finals.map((f) => f.ageGroup).sort()).toEqual(['Under12', 'Under14']); // no All-ages final
     expect(ii('Under12')).toMatchObject({ status: 'set', label: 'Competition II (All Round) — Boys Under 12' });
-    expect(ii('Under12').qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q', 'Y3 Q']); // 18 and 16.5; Y2 did Pole only (9.9)
+    expect(ii('Under12').qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q', 'Y3 Q']); // 18 and 16.5; Y2 (9.9, Pole only) is Alpha2's third
+    expect(ii('Under12').skipped).toEqual([expect.objectContaining({ playerName: 'Y2 Q', reason: 'team_cap' })]);
     expect(ii('Under14').status).toBe('waiting'); // Under 14 not locked yet
 
     await scores(competition, a, 'Under14', [[o1, POLE, 7], [o1, ROPE, 7], [o2, POLE, 6], [o2, ROPE, 6]]);
@@ -154,6 +155,20 @@ describe('qualification service', () => {
     const entryOf = (p) => saved.registeredTeams.flatMap((rt) => rt.players).find((e) => String(e.player) === String(p._id));
     expect(entryOf(y1).apparatus.competition_2).toEqual([POLE, ROPE]);
     expect(entryOf(o1).apparatus.competition_2).toBeUndefined();
+  });
+
+  test('II: a final whose first score came before its list existed gets its list, frozen', async () => {
+    const { service } = build();
+    const a = await team('Early');
+    const [y1, y2] = [await player('E1', 11), await player('E2', 11)];
+    const competition = await meet([{ team: a, players: [{ player: y1, ageGroup: 'Under12' }, { player: y2, ageGroup: 'Under12' }] }], ['competition_1', 'competition_2']);
+    await scores(competition, a, 'Under12', [[y1, POLE, 9], [y1, ROPE, 9], [y2, POLE, 8], [y2, ROPE, 8]]);
+    await Score.create({ competition: competition._id, teamId: a._id, gender: 'Male', ageGroup: 'Under12', competitionType: 'Competition II',
+      playerScores: [{ playerId: y1._id, playerName: 'E1 Q', apparatus: POLE, finalScore: 0, isFinalized: false }] });
+    await service.recomputeAll(competition._id);
+    const [ii] = await service.list(competition._id);
+    expect(ii.status).toBe('started');
+    expect(ii.qualifiers.map((q) => q.playerName)).toEqual(['E1 Q', 'E2 Q']);
   });
 
   test('II: an age group nobody entered has no final', async () => {
