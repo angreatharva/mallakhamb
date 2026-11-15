@@ -87,7 +87,11 @@ class JudgePanelService {
 
           await this.assertAssignableJudgeAccount(judgeAccountId);
 
-          // Look for existing judge in the SAME slot (gender + ageGroup + judgeNo + competition)
+          // Look for existing judge in the SAME slot (gender + ageGroup + judgeNo
+          // + competition) OF THE SAME COMPETITION TYPE. Without the type, seating
+          // Competition II in an age group replaced that age group's Competition I
+          // judge with the new person (owner, 2026-11-14: Competition II has its
+          // own panel per age group, added once the finals are confirmed).
           let existing = null;
           if (competitionId && judgeData.gender && judgeData.ageGroup && judgeData.judgeNo) {
             const query = {
@@ -96,6 +100,10 @@ class JudgePanelService {
               ageGroup: judgeData.ageGroup,
               judgeNo: judgeData.judgeNo,
             };
+            const types = Array.isArray(judgeData.competitionTypes)
+              ? judgeData.competitionTypes
+              : [judgeData.competitionTypes].filter(Boolean);
+            if (types.length > 0) query.competitionTypes = { $in: types };
             if (judgeData.apparatus) {
               query.apparatus = judgeData.apparatus;
             } else {

@@ -73,6 +73,8 @@ function buildService({ accounts, rows = [], competition } = {}) {
           r.gender === query.gender &&
           r.ageGroup === query.ageGroup &&
           Number(r.judgeNo) === Number(query.judgeNo) &&
+          (!query.competitionTypes?.$in
+            || query.competitionTypes.$in.some((t) => (r.competitionTypes || []).includes(t))) &&
           matchesApparatus(r, query.apparatus)
       ) || null
     ),
@@ -119,6 +121,42 @@ function buildService({ accounts, rows = [], competition } = {}) {
 
 /** One full minimum panel's worth of seat payloads. */
 const minimumPanel = (apparatus) => MINIMUM.map((seat) => ({ ...PANEL, ...seat, apparatus }));
+
+describe('a Competition II panel beside the age group Competition I panel (owner, 2026-11-14)', () => {
+  const COMP_II = { ...PANEL, competitionTypes: ['competition_2'] };
+  const others = [
+    { _id: 'account-5', name: 'Asha', isActive: true },
+    { _id: 'account-6', name: 'Neel', isActive: true },
+    { _id: 'account-7', name: 'Om', isActive: true },
+    { _id: 'account-8', name: 'Tara', isActive: true },
+  ];
+
+  it('seats new people for Competition II without replacing the Competition I judges', async () => {
+    const { service, stored } = buildService({ accounts: [
+      { _id: 'account-1', name: 'Pat', isActive: true }, { _id: 'account-2', name: 'Sam', isActive: true },
+      { _id: 'account-3', name: 'Ravi', isActive: true }, { _id: 'account-4', name: 'Mira', isActive: true }, ...others,
+    ] });
+    await service.saveJudges(COMPETITION, minimumPanel(POLE), 'admin-1');
+    const comp2 = MINIMUM.map((seat, i) => ({
+      ...COMP_II, ...seat, apparatus: POLE, judgeAccount: seat.judgeType === 'Time Keeper' ? 'account-8' : others[i]._id,
+    }));
+    const result = await service.saveJudges(COMPETITION, comp2, 'admin-1');
+
+    expect(result.errors).toEqual([]);
+    expect(result.created).toHaveLength(MINIMUM.length);
+    const typesOf = (t) => stored.filter((r) => (r.competitionTypes || []).includes(t));
+    expect(typesOf('competition_1').map((r) => r.judgeAccount)).toEqual(MINIMUM.map((m) => m.judgeAccount));
+    expect(typesOf('competition_2').every((r) => r.competitionTypes.length === 1)).toBe(true);
+  });
+
+  it('lets the same person sit on both panels, even in another seat', async () => {
+    const { service } = buildService();
+    await service.saveJudges(COMPETITION, [{ ...PANEL, judgeNo: 1, judgeType: 'Senior Judge', apparatus: POLE, judgeAccount: 'account-1' }], 'admin-1');
+    const result = await service.saveJudges(COMPETITION, [{ ...COMP_II, judgeNo: 2, judgeType: 'Judge 1', apparatus: POLE, judgeAccount: 'account-1' }], 'admin-1');
+    expect(result.errors).toEqual([]);
+    expect(result.created).toHaveLength(1);
+  });
+});
 
 describe('seating a panel for one apparatus', () => {
   it('writes the apparatus onto every seat', async () => {

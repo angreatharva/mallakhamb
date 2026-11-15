@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useId } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Users, Filter, UserPlus, Save, Edit, X, Trash2, Search, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
@@ -274,6 +275,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
 
 const Judges = () => {
   const { routePrefix } = useRouteContext();
+  const location = useLocation();
   const { currentCompetition } = useCompetition();
   const api = routePrefix === '/superadmin' ? superAdminAPI : adminAPI;
   const isSuperAdmin = routePrefix === '/superadmin';
@@ -433,6 +435,44 @@ const Judges = () => {
     setJudges([]);
     setJudgesExistForSelection(false);
   }, [selectedAgeGroup]);
+
+  /*
+   * "Seat judges" from a finalized final on the Finals tab (owner, 2026-11-14:
+   * once the finals are confirmed, the admin adds the Competition II judges).
+   * The final's category arrives in the navigation state and is walked down
+   * the ladder one rung per render, because each rung's own effect above
+   * clears the rungs below it. Declared AFTER those effects, so in the render
+   * where a rung changes its reset runs first and this sets the next rung
+   * last. The apparatus is left to the admin: one panel per apparatus.
+   */
+  const presetRef = useRef(location.state?.judgesPreset || null);
+  const [seatingFinal, setSeatingFinal] = useState(() => location.state?.judgesPreset || null);
+  useEffect(() => {
+    const preset = presetRef.current;
+    if (!preset) return;
+    if (isSuperAdmin && selectedCompetition?.value !== preset.competitionId) {
+      const comp = competitions.find((c) => String(c._id) === String(preset.competitionId));
+      if (comp) setSelectedCompetition({ value: comp._id, label: `${comp.name}${comp.year ? ` (${comp.year})` : ''}${comp.place ? ` — ${comp.place}` : ''}` });
+      return;
+    }
+    if (judgeType !== 'add') { setJudgeType('add'); return; }
+    if (selectedGender?.value !== preset.gender) {
+      setSelectedGender(genders.find((g) => g.value === preset.gender) || null);
+      return;
+    }
+    if (selectedAgeGroup?.value !== preset.ageGroup) {
+      const option = withAllAges(availableAgeGroups, competitionForAgeGroups).find((o) => o.value === preset.ageGroup);
+      if (option) setSelectedAgeGroup(option);
+      return;
+    }
+    if (selectedCompetitionType?.value !== preset.competitionType) {
+      const option = competitionTypeOptions.find((o) => o.value === preset.competitionType);
+      if (option) {
+        setSelectedCompetitionType(option);
+        presetRef.current = null;
+      }
+    }
+  });
 
   /**
    * Ensure the judge list always shows all six slots.
@@ -756,6 +796,14 @@ const Judges = () => {
             <EmptyState icon={Filter} title="Select a Competition First" desc="Choose a competition above to start managing judges." />
           ) : (
             <div>
+              {seatingFinal && (
+                <div className="mb-4 p-4 rounded-xl border text-sm bg-surface-sunken border-line flex flex-wrap items-center justify-between gap-2" data-testid="seating-final">
+                  <p className="m-0 text-ink/70">
+                    Seating the judges for <strong className="text-ink">{seatingFinal.label}</strong>. Choose the apparatus, then staff its panel — one panel per apparatus.
+                  </p>
+                  <DarkBtn variant="ghost" onClick={() => setSeatingFinal(null)}>Dismiss</DarkBtn>
+                </div>
+              )}
               {/* Filters row — the ladder: action → gender → age group → competition type → apparatus */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <div>

@@ -126,8 +126,19 @@ const judgeSchema = new mongoose.Schema({
  * `index-manager` reports it as undeclared drift and never drops an index on
  * its own.
  */
-judgeSchema.index({ gender: 1, ageGroup: 1, apparatus: 1, judgeNo: 1, competition: 1 }, { unique: true });
-judgeSchema.index({ gender: 1, ageGroup: 1, apparatus: 1, judgeType: 1, competition: 1 }, { unique: true });
+/*
+ * AND ONE PANEL PER COMPETITION TYPE (owner, 2026-11-14).
+ *
+ * Competition II became a final per gender + age group, so its panel lives in
+ * the same (gender, age group, apparatus) as that age group's Competition I
+ * panel — and once the finals are confirmed the admin seats the people who
+ * judge it, who need not be the Competition I panel. `competitionTypes` is in
+ * both keys for that. It is an array, so the keys are multikey: a seat for
+ * [I, III] and another for [II] coexist, while two seats both judging I in the
+ * same slot still collide. Migration 017 swaps the old pair for these.
+ */
+judgeSchema.index({ gender: 1, ageGroup: 1, apparatus: 1, judgeNo: 1, competition: 1, competitionTypes: 1 }, { unique: true });
+judgeSchema.index({ gender: 1, ageGroup: 1, apparatus: 1, judgeType: 1, competition: 1, competitionTypes: 1 }, { unique: true });
 judgeSchema.index({ competitionTypes: 1 });
 
 // "Which panels does this judge sit on at this meet?" — the lookup behind
