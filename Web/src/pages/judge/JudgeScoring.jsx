@@ -8,6 +8,7 @@ import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
 import { secureStorage } from '@/utils/auth/secureStorage';
 import { useAuth } from '../../contexts/AuthContext';
+import { ConfirmDialog } from '@/components/ui';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { FG } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
@@ -238,6 +239,8 @@ const JudgeSlip = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showCopModal, setShowCopModal] = useState(false);
+  // Senior Judge's "Absent" (user rule 2026-11-15) — asks before it writes.
+  const [confirmAbsent, setConfirmAbsent] = useState(false);
   /*
    * The meet closed at 23:59 UTC on its end date, so the server will refuse
    * this slip with a 423 whatever the sheet does. Read here so the sheet says
@@ -634,6 +637,44 @@ const JudgeSlip = () => {
     } finally { setSubmitting(false); }
   };
 
+  /*
+   * ABSENT (user rule 2026-11-15). The Senior Judge marks an athlete who did
+   * not perform: the server overrides every scoring rule and saves 0.00 for
+   * every judge, time 0, no deduction, final score 0, finalized for the whole
+   * panel. Only an admin's per-athlete unlock undoes it. Throws on failure so
+   * the confirm dialog stays open and says why.
+   */
+  const markAbsent = async () => {
+    try {
+      await judgeAPI.saveScore({
+        markAbsent: true,
+        playerId: playerIdOf(selectedPlayer),
+        playerName: selectedPlayer.name,
+        judgeType: myJudgeType,
+        teamId: selectedTeam._id,
+        gender: selectedGender || judgeInfo.gender,
+        ageGroup: selectedAgeGroup || judgeInfo.ageGroup,
+        competitionType: selectedCompetitionType,
+        competitionId: judgeInfo.competition?._id || judgeInfo.competition,
+        apparatus: selectedApparatus,
+      });
+    } catch (error) {
+      throw new Error(error.response?.data?.error?.message || 'Could not mark the athlete absent. Please try again.');
+    }
+    try {
+      const sKey = `judge_submitted_players_${selectedTeam._id}`;
+      const prev = JSON.parse(sessionStorage.getItem(sKey) || '{}');
+      prev[`${playerIdOf(selectedPlayer)}::${apparatusKey(selectedApparatus)}`] = true;
+      sessionStorage.setItem(sKey, JSON.stringify(prev));
+    } catch {
+      // best-effort cache of "already scored" markers
+    }
+    setSubmitted(true);
+    toast.success(`${selectedPlayer.name} marked absent: 0.00 saved for the whole panel`);
+    goBackAfterScoring();
+  };
+  const canMarkAbsent = myJudgeType === 'Senior Judge' && !finalized && !competitionLocked;
+
   const handleLogout = async () => {
     clearCompetitionContext?.();
     await logout(navigate);
@@ -683,6 +724,20 @@ const JudgeSlip = () => {
         {/* Before the sheet, not beside the button: the point is that the judge
             sees it BEFORE marking a routine. Submit is disabled to match. */}
         <CompetitionLockBanner className="mb-4" />
+
+        {canMarkAbsent && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 bg-surface-sunken border-line"
+            data-testid="absent-bar">
+            <p className="m-0 text-sm text-fg-secondary">
+              Athlete did not perform? Mark them absent: 0.00 for every judge, no time, no deduction.
+            </p>
+            <button type="button" onClick={() => setConfirmAbsent(true)} disabled={!isConnected}
+              className="px-4 py-2.5 rounded-xl border text-sm font-black min-h-[44px]"
+              style={{ borderColor: 'rgb(var(--danger-fg) / 0.5)', color: 'rgb(var(--danger-fg))', background: 'rgb(var(--danger-fg) / 0.08)' }}>
+              Mark Absent
+            </button>
+          </div>
+        )}
 
         {!slipReady && (
           <div className="fixed inset-0 z-50 flex items-center justify-center"
@@ -1047,6 +1102,11 @@ const JudgeSlip = () => {
 
       {/* Modals */}
       <CopPdfModal isOpen={showCopModal} onClose={() => setShowCopModal(false)} />
+      <ConfirmDialog open={confirmAbsent} onClose={() => setConfirmAbsent(false)} onConfirm={markAbsent}
+        tone="danger" confirmText="Mark Absent" title={`Mark ${selectedPlayer.name} absent?`}>
+        Every judge&apos;s score, the time and every deduction are saved as 0, and the final score is 0.00.
+        The athlete is locked for the whole panel; only the admin can reopen them.
+      </ConfirmDialog>
     </div>
   );
 };

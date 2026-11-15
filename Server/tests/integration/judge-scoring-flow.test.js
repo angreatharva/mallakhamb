@@ -232,6 +232,24 @@ describe('judge scoring flow — a full panel sequence', () => {
     expect(doc.playerScores[0].judgeSlips[0].executionScore).toBe(0.1);
   });
 
+  // User rule 2026-11-15: the Senior Judge marks an athlete absent; nobody
+  // else on the panel may, and the server writes the whole row itself.
+  test('only the Senior Judge marks an athlete absent, and every value is 0', async () => {
+    const absentBody = { ...slip(), markAbsent: true, score: 9.9 };
+    const refused = await post(tokenFor(j1), absentBody);
+    expect(refused.status).toBe(403);
+    expect(await Score.findOne({ teamId })).toBeNull();
+
+    expect((await post(tokenFor(j1), slip({ score: 8.1 }))).status).toBe(200);
+    const res = await post(tokenFor(senior), absentBody);
+    expect(res.status).toBe(200);
+    const row = (await Score.findOne({ teamId, competition: competitionId })).playerScores[0];
+    expect(row).toMatchObject({ isAbsent: true, isFinalized: true, finalScore: 0, time: '0', deduction: 0 });
+    expect(row.judgeScores.judge1).toBe(0);
+    // Locked for the panel from now on.
+    expect((await post(tokenFor(j2), slip({ score: 7 }))).status).not.toBe(200);
+  });
+
   // User rule 2026-11-08: the Scorer's sheet posts the whole panel back, but
   // the server takes only the time from it — not the judges' marks, and not
   // a body that claims the Scorer may write them.

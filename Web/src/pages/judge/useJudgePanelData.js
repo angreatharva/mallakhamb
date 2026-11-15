@@ -616,7 +616,9 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
           return;
         }
         setFinalized(true);
-        toast.success('Panel score finalized and locked');
+        toast.success(data.isAbsent
+          ? 'The Senior Judge marked this athlete absent (0.00)'
+          : 'Panel score finalized and locked');
       }
     });
     // An admin restored the panel's Edit My Score allowance on an athlete.

@@ -127,6 +127,11 @@ describe('athletesAwaitingSeniorJudge', () => {
     expect(athletesAwaitingSeniorJudge(rows, scores)).toEqual(['Bela', 'Chitra']);
   });
 
+  it('does not wait for an athlete the Senior Judge marked absent (2026-11-15)', () => {
+    const scores = { a: { seniorJudge: '8.4' }, b: { seniorJudge: '0', isAbsent: true }, c: { seniorJudge: '' } };
+    expect(athletesAwaitingSeniorJudge(rows, scores)).toEqual(['Chitra']);
+  });
+
   it('counts a row with no score entry as waiting', () => {
     expect(athletesAwaitingSeniorJudge(rows, { a: { seniorJudge: 9 } })).toEqual(['Bela', 'Chitra']);
   });

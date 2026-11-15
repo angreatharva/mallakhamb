@@ -149,6 +149,8 @@ class QualificationService {
       const team = idOf(doc.teamId);
       const locked = doc.isLocked ? null : new Set((doc.lockedApparatus || []).map(apparatusKey));
       for (const row of publishedPlayerScores(doc)) {
+        // An athlete marked absent did not perform: never a finalist.
+        if (row.isAbsent) continue;
         const key = apparatusKey(row.apparatus);
         (rowsByApparatus[key] ||= []).push({ ...(row.toObject?.() || row), teamId: team });
       }

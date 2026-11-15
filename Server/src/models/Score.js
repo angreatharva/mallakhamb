@@ -137,6 +137,17 @@ const playerScoreSchema = new mongoose.Schema({
     min: 0,
     // Final score = averageMarks - deduction - otherDeduction
   },
+  /*
+   * The Senior Judge marked the athlete ABSENT (user rule 2026-11-15): the
+   * performance did not happen. Every judge's mark, the time, every deduction
+   * and the final score are 0, the row is finalized for the whole panel, and
+   * no judge, Scorer or admin save changes it. Only an admin's per-athlete
+   * "Unlock for judges" clears it (scoring.service.unlockPlayerForJudges).
+   */
+  isAbsent: {
+    type: Boolean,
+    default: false
+  },
   // Set when Senior Judge completes Final Submit for this player (panel locked).
   isFinalized: {
     type: Boolean,

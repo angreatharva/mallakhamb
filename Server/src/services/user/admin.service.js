@@ -1093,7 +1093,7 @@ class AdminService extends UserService {
        * MongoDB for nothing.
        */
       const scoreDocs = await this.scoreRepository.find(scoreQuery, {
-        select: 'teamId isLocked playerScores.playerId playerScores.isFinalized '
+        select: 'teamId isLocked playerScores.playerId playerScores.isFinalized playerScores.isAbsent '
           + 'playerScores.finalizedAt playerScores.finalScore playerScores.averageMarks '
           + 'playerScores.deduction playerScores.otherDeduction playerScores.judgeScores '
           + 'playerScores.panelSize '
@@ -1156,7 +1156,9 @@ class AdminService extends UserService {
           if (ps.isFinalized || doc.isLocked) {
             finalizedByPlayer.set(key, {
               isFinalized: true,
-              finalScore: resolvedFinal,
+              // Marked absent by the Senior Judge (user rule 2026-11-15).
+              isAbsent: Boolean(ps.isAbsent),
+              finalScore: ps.isAbsent ? 0 : resolvedFinal,
               finalizedAt: ps.finalizedAt,
             });
           }
@@ -1221,6 +1223,7 @@ class AdminService extends UserService {
             gender: playerEntry.gender,
             apparatus: playerEntry.apparatus,
             isFinalized: !!finalized,
+            isAbsent: !!finalized?.isAbsent,
             finalScore: finalized?.finalScore ?? null,
             hasScore: scoredByPlayer.has(key),
           };

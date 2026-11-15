@@ -382,7 +382,10 @@ const ScorerScoring = () => {
             judge3: ps.judgeScores?.judge3 !== undefined && ps.judgeScores?.judge3 !== null ? ps.judgeScores.judge3.toString() : '',
             judge4: ps.judgeScores?.judge4 !== undefined && ps.judgeScores?.judge4 !== null ? ps.judgeScores.judge4.toString() : '',
             deduction: ps.deduction !== undefined && ps.deduction !== null ? ps.deduction.toString() : '',
-            otherDeduction: ps.otherDeduction !== undefined && ps.otherDeduction !== null ? ps.otherDeduction.toString() : ''
+            otherDeduction: ps.otherDeduction !== undefined && ps.otherDeduction !== null ? ps.otherDeduction.toString() : '',
+            // Marked absent by the Senior Judge (user rule 2026-11-15): 0.00,
+            // no time, nothing for the Scorer to record.
+            isAbsent: Boolean(ps.isAbsent),
           };
         }
       });
@@ -703,8 +706,10 @@ const ScorerScoring = () => {
   const runningOrder = useRunningOrder(orderCategory);
   const orderedPlayers = useOrderedTeamRows(players, selectedTeam?._id, runningOrder);
   const tableRows = useMemo(
-    () => orderedPlayers.map(({ teamName: _teamName, lotNo: _lot, runningPosition: _pos, ...row }) => row),
-    [orderedPlayers],
+    () => orderedPlayers.map(({ teamName: _teamName, lotNo: _lot, runningPosition: _pos, ...row }) => (
+      scores[row.id]?.isAbsent ? { ...row, name: `${row.name} (Absent)` } : row
+    )),
+    [orderedPlayers, scores],
   );
 
   const calculateFinalScore = (ps) => {
@@ -819,7 +824,7 @@ const ScorerScoring = () => {
 
     const playersWithoutTime = players.filter(p => {
       const ps = scores[p.id];
-      return !ps?.time?.trim();
+      return !ps?.isAbsent && !ps?.time?.trim();
     });
 
     if (playersWithoutTime.length > 0) {
@@ -832,7 +837,7 @@ const ScorerScoring = () => {
       const ps = scores[p.id];
       if (!ps) return false;
       const hasJudge = (ps.seniorJudge && parseFloat(ps.seniorJudge) > 0) || (ps.judge1 && parseFloat(ps.judge1) > 0) || (ps.judge2 && parseFloat(ps.judge2) > 0) || (ps.judge3 && parseFloat(ps.judge3) > 0) || (ps.judge4 && parseFloat(ps.judge4) > 0);
-      return hasJudge && ps.time?.trim();
+      return ps.isAbsent || (hasJudge && ps.time?.trim());
     });
     // Lock & Submit waits for the Senior Judge's mark on every athlete
     // (user rule 2026-11-11); until then this is a draft save.

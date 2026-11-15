@@ -36,6 +36,8 @@ const JudgeTeamPlayers = () => {
   const [loading, setLoading] = useState(!location.state?.team);
   const [judgeScoreMap, setJudgeScoreMap] = useState({}); // { playerId: true } for players this judge has scored
   const [finalizedScoreMap, setFinalizedScoreMap] = useState({}); // { playerId: finalScore|true } for finalized scores
+  // Athletes the Senior Judge marked absent (user rule 2026-11-15).
+  const [absentMap, setAbsentMap] = useState({});
   // Athlete running order for this category, set by the panel's Senior Judge or
   // Scorer (or drawn by an admin). Empty until loaded; anyone without a stored
   // position falls back to name order.
@@ -123,6 +125,7 @@ const JudgeTeamPlayers = () => {
       try {
         const scoreMap = {};
         const finalizedMap = {};
+        const absent = {};
         const statusKey = (playerId, apparatus) => `${String(playerId)}::${apparatusKey(apparatus)}`;
 
         // 1. The judge-specific endpoint, which reports per ATHLETE and has no
@@ -204,6 +207,7 @@ const JudgeTeamPlayers = () => {
                 if (ps.isFinalized || doc.isLocked) {
                   finalizedMap[statusKey(pid, ps.apparatus)] = ps.finalScore ?? true;
                 }
+                if (ps.isAbsent) absent[statusKey(pid, ps.apparatus)] = true;
               }
             });
           });
@@ -226,6 +230,7 @@ const JudgeTeamPlayers = () => {
 
         setJudgeScoreMap(scoreMap);
         setFinalizedScoreMap(finalizedMap);
+        setAbsentMap(absent);
         logger.log('Final merged judge score map loaded:', scoreMap, 'finalized map:', finalizedMap);
       } catch (scoreErr) {
         logger.warn('Could not fetch scores (non-critical):', scoreErr.message);
@@ -340,6 +345,7 @@ const JudgeTeamPlayers = () => {
           isFinalized,
           finalScore,
           hasScore: !!judgeScoreMap[key],
+          isAbsent: !!absentMap[key],
         };
       });
   })();
@@ -352,6 +358,10 @@ const JudgeTeamPlayers = () => {
   });
 
   const handlePlayerSelect = (player) => {
+    if (player.isFinalized && player.isAbsent) {
+      toast.success(`${player.name} was marked absent by the Senior Judge (0.00)`);
+      return;
+    }
     if (player.isFinalized) {
       toast.success(
         `Scores locked for ${player.name}${player.finalScore != null ? ` (${Number(player.finalScore).toFixed(2)})` : ''}`
@@ -478,7 +488,7 @@ const JudgeTeamPlayers = () => {
                           {isLocked ? (
                             <span className="type-tag px-2 py-0.5 rounded-md"
                               style={{ background: 'rgb(var(--success-fg) / 0.2)', color: FG.success }}>
-                              Finalized
+                              {player.isAbsent ? 'Absent' : 'Finalized'}
                             </span>
                           ) : isSubmitted ? (
                             <span className="type-tag px-2 py-0.5 rounded-md"

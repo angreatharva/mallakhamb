@@ -476,6 +476,40 @@ function createAdminController(container) {
         effectiveJudgeType = req.body.judgeType;
       }
 
+      /*
+       * ABSENT (user rule 2026-11-15): the Senior Judge (or an admin) marks
+       * an athlete who did not perform. It overrides every scoring rule - the
+       * server writes the whole row itself (all marks, time, deductions and
+       * the final score 0, finalized for every judge); nothing else from the
+       * body is used. Never from a Scorer or another panel judge.
+       */
+      scoreData.markAbsent = false;
+      if (req.body.markAbsent === true) {
+        if (!isSeniorJudge && !isAdmin) {
+          return res.status(403).json({
+            success: false,
+            error: { message: 'Only the Senior Judge can mark an athlete absent', code: 'FORBIDDEN' },
+          });
+        }
+        if (!req.body.playerId) {
+          return res.status(400).json({
+            success: false,
+            error: { message: 'playerId is required to mark an athlete absent', code: 'VALIDATION_ERROR' },
+          });
+        }
+        scoreData.markAbsent = true;
+        scoreData.isFinalSubmit = true;
+        scoreData.playerScores = [{
+          playerId: req.body.playerId,
+          playerName: req.body.playerName,
+          apparatus: req.body.apparatus,
+          isAbsent: true,
+        }];
+        delete scoreData.playerId;
+        delete scoreData.score;
+        delete scoreData.breakdown;
+      }
+
       // A single-slip payload from a principal we cannot bind to a panel role
       // is rejected outright rather than silently falling through as a bulk
       // write with no playerScores.

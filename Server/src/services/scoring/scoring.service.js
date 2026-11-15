@@ -1050,20 +1050,23 @@ class ScoringService {
         throw new NotFoundError('Score');
       }
 
-      await this.scoreRepository.updateById(scoreId, {
-        isLocked: false,
-        // As in `unlockScore`: the per-apparatus locks are the ones `saveScores`
-        // actually tests, so an unlock that left them standing reopens nothing.
-        lockedApparatus: [],
-        // And the Senior Judge's Final Submit on every athlete (user rule
-        // 2026-11-08): "unlock" means the JUDGES can change their scores
-        // again, and a finalized athlete refuses every judge's write. Their
-        // published results are withdrawn until the Senior Judge final-submits
-        // again (published-score.util reads `isFinalized`).
-        'playerScores.$[].isFinalized': false,
-        unlockedBy: adminId,
-        unlockedAt: new Date()
-      });
+      await this.scoreRepository.model.updateOne({ _id: scoreId }, {
+        $set: {
+          isLocked: false,
+          // As in `unlockScore`: the per-apparatus locks are the ones `saveScores`
+          // actually tests, so an unlock that left them standing reopens nothing.
+          lockedApparatus: [],
+          // And the Senior Judge's Final Submit on every athlete (user rule
+          // 2026-11-08): "unlock" means the JUDGES can change their scores
+          // again, and a finalized athlete refuses every judge's write. Their
+          // published results are withdrawn until the Senior Judge final-submits
+          // again (published-score.util reads `isFinalized`). An athlete marked
+          // ABSENT stays final: only a per-athlete unlock clears that.
+          'playerScores.$[open].isFinalized': false,
+          unlockedBy: adminId,
+          unlockedAt: new Date()
+        },
+      }, { arrayFilters: [{ 'open.isAbsent': { $ne: true } }] });
 
       this.logger.info('Score unlocked', { scoreId, adminId });
       this._broadcastReopened(scoreDoc, scoreDoc.playerScores || []);
@@ -1127,6 +1130,12 @@ class ScoringService {
     const rowApparatus = apparatusKey(row.apparatus);
     row.isFinalized = false;
     row.finalizedAt = undefined;
+    // Reopening an athlete marked absent un-marks them: the panel scores the
+    // performance afresh (user rule 2026-11-15).
+    if (row.isAbsent) {
+      row.isAbsent = false;
+      row.time = '';
+    }
     doc.lockedApparatus = (doc.lockedApparatus || []).filter((a) => apparatusKey(a) !== rowApparatus);
     doc.isLocked = false;
     doc.unlockedBy = actorId;
@@ -1574,9 +1583,38 @@ class ScoringService {
         if (seated) row.panelSize = seated;
       });
 
+      // Absent (user rule 2026-11-15, set by the controller for the Senior
+      // Judge or an admin only): the row is written whole, every value 0.
+      const markAbsent = scoreData.markAbsent === true;
+      const absentRow = (row) => ({
+        playerId: row.playerId,
+        playerName: row.playerName,
+        apparatus: row.apparatus || 'Pole Mallakhamb',
+        isAbsent: true,
+        time: '0',
+        judgeScores: { seniorJudge: 0, judge1: 0, judge2: 0, judge3: 0, judge4: 0 },
+        judgeSlips: [],
+        breakdown: null,
+        executionAverage: 0,
+        baseScore: 0,
+        baseScoreApplied: false,
+        toleranceUsed: 0,
+        averageMarks: 0,
+        deduction: 0,
+        otherDeduction: 0,
+        finalScore: 0,
+        panelSize: sizeFor(row) || row.panelSize || null,
+        isFinalized: true,
+        finalizedAt: new Date(),
+      });
+
       // Process each player score through calculation service
       const processedPlayerScores = [];
       for (const playerScore of incomingRows) {
+        if (markAbsent) {
+          processedPlayerScores.push(absentRow(playerScore));
+          continue;
+        }
         // COP §3.3 — reject a slip whose breakdown exceeds the section ceilings
         // (Difficulty ≤3.80, Combination ≤1.60, Execution ≤4.40, Bonus 0/0.20,
         // total ≤10.00). No-op when no breakdown is supplied.
@@ -1679,6 +1717,21 @@ class ScoringService {
                 `Scores for ${existingPlayerScore.playerName || 'this player'} are finalized and locked`
               );
             }
+
+            // Absent: the whole row is replaced - but a judge may not mark an
+            // athlete absent once the panel's score is final (an admin unlocks
+            // first). An absent row is never changed by any other save: the
+            // Scorer's time, an admin's sheet and a judge's slip all leave it.
+            if (incomingPlayerScore.isAbsent) {
+              if (existingPlayerScore.isFinalized && !existingPlayerScore.isAbsent && !scoreData.allowFinalizedEdit) {
+                throw new ValidationError(
+                  `Scores for ${existingPlayerScore.playerName || 'this player'} are already final. Ask the admin to unlock the athlete first.`
+                );
+              }
+              mergedPlayerScores[existingPlayerIndex] = incomingPlayerScore;
+              continue;
+            }
+            if (existingPlayerScore.isAbsent) continue;
 
             // A Scorer's save: the stored row with only the time (and the
             // deduction the time implies) and the Other Deduction replaced,
@@ -2099,6 +2152,7 @@ class ScoringService {
               playerName: playerScore.playerName,
               teamId: scoreData.teamId,
               finalScore: playerScore.finalScore,
+              isAbsent: Boolean(playerScore.isAbsent),
               // Same reason as the `score_updated` above: this locks a row, and
               // the row is (player, apparatus).
               apparatus: playerScore.apparatus || null,

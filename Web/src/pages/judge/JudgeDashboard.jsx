@@ -822,7 +822,9 @@ const JudgeDashboard = () => {
       || (heldHere.length === 0 && RECORDER_ROLES.includes(judgeInfo?.judgeType));
     if (recorder) { handleTeamSelect(team); return; }
     if (entry.isFinalized) {
-      toast.success(`Scores locked for ${entry.player.firstName} ${entry.player.lastName}`);
+      toast.success(entry.isAbsent
+        ? `${entry.player.firstName} ${entry.player.lastName} was marked absent by the Senior Judge (0.00)`
+        : `Scores locked for ${entry.player.firstName} ${entry.player.lastName}`);
       return;
     }
     navigate('/judge/scoring', {
@@ -1000,7 +1002,7 @@ const JudgeDashboard = () => {
                           </span>
                         </span>
                         <span className="flex items-center gap-3 flex-shrink-0">
-                          {entry.isFinalized && <span className="text-xs text-success-fg font-semibold">Scored</span>}
+                          {entry.isFinalized && <span className="text-xs text-success-fg font-semibold">{entry.isAbsent ? 'Absent' : 'Scored'}</span>}
                           <ChevronRight className="w-5 h-5 text-fg-muted" aria-hidden="true" />
                         </span>
                       </button>

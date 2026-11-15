@@ -77,7 +77,9 @@ export function buildScorerRows({ team, gender, ageGroup, competitionType, appar
  */
 export function athletesAwaitingSeniorJudge(players = [], scores = {}) {
   return players
-    .filter((p) => !(parseFloat(scores?.[p.id]?.seniorJudge) > 0))
+    // An athlete the Senior Judge marked absent IS marked (0.00, user rule
+    // 2026-11-15) — the sheet must not wait for a mark that will never come.
+    .filter((p) => !scores?.[p.id]?.isAbsent && !(parseFloat(scores?.[p.id]?.seniorJudge) > 0))
     .map((p) => p.name);
 }
 
