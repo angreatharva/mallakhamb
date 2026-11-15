@@ -99,6 +99,7 @@ const ScoreInput = ({ label, ariaLabel, value, onChange, hint }) => {
           }
         `}</style>
         <DecimalInput
+          impliedDecimal
           id={inputId}
           aria-label={label ? undefined : ariaLabel}
           value={value}

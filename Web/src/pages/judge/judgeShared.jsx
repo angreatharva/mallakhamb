@@ -238,21 +238,38 @@ export const DIFFICULTY_CLASSES = Object.freeze([
 // placeholder instead of a literal 0, and reports the parsed number upward.
 // The parent may round or clamp it; when that changes the number, the text
 // is re-synced to what the parent kept.
+//
+// `impliedDecimal` (the Execution field, user rule 2026-11-15): digits typed
+// WITHOUT a point read as d.dd — the first digit is the whole number and the
+// rest are decimals — so a judge can type 220 for 2.20, 010 for 0.10 and 440
+// for 4.40 without hunting for the "." key. Typing the point (2.20) works as
+// before. At most three digits without a point; a 4th is ignored. A single
+// digit is still a whole mark (3 → 3.00), so nothing typed today changes.
 const toDraft = (v) => (Number(v) ? String(Number(v)) : '');
 
-export const DecimalInput = ({ value, onValueChange, onBlur, placeholder = '0.00', ...rest }) => {
+/** The mark a draft stands for: "220" → 2.2 with implied decimals, else as written. */
+export const parseDecimalDraft = (text, impliedDecimal = false) => {
+  const t = String(text ?? '');
+  if (impliedDecimal && /^\d{2,}$/.test(t)) return Number(t) / 10 ** (t.length - 1);
+  return parseFloat(t) || 0;
+};
+
+export const DecimalInput = ({ value, onValueChange, onBlur, placeholder = '0.00', impliedDecimal = false, ...rest }) => {
   const [draft, setDraft] = useState(() => toDraft(value));
 
   useEffect(() => {
-    setDraft((d) => (Math.abs((parseFloat(d) || 0) - (Number(value) || 0)) < 1e-9 ? d : toDraft(value)));
-  }, [value]);
+    setDraft((d) => (Math.abs(parseDecimalDraft(d, impliedDecimal) - (Number(value) || 0)) < 1e-9 ? d : toDraft(value)));
+  }, [value, impliedDecimal]);
 
   const handleChange = (e) => {
     const text = e.target.value.replace(/,/g, '.');
     if (!/^\d*\.?\d*$/.test(text)) return;
-    const cleaned = text.replace(/^0+(?=\d)/, '');
+    const noPoint = !text.includes('.');
+    // Implied decimals keep the leading zero ("010" is 0.10) and stop at d.dd.
+    if (impliedDecimal && noPoint && text.length > 3) return;
+    const cleaned = impliedDecimal && noPoint ? text : text.replace(/^0+(?=\d)/, '');
     setDraft(cleaned);
-    onValueChange(parseFloat(cleaned) || 0);
+    onValueChange(parseDecimalDraft(cleaned, impliedDecimal));
   };
 
   return (
@@ -276,6 +293,7 @@ DecimalInput.propTypes = {
   onValueChange: PropTypes.func.isRequired,
   onBlur: PropTypes.func,
   placeholder: PropTypes.string,
+  impliedDecimal: PropTypes.bool,
 };
 
 // ─── Mismatch Modal ───────────────────────────────────────────────────────────
@@ -771,6 +789,7 @@ export const SrEditModal = ({ isOpen, onClose, onSave, editTarget, combinationCh
                   <span className="text-xs px-2 py-1 rounded-full bg-surface-raised text-fg">Max 4.40</span>
                 </div>
                 <DecimalInput
+                  impliedDecimal
                   value={editScores.execution}
                   onValueChange={raw => setEditScores({ ...editScores, execution: roundExecution(raw) })}
                   aria-label="Execution"
