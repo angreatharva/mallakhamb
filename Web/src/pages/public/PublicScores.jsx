@@ -228,10 +228,10 @@ const PublicScores = () => {
         competitionTypes: c.competitionTypes || [],
         apparatusConfig: c.apparatusConfig || {},
         apparatusByGender: c.apparatusByGender || {},
-        // Absent from the public payload today, so the age-group filter falls
-        // back to the gender's full list. Carried through so that it narrows
-        // on its own if the endpoint ever starts sending it.
+        // The meet's own age groups, its custom ones by name (owner,
+        // 2026-11-15): the age-group filter offers exactly these.
         ageGroups: c.ageGroups || [],
+        customAgeGroups: c.customAgeGroups || [],
         legacyFinals: Boolean(c.legacyFinals),
       })));
       if (!comps.length) {

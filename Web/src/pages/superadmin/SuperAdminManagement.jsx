@@ -18,6 +18,10 @@ import {
   getCompetitionPlayerFeeRupees, resolveFeeWindow, formatFeeWindowDate, FEE_PHASE,
 } from '@/utils/scoring/competitionFee';
 import { ALL_AGE_GROUPS, isAgeGroupValidForGender } from '../../hooks/useAgeGroups';
+import { CUSTOM_AGE_GROUP_LABEL_MAX, MAX_CUSTOM_AGE_GROUPS } from '@/utils/competition/ageEligibility';
+import {
+  blankCustomRow, splitAgeGroups, customAgeGroupsError, selectedPairCount, buildAgeGroupPayload, rangeText,
+} from './customAgeGroupsForm';
 import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { isApparatusAllowedForGender } from '@/utils/scoring/copRules';
 import { TEAM_SIZE_OPTIONS } from '@/utils/scoring/teamSize';
@@ -381,7 +385,7 @@ const SuperAdminManagement = () => {
   const [competitionFormData, setCompetitionFormData] = useState({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
+    description: '', admins: [], ageGroups: [], customAgeGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
     registrationOpenDate: '', feeDueDate: '', lateFee: ''
   });
 
@@ -552,7 +556,7 @@ const SuperAdminManagement = () => {
   const resetCompetitionForm = () => setCompetitionFormData({
     name: '', level: { value: 'district', label: 'District' }, competitionTypes: ['competition_1'], apparatusByGender: {},
     place: '', year: { value: new Date().getFullYear(), label: new Date().getFullYear().toString() }, startDate: '', endDate: '',
-    description: '', admins: [], ageGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
+    description: '', admins: [], ageGroups: [], customAgeGroups: [], playerFee: '', apparatusFees: {}, maxTeamSize: null,
     registrationOpenDate: '', feeDueDate: '', lateFee: ''
   });
 
@@ -569,7 +573,7 @@ const SuperAdminManagement = () => {
         place: comp.place, year: yearOption,
         startDate: comp.startDate.split('T')[0], endDate: comp.endDate.split('T')[0],
         description: comp.description || '', admins: comp.admins.map(a => a._id),
-        ageGroups: comp.ageGroups || [], playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : '', apparatusFees: comp.apparatusFees || {},
+        ...splitAgeGroups(comp), playerFee: Number.isFinite(Number(comp.playerFee)) ? Number(comp.playerFee) : '', apparatusFees: comp.apparatusFees || {},
         maxTeamSize: comp.maxTeamSize ?? null,
         registrationOpenDate: toDateInputValue(comp.registrationOpenDate),
         feeDueDate: toDateInputValue(comp.feeDueDate),
@@ -583,7 +587,9 @@ const SuperAdminManagement = () => {
   const handleCreateCompetition = async (e) => {
     e.preventDefault();
     if (!competitionFormData.admins.length) { toast.error('Assign at least one admin'); return; }
-    if (!competitionFormData.ageGroups.length) { toast.error('Select at least one age group'); return; }
+    if (!selectedPairCount(competitionFormData)) { toast.error('Select at least one age group'); return; }
+    const customError = customAgeGroupsError(competitionFormData.customAgeGroups);
+    if (customError) { toast.error(customError); return; }
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
     const { apparatusByGender: activeApparatusByGender, apparatusConfig: activeApparatusConfig, missing } =
       activeApparatus(competitionFormData);
@@ -609,6 +615,7 @@ const SuperAdminManagement = () => {
     try {
       await superAdminAPI.createCompetition({
         ...competitionFormData,
+        ...buildAgeGroupPayload(competitionFormData),
         apparatusConfig: activeApparatusConfig,
         apparatusByGender: activeApparatusByGender,
         level: competitionFormData.level.value,
@@ -627,6 +634,9 @@ const SuperAdminManagement = () => {
 
   const handleUpdateCompetition = async (e) => {
     e.preventDefault();
+    if (!selectedPairCount(competitionFormData)) { toast.error('Select at least one age group'); return; }
+    const customError = customAgeGroupsError(competitionFormData.customAgeGroups);
+    if (customError) { toast.error(customError); return; }
     if (!competitionFormData.competitionTypes.length) { toast.error('Select at least one competition type'); return; }
     const { apparatusByGender: activeApparatusByGender, apparatusConfig: activeApparatusConfig, missing } =
       activeApparatus(competitionFormData);
@@ -655,7 +665,7 @@ const SuperAdminManagement = () => {
         competitionTypes: competitionFormData.competitionTypes, apparatusConfig: activeApparatusConfig,
         apparatusByGender: activeApparatusByGender, place: competitionFormData.place,
         startDate: competitionFormData.startDate, endDate: competitionFormData.endDate,
-        description: competitionFormData.description, ageGroups: competitionFormData.ageGroups,
+        description: competitionFormData.description, ...buildAgeGroupPayload(competitionFormData),
         playerFee,
         maxTeamSize: competitionFormData.maxTeamSize,
         apparatusFees: competitionFormData.apparatusFees,
@@ -720,6 +730,17 @@ const SuperAdminManagement = () => {
     ? `Added per athlete on top of the base fee for any payment made after ${competitionFormData.feeDueDate}`
       + `, up to 23:59 on the end date. Leave blank or 0 for no penalty.`
     : 'Set a "Last Date to Pay Fees" above first — with no deadline there is nothing to be late for.';
+
+  const addCustomAgeGroup = () => {
+    const row = blankCustomRow(); // outside the updater: StrictMode runs updaters twice
+    setCompetitionFormData(prev => ({ ...prev, customAgeGroups: [...prev.customAgeGroups, row] }));
+  };
+  const updateCustomAgeGroup = (index, change) => setCompetitionFormData(prev => ({
+    ...prev, customAgeGroups: prev.customAgeGroups.map((row, i) => (i === index ? { ...row, ...change } : row)),
+  }));
+  const removeCustomAgeGroup = (index) => setCompetitionFormData(prev => ({
+    ...prev, customAgeGroups: prev.customAgeGroups.filter((_, i) => i !== index),
+  }));
 
   const isAgeGroupSelected = (ag, gender) => competitionFormData.ageGroups.some(g => g.ageGroup === ag && g.gender === gender);
 
@@ -1389,6 +1410,57 @@ const SuperAdminManagement = () => {
                 </div>
               </div>
             ))}
+          </div>
+          {/* Custom age groups (owner, 2026-11-15): this meet's own, beside the
+              COP ones — a name, an age range on 31 Dec of the meet year, and
+              which genders run it. */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="type-tag text-accent-fg">Custom Age Groups</p>
+              <button type="button" onClick={addCustomAgeGroup}
+                disabled={competitionFormData.customAgeGroups.length >= MAX_CUSTOM_AGE_GROUPS}
+                className="text-xs font-bold px-3 py-2 rounded-lg border border-line text-accent-fg tap-safe disabled:opacity-40">
+                + Add custom age group
+              </button>
+            </div>
+            <p className="text-xs text-ink/60 mb-2">
+              For groups the COP list does not have, e.g. &ldquo;Under 11&rdquo; (max 11) or &ldquo;Veterans 35+&rdquo; (min 35).
+              Age is on 31 Dec of the competition year; leave an end blank for no limit.
+            </p>
+            <div className="space-y-2">
+              {competitionFormData.customAgeGroups.map((row, i) => (
+                <div key={row.uid} className="p-3 rounded-xl border bg-surface-sunken border-line" data-testid="custom-age-group-row">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_5.5rem_5.5rem_auto] gap-2 items-end">
+                    <DarkInput id={`custom-age-name-${row.uid}`} label="Name" required placeholder="e.g. Under 11" maxLength={CUSTOM_AGE_GROUP_LABEL_MAX}
+                      value={row.label} onChange={(e) => updateCustomAgeGroup(i, { label: e.target.value })} />
+                    <DarkInput id={`custom-age-min-${row.uid}`} label="Min age" placeholder="—" type="text" inputMode="numeric" maxLength={2}
+                      value={row.minAge} onChange={(e) => updateCustomAgeGroup(i, { minAge: e.target.value.replace(/\D/g, '') })} />
+                    <DarkInput id={`custom-age-max-${row.uid}`} label="Max age" placeholder="—" type="text" inputMode="numeric" maxLength={2}
+                      value={row.maxAge} onChange={(e) => updateCustomAgeGroup(i, { maxAge: e.target.value.replace(/\D/g, '') })} />
+                    <button type="button" onClick={() => removeCustomAgeGroup(i)} aria-label={`Remove ${row.label || 'custom age group'}`}
+                      className="text-xs font-bold px-3 py-2 rounded-lg border border-line text-danger-fg tap-safe">
+                      Remove
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {['Male', 'Female'].map((gender) => (
+                      <label key={gender} className="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all"
+                        style={{ background: row[gender] ? `${alpha('rgb(var(--accent))', 0x12)}` : 'transparent' }}>
+                        <input type="checkbox" className="sr-only" checked={row[gender]} onChange={() => updateCustomAgeGroup(i, { [gender]: !row[gender] })} />
+                        <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all"
+                          style={{ background: row[gender] ? 'rgb(var(--accent))' : 'transparent', borderColor: row[gender] ? 'rgb(var(--accent))' : 'rgb(var(--ink) / 0.3)' }}>
+                          {row[gender] && <svg className="w-2.5 h-2.5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <span className="text-xs font-semibold text-ink/70">{gender === 'Male' ? 'Boys' : 'Girls'}</span>
+                      </label>
+                    ))}
+                    {rangeText(row.minAge, row.maxAge) && (
+                      <span className="text-xs text-ink/60 ml-auto">{rangeText(row.minAge, row.maxAge)}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

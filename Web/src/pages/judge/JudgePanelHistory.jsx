@@ -4,7 +4,7 @@ import { EmptyState, Heading, Panel, SearchField, StatusTag, Tag } from '@/compo
 import { matchesSearch } from '@/utils/ui/search';
 import { levelLabel } from '@/utils/competition/levels';
 import { isCompetitionLocked } from '@/utils/scoring/competitionLock';
-import { ageGroupMapping } from '@/hooks/useAgeGroups';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 import { COMPETITION_TYPES } from './judgeCategoryOptions';
 
 const typeLabel = (value) => COMPETITION_TYPES.find((t) => t.value === value)?.label || value;
@@ -48,7 +48,7 @@ export const groupSeatsByMeet = (assignments = []) => {
 const SeatLine = ({ seat }) => {
   const category = [
     seat.gender,
-    seat.ageGroup ? (ageGroupMapping[seat.ageGroup]?.label || seat.ageGroup) : null,
+    seat.ageGroup ? ageGroupLabel(seat.ageGroup) : null,
     (seat.competitionTypes || []).map(typeLabel).join(', ') || null,
     seat.apparatus || null,
   ].filter(Boolean);

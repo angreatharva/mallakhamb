@@ -192,7 +192,7 @@ class JudgeService extends UserService {
       const competitions = competitionIds.length > 0
         ? await this.competitionRepository.find(
           { _id: { $in: competitionIds } },
-          { select: '_id name level place startDate endDate status apparatusConfig apparatusByGender' }
+          { select: '_id name level place startDate endDate status apparatusConfig apparatusByGender ageGroups customAgeGroups' }
         )
         : [];
       const competition = competitions.find(

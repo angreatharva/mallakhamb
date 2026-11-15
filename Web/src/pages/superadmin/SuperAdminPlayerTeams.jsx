@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Search } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
 import { levelLabel, COMPETITION_LEVELS } from '@/utils/competition/levels';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 import {
   Button, ConfirmDialog, EmptyState, Field, Heading, Input, Notice, Panel, Select, Spinner, StatusTag, Tabs, TabPanel, Tag, Textarea, SearchSelect,
 } from '@/components/ui';
@@ -161,7 +162,7 @@ const PlayerDetail = ({ playerId, teams }) => {
             {player.entries.map((e) => (
               <li key={`${e.competition._id}-${e.team._id}`} className="grid gap-0.5">
                 <span className="type-body-s">
-                  <strong>{e.competition.name}</strong> · {levelLabel(e.competition.level)} · {e.team.name} · {e.gender} {e.ageGroup}
+                  <strong>{e.competition.name}</strong> · {levelLabel(e.competition.level)} · {e.team.name} · {e.gender} {ageGroupLabel(e.ageGroup, e.competition)}
                   {e.competition.locked ? ' · finished' : ''}{e.isSubmitted ? ' · submitted' : ''}
                 </span>
                 {!e.heldAtLevel && <span className="type-caption text-fg-muted">Not this level&apos;s team for the player</span>}

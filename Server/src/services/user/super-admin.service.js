@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const { EMAIL_TYPES } = require('../../models/Player');
 const { calculatePlayerAdditionAmount, resolveFeeWindow } = require('../../config/payment.config');
 const { applyApparatusByGender } = require('../../utils/data/competition-apparatus.util');
+const { applyAgeGroups } = require('../../utils/data/custom-age-groups.util');
 const { hasRoomInSquad, isValidTeamSize, TEAM_SIZES } = require('../../utils/scoring/team-championship.util');
 const { assertAgeGroup } = require('../../utils/data/age-eligibility.util');
 
@@ -463,7 +464,7 @@ class SuperAdminService {
     }
     // The per-gender apparatus is validated here and `apparatusConfig` is
     // derived from it, so the two cannot disagree.
-    const body = applyApparatusByGender({ ...normalizeFeeWindow(payload), playerFee });
+    const body = applyAgeGroups(applyApparatusByGender({ ...normalizeFeeWindow(payload), playerFee }));
 
     // Mandatory: it caps every team per age group and decides the Team
     // Championship count (4 → best 3, 6 → best 5).
@@ -515,7 +516,7 @@ class SuperAdminService {
     await this._record(actorId, {
       entity: 'competition', entityId: id, action: 'COMPETITION_UPDATED', label: updated?.name || before?.name,
       reason: payload?.reason, competitionId: id, before, after: updated,
-      fields: ['name', 'level', 'place', 'year', 'startDate', 'endDate', 'registrationOpenDate', 'feeDueDate', 'playerFee', 'lateFee', 'apparatusFees', 'maxTeamSize', 'competitionTypes', 'apparatusByGender', 'ageGroups', 'description', 'status'],
+      fields: ['name', 'level', 'place', 'year', 'startDate', 'endDate', 'registrationOpenDate', 'feeDueDate', 'playerFee', 'lateFee', 'apparatusFees', 'maxTeamSize', 'competitionTypes', 'apparatusByGender', 'ageGroups', 'customAgeGroups', 'description', 'status'],
     });
     return updated;
   }
@@ -530,7 +531,7 @@ class SuperAdminService {
     if (!existing) throw new NotFoundError('Competition');
     seen.before = existing;
 
-    const body = applyApparatusByGender(normalizeFeeWindow(payload, existing), existing.competitionTypes);
+    const body = applyAgeGroups(applyApparatusByGender(normalizeFeeWindow(payload, existing), existing.competitionTypes), existing);
 
     if (Object.prototype.hasOwnProperty.call(payload, 'maxTeamSize')) {
       if (!isValidTeamSize(payload.maxTeamSize)) {

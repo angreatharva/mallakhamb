@@ -21,7 +21,7 @@ const { requireReason } = require('./correction.service');
 const { checkAgeGroup, groupLabel } = require('../../utils/data/age-eligibility.util');
 const { hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
-const { AGE_GROUPS, GENDERS, APPARATUS } = require('../../config/cop-rules');
+const { isAgeGroup, isCustomAgeGroup, GENDERS, APPARATUS } = require('../../config/cop-rules');
 
 const same = (a, b) => String(a?._id || a) === String(b?._id || b);
 const personName = (p) => [p?.firstName, p?.lastName].filter(Boolean).join(' ') || 'Athlete';
@@ -78,7 +78,7 @@ class EntriesAdminService {
     return {
       competition: {
         _id: meet._id, name: meet.name, maxTeamSize: meet.maxTeamSize || null,
-        competitionTypes: meet.competitionTypes || [], ageGroups: meet.ageGroups || [],
+        competitionTypes: meet.competitionTypes || [], ageGroups: meet.ageGroups || [], customAgeGroups: meet.customAgeGroups || [],
         apparatusByGender: meet.apparatusByGender || null, playerFee: meet.playerFee ?? null,
       },
       team: { _id: teamId, name: team?.name || 'Unknown team' },
@@ -101,9 +101,11 @@ class EntriesAdminService {
 
   _validEntry(meet, { gender, ageGroup, apparatus }) {
     if (!GENDERS.includes(gender)) throw new ValidationError('Choose Male or Female');
-    if (!AGE_GROUPS.includes(ageGroup)) throw new ValidationError('Choose an age group');
-    if ((meet.ageGroups || []).length && !(meet.ageGroups || []).some((g) => g.gender === gender && g.ageGroup === ageGroup)) {
-      throw new ValidationError(`${groupLabel(ageGroup)} (${gender}) is not run at this competition`);
+    if (!isAgeGroup(ageGroup)) throw new ValidationError('Choose an age group');
+    const runs = (meet.ageGroups || []).some((g) => g.gender === gender && g.ageGroup === ageGroup);
+    // A custom group exists only where the meet runs it; a COP one wherever a meet lists none.
+    if (((meet.ageGroups || []).length || isCustomAgeGroup(ageGroup)) && !runs) {
+      throw new ValidationError(`${groupLabel(ageGroup, meet)} (${gender}) is not run at this competition`);
     }
     const canonical = toCanonicalApparatus(apparatus, meet.competitionTypes);
     for (const list of Object.values(canonical)) {
@@ -117,11 +119,11 @@ class EntriesAdminService {
     if (age.ok) return null;
     if (!overrideAge) {
       throw new BusinessRuleError(
-        `${personName(player)} is ${age.age} on 31 Dec ${age.cutoffYear}, too old for ${groupLabel(ageGroup)}. Tick "allow outside the age rule" to enter anyway.`,
+        `${personName(player)} is ${age.age} on 31 Dec ${age.cutoffYear}, ${age.problem}. Tick "allow outside the age rule" to enter anyway.`,
         { reason: 'AGE_GROUP_NOT_ALLOWED' }
       );
     }
-    return `age ${age.age} entered in ${groupLabel(ageGroup)} by override`;
+    return `age ${age.age} entered in ${groupLabel(ageGroup, meet)} by override`;
   }
 
   async addPlayer(actor, competitionId, teamId, body = {}) {
@@ -137,7 +139,7 @@ class EntriesAdminService {
     const ageNote = this._checkAge(player, meet, body.gender, body.ageGroup, body.overrideAge);
     const full = !hasRoomInSquad(meet.maxTeamSize, reg.players || [], body.gender, body.ageGroup);
     if (full && !body.overrideLimit) {
-      throw new BusinessRuleError(`The ${body.gender} ${groupLabel(body.ageGroup)} squad is full (${meet.maxTeamSize}). Tick "allow a full squad" to add anyway.`, { reason: 'SQUAD_FULL' });
+      throw new BusinessRuleError(`The ${body.gender} ${groupLabel(body.ageGroup, meet)} squad is full (${meet.maxTeamSize}). Tick "allow a full squad" to add anyway.`, { reason: 'SQUAD_FULL' });
     }
     const ok = await this.competitions.addPlayerToRegistration(meet._id, teamId, { player: player._id, gender: body.gender, ageGroup: body.ageGroup, apparatus });
     if (!ok) throw new NotFoundError('This team has no entry in this competition');
@@ -187,7 +189,7 @@ class EntriesAdminService {
       const scored = await mongoose.model('Score').exists({ competition: meet._id, teamId: oid(teamId), 'playerScores.playerId': oid(playerId) });
       if (scored) throw new BusinessRuleError('This athlete already has scores in their current age group; their category cannot change now.');
       if (!hasRoomInSquad(meet.maxTeamSize, reg.players || [], next.gender, next.ageGroup, playerId) && !body.overrideLimit) {
-        throw new BusinessRuleError(`The ${next.gender} ${groupLabel(next.ageGroup)} squad is full. Tick "allow a full squad" to move anyway.`, { reason: 'SQUAD_FULL' });
+        throw new BusinessRuleError(`The ${next.gender} ${groupLabel(next.ageGroup, meet)} squad is full. Tick "allow a full squad" to move anyway.`, { reason: 'SQUAD_FULL' });
       }
     }
     await this.competitions.updatePlayerInRegistration(meet._id, teamId, playerId, { gender: next.gender, ageGroup: next.ageGroup, apparatus });

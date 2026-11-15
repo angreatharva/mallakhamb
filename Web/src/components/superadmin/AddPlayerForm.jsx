@@ -66,7 +66,6 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
   const [loadingTeams, setLoadingTeams] = useState(false);
   
   // Get age groups based on selected gender
-  const competitionAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
 
   /*
    * The COP age rule, as the server enforces it: age on 31 December of the
@@ -74,13 +73,15 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
    * The form used birthday-based limits one year off ("Under 12" stopped at 11).
    */
   const competitionDoc = competitions.find((c) => c._id === selectedCompetition?.value) || null;
+  // The chosen meet's groups (its custom ones included), not the dashboard's.
+  const competitionAgeGroups = useAgeGroups(selectedGender?.value || 'Male', competitionDoc);
   const cutoffYear = ageCutoffYear(competitionDoc) ?? new Date().getUTCFullYear();
   const calculateAge = (dob) => (dob ? ageOnCutoff(dob, cutoffYear) : null);
 
   // The meet's groups this player may enter, youngest first.
   const getAvailableAgeGroups = (gender, playerAge) => {
     if (playerAge === null || !competitionAgeGroups.length) return [];
-    const allowed = eligibleAgeGroups(playerAge, gender);
+    const allowed = eligibleAgeGroups(playerAge, gender, undefined, competitionDoc);
     return competitionAgeGroups
       .filter((ag) => allowed.includes(ag.value))
       .sort((x, y) => allowed.indexOf(x.value) - allowed.indexOf(y.value));
@@ -194,8 +195,8 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
     }
     
     // Their own age group or a higher one (COP); the server checks it again.
-    if (playerAge !== null && selectedGender && !eligibleAgeGroups(playerAge, selectedGender.value).includes(selectedAgeGroup.value)) {
-      toast.error(`Player is ${playerAge} on 31 Dec ${cutoffYear} and too old for ${selectedAgeGroup.label}`);
+    if (playerAge !== null && selectedGender && !eligibleAgeGroups(playerAge, selectedGender.value, undefined, competitionDoc).includes(selectedAgeGroup.value)) {
+      toast.error(`Player is ${playerAge} on 31 Dec ${cutoffYear} and may not enter ${selectedAgeGroup.label}`);
       return;
     }
     

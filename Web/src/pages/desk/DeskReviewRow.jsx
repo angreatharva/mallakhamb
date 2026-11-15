@@ -2,9 +2,10 @@ import PropTypes from 'prop-types';
 import { Check, Trash2 } from 'lucide-react';
 import { Field, IconButton, Input, Select, StatusTag } from '@/components/ui';
 import {
-  ageCutoffYear, ageOnCutoff, eligibleAgeGroups, lowestAgeGroup,
+  ageCutoffYear, ageOnCutoff, eligibleAgeGroups, lowestAgeGroup, isCustomAgeGroup,
 } from '@/utils/competition/ageEligibility';
 import { APPARATUS_LABEL, CheckBox, ageLabel, genderWord } from './deskShared';
+import { registerCustomAgeGroups } from '@/hooks/useAgeGroups';
 
 /** Below this the reader was unsure: the box is flagged for a second look. */
 const LOW_CONFIDENCE = 0.8;
@@ -23,12 +24,13 @@ const toCapitals = (value) => value.toUpperCase();
  * them stays there, in red, until the admin picks one.
  */
 const DeskReviewRow = ({ index, row, crop = null, competition, onChange, onRemove, locked = false }) => {
+  registerCustomAgeGroups(competition.customAgeGroups);
   const sections = competition.sections || [];
   const forGender = sections.find((s) => s.gender === row.gender) || { ageGroups: [], apparatus: [] };
   const cutoff = ageCutoffYear(competition);
   const age = row.dateOfBirth ? ageOnCutoff(row.dateOfBirth, cutoff) : null;
   const lowest = row.gender && age !== null ? lowestAgeGroup(age, row.gender) : null;
-  const eligible = row.gender && age !== null ? eligibleAgeGroups(age, row.gender, forGender.ageGroups) : [];
+  const eligible = row.gender && age !== null ? eligibleAgeGroups(age, row.gender, forGender.ageGroups, competition.customAgeGroups) : [];
   // The chosen group stays listed even when it is not allowed, so the select
   // shows what the coach wrote instead of silently showing another value.
   const groupOptions = [...new Set([...(row.ageGroup && !eligible.includes(row.ageGroup) ? [row.ageGroup] : []), ...eligible])];
@@ -107,7 +109,7 @@ const DeskReviewRow = ({ index, row, crop = null, competition, onChange, onRemov
             {groupOptions.length === 0 && <option value="">{age === null ? 'Enter the date of birth' : 'No group fits'}</option>}
             {groupOptions.map((group) => (
               <option key={group} value={group} disabled={!eligible.includes(group)}>
-                {ageLabel(group)}{!eligible.includes(group) ? ' (not allowed)' : group === lowest ? '' : ' (playing up)'}
+                {ageLabel(group)}{!eligible.includes(group) ? ' (not allowed)' : group === lowest || isCustomAgeGroup(group) ? '' : ' (playing up)'}
               </option>
             ))}
           </Select>

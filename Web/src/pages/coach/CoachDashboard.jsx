@@ -3,7 +3,7 @@ import { Trophy, UserPlus, Search, Trash2, Check, CheckCircle, Save, GripVertica
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coachAPI } from '@/services/api';
-import { useAgeGroups, useAgeGroupValues } from '../../hooks/useAgeGroups';
+import { useAgeGroups, useAgeGroupValues, ageGroupLabel } from '../../hooks/useAgeGroups';
 import Dropdown from '@/components/auth/Dropdown';
 import { useCompetition } from '../../contexts/CompetitionContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -166,7 +166,7 @@ const CoachDashboard = () => {
    * refusing girls who play up into "Above 16".
    */
   const cutoffYear = ageCutoffYear(currentCompetition) ?? new Date().getUTCFullYear();
-  const allowedGroups = (dob, gender) => eligibleAgeGroups(ageOnCutoff(dob, cutoffYear), gender);
+  const allowedGroups = (dob, gender) => eligibleAgeGroups(ageOnCutoff(dob, cutoffYear), gender, undefined, currentCompetition);
 
   const competitionAgeGroups = useAgeGroups(selectedGender?.value || 'Male');
   const maleAgeGroupValues = useAgeGroupValues('Male');
@@ -218,7 +218,7 @@ const CoachDashboard = () => {
 
   /** The meet's groups this player may enter: their own and every higher one, youngest first. */
   const getAvailableAgeGroups = (gender, playerAge) => {
-    const allowed = eligibleAgeGroups(playerAge, gender);
+    const allowed = eligibleAgeGroups(playerAge, gender, undefined, currentCompetition);
     return competitionAgeGroups
       .filter((ag) => allowed.includes(ag.value))
       .sort((a, b) => allowed.indexOf(a.value) - allowed.indexOf(b.value));
@@ -293,8 +293,8 @@ const CoachDashboard = () => {
         return toast.error(`This competition allows at most ${team.maxTeamSize} players per age group — ${selectedAgeGroup.label} is full`);
       }
     }
-    if (!eligibleAgeGroups(age, selectedGender.value).includes(selectedAgeGroup.value)) {
-      return toast.error(`Player is ${age} on 31 Dec ${cutoffYear} and too old for ${selectedAgeGroup.label}`);
+    if (!eligibleAgeGroups(age, selectedGender.value, undefined, currentCompetition).includes(selectedAgeGroup.value)) {
+      return toast.error(`Player is ${age} on 31 Dec ${cutoffYear} and may not enter ${selectedAgeGroup.label}`);
     }
     try {
       await coachAPI.addPlayerToAgeGroup({ 
@@ -374,7 +374,7 @@ const CoachDashboard = () => {
       // Their own group or any higher one (COP). Playing up is always allowed.
       if (!allowedGroups(data.dateOfBirth, targetGender).includes(targetAgeGroup)) {
         toast.error(
-          `${data.firstName} is ${calculateAge(data.dateOfBirth)} on 31 Dec ${cutoffYear} and too old for ${getAgeGroupDisplay(targetAgeGroup)}`
+          `${data.firstName} is ${calculateAge(data.dateOfBirth)} on 31 Dec ${cutoffYear} and may not enter ${getAgeGroupDisplay(targetAgeGroup)}`
         );
         return;
       }
@@ -398,7 +398,7 @@ const CoachDashboard = () => {
   const getAgeGroupDisplay = (ag) => ({
     'Under10': 'Under 10', 'Under12': 'Under 12', 'Under14': 'Under 14',
     'Under16': 'Under 16', 'Under18': 'Under 18', 'Above18': 'Above 18', 'Above16': 'Above 16',
-  }[ag] || ag);
+  }[ag] || ageGroupLabel(ag, currentCompetition));
 
   const getPlayersByAgeGroup = () => {
     if (!team?.players) return {};

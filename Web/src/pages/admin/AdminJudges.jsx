@@ -6,7 +6,7 @@ import { AnimatePresence } from 'framer-motion';
 import { adminAPI, superAdminAPI } from '@/services/api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { useAgeGroups, withAllAges, typesForAgeGroup } from '../../hooks/useAgeGroups';
+import { useAgeGroups, withAllAges, typesForAgeGroup, ageGroupLabel } from '../../hooks/useAgeGroups';
 import { APPARATUS, offeredApparatus } from '@/utils/scoring/apparatus';
 import { logger } from '@/infrastructure/logger';
 import Dropdown from '@/components/auth/Dropdown';
@@ -238,7 +238,7 @@ const AssignJudgeModal = ({ judge, api, selected, setSelected, onSave, onCancel,
             <div className="p-3 rounded-xl border text-xs" style={{ background: 'rgb(var(--ink) / 0.03)', borderColor: 'var(--line)', color: 'var(--fg-muted)' }}>
               <span className="font-bold text-accent-fg">{seatLabel(judge.judgeType)}</span>
               {judge.gender && <> · {judge.gender}</>}
-              {judge.ageGroup && <> · {judge.ageGroup}</>}
+              {judge.ageGroup && <> · {ageGroupLabel(judge.ageGroup)}</>}
               {judge.apparatus && <> · {judge.apparatus}</>}
             </div>
 

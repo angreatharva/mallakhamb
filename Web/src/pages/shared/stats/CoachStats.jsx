@@ -12,6 +12,7 @@ import PerformanceDetail from './PerformanceDetail';
 import StatsFilters from './StatsFilters';
 import { toggleApparatus } from './PlayerStats';
 import { apparatusPresent, athleteCards, checklistMisses, filterPerformances, summarize, trainingFocus } from './statsModel';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 /**
  * Fill for a share of a section's maximum, scaled across this squad's range so
@@ -149,7 +150,7 @@ function SquadOverview({ performances, teamTrend, onOpen }) {
           takeaway="Your team's total (best scores per apparatus, as the championship counts them) at each meet."
           legend={drawable ? trendKeys.map((key, i) => {
             const t = teamTrend.find((x) => `${x.teamId}|${x.gender}|${x.ageGroup}` === key);
-            return { label: `${t.teamName} (${t.ageGroup})`, slot: i + 1, line: true };
+            return { label: `${t.teamName} (${ageGroupLabel(t.ageGroup)})`, slot: i + 1, line: true };
           }) : null}
           table={{
             caption: 'Team championship by meet',
@@ -164,7 +165,7 @@ function SquadOverview({ performances, teamTrend, onOpen }) {
               id: `${t.competitionId}-${t.teamId}-${t.ageGroup}-${t.gender}`,
               meet: t.competitionName,
               team: t.teamName,
-              category: `${t.gender === 'Female' ? 'Girls' : 'Boys'} ${t.ageGroup}`,
+              category: `${t.gender === 'Female' ? 'Girls' : 'Boys'} ${ageGroupLabel(t.ageGroup)}`,
               total: fmt(t.total),
               rank: t.rank ? `${ordinal(t.rank)} / ${t.teamsInStanding}` : '—',
             })),

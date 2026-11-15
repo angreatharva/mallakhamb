@@ -5,6 +5,7 @@ import { secureStorage } from '@/utils/auth/secureStorage.js';
 import { logger } from '@/infrastructure/logger.js';
 import { authAPI } from '@/services/auth/auth.api.js';
 import { normalizeLevel, competitionsAtLevel } from '@/utils/competition/levels.js';
+import { registerCustomAgeGroups } from '@/utils/competition/ageEligibility.js';
 
 const CompetitionContext = createContext();
 
@@ -65,6 +66,11 @@ export const CompetitionProvider = ({ children, userType }) => {
   const [selectedLevel, setSelectedLevelState] = useState(() => getStoredLevel(userType));
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Name every meet's custom age groups for screens that hold only a key
+  // (idempotent, so it may run during render, before the children read labels).
+  registerCustomAgeGroups(currentCompetition);
+  for (const c of assignedCompetitions) registerCustomAgeGroups(c);
 
   // Persist currentCompetition to storage whenever it changes so it survives navigation
   useEffect(() => {

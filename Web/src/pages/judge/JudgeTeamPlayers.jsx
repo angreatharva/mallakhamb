@@ -22,7 +22,7 @@ import { FG } from '@/styles/tokens';
 import { FadeIn } from '@/components/admin/AdminKit';
 import { J, JudgeAmbience, JudgeHeader } from './judgeShared';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
-import { ageMatches } from '@/hooks/useAgeGroups';
+import { ageMatches, ageGroupLabel } from '@/hooks/useAgeGroups';
 
 const JudgeTeamPlayers = () => {
   const navigate = useNavigate();
@@ -498,7 +498,7 @@ const JudgeTeamPlayers = () => {
                           ) : null}
                         </p>
                         <p className="text-xs text-fg-muted mt-0.5">
-                          {player.gender} - {player.ageGroup}
+                          {player.gender} - {ageGroupLabel(player.ageGroup)}
                           {isLocked && player.finalScore != null
                             ? ` · Final ${Number(player.finalScore).toFixed(2)}`
                             : ''}

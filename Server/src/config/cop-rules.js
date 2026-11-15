@@ -131,22 +131,142 @@ function lowestAgeGroup(age, gender) {
   return list.find((group) => age >= AGE_GROUP_RANGES[group].min && age <= AGE_GROUP_RANGES[group].max) || null;
 }
 
+// ── Custom age groups (owner, 2026-11-15) ───────────────────────────────────
+//
+// A Super Admin may add age groups of their own to ONE competition, beside the
+// COP ones: a name and an age range ("Under 11", "Veterans 35+"), switched on
+// for boys, girls or both through the meet's ordinary `ageGroups` list. The
+// definition lives on the competition (`customAgeGroups`); everything else —
+// squad entries, scores, panels, running order, finals — stores only its KEY,
+// exactly as it stores 'Under12'.
+//
+// The key is 'Custom' + letters and digits: a fixed prefix so no custom group
+// can ever collide with a COP value or 'AllAges', and nothing but [A-Za-z0-9]
+// so it is safe inside socket room names and URLs. Models and validators check
+// the SHAPE of an age group with AGE_GROUP_PATTERN; whether a meet actually
+// runs it is the competition's business (its `ageGroups`), as it always was.
+// Web/src/utils/competition/ageEligibility.js mirrors the age rule below.
+
+const CUSTOM_AGE_GROUP_PREFIX = 'Custom';
+const CUSTOM_KEY_SOURCE = 'Custom[A-Za-z0-9]{1,40}';
+const CUSTOM_AGE_GROUP_RE = new RegExp(`^${CUSTOM_KEY_SOURCE}$`);
+/** Most custom groups one competition may define. */
+const MAX_CUSTOM_AGE_GROUPS = 20;
+/** Longest custom group name. */
+const CUSTOM_AGE_GROUP_LABEL_MAX = 40;
+/** Oldest age a custom range may name. */
+const CUSTOM_AGE_MAX = 99;
+
+/** Any player/entry age group: a COP bracket or a custom key. */
+const AGE_GROUP_PATTERN = new RegExp(`^(?:${AGE_GROUPS.join('|')}|${CUSTOM_KEY_SOURCE})$`);
+/** Any category age group: the above, or All ages. */
+const CATEGORY_AGE_GROUP_PATTERN = new RegExp(`^(?:${[...AGE_GROUPS, ALL_AGES].join('|')}|${CUSTOM_KEY_SOURCE})$`);
+
+/** @returns {boolean} is this a custom age group key? */
+const isCustomAgeGroup = (value) => typeof value === 'string' && CUSTOM_AGE_GROUP_RE.test(value);
+/** @returns {boolean} a COP bracket or a custom key (what a player can be entered in) */
+const isAgeGroup = (value) => AGE_GROUPS.includes(value) || isCustomAgeGroup(value);
+/** @returns {boolean} isAgeGroup or All ages (what a category can be keyed on) */
+const isCategoryAgeGroup = (value) => value === ALL_AGES || isAgeGroup(value);
+
 /**
- * Every bracket this player may enter: their lowest one and each higher one
- * (COP 1.8.3.3 lets a player play up, never down), narrowed to what the meet
- * runs for the gender when `offered` is given.
+ * A competition's custom age group definitions (accepts the competition or
+ * the list itself).
+ * @returns {Array<{key:string,label:string,minAge:number|null,maxAge:number|null}>}
+ */
+function customAgeGroupsOf(source) {
+  const list = Array.isArray(source) ? source : source?.customAgeGroups;
+  return Array.isArray(list) ? list.filter((d) => d && isCustomAgeGroup(d.key)) : [];
+}
+
+const findCustom = (group, custom) => customAgeGroupsOf(custom).find((d) => d.key === group) || null;
+const ageOrNull = (value) => (value === null || value === undefined || value === '' ? null : Number(value));
+
+/**
+ * The ages a group admits, inclusive: a COP bracket's fixed range, or a custom
+ * group's own (a blank minimum is 0, a blank maximum is no limit).
+ * @returns {{min:number,max:number}|null} null for an unknown group
+ */
+function ageGroupRange(group, custom = []) {
+  if (AGE_GROUP_RANGES[group]) return AGE_GROUP_RANGES[group];
+  const def = findCustom(group, custom);
+  if (!def) return null;
+  const min = ageOrNull(def.minAge);
+  const max = ageOrNull(def.maxAge);
+  return { min: Number.isFinite(min) ? min : 0, max: Number.isFinite(max) ? max : Infinity };
+}
+
+/**
+ * Age order for any mix of groups: an "Under N" sorts at N, an "Above N" (or
+ * a range with no top) after every capped one. COP before custom on a tie.
+ */
+function ageGroupSortKey(group, custom = []) {
+  const range = ageGroupRange(group, custom);
+  if (!range) return 100000;
+  const base = Number.isFinite(range.max) ? range.max : 1000 + range.min;
+  return base * 2 + (AGE_GROUP_RANGES[group] ? 0 : 1);
+}
+
+/** Sort groups youngest first (a new array). */
+function sortAgeGroups(groups, custom = []) {
+  return [...(groups || [])].sort((a, b) => ageGroupSortKey(a, custom) - ageGroupSortKey(b, custom));
+}
+
+/**
+ * What to call a group on screen: 'Under12' → 'Under 12', a custom key → its
+ * name. With no definition at hand a custom key still reads sensibly
+ * ('CustomVeterans35' → 'Veterans 35').
+ */
+function ageGroupLabel(group, custom = []) {
+  if (group === ALL_AGES) return 'All ages';
+  const def = findCustom(group, custom);
+  if (def?.label) return def.label;
+  const text = String(group || '');
+  if (isCustomAgeGroup(text)) {
+    return text.slice(CUSTOM_AGE_GROUP_PREFIX.length)
+      .replace(/([a-zA-Z])(\d)/g, '$1 $2')
+      .replace(/(\d)([a-zA-Z])/g, '$1 $2');
+  }
+  return text.replace(/^(Under|Above)(\d+)$/, '$1 $2');
+}
+
+/**
+ * A new key for a custom group named `label`, unique among `taken`.
+ * 'Under 11' → 'CustomUnder11'; a name with no Latin letters or digits → 'CustomGroup'.
+ */
+function customAgeGroupKey(label, taken = []) {
+  const used = new Set(taken);
+  const stem = `${CUSTOM_AGE_GROUP_PREFIX}${(String(label || '').replace(/[^A-Za-z0-9]/g, '') || 'Group').slice(0, 30)}`;
+  if (!used.has(stem)) return stem;
+  for (let n = 2; ; n += 1) if (!used.has(`${stem}x${n}`)) return `${stem}x${n}`;
+}
+
+/**
+ * Every bracket this player may enter, youngest first:
+ *  - COP: their lowest bracket and each higher one of their gender (COP
+ *    1.8.3.3 lets a player play up, never down);
+ *  - custom: each group whose own age range admits them (owner, 2026-11-15).
+ * Narrowed to what the meet runs for the gender when `offered` is given.
  *
  * @param {number} age
  * @param {string} gender
  * @param {string[]} [offered] - the meet's brackets for this gender
- * @returns {string[]} youngest first; empty when the player fits none
+ * @param {Array|Object} [custom] - the meet's custom groups (or the meet)
+ * @returns {string[]} empty when the player fits none
  */
-function eligibleAgeGroups(age, gender, offered) {
+function eligibleAgeGroups(age, gender, offered, custom = []) {
   const list = AGE_GROUPS_BY_GENDER[gender];
+  if (!list || !Number.isFinite(age) || age < 0) return [];
   const lowest = lowestAgeGroup(age, gender);
-  if (!list || !lowest) return [];
-  const allowed = list.slice(list.indexOf(lowest));
-  return Array.isArray(offered) ? allowed.filter((group) => offered.includes(group)) : allowed;
+  const cop = lowest ? list.slice(list.indexOf(lowest)) : [];
+  const own = customAgeGroupsOf(custom)
+    .filter((def) => {
+      const range = ageGroupRange(def.key, custom);
+      return age >= range.min && age <= range.max;
+    })
+    .map((def) => def.key);
+  const all = own.length ? sortAgeGroups([...cop, ...own], custom) : cop;
+  return Array.isArray(offered) ? all.filter((group) => offered.includes(group)) : all;
 }
 
 // §3.3 — universal point distribution (all apparatus, all competitions)
@@ -590,6 +710,22 @@ module.exports = {
   ageOnCutoff,
   lowestAgeGroup,
   eligibleAgeGroups,
+  CUSTOM_AGE_GROUP_PREFIX,
+  CUSTOM_AGE_GROUP_RE,
+  MAX_CUSTOM_AGE_GROUPS,
+  CUSTOM_AGE_GROUP_LABEL_MAX,
+  CUSTOM_AGE_MAX,
+  AGE_GROUP_PATTERN,
+  CATEGORY_AGE_GROUP_PATTERN,
+  isCustomAgeGroup,
+  isAgeGroup,
+  isCategoryAgeGroup,
+  customAgeGroupsOf,
+  ageGroupRange,
+  ageGroupSortKey,
+  sortAgeGroups,
+  ageGroupLabel,
+  customAgeGroupKey,
   COMPETITION_TYPE_SLUGS,
   COMPETITION_TYPE_DISPLAYS,
   APPARATUS,

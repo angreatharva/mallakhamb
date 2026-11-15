@@ -16,6 +16,7 @@ import { FG, alpha } from '@/styles/tokens';
 import { J, JudgeHeader } from './judgeShared';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 /** Judge roles allowed to set a panel's running order. Mirrors the server's
  *  `SEQUENCE_JUDGE_TYPES` and `requireSequenceManager`; this copy only decides
@@ -238,7 +239,7 @@ const JudgeSequence = () => {
           style={{ background: 'rgb(var(--accent) / 0.08)', borderColor: 'rgb(var(--accent) / 0.25)' }}>
           <p className="type-tag mb-2 text-fg-secondary">Category</p>
           <h1 className="text-xl font-black text-ink">
-            {categoryParams?.gender} — {categoryParams?.ageGroup}
+            {categoryParams?.gender} — {ageGroupLabel(categoryParams?.ageGroup)}
           </h1>
           <p className="text-sm mt-1 text-fg-muted">
             {COMP_LABEL[category.competitionType] || category.competitionType}
@@ -337,7 +338,7 @@ const JudgeSequence = () => {
                                 <div className="min-w-0">
                                   <p className="text-sm text-ink truncate">{player.name}</p>
                                   <p className="text-xs text-fg-muted">
-                                    {player.gender} · {player.ageGroup}
+                                    {player.gender} · {ageGroupLabel(player.ageGroup)}
                                     {player.isFinalized ? ' · finalized' : ''}
                                   </p>
                                 </div>

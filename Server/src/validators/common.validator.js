@@ -1,6 +1,7 @@
 const { body, param, query } = require('express-validator');
 const mongoose = require('mongoose');
 const { LOGIN_ID_PATTERN } = require('../utils/data/player-login-id.util');
+const { CATEGORY_AGE_GROUP_PATTERN } = require('../config/cop-rules');
 
 /**
  * Common validation rules used across multiple validators
@@ -180,6 +181,23 @@ const enumValue = (field, allowedValues, location = 'body') => {
 };
 
 /**
+ * A category age group: a COP bracket, All ages, or a meet's custom key
+ * (config/cop-rules CATEGORY_AGE_GROUP_PATTERN). Shape only — whether the meet
+ * runs it is the service's business.
+ */
+const ageGroupField = (field, location = 'body') => {
+  const validator = location === 'body' ? body(field) :
+                    location === 'param' ? param(field) :
+                    query(field);
+  return validator
+    .trim()
+    .notEmpty()
+    .withMessage(`${field} is required`)
+    .matches(CATEGORY_AGE_GROUP_PATTERN)
+    .withMessage(`${field} must be an age group`);
+};
+
+/**
  * Validate string field
  */
 const string = (field, options = {}) => {
@@ -332,6 +350,7 @@ module.exports = {
   dateRange,
   date,
   enumValue,
+  ageGroupField,
   string,
   number,
   boolean,

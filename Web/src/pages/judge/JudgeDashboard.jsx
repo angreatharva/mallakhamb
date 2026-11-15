@@ -29,7 +29,7 @@ import JudgeHome from './JudgeHome';
 import { apparatusInUse, entryGender, isRegisteredFor, offeredApparatus } from '@/utils/scoring/apparatus';
 import { levelLabel } from '@/utils/competition/levels';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
-import { ageMatches, ageGroupMapping } from '@/hooks/useAgeGroups';
+import { ageMatches, ageGroupLabel } from '@/hooks/useAgeGroups';
 import {
   COMPETITION_TYPES,
   idOf,
@@ -940,7 +940,7 @@ const JudgeDashboard = () => {
                   // one too, not only one choosing between several.
                   { label: 'Meet', value: currentMeet?.name || competitionName(selectedCompetitionId) },
                   { label: 'Gender', value: selectedGender || judgeInfo.gender },
-                  { label: 'Age Group', value: ageGroupMapping[selectedAgeGroup || judgeInfo.ageGroup]?.label || selectedAgeGroup || judgeInfo.ageGroup },
+                  { label: 'Age Group', value: ageGroupLabel(selectedAgeGroup || judgeInfo.ageGroup) },
                   { label: 'Competition', value: getCompLabel(selectedCompetitionType) },
                   // '—' rather than "All apparatus": the meet declared none and
                   // nobody has entered, so there was nothing to choose.
@@ -997,7 +997,7 @@ const JudgeDashboard = () => {
                           <span className="min-w-0">
                             <span className="block font-bold text-lg text-ink truncate">{name}</span>
                             <span className="inline-block mt-1 text-[11px] px-2 py-0.5 rounded-md bg-ink/10 text-fg-secondary font-semibold truncate max-w-full">
-                              {team.name}{entry.ageGroup && selectedAgeGroup === 'AllAges' ? ` · ${ageGroupMapping[entry.ageGroup]?.label || entry.ageGroup}` : ''}
+                              {team.name}{entry.ageGroup && selectedAgeGroup === 'AllAges' ? ` · ${ageGroupLabel(entry.ageGroup)}` : ''}
                             </span>
                           </span>
                         </span>
@@ -1193,7 +1193,7 @@ const JudgeDashboard = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {availableAgeGroups.map(ag => (
                           <SelectBtn key={ag} selected={selectedAgeGroup === ag} onClick={() => setSelectedAgeGroup(ag)}>
-                            <span>{ageGroupMapping[ag]?.label || ag}</span>
+                            <span>{ageGroupLabel(ag)}</span>
                           </SelectBtn>
                         ))}
                       </div>
@@ -1202,7 +1202,7 @@ const JudgeDashboard = () => {
                     <div className="rounded-xl border border-ink/10 bg-ink/5 p-4 text-center">
                       <p className="type-tag text-fg-muted mb-1">Assigned Age Group</p>
                       <p className="font-bold text-ink">
-                        {(availableAgeGroups[0] && (ageGroupMapping[availableAgeGroups[0]]?.label || availableAgeGroups[0]))
+                        {(availableAgeGroups[0] && ageGroupLabel(availableAgeGroups[0]))
                           || (selectedGender ? 'No panel in this gender' : judgeInfo.ageGroup)
                           || '—'}
                       </p>
@@ -1300,7 +1300,7 @@ const JudgeDashboard = () => {
                   </div>
                   <h2 id="role-modal-title" className="text-2xl font-black text-ink">Select Your Role</h2>
                   <p className="text-fg-muted text-sm mt-2">
-                    You are both Scorer and Time Keeper for {selectedGender || judgeInfo.gender} · {selectedAgeGroup || judgeInfo.ageGroup} · {getCompLabel(selectedCompetitionType)}{selectedApparatus ? ` · ${selectedApparatus}` : ''}. Choose which one you are working as.
+                    You are both Scorer and Time Keeper for {selectedGender || judgeInfo.gender} · {ageGroupLabel(selectedAgeGroup || judgeInfo.ageGroup)} · {getCompLabel(selectedCompetitionType)}{selectedApparatus ? ` · ${selectedApparatus}` : ''}. Choose which one you are working as.
                   </p>
                 </div>
 

@@ -14,8 +14,8 @@ const { COMPETITION_LEVELS } = require('../config/competition-levels');
 const Player = require('../models/Player');
 const Judge = require('../models/Judge');
 
-/** Age groups, read off the Player schema's own enum. */
-const AGE_GROUPS = Player.schema.path('ageGroup').enumValues;
+/** The COP age groups (a meet may add custom ones: config/cop-rules AGE_GROUP_PATTERN). */
+const { AGE_GROUPS, AGE_GROUP_PATTERN } = require('../config/cop-rules');
 
 /** Genders, likewise. */
 const GENDERS = Player.schema.path('gender').enumValues;
@@ -37,4 +37,4 @@ const COMPETITION_TYPES = [
 const JUDGE_TYPES = Judge.schema.path('judgeType')?.enumValues
   || [...require('../config/judge-seats').JUDGE_SEAT_TYPES];
 
-module.exports = { APPARATUS, AGE_GROUPS, GENDERS, COMPETITION_TYPES, JUDGE_TYPES, COMPETITION_LEVELS };
+module.exports = { APPARATUS, AGE_GROUPS, AGE_GROUP_PATTERN, GENDERS, COMPETITION_TYPES, JUDGE_TYPES, COMPETITION_LEVELS };

@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS, APPARATUS } = require('../config/cop-rules');
+const { AGE_GROUP_PATTERN, GENDERS, APPARATUS } = require('../config/cop-rules');
 
 /**
  * WalkInRegistration — one paper form being turned into entries at the desk.
@@ -27,9 +27,9 @@ const rowSchema = new mongoose.Schema({
   dobRaw: { type: String, trim: true, default: '' },
   gender: { type: String, enum: [...GENDERS, null], default: null },
   /** The section the coach wrote the player in. */
-  writtenAgeGroup: { type: String, enum: [...AGE_GROUPS, null], default: null },
+  writtenAgeGroup: { type: String, match: [AGE_GROUP_PATTERN, 'Invalid age group'], default: null },
   /** The group the admin chose; starts as `writtenAgeGroup`. */
-  ageGroup: { type: String, enum: [...AGE_GROUPS, null], default: null },
+  ageGroup: { type: String, match: [AGE_GROUP_PATTERN, 'Invalid age group'], default: null },
   apparatus: [{ type: String, enum: APPARATUS }],
   confidence: {
     firstName: Number,

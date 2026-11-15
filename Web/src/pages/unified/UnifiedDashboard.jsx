@@ -24,7 +24,7 @@ const SuperAdminPlayerTeams = lazy(() => import('../superadmin/SuperAdminPlayerT
 const SuperAdminFix = lazy(() => import('../superadmin/SuperAdminFix'));
 const SuperAdminHistory = lazy(() => import('../superadmin/SuperAdminHistory'));
 const AdminFinals = lazy(() => import('../admin/AdminFinals'));
-import { useAgeGroupValues } from '../../hooks/useAgeGroups';
+import { useAgeGroupValues, ageGroupLabel } from '../../hooks/useAgeGroups';
 import { logger } from '@/infrastructure/logger';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import { Button, EmptyState, Heading, Panel, Stat, StatusTag, Tag } from '@/components/ui';
@@ -34,7 +34,7 @@ import { AppHeader } from '@/components/shell';
 const ageLabel = (ag) => ({
   Under10: 'Under 10', Under12: 'Under 12', Under14: 'Under 14',
   Under16: 'Under 16', Under18: 'Under 18', Above16: 'Above 16', Above18: 'Above 18',
-}[ag] || ag);
+}[ag] || ageGroupLabel(ag));
 
 const compLabel = (ct) => ({
   competition_1: 'Competition I', competition_2: 'Competition II', competition_3: 'Competition III',

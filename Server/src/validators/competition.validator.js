@@ -1,6 +1,6 @@
 const { body, param } = require('express-validator');
-const { objectId, dateRange, enumValue, string, number, array } = require('./common.validator');
-const { AGE_GROUPS, CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { objectId, dateRange, enumValue, ageGroupField, string, number, array } = require('./common.validator');
+const { AGE_GROUP_PATTERN, CATEGORY_AGE_GROUP_PATTERN, GENDERS, MAX_CUSTOM_AGE_GROUPS, isAgeGroup, isCustomAgeGroup } = require('../config/cop-rules');
 const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 
 /**
@@ -100,15 +100,33 @@ const createCompetition = () => {
       .custom((value) => {
         if (value && value.length > 0) {
           const validGenders = GENDERS;
-          const validAgeGroups = AGE_GROUPS;
-          
+
           for (const group of value) {
             if (!group.gender || !validGenders.includes(group.gender)) {
               throw new Error('Invalid gender in age groups');
             }
-            if (!group.ageGroup || !validAgeGroups.includes(group.ageGroup)) {
+            // A COP bracket or a custom key; whether the meet defines that key
+            // is checked by applyAgeGroups.
+            if (!group.ageGroup || !isAgeGroup(group.ageGroup)) {
               throw new Error('Invalid age group in age groups');
             }
+          }
+        }
+        return true;
+      }),
+    body('customAgeGroups')
+      .optional()
+      .isArray({ max: MAX_CUSTOM_AGE_GROUPS })
+      .withMessage(`Custom age groups must be a list of at most ${MAX_CUSTOM_AGE_GROUPS}`)
+      .custom((value) => {
+        // Shape only; utils/data/custom-age-groups.util checks names, ranges
+        // and keys against the stored meet.
+        for (const group of value || []) {
+          if (!group || typeof group !== 'object' || typeof group.label !== 'string') {
+            throw new Error('Every custom age group needs a name');
+          }
+          if (group.key !== undefined && group.key !== null && group.key !== '' && !isCustomAgeGroup(group.key)) {
+            throw new Error('Invalid custom age group key');
           }
         }
         return true;
@@ -226,15 +244,33 @@ const updateCompetition = () => {
       .custom((value) => {
         if (value && value.length > 0) {
           const validGenders = GENDERS;
-          const validAgeGroups = AGE_GROUPS;
-          
+
           for (const group of value) {
             if (!group.gender || !validGenders.includes(group.gender)) {
               throw new Error('Invalid gender in age groups');
             }
-            if (!group.ageGroup || !validAgeGroups.includes(group.ageGroup)) {
+            // A COP bracket or a custom key; whether the meet defines that key
+            // is checked by applyAgeGroups.
+            if (!group.ageGroup || !isAgeGroup(group.ageGroup)) {
               throw new Error('Invalid age group in age groups');
             }
+          }
+        }
+        return true;
+      }),
+    body('customAgeGroups')
+      .optional()
+      .isArray({ max: MAX_CUSTOM_AGE_GROUPS })
+      .withMessage(`Custom age groups must be a list of at most ${MAX_CUSTOM_AGE_GROUPS}`)
+      .custom((value) => {
+        // Shape only; utils/data/custom-age-groups.util checks names, ranges
+        // and keys against the stored meet.
+        for (const group of value || []) {
+          if (!group || typeof group !== 'object' || typeof group.label !== 'string') {
+            throw new Error('Every custom age group needs a name');
+          }
+          if (group.key !== undefined && group.key !== null && group.key !== '' && !isCustomAgeGroup(group.key)) {
+            throw new Error('Invalid custom age group key');
           }
         }
         return true;
@@ -334,7 +370,7 @@ const addPlayerToTeam = () => {
       .trim()
       .notEmpty()
       .withMessage('Age group is required')
-      .isIn(AGE_GROUPS)
+      .matches(AGE_GROUP_PATTERN)
       .withMessage('Invalid age group'),
     body('gender')
       .trim()
@@ -352,7 +388,7 @@ const startAgeGroup = () => {
   return [
     objectId('competitionId', 'param'),
     enumValue('gender', GENDERS),
-    enumValue('ageGroup', CATEGORY_AGE_GROUPS),
+    ageGroupField('ageGroup'),
     body('competitionType')
       .trim()
       .notEmpty()

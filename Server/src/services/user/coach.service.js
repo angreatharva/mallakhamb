@@ -12,6 +12,8 @@ const { NotFoundError, ValidationError, AuthorizationError } = require('../../er
 const { stripSensitiveFields } = require('../../utils/data/user-projection.util');
 const { assertAgeGroup, checkAgeGroup, groupLabel } = require('../../utils/data/age-eligibility.util');
 
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
 /** "Too old for Under 12 (13 on 31 Dec 2026) — move to Under 14 or higher", or null. */
 function ageIssueOf(player, entry, competition) {
   const result = checkAgeGroup({ dateOfBirth: player.dateOfBirth, gender: entry.gender, ageGroup: entry.ageGroup, competition });
@@ -22,8 +24,8 @@ function ageIssueOf(player, entry, competition) {
     age: result.age,
     cutoffYear: result.cutoffYear,
     eligible: choices,
-    message: `Too old for ${groupLabel(entry.ageGroup)} (${result.age} on 31 Dec ${result.cutoffYear})`
-      + (choices.length ? ` — move to ${groupLabel(choices[0])}${choices.length > 1 ? ' or higher' : ''}` : ''),
+    message: `${cap(result.problem)} (${result.age} on 31 Dec ${result.cutoffYear})`
+      + (choices.length ? ` — move to ${groupLabel(choices[0], competition)}${choices.length > 1 ? ' or higher' : ''}` : ''),
   };
 }
 // One shape on the way in, whatever the two clients post — see the module header.

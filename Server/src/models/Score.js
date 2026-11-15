@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { CATEGORY_AGE_GROUP_PATTERN, GENDERS } = require('../config/cop-rules');
 
 const playerScoreSchema = new mongoose.Schema({
   playerId: {
@@ -278,7 +278,7 @@ const scoreSchema = new mongoose.Schema({
   ageGroup: {
     type: String,
     required: true,
-    enum: CATEGORY_AGE_GROUPS
+    match: [CATEGORY_AGE_GROUP_PATTERN, 'Invalid age group']
   },
   competitionType: {
     type: String,

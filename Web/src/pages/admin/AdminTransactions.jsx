@@ -10,6 +10,7 @@ import Dropdown from '@/components/auth/Dropdown';
 import { BodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { DarkCard, FadeIn, DarkSearch } from '@/components/admin/AdminKit';
 import { matchesSearch } from '@/utils/ui/search';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 const statusStyle = (status) => {
   const map = {
@@ -377,7 +378,7 @@ const AdminTransactions = () => {
                                 background: `${alpha('rgb(var(--accent))', 0x20)}`, 
                                 color: FG.brand 
                               }}>
-                                {player.ageGroup}
+                                {ageGroupLabel(player.ageGroup)}
                               </span>
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{ 
                                 background: player.gender === 'Male' 

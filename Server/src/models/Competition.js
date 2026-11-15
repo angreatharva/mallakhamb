@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { AGE_GROUPS, CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUP_PATTERN, CATEGORY_AGE_GROUP_PATTERN, GENDERS, CUSTOM_AGE_GROUP_RE, CUSTOM_AGE_GROUP_LABEL_MAX, CUSTOM_AGE_MAX } = require('../config/cop-rules');
 const { TEAM_SIZES } = require('../utils/scoring/team-championship.util');
 const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 
@@ -181,7 +181,7 @@ const competitionSchema = new mongoose.Schema({
       },
       ageGroup: {
         type: String,
-        enum: AGE_GROUPS
+        match: [AGE_GROUP_PATTERN, 'Invalid age group']
       },
       gender: {
         type: String,
@@ -263,9 +263,24 @@ const competitionSchema = new mongoose.Schema({
     },
     ageGroup: {
       type: String,
-      enum: AGE_GROUPS,
+      match: [AGE_GROUP_PATTERN, 'Invalid age group'],
       required: true
     }
+  }],
+  /*
+   * Age groups the Super Admin made up for THIS meet, beside the COP ones
+   * (owner, 2026-11-15). Only the definition lives here; `ageGroups` above
+   * switches each one on per gender, and every entry, score, seat and final
+   * stores the `key` like any COP value. Ages are on 31 Dec of the meet year
+   * (cop-rules#ageCutoffYear), inclusive; a blank end is open.
+   * Written only through utils/data/custom-age-groups.util#applyAgeGroups.
+   */
+  customAgeGroups: [{
+    _id: false,
+    key: { type: String, required: true, match: [CUSTOM_AGE_GROUP_RE, 'Invalid custom age group key'] },
+    label: { type: String, required: true, trim: true, maxlength: CUSTOM_AGE_GROUP_LABEL_MAX },
+    minAge: { type: Number, default: null, min: 0, max: CUSTOM_AGE_MAX },
+    maxAge: { type: Number, default: null, min: 0, max: CUSTOM_AGE_MAX }
   }],
   playerFee: {
     type: Number,
@@ -285,7 +300,7 @@ const competitionSchema = new mongoose.Schema({
     },
     ageGroup: {
       type: String,
-      enum: CATEGORY_AGE_GROUPS,
+      match: [CATEGORY_AGE_GROUP_PATTERN, 'Invalid age group'],
       required: true
     },
     competitionType: {

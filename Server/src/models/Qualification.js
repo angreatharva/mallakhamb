@@ -17,7 +17,7 @@
  */
 
 const mongoose = require('mongoose');
-const { CATEGORY_AGE_GROUPS, AGE_GROUPS, GENDERS, APPARATUS } = require('../config/cop-rules');
+const { CATEGORY_AGE_GROUP_PATTERN, AGE_GROUP_PATTERN, GENDERS, APPARATUS } = require('../config/cop-rules');
 
 const person = {
   _id: false,
@@ -26,14 +26,14 @@ const person = {
   playerName: { type: String, default: '' },
   rank: { type: Number, default: null },
   score: { type: Number, default: null },
-  sourceAgeGroup: { type: String, enum: [...AGE_GROUPS, null], default: null },
+  sourceAgeGroup: { type: String, match: [AGE_GROUP_PATTERN, 'Invalid age group'], default: null },
 };
 
 const qualificationSchema = new mongoose.Schema({
   competition: { type: mongoose.Schema.Types.ObjectId, ref: 'Competition', required: true },
   competitionType: { type: String, enum: ['competition_2', 'competition_3'], required: true },
   gender: { type: String, enum: GENDERS, required: true },
-  ageGroup: { type: String, enum: CATEGORY_AGE_GROUPS, required: true },
+  ageGroup: { type: String, match: [CATEGORY_AGE_GROUP_PATTERN, 'Invalid age group'], required: true },
   apparatus: { type: String, enum: [...APPARATUS, null], default: null },
 
   status: { type: String, enum: ['waiting', 'waiting_draw', 'set'], default: 'waiting' },
@@ -43,7 +43,7 @@ const qualificationSchema = new mongoose.Schema({
   /** Competition II: each age group's part of the final. */
   slices: [{
     _id: false,
-    ageGroup: { type: String, enum: AGE_GROUPS, required: true },
+    ageGroup: { type: String, match: [AGE_GROUP_PATTERN, 'Invalid age group'], required: true },
     status: { type: String, enum: ['waiting', 'waiting_draw', 'set'], default: 'waiting' },
     waitingFor: [String],
   }],
@@ -58,7 +58,7 @@ const qualificationSchema = new mongoose.Schema({
   /** Competition II only: a tie the rules cannot break, drawn by the admin. */
   drawOrders: [{
     _id: false,
-    ageGroup: { type: String, enum: AGE_GROUPS, required: true },
+    ageGroup: { type: String, match: [AGE_GROUP_PATTERN, 'Invalid age group'], required: true },
     order: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Player' }],
     by: { type: mongoose.Schema.Types.ObjectId, default: null },
     at: { type: Date, default: Date.now },

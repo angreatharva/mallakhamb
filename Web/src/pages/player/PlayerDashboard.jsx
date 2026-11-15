@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import { matchesSearch } from '@/utils/ui/search';
 import { Fact, InfoRow, PageHeader } from '@/components/shell';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 const STATUS = { Submitted: 'success', Active: 'info' };
@@ -283,7 +284,7 @@ const PlayerDashboard = () => {
               : teamPicker('Select a team')}
           </Fact>
           <Fact label="Age Group"
-            value={player?.ageGroup ? AGE_GROUP_MAP[player.ageGroup] || player.ageGroup : 'Not assigned'} />
+            value={player?.ageGroup ? AGE_GROUP_MAP[player.ageGroup] || ageGroupLabel(player.ageGroup) : 'Not assigned'} />
           <Fact label="Gender" value={player?.gender} />
           <Fact label="Date of Birth"
             value={player?.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'} />
@@ -307,7 +308,7 @@ const PlayerDashboard = () => {
               <>
                 <InfoRow label="Team Name" value={player.team.name} />
                 <InfoRow label="Age Group"
-                  value={player.ageGroup ? (AGE_GROUP_MAP[player.ageGroup] || player.ageGroup) : 'Not assigned'} />
+                  value={player.ageGroup ? (AGE_GROUP_MAP[player.ageGroup] || ageGroupLabel(player.ageGroup)) : 'Not assigned'} />
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-1">
                   <span className="text-fg-muted type-body-s">Status</span>
                   <StatusBadge status={player.teamStatus} />

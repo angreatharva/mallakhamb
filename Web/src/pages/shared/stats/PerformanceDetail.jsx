@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { Check, Medal, X } from 'lucide-react';
 import { Heading, Panel, Tag } from '@/components/ui';
 import { BulletMeter, PanelStrip, SECTIONS, apparatusLabel, fmt, ordinal } from '@/components/charts';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 const CATEGORY = { 'Competition I': 'Team', 'Competition II': 'Individual', 'Competition III': 'Apparatus' };
 const MEDAL = { 1: 'medal-gold', 2: 'medal-silver', 3: 'medal-bronze' };
@@ -21,7 +22,7 @@ const PerformanceDetail = ({ performance: p, checklist = [], showAthlete = false
           <div className="flex flex-wrap gap-2">
             <Tag tone="ident">{apparatusLabel(p.apparatus)}</Tag>
             <Tag>{CATEGORY[p.competitionType] || p.competitionType}</Tag>
-            <Tag>{`${p.gender === 'Female' ? 'Girls' : 'Boys'} · ${p.ageGroup}`}</Tag>
+            <Tag>{`${p.gender === 'Female' ? 'Girls' : 'Boys'} · ${ageGroupLabel(p.ageGroup)}`}</Tag>
           </div>
           <Heading level={3} step="display-s" className="m-0 mt-1">
             {showAthlete ? p.playerName : p.competitionName}

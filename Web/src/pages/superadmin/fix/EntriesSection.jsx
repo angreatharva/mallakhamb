@@ -5,16 +5,18 @@ import { superAdminAPI } from '@/services/api';
 import { levelLabel } from '@/utils/competition/levels';
 import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag, Tag, SearchSelect } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
+import { ageGroupLabel, registerCustomAgeGroups } from '@/hooks/useAgeGroups';
 
 const ID = 'sa-entries';
 const TYPE_LABEL = { competition_1: 'Competition I', competition_2: 'Competition II', competition_3: 'Competition III' };
 const APPARATUS = ['Pole Mallakhamb', 'Hanging Mallakhamb', 'Rope Mallakhamb'];
-const group = (g) => String(g || '').replace(/^(Under|Above)(\d+)$/, '$1 $2');
+const group = (g) => ageGroupLabel(g);
 const decimal = (v) => v.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
 /** Gender, age group and apparatus per competition type, for adding or editing a squad place. */
 const EntryForm = ({ competition, value, onChange }) => {
+  registerCustomAgeGroups(competition);
   const groups = (competition.ageGroups || []).filter((g) => g.gender === value.gender).map((g) => g.ageGroup);
   // Competition II / III places are filled by the finals engine; only Competition I is chosen here.
   const types = (competition.competitionTypes || []).filter((t) => t === 'competition_1');

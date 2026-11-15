@@ -34,6 +34,10 @@ const {
   ageOnCutoff,
   lowestAgeGroup,
   eligibleAgeGroups,
+  customAgeGroupsOf,
+  isCustomAgeGroup,
+  sortAgeGroups,
+  ageGroupLabel,
 } = require('../../config/cop-rules');
 const { resolveFeeWindow, calculateTeamPaymentAmount } = require('../../config/payment.config');
 const { mayActOnCompetition, isSuperAdmin } = require('../../utils/security/competition-access.util');
@@ -53,7 +57,7 @@ const CONSENT_AGE = 18;
 const MAX_ROWS = 120;
 
 /** 'Under12' → 'Under 12', for messages a person reads. */
-const groupLabel = (group) => String(group || '').replace(/^(Under|Above)(\d+)$/, '$1 $2');
+const groupLabel = (group, custom = []) => ageGroupLabel(group, custom);
 
 const idOf = (value) => (value?._id ?? value)?.toString?.() ?? null;
 const sameId = (a, b) => Boolean(a) && Boolean(b) && idOf(a) === idOf(b);
@@ -616,6 +620,8 @@ class WalkInService {
         feePhase: window.phase,
         lateFeePerPlayer: window.lateFeePerPlayer,
         sections: checked.sections,
+        // The meet's own age groups, so the desk can name them and apply their range.
+        customAgeGroups: customAgeGroupsOf(competition),
         formPages: buildFormLayout().pages.map((p) => ({
           page: p.page,
           sections: p.sections.map((s) => s.key),
@@ -645,8 +651,13 @@ class WalkInService {
     const cutoffYear = ageCutoffYear(competition);
     const types = competition.competitionTypes?.length ? competition.competitionTypes : ['competition_1'];
     const configured = (competition.ageGroups || []).map((g) => `${g.gender}:${g.ageGroup}`);
-    const offeredGroups = (gender) => (AGE_GROUPS_BY_GENDER[gender] || [])
-      .filter((group) => configured.length === 0 || configured.includes(`${gender}:${group}`));
+    const custom = customAgeGroupsOf(competition);
+    // COP brackets the gender plays, plus the meet's custom groups switched on
+    // for it (owner, 2026-11-15), in age order.
+    const offeredGroups = (gender) => sortAgeGroups([
+      ...(AGE_GROUPS_BY_GENDER[gender] || []).filter((group) => configured.length === 0 || configured.includes(`${gender}:${group}`)),
+      ...custom.map((d) => d.key).filter((key) => configured.includes(`${gender}:${key}`)),
+    ], custom);
     const offeredApp = (gender) => [...new Set(types.flatMap((t) => offeredApparatus(competition, t, gender)))];
 
     const sections = ['Male', 'Female'].map((gender) => ({
@@ -681,7 +692,7 @@ class WalkInService {
       const age = dob ? ageOnCutoff(dob, cutoffYear) : null;
       const gender = AGE_GROUPS_BY_GENDER[row.gender] ? row.gender : null;
       const lowest = gender && age !== null ? lowestAgeGroup(age, gender) : null;
-      const eligible = gender && age !== null ? eligibleAgeGroups(age, gender, offeredGroups(gender)) : [];
+      const eligible = gender && age !== null ? eligibleAgeGroups(age, gender, offeredGroups(gender), custom) : [];
 
       if (!row.player) {
         for (const [field, value] of [['firstName', firstName], ['lastName', lastName]]) {
@@ -701,8 +712,11 @@ class WalkInService {
           else if (eligible.length === 0) add('ageGroup', 'error', 'This competition runs no age group this player may enter');
           else if (!row.ageGroup) add('ageGroup', 'error', 'Choose an age group');
           else if (!offeredGroups(gender).includes(row.ageGroup)) add('ageGroup', 'error', 'This competition does not run that age group');
-          else if (!eligible.includes(row.ageGroup)) add('ageGroup', 'error', `Too old for ${groupLabel(row.ageGroup)} — choose ${groupLabel(eligible[0])} or higher`);
-          else if (row.ageGroup !== lowest) add('ageGroup', 'info', `Playing up — their own group is ${groupLabel(lowest)}.`);
+          else if (!eligible.includes(row.ageGroup)) {
+            const def = custom.find((d) => d.key === row.ageGroup);
+            const why = def && Number.isFinite(def.minAge) && def.minAge !== null && age < def.minAge ? 'Too young' : 'Too old';
+            add('ageGroup', 'error', `${why} for ${groupLabel(row.ageGroup, custom)} — choose ${groupLabel(eligible[0], custom)}${eligible.length > 1 ? ' or another group they fit' : ''}`);
+          } else if (row.ageGroup !== lowest && !isCustomAgeGroup(row.ageGroup)) add('ageGroup', 'info', `Playing up — their own group is ${groupLabel(lowest)}.`);
         }
 
         const offered = gender ? offeredApp(gender) : [];

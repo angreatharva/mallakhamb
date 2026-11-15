@@ -20,7 +20,10 @@
  * @module docs/openapi
  */
 
-const { APPARATUS, COMPETITION_TYPES, AGE_GROUPS, GENDERS, COMPETITION_LEVELS } = require('./api-enums');
+const { APPARATUS, COMPETITION_TYPES, AGE_GROUPS, AGE_GROUP_PATTERN, GENDERS, COMPETITION_LEVELS } = require('./api-enums');
+
+// A COP bracket, or a meet's own custom group key ('Custom…'; owner, 2026-11-15).
+const AGE_GROUP_SCHEMA = { type: 'string', pattern: AGE_GROUP_PATTERN.source, example: AGE_GROUPS[1] };
 
 const { JUDGE_SEAT_TYPES, MAX_SEAT_NO } = require('../config/judge-seats');
 
@@ -77,7 +80,7 @@ const pathParam = (name, description) => ({
 /** gender + ageGroup + competitionType + apparatus, as query filters. */
 const CATEGORY_QUERY = [
   queryParam('gender', { type: 'string', enum: GENDERS }, 'Category gender'),
-  queryParam('ageGroup', { type: 'string', enum: AGE_GROUPS }, 'Category age group'),
+  queryParam('ageGroup', AGE_GROUP_SCHEMA, 'Category age group'),
   queryParam('competitionType', { type: 'string', enum: COMPETITION_TYPES }, 'Competition I / II / III (slug or display form)'),
   queryParam('apparatus', { type: 'string', enum: APPARATUS }, 'Apparatus filter'),
 ];
@@ -236,11 +239,12 @@ const schemas = {
           type: 'object',
           properties: {
             gender: { type: 'string', enum: GENDERS },
-            ageGroup: { type: 'string', enum: AGE_GROUPS },
+            ageGroup: AGE_GROUP_SCHEMA,
             status: { type: 'string' },
           },
         },
       },
+      customAgeGroups: { type: 'array', description: 'Age groups this meet adds to the COP ones (Super Admin only)', items: { type: 'object', properties: { key: { type: 'string', pattern: '^Custom[A-Za-z0-9]{1,40}$' }, label: { type: 'string', maxLength: 40 }, minAge: { type: 'integer', nullable: true }, maxAge: { type: 'integer', nullable: true } } } },
       registeredTeams: {
         type: 'array',
         description:
@@ -265,7 +269,7 @@ const schemas = {
           type: 'object',
           properties: {
             player: { type: 'string', format: 'objectid' },
-            ageGroup: { type: 'string', enum: AGE_GROUPS },
+            ageGroup: AGE_GROUP_SCHEMA,
             gender: { type: 'string', enum: GENDERS },
             apparatus: {
               type: 'object',
@@ -305,7 +309,7 @@ const schemas = {
           type: 'object',
           properties: {
             player: ref('UserSummary'),
-            ageGroup: { type: 'string', enum: AGE_GROUPS },
+            ageGroup: AGE_GROUP_SCHEMA,
             gender: { type: 'string', enum: GENDERS },
             apparatus: { type: 'object', additionalProperties: true },
             isFinalized: { type: 'boolean', description: 'Senior Judge has Final Submitted this athlete' },
@@ -331,7 +335,7 @@ const schemas = {
       phone: { type: 'string' },
       dateOfBirth: { type: 'string', format: 'date' },
       gender: { type: 'string', enum: GENDERS },
-      ageGroup: { type: 'string', enum: AGE_GROUPS, nullable: true },
+      ageGroup: { ...AGE_GROUP_SCHEMA, nullable: true },
       team: { type: 'string', format: 'objectid', nullable: true },
       stateUnit: { type: 'string', nullable: true },
       registrationNumber: { type: 'string', nullable: true },
@@ -357,7 +361,7 @@ const schemas = {
       _id: { type: 'string', format: 'objectid' },
       competition: { type: 'string', format: 'objectid' },
       gender: { type: 'string', enum: GENDERS },
-      ageGroup: { type: 'string', enum: AGE_GROUPS },
+      ageGroup: AGE_GROUP_SCHEMA,
       judgeNo: { type: 'integer', minimum: 1, maximum: MAX_SEAT_NO },
       judgeType: { type: 'string', enum: JUDGE_TYPES },
       competitionTypes: { type: 'array', items: { type: 'string', enum: COMPETITION_TYPES } },
@@ -420,7 +424,7 @@ const schemas = {
       playerId: { type: 'string', format: 'objectid' },
       playerName: { type: 'string' },
       playerGender: { type: 'string', enum: GENDERS },
-      playerAgeGroup: { type: 'string', enum: AGE_GROUPS },
+      playerAgeGroup: AGE_GROUP_SCHEMA,
       apparatus: { type: 'string', enum: APPARATUS },
       judgeScores: {
         type: 'object',
@@ -450,7 +454,7 @@ const schemas = {
       competition: { type: 'string', format: 'objectid' },
       teamId: { type: 'string', format: 'objectid' },
       gender: { type: 'string', enum: GENDERS },
-      ageGroup: { type: 'string', enum: AGE_GROUPS },
+      ageGroup: AGE_GROUP_SCHEMA,
       competitionType: { type: 'string', enum: ['Competition I', 'Competition II', 'Competition III'] },
       playerScores: { type: 'array', items: ref('PlayerScore') },
       timeKeeper: { type: 'string' },
@@ -473,7 +477,7 @@ const schemas = {
       competition: { type: 'string', format: 'objectid' },
       teamId: { type: 'string', format: 'objectid' },
       gender: { type: 'string', enum: GENDERS },
-      ageGroup: { type: 'string', enum: AGE_GROUPS },
+      ageGroup: AGE_GROUP_SCHEMA,
       competitionType: { type: 'string', enum: COMPETITION_TYPES },
       apparatus: { type: 'string', enum: APPARATUS },
       playerId: { type: 'string', format: 'objectid', description: 'Single-slip form' },
@@ -504,7 +508,7 @@ const schemas = {
     properties: {
       competition: { type: 'string', format: 'objectid' },
       gender: { type: 'string', enum: GENDERS },
-      ageGroup: { type: 'string', enum: AGE_GROUPS },
+      ageGroup: AGE_GROUP_SCHEMA,
       competitionType: { type: 'string' },
       lotsDrawnAt: { type: 'string', format: 'date-time', nullable: true },
       hasOrder: { type: 'boolean' },
@@ -597,7 +601,7 @@ const S = {
   num: { type: 'number' },
   int: { type: 'integer' },
   gender: { type: 'string', enum: GENDERS },
-  ageGroup: { type: 'string', enum: AGE_GROUPS },
+  ageGroup: AGE_GROUP_SCHEMA,
   competitionType: { type: 'string', enum: COMPETITION_TYPES },
   apparatus: { type: 'string', enum: APPARATUS },
   judgeType: { type: 'string', enum: JUDGE_TYPES },
@@ -1211,6 +1215,7 @@ function buildPaths() {
       endDate: { type: 'string', format: 'date-time' },
       competitionTypes: { type: 'array', items: S.competitionType },
       ageGroups: { type: 'array', items: { type: 'object', properties: { gender: S.gender, ageGroup: S.ageGroup } } },
+      customAgeGroups: { type: 'array', description: 'Age groups this meet adds to the COP ones (Super Admin only)', items: { type: 'object', properties: { key: { type: 'string', pattern: '^Custom[A-Za-z0-9]{1,40}$' }, label: { type: 'string', maxLength: 40 }, minAge: { type: 'integer', nullable: true }, maxAge: { type: 'integer', nullable: true } } } },
     }, ['name', 'year', 'place', 'startDate', 'endDate'])),
     responses: { 201: ok('Created', ref('Competition')), ...VALIDATION_ERROR, 409: errorResponse('name + year + place already exists') },
   }));
@@ -2031,7 +2036,7 @@ function buildPaths() {
     parameters: [
       queryParam('competitionId', S.id, 'Competition id', true),
       queryParam('gender', { type: 'string', enum: GENDERS }, 'Category gender', true),
-      queryParam('ageGroup', { type: 'string', enum: AGE_GROUPS }, 'Category age group', true),
+      queryParam('ageGroup', AGE_GROUP_SCHEMA, 'Category age group', true),
     ],
     responses: {
       200: ok('Ranked teams', {

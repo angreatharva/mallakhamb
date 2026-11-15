@@ -17,7 +17,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const { phone } = require('../validators/common.validator');
-const { APPARATUS, AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { APPARATUS, AGE_GROUP_PATTERN, GENDERS } = require('../config/cop-rules');
 const createAuthMiddleware = require('../middleware/auth.middleware');
 const { requireCoach } = require('../middleware/auth.middleware');
 const { validateCompetitionContext } = require('../middleware/competition-context.middleware');
@@ -101,7 +101,7 @@ function createCoachRoutes(container) {
   const addPlayerValidation = [
     body('playerId').isMongoId().withMessage('Valid player ID is required'),
     body('ageGroup')
-      .isIn(AGE_GROUPS)
+      .matches(AGE_GROUP_PATTERN)
       .withMessage('Valid age group is required'),
     body('gender')
       .isIn(GENDERS)

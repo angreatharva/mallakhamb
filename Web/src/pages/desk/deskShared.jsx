@@ -1,11 +1,12 @@
 import PropTypes from 'prop-types';
 import { Check } from 'lucide-react';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 export const AGE_LABEL = {
   Under10: 'Under 10', Under12: 'Under 12', Under14: 'Under 14', Under16: 'Under 16',
   Under18: 'Under 18', Above16: 'Above 16', Above18: 'Above 18',
 };
-export const ageLabel = (group) => AGE_LABEL[group] || group || '—';
+export const ageLabel = (group) => (group ? ageGroupLabel(group) : '—');
 
 export const APPARATUS_LABEL = {
   'Pole Mallakhamb': 'Pole', 'Rope Mallakhamb': 'Rope', 'Hanging Mallakhamb': 'Hanging',

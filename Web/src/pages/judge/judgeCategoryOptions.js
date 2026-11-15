@@ -24,7 +24,7 @@
  * carried the one meet that happened to be active when they signed in.
  */
 
-import { AGE_GROUPS_BY_GENDER, ALL_AGE_GROUPS, ALL_AGES } from '@/hooks/useAgeGroups';
+import { AGE_GROUPS_BY_GENDER, ALL_AGE_GROUPS, ALL_AGES, isCustomAgeGroup, ageGroupLabel } from '@/hooks/useAgeGroups';
 import { APPARATUS } from '@/utils/scoring/apparatus';
 import { isApparatusAllowedForGender, normalizeApparatus } from '@/utils/scoring/copRules';
 
@@ -156,10 +156,12 @@ export function ageGroupsForJudge(assignments, category = {}) {
   const forGender = AGE_GROUPS_BY_GENDER[category.gender] || [];
   const ordered = forGender.filter((ageGroup) => held.has(ageGroup));
   const leftovers = ALL_AGE_GROUPS.filter((ageGroup) => held.has(ageGroup) && !forGender.includes(ageGroup));
+  // A meet's own custom groups (owner, 2026-11-15): after the COP ones, by name.
+  const custom = [...held].filter(isCustomAgeGroup).sort((a, b) => ageGroupLabel(a).localeCompare(ageGroupLabel(b)));
   // Competition II's one final per gender: offered last, when seated on it.
   const allAges = held.has(ALL_AGES) ? [ALL_AGES] : [];
 
-  return [...ordered, ...leftovers, ...allAges];
+  return [...ordered, ...custom, ...leftovers, ...allAges];
 }
 
 /**

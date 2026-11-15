@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUP_PATTERN, GENDERS } = require('../config/cop-rules');
 const { COMPETITION_LEVELS } = require('../config/competition-levels');
 const bcrypt = require('bcryptjs');
 const { baseLoginId, nextFreeLoginId, siblingsPattern } = require('../utils/data/player-login-id.util');
@@ -157,7 +157,7 @@ const playerSchema = new mongoose.Schema({
   },
   ageGroup: {
     type: String,
-    enum: AGE_GROUPS,
+    match: [AGE_GROUP_PATTERN, 'Invalid age group'],
     default: null
   },
   gender: {
@@ -191,7 +191,7 @@ const playerSchema = new mongoose.Schema({
   // The age group the player is locked into after playing up.
   lockedAgeGroup: {
     type: String,
-    enum: AGE_GROUPS,
+    match: [AGE_GROUP_PATTERN, 'Invalid age group'],
     default: null
   },
   // The reset code, stored as its SHA-256 (security audit 2026-10-31, H3), and

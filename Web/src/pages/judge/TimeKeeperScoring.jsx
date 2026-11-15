@@ -31,6 +31,7 @@ import { seatTypesFor } from './useJudgePanelData';
 import { useTimekeeping, BEEP_MARKS, deductionNote } from './timeKeeper';
 import StopwatchFace from './StopwatchFace';
 import { useRunningOrder, useOrderedTeamRows } from './useRunningOrder';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 const SESSION_KEY = 'timekeeper_active_session';
 
@@ -186,7 +187,7 @@ const TimeKeeperScoring = () => {
 
         <div className="rounded-2xl border p-5 bg-surface border-line">
           <p className="type-tag mb-1 text-accent-fg">Timing Session</p>
-          <h1 className="text-xl sm:text-2xl font-black text-ink">{gender} — {ageGroup}</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-ink">{gender} — {ageGroupLabel(ageGroup)}</h1>
           <p className="mt-1 text-sm text-fg-muted">
             {selectedTeam.name}
             {selectedCompetitionType?.label ? ` · ${selectedCompetitionType.label}` : ''}

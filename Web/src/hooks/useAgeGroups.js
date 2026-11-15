@@ -1,5 +1,16 @@
 import { useMemo } from 'react';
 import { useCompetition } from '../contexts/CompetitionContext';
+import {
+  AGE_GROUPS_BY_GENDER,
+  customAgeGroupsOf,
+  isCustomAgeGroup,
+  sortAgeGroups,
+  ageGroupLabelFrom,
+  registerCustomAgeGroups,
+  knownCustomAgeGroup,
+} from '../utils/competition/ageEligibility';
+
+export { AGE_GROUPS_BY_GENDER, isCustomAgeGroup, customAgeGroupsOf, registerCustomAgeGroups };
 
 /**
  * Which age groups each gender competes in.
@@ -12,10 +23,8 @@ import { useCompetition } from '../contexts/CompetitionContext';
  *
  * Values are in age order, which is also the order they are displayed in.
  */
-export const AGE_GROUPS_BY_GENDER = {
-  Male: ['Under10', 'Under12', 'Under14', 'Under18', 'Above18'],
-  Female: ['Under10', 'Under12', 'Under14', 'Under16', 'Above16'],
-};
+// AGE_GROUPS_BY_GENDER itself lives in utils/competition/ageEligibility (the
+// Server cop-rules mirror) and is re-exported above.
 
 // Age group mapping from competition format to display format
 export const ageGroupMapping = {
@@ -58,7 +67,23 @@ export const ALL_AGE_GROUPS = Object.keys(ageGroupMapping).filter((group) => gro
  * @param {string} ageGroup - stored value, e.g. 'Under14'
  * @returns {{value: string, label: string}} dropdown option
  */
-const toOption = (ageGroup) => ageGroupMapping[ageGroup] || { value: ageGroup, label: ageGroup };
+
+/**
+ * What to call an age group on screen: 'Under12' → 'Under 12', a custom key →
+ * its name (from `competition` when given, else from any meet seen so far).
+ *
+ * @param {string} ageGroup
+ * @param {Object|Array} [competition]
+ * @returns {string}
+ */
+export const ageGroupLabel = (ageGroup, competition = null) => {
+  if (!ageGroup) return '';
+  if (ageGroupMapping[ageGroup]) return ageGroupMapping[ageGroup].label;
+  const own = customAgeGroupsOf(competition).find((d) => d.key === ageGroup) || knownCustomAgeGroup(ageGroup);
+  return ageGroupLabelFrom(ageGroup, own ? [own] : []);
+};
+
+const toOption = (ageGroup, competition = null) => ageGroupMapping[ageGroup] || { value: ageGroup, label: ageGroupLabel(ageGroup, competition) };
 
 /**
  * Is this age group one the gender actually competes in?
@@ -68,7 +93,9 @@ const toOption = (ageGroup) => ageGroupMapping[ageGroup] || { value: ageGroup, l
  * @returns {boolean}
  */
 export const isAgeGroupValidForGender = (ageGroup, gender) =>
-  (AGE_GROUPS_BY_GENDER[gender] || []).includes(ageGroup);
+  (AGE_GROUPS_BY_GENDER[gender] || []).includes(ageGroup)
+  // A custom group runs for whichever gender its meet switched it on for.
+  || (Boolean(AGE_GROUPS_BY_GENDER[gender]) && isCustomAgeGroup(ageGroup));
 
 /**
  * Every age group a gender competes in, as dropdown options.
@@ -102,15 +129,18 @@ export const getFilteredAgeGroups = (competition, gender) => {
   const allowed = AGE_GROUPS_BY_GENDER[gender];
   if (!allowed) return [];
 
+  registerCustomAgeGroups(competition);
   const configured = competition?.ageGroups;
   if (!configured || configured.length === 0) {
     return getAgeGroupsForGender(gender);
   }
 
-  return configured
-    .filter((ag) => ag.gender === gender && allowed.includes(ag.ageGroup))
-    .map((ag) => toOption(ag.ageGroup))
-    .sort((a, b) => allowed.indexOf(a.value) - allowed.indexOf(b.value));
+  const custom = customAgeGroupsOf(competition);
+  const defined = new Set(custom.map((d) => d.key));
+  const values = configured
+    .filter((ag) => ag.gender === gender && (allowed.includes(ag.ageGroup) || defined.has(ag.ageGroup)))
+    .map((ag) => ag.ageGroup);
+  return sortAgeGroups([...new Set(values)], custom).map((value) => toOption(value, competition));
 };
 
 /**

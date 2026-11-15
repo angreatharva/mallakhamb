@@ -9,6 +9,8 @@
  *  - "Under N" includes N. A player may enter their own group or any HIGHER
  *    one the meet runs. Coming back down after playing up is allowed for now
  *    (PARKED).
+ *  - A meet's custom age group (owner, 2026-11-15) admits exactly the ages in
+ *    its own range, on the same 31 December.
  *
  * The arithmetic lives in config/cop-rules (mirrored on the Web and held in
  * step by ageEligibilitySync.test.js); this module turns it into one check
@@ -18,10 +20,16 @@
  */
 
 const { ValidationError } = require('../../errors');
-const { ageCutoffYear, ageOnCutoff, lowestAgeGroup, eligibleAgeGroups } = require('../../config/cop-rules');
+const {
+  ageCutoffYear, ageOnCutoff, lowestAgeGroup, eligibleAgeGroups,
+  ageGroupLabel, ageGroupRange, customAgeGroupsOf, isCustomAgeGroup,
+} = require('../../config/cop-rules');
 
-/** 'Under12' → 'Under 12'. */
-const groupLabel = (group) => String(group || '').replace(/^(Under|Above)(\d+)$/, '$1 $2');
+/**
+ * 'Under12' → 'Under 12'; a custom key → its name (from `competition` when
+ * given).
+ */
+const groupLabel = (group, competition = null) => ageGroupLabel(group, customAgeGroupsOf(competition));
 
 const nameOf = (player) => [player?.firstName, player?.lastName].filter(Boolean).join(' ').replace(/&#x27;/gi, "'") || 'This player';
 
@@ -32,18 +40,40 @@ const nameOf = (player) => [player?.firstName, player?.lastName].filter(Boolean)
  * @param {Date|string} args.dateOfBirth
  * @param {string} args.gender
  * @param {string} args.ageGroup
- * @param {Object} [args.competition] - for the cut-off year
+ * @param {Object} [args.competition] - for the cut-off year and custom groups
  * @param {number} [args.cutoffYear]  - when there is no competition (a player's own choice)
- * @returns {{ok: boolean, age: number|null, cutoffYear: number|null, lowest: string|null, eligible: string[]}}
- *   `ok` is true when the date is missing or unreadable — nothing to judge by
+ * @returns {{ok: boolean, age: number|null, cutoffYear: number|null, lowest: string|null, eligible: string[], problem: string|null}}
+ *   `ok` is true when the date is missing or unreadable — nothing to judge by.
+ *   `problem` says why not, e.g. "too old for Under 12".
  */
 function checkAgeGroup({ dateOfBirth, gender, ageGroup, competition = null, cutoffYear = null }) {
   const year = cutoffYear ?? ageCutoffYear(competition) ?? new Date().getUTCFullYear();
   const age = ageOnCutoff(dateOfBirth, year);
-  if (age === null || !ageGroup || !gender) return { ok: true, age, cutoffYear: year, lowest: null, eligible: [] };
+  if (age === null || !ageGroup || !gender) return { ok: true, age, cutoffYear: year, lowest: null, eligible: [], problem: null };
+  const custom = customAgeGroupsOf(competition);
   const lowest = lowestAgeGroup(age, gender);
-  const eligible = eligibleAgeGroups(age, gender);
-  return { ok: eligible.includes(ageGroup), age, cutoffYear: year, lowest, eligible };
+  const eligible = eligibleAgeGroups(age, gender, undefined, custom);
+  const ok = eligible.includes(ageGroup);
+  let problem = null;
+  if (!ok) {
+    const range = ageGroupRange(ageGroup, custom);
+    const label = groupLabel(ageGroup, competition);
+    if (!range) problem = `${label} is not an age group of this competition`;
+    else if (isCustomAgeGroup(ageGroup) && age < range.min) problem = `too young for ${label}`;
+    else problem = `too old for ${label}`;
+  }
+  return { ok, age, cutoffYear: year, lowest, eligible, problem };
+}
+
+/**
+ * The groups this player could choose instead, narrowed to what the meet runs
+ * for the gender.
+ */
+function choicesFor(result, gender, competition) {
+  const offered = competition?.ageGroups?.length
+    ? competition.ageGroups.filter((g) => g.gender === gender).map((g) => g.ageGroup)
+    : null;
+  return offered ? result.eligible.filter((g) => offered.includes(g)) : result.eligible;
 }
 
 /**
@@ -54,17 +84,14 @@ function checkAgeGroup({ dateOfBirth, gender, ageGroup, competition = null, cuto
 function assertAgeGroup({ player, gender, ageGroup, competition = null, cutoffYear = null }) {
   const result = checkAgeGroup({ dateOfBirth: player?.dateOfBirth, gender, ageGroup, competition, cutoffYear });
   if (result.ok) return result;
-  const offered = competition?.ageGroups?.length
-    ? competition.ageGroups.filter((g) => g.gender === gender).map((g) => g.ageGroup)
-    : null;
-  const choices = offered ? result.eligible.filter((g) => offered.includes(g)) : result.eligible;
+  const choices = choicesFor(result, gender, competition);
   const hint = choices.length
-    ? `Choose ${groupLabel(choices[0])}${choices.length > 1 ? ' or higher' : ''}.`
+    ? `Choose ${groupLabel(choices[0], competition)}${choices.length > 1 ? ' or higher' : ''}.`
     : 'This competition runs no age group they may enter.';
   throw new ValidationError(
-    `${nameOf(player)} is ${result.age} on 31 Dec ${result.cutoffYear}, too old for ${groupLabel(ageGroup)}. ${hint}`,
+    `${nameOf(player)} is ${result.age} on 31 Dec ${result.cutoffYear}, ${result.problem}. ${hint}`,
     { field: 'ageGroup', reason: 'AGE_GROUP_NOT_ALLOWED', age: result.age, cutoffYear: result.cutoffYear, eligible: choices }
   );
 }
 
-module.exports = { checkAgeGroup, assertAgeGroup, groupLabel };
+module.exports = { checkAgeGroup, assertAgeGroup, groupLabel, choicesFor };

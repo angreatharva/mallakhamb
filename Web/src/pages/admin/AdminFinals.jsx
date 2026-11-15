@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { CheckCheck, Lock, RefreshCw, RotateCcw, UserMinus, Undo2, Users } from 'lucide-react';
 import { adminAPI } from '@/services/user/admin.api';
 import { superAdminAPI } from '@/services/user/super-admin.api';
-import { ageGroupMapping, ALL_AGES } from '@/hooks/useAgeGroups';
+import { ALL_AGES, ageGroupLabel } from '@/hooks/useAgeGroups';
 import { useRouteContext } from '@/contexts/RouteContext';
 import {
   Button, ConfirmDialog, EmptyState, Heading, Notice, Panel, Segmented, Spinner, StatusTag, Tag,
@@ -18,7 +18,7 @@ const STATUS = {
   finalized: { tone: 'success', text: 'Finalized' },
   started: { tone: 'success', text: 'Final started' },
 };
-const ageLabel = (g) => ageGroupMapping[g]?.label || g || '';
+const ageLabel = (g) => (g ? ageGroupLabel(g) : '');
 const errorOf = (error, fallback) => error?.response?.data?.error?.message || error?.response?.data?.message || fallback;
 
 /** A Competition II tie the rules could not break: the admin taps the players in the drawn order. */

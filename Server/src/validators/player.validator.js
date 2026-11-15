@@ -1,6 +1,6 @@
 const { body, query } = require('express-validator');
 const { objectId, password, phone, enumValue, date } = require('./common.validator');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUP_PATTERN, GENDERS, isCustomAgeGroup } = require('../config/cop-rules');
 const { COMPETITION_LEVELS, LEVELS_SENTENCE } = require('../config/competition-levels');
 const { checkAgeGroup, groupLabel } = require('../utils/data/age-eligibility.util');
 
@@ -12,9 +12,11 @@ const { checkAgeGroup, groupLabel } = require('../utils/data/age-eligibility.uti
 function ownAgeGroupAllowed(value, { req }) {
   const { dateOfBirth, gender } = req.body || {};
   if (!value || !dateOfBirth || !gender) return true;
+  // A meet's custom group is judged where the meet is known (squad entry).
+  if (isCustomAgeGroup(value)) return true;
   const result = checkAgeGroup({ dateOfBirth, gender, ageGroup: value, cutoffYear: new Date().getUTCFullYear() });
   if (!result.ok) {
-    throw new Error(`Age ${result.age} on 31 Dec ${result.cutoffYear} is too old for ${groupLabel(value)}`
+    throw new Error(`Age ${result.age} on 31 Dec ${result.cutoffYear} is ${result.problem}`
       + (result.eligible.length ? `; choose ${groupLabel(result.eligible[0])} or higher` : ''));
   }
   return true;
@@ -150,7 +152,7 @@ const createPlayer = () => {
     body('ageGroup')
       .optional()
       .trim()
-      .isIn(AGE_GROUPS)
+      .matches(AGE_GROUP_PATTERN)
       .withMessage('Invalid age group')
       .bail()
       .custom(ownAgeGroupAllowed),
@@ -215,7 +217,7 @@ const updatePlayer = () => {
     body('ageGroup')
       .optional()
       .trim()
-      .isIn(AGE_GROUPS)
+      .matches(AGE_GROUP_PATTERN)
       .withMessage('Invalid age group')
       .bail()
       .custom(ownAgeGroupAllowed),

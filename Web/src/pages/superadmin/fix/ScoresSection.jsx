@@ -5,12 +5,13 @@ import { superAdminAPI } from '@/services/api';
 import { levelLabel } from '@/utils/competition/levels';
 import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag, SearchSelect } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 const ID = 'sa-scores';
 const ROLE_LABEL = { CHIEF: 'Chief', SR_JUDGE: 'Sr. Judge', J1: 'Judge 1', J2: 'Judge 2', J3: 'Judge 3', J4: 'Judge 4', J5: 'Judge 5' };
 const SEAT_LABEL = { seniorJudge: 'Sr. Judge', judge1: 'Judge 1', judge2: 'Judge 2', judge3: 'Judge 3', judge4: 'Judge 4' };
 const SECTIONS = [['d', 'difficultyScore', 'D'], ['c', 'combinationScore', 'C'], ['e', 'executionScore', 'E']];
-const group = (g) => String(g || '').replace(/^(Under|Above)(\d+)$/, '$1 $2');
+const group = (g) => ageGroupLabel(g);
 const fmt = (n, dp = 2) => (n === null || n === undefined ? '—' : Number(n).toFixed(dp));
 /** Keep a mark field to digits and one point (number-only TEXT input, never type="number"). */
 const decimal = (v) => v.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');

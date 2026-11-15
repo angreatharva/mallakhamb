@@ -5,7 +5,7 @@ import { superAdminAPI } from '@/services/api';
 import { adminLotsAPI, superAdminLotsAPI } from '@/services/ordering/lots.api';
 import { useRouteContext } from '../../contexts/RouteContext';
 import { useCompetition } from '../../contexts/CompetitionContext';
-import { useAgeGroups, withAllAges, typesForAgeGroup } from '../../hooks/useAgeGroups';
+import { useAgeGroups, withAllAges, typesForAgeGroup, ageGroupLabel } from '../../hooks/useAgeGroups';
 import Dropdown from '@/components/auth/Dropdown';
 import ConfirmDialog from '@/components/auth/ConfirmDialog';
 import SortableList from '@/components/ordering/SortableList';
@@ -389,7 +389,7 @@ const AdminLots = () => {
                                 <LotBadge lotNo={player.lotNo} position={playerIndex} />
                                 <div className="min-w-0">
                                   <p className="text-sm text-ink truncate">{player.name}</p>
-                                  <p className="text-xs text-fg-muted">{player.gender} · {player.ageGroup}</p>
+                                  <p className="text-xs text-fg-muted">{player.gender} · {ageGroupLabel(player.ageGroup)}</p>
                                 </div>
                               </div>
                             )}

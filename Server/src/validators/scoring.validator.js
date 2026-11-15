@@ -1,10 +1,9 @@
 const mongoose = require('mongoose');
 const { body, param } = require('express-validator');
-const { objectId, enumValue, number } = require('./common.validator');
+const { objectId, enumValue, number, ageGroupField } = require('./common.validator');
 const {
   isApparatusAllowedForGender,
-  AGE_GROUPS,
-  CATEGORY_AGE_GROUPS,
+  CATEGORY_AGE_GROUP_PATTERN,
   GENDERS,
   COMPETITION_TYPE_DISPLAYS,
   POINT_CEILINGS,
@@ -165,7 +164,7 @@ const submitScore = () => {
         return true;
       }),
     enumValue('gender', GENDERS),
-    enumValue('ageGroup', CATEGORY_AGE_GROUPS),
+    ageGroupField('ageGroup'),
     body('competitionType')
       .trim()
       .notEmpty()

@@ -38,7 +38,7 @@
  */
 
 const { NotFoundError, BusinessRuleError, ValidationError } = require('../../errors');
-const { ALL_AGES, apparatusKey, toCompetitionTypeDisplay } = require('../../config/cop-rules');
+const { ALL_AGES, apparatusKey, toCompetitionTypeDisplay, ageGroupLabel, customAgeGroupsOf } = require('../../config/cop-rules');
 const { offeredApparatus } = require('../../utils/data/competition-apparatus.util');
 const { runsAllAges } = require('../../utils/data/category.util');
 const { apparatusList, toCanonicalApparatus } = require('../../utils/data/apparatus.util');
@@ -49,7 +49,8 @@ const { apparatusFinal, allRoundAgeGroup, sameQualifiers } = require('../../util
 
 const idOf = (value) => (value?._id ?? value)?.toString?.() ?? null;
 const sameId = (a, b) => Boolean(a) && Boolean(b) && idOf(a) === idOf(b);
-const groupLabel = (g) => (g === ALL_AGES ? 'All ages' : String(g || '').replace(/^(Under|Above)(\d+)$/, '$1 $2'));
+/** 'Under12' → 'Under 12'; a custom key → its name when the meet is at hand. */
+const groupLabel = (g, competition = null) => ageGroupLabel(g, customAgeGroupsOf(competition));
 const genderWord = (g) => (g === 'Male' ? 'Boys' : 'Girls');
 const shortApparatus = (a) => String(a || '').replace(' Mallakhamb', '');
 
@@ -60,9 +61,9 @@ const shortApparatus = (a) => String(a || '').replace(' Mallakhamb', '');
 const recomputeScope = (doc) => (doc.ageGroup === ALL_AGES ? null : doc.ageGroup);
 
 /** "Competition III — Boys Under 14 · Pole", "Competition II — Girls Under 14". */
-function finalLabel(doc) {
+function finalLabel(doc, competition = doc?.competition) {
   const type = doc.competitionType === 'competition_2' ? 'Competition II (All Round)' : 'Competition III (Apparatus)';
-  return `${type} — ${genderWord(doc.gender)} ${groupLabel(doc.ageGroup)}${doc.apparatus ? ` · ${shortApparatus(doc.apparatus)}` : ''}`;
+  return `${type} — ${genderWord(doc.gender)} ${groupLabel(doc.ageGroup, competition && typeof competition === 'object' ? competition : null)}${doc.apparatus ? ` · ${shortApparatus(doc.apparatus)}` : ''}`;
 }
 
 class QualificationService {
@@ -303,7 +304,7 @@ class QualificationService {
       }
       if (blocking.length) {
         const names = await this._teamNames(blocking.flatMap(([, t]) => t));
-        const reasons = blocking.flatMap(([key, teams]) => teams.map((t) => `${groupLabel(ageGroup)}: ${names.get(t)?.name || 'a team'} has not locked Competition I ${shortApparatus(key)}`));
+        const reasons = blocking.flatMap(([key, teams]) => teams.map((t) => `${groupLabel(ageGroup, competition)}: ${names.get(t)?.name || 'a team'} has not locked Competition I ${shortApparatus(key)}`));
         slices.push({ ageGroup, status: 'waiting', waitingFor: reasons });
         waitingFor.push(...reasons);
         continue;
@@ -315,9 +316,9 @@ class QualificationService {
       slices.push({
         ageGroup,
         status: result.status === 'waiting_draw' ? 'waiting_draw' : 'set',
-        waitingFor: result.status === 'waiting_draw' ? [`${groupLabel(ageGroup)}: a tie for the last place — record the draw on this final`] : [],
+        waitingFor: result.status === 'waiting_draw' ? [`${groupLabel(ageGroup, competition)}: a tie for the last place — record the draw on this final`] : [],
       });
-      if (result.status === 'waiting_draw') waitingFor.push(`${groupLabel(ageGroup)}: a tie for the last place — record the draw on this final`);
+      if (result.status === 'waiting_draw') waitingFor.push(`${groupLabel(ageGroup, competition)}: a tie for the last place — record the draw on this final`);
       qualifiers.push(...result.qualifiers.map((q) => this._person(q, ageGroup, existing)));
       tied.push(...result.tied.map((q) => this._person(q, ageGroup)));
       skipped.push(...result.skipped.map((q) => ({ ...this._person(q, ageGroup), reason: q.reason })));
@@ -382,10 +383,10 @@ class QualificationService {
       if (!byCoach.has(key)) byCoach.set(key, { teamName: team.name, players: [] });
       byCoach.get(key).players.push({ name: q.playerName, replacement: Boolean(q.replacement) });
     }
-    const competition = await this.competitions.findById(saved.competition, { select: 'name' });
+    const competition = await this.competitions.findById(saved.competition, { select: 'name customAgeGroups' });
     for (const [coachId, info] of byCoach) {
       this.otpService.notifyCoachOfQualifiers({
-        coachId, competitionName: competition?.name || 'the competition', finalLabel: finalLabel(saved), ...info,
+        coachId, competitionName: competition?.name || 'the competition', finalLabel: finalLabel(saved, competition), ...info,
       });
     }
   }
@@ -594,7 +595,7 @@ class QualificationService {
 
   /** The finals one player is in, for the player dashboard. */
   async forPlayer(playerId) {
-    const docs = await this.qualifications.find({ 'qualifiers.player': playerId, finalizedAt: { $ne: null } }, { populate: { path: 'competition', select: 'name startDate level' } }) || [];
+    const docs = await this.qualifications.find({ 'qualifiers.player': playerId, finalizedAt: { $ne: null } }, { populate: { path: 'competition', select: 'name startDate level customAgeGroups' } }) || [];
     return docs.map((d) => ({ competition: d.competition ? { _id: d.competition._id, name: d.competition.name } : null, label: finalLabel(d), competitionType: d.competitionType, apparatus: d.apparatus }));
   }
 

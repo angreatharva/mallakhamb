@@ -5,6 +5,7 @@ import { superAdminAPI } from '@/services/api';
 import { COMPETITION_LEVELS, levelLabel } from '@/utils/competition/levels';
 import { Button, Field, Input, Notice, Panel, Select, Spinner, SearchSelect } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 const ID = 'sa-transfer';
 
@@ -147,7 +148,7 @@ const TransferSection = () => {
                   {preview.competitions.map((c) => (
                     <label key={c._id} className="flex flex-wrap items-center gap-2 type-body-s">
                       <input type="checkbox" checked={!!chosen[c._id]} onChange={(e) => setChosen({ ...chosen, [c._id]: e.target.checked })} />
-                      <strong>{c.name}</strong> · {c.enteredFor.gender} {c.enteredFor.ageGroup}
+                      <strong>{c.name}</strong> · {c.enteredFor.gender} {ageGroupLabel(c.enteredFor.ageGroup)}
                       {c.finished && <span className="text-fg-muted">· finished</span>}
                       {!c.targetEntered && <span className="text-fg-muted">· {preview.to.name} gets an entry here</span>}
                       {!c.targetHasRoom && <span className="ui-field__error type-caption">· squad full</span>}

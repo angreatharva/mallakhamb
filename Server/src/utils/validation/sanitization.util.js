@@ -10,7 +10,7 @@
 // shared vocabulary in config/cop-rules — the same lists the Mongoose enums
 // and the express-validator chains read, so a new age bracket cannot be
 // accepted at the boundary and rejected by the schema (or the reverse).
-const { AGE_GROUPS, GENDERS } = require('../../config/cop-rules');
+const { AGE_GROUPS, GENDERS, isAgeGroup } = require('../../config/cop-rules');
 
 const VALID_GENDERS = GENDERS;
 const VALID_AGE_GROUPS = AGE_GROUPS;
@@ -189,7 +189,7 @@ const isValidGender = (gender) => VALID_GENDERS.includes(gender);
  * @param {string} ageGroup - Age group value to validate
  * @returns {boolean} True if valid
  */
-const isValidAgeGroup = (ageGroup) => VALID_AGE_GROUPS.includes(ageGroup);
+const isValidAgeGroup = (ageGroup) => isAgeGroup(ageGroup);
 
 /**
  * Validate competition type parameter against whitelist

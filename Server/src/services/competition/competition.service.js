@@ -15,6 +15,7 @@ const {
 } = require('../../errors');
 const { sanitizeCompetitionData } = require('../../utils/validation/sanitization.util');
 const { applyApparatusByGender } = require('../../utils/data/competition-apparatus.util');
+const { applyAgeGroups } = require('../../utils/data/custom-age-groups.util');
 const EventTypes = require('../../socket/events/event-types');
 const { pageMeta } = require('../../utils/data/pagination.util');
 
@@ -28,7 +29,9 @@ const { pageMeta } = require('../../utils/data/pagination.util');
  * the UI: an admin who posts them directly gets a competition without them, not
  * a competition priced by whoever asked last.
  */
-const SUPERADMIN_ONLY_FEE_FIELDS = ['registrationOpenDate', 'feeDueDate', 'lateFee'];
+// customAgeGroups: only the Super Admin defines a meet's own age groups (owner,
+// 2026-11-15); an admin may still switch the defined ones on and off.
+const SUPERADMIN_ONLY_FEE_FIELDS = ['registrationOpenDate', 'feeDueDate', 'lateFee', 'customAgeGroups'];
 
 /**
  * @param {Object} data
@@ -91,9 +94,9 @@ class CompetitionService {
   async createCompetition(competitionData, createdBy) {
     try {
       // Sanitize string inputs
-      const sanitizedData = applyApparatusByGender(
+      const sanitizedData = applyAgeGroups(applyApparatusByGender(
         stripSuperAdminFeeFields(sanitizeCompetitionData(competitionData))
-      );
+      ));
 
       // Validate dates
       this.validateDates(sanitizedData.startDate, sanitizedData.endDate);
@@ -181,10 +184,10 @@ class CompetitionService {
         throw new NotFoundError('Competition', competitionId);
       }
 
-      const sanitizedUpdates = applyApparatusByGender(
+      const sanitizedUpdates = applyAgeGroups(applyApparatusByGender(
         stripSuperAdminFeeFields(sanitizeCompetitionData(updates)),
         competition.competitionTypes
-      );
+      ), competition);
 
       // Validate dates if being updated
       if (sanitizedUpdates.startDate || sanitizedUpdates.endDate) {

@@ -16,7 +16,7 @@ const EventTypes = require('../../socket/events/event-types');
 const { scoringRoomIds } = require('../../utils/data/scoring-room.util');
 const { noopMetrics } = require('../../infrastructure/prometheus/registry');
 const {
-  AGE_GROUPS,
+  isAgeGroup,
   GENDERS,
   apparatusKey,
   toCompetitionTypeDisplay,
@@ -515,7 +515,7 @@ class ScoringService {
 
     if (!scoreData.ageGroup) {
       errors.push('Age group is required');
-    } else if (!AGE_GROUPS.includes(scoreData.ageGroup)) {
+    } else if (!isAgeGroup(scoreData.ageGroup)) {
       errors.push('Invalid age group');
     }
 

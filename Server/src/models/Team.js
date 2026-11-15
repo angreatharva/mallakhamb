@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { AGE_GROUP_PATTERN, GENDERS } = require('../config/cop-rules');
 
 /**
  * Team Model
@@ -52,7 +52,7 @@ const teamSchema = new mongoose.Schema({
   // Age group bracket (v2 §2 Team entity).
   teamAgeGroup: {
     type: String,
-    enum: AGE_GROUPS,
+    match: [AGE_GROUP_PATTERN, 'Invalid age group'],
     default: null
   }
 }, {

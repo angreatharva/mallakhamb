@@ -7,10 +7,11 @@ import {
   Button, EmptyState, Field, Heading, Input, Notice, Panel, Select, Spinner, StatusTag, Tag,
 } from '@/components/ui';
 import { ReasonDialog, errorOf } from '../SuperAdminHistory';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 const ID = 'sa-accounts';
 const TYPE_LABEL = { player: 'Player', coach: 'Coach', judge: 'Judge', admin: 'Admin' };
-const group = (g) => String(g || '').replace(/^(Under|Above)(\d+)$/, '$1 $2');
+const group = (g) => ageGroupLabel(g);
 const dateValue = (v) => (v ? new Date(v).toISOString().slice(0, 10) : '');
 
 /** The form's starting values for one account. */

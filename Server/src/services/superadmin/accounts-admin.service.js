@@ -193,7 +193,7 @@ class AccountsAdminService {
     const Score = mongoose.model('Score');
     const meets = await Competition.find(
       { 'registeredTeams.players.player': player._id, isDeleted: { $ne: true } },
-      { name: 1, level: 1, startDate: 1, endDate: 1, ageGroups: 1, 'registeredTeams.team': 1, 'registeredTeams.players': 1 }
+      { name: 1, level: 1, startDate: 1, endDate: 1, ageGroups: 1, customAgeGroups: 1, 'registeredTeams.team': 1, 'registeredTeams.players': 1 }
     ).lean();
     const out = [];
     for (const meet of meets) {

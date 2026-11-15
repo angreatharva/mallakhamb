@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { CATEGORY_AGE_GROUPS, GENDERS } = require('../config/cop-rules');
+const { CATEGORY_AGE_GROUP_PATTERN, GENDERS } = require('../config/cop-rules');
 
 /**
  * TieBreakDraw Model
@@ -36,7 +36,7 @@ const tieBreakDrawSchema = new mongoose.Schema({
   },
   ageGroup: {
     type: String,
-    enum: CATEGORY_AGE_GROUPS,
+    match: [CATEGORY_AGE_GROUP_PATTERN, 'Invalid age group'],
     required: [true, 'Age group is required']
   },
   competitionType: {

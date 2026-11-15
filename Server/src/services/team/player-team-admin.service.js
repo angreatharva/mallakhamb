@@ -102,7 +102,7 @@ class PlayerTeamAdminService {
   async _entries(player) {
     const meets = await this.competitions.find(
       { 'registeredTeams.players.player': player._id },
-      { sort: { startDate: -1 }, select: 'name level place startDate endDate ageGroups registeredTeams' }
+      { sort: { startDate: -1 }, select: 'name level place startDate endDate ageGroups customAgeGroups registeredTeams' }
     );
     const rows = [];
     for (const meet of meets || []) {
@@ -120,7 +120,7 @@ class PlayerTeamAdminService {
           gender: entry.gender,
           isSubmitted: Boolean(rt.isSubmitted),
           paymentStatus: rt.paymentStatus || null,
-          ageIssue: age.ok ? null : `Too old for ${groupLabel(entry.ageGroup)} (${age.age} on 31 Dec ${age.cutoffYear})`,
+          ageIssue: age.ok ? null : `${age.problem[0].toUpperCase()}${age.problem.slice(1)} (${age.age} on 31 Dec ${age.cutoffYear})`,
         });
       }
     }

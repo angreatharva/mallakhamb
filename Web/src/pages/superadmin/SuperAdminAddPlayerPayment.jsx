@@ -7,6 +7,7 @@ import looksMeta from '@/styles/generated/looks.meta.json';
 import { FadeIn } from '@/components/admin/AdminKit';
 import { logger } from '@/infrastructure/logger';
 import { calculatePlayerFee, resolveFeeWindow, formatFeeWindowDate } from '@/utils/scoring/competitionFee';
+import { ageGroupLabel } from '@/hooks/useAgeGroups';
 
 /** Razorpay takes a hex for its theme: the brand saffron from the pack metadata. */
 const RAZORPAY_THEME = looksMeta.looks['prime-time'].dark.accent;
@@ -361,7 +362,7 @@ const SuperAdminAddPlayerPayment = () => {
                 </div>
                 <div className="flex justify-between py-2 border-b border-line">
                   <span className="text-fg-muted text-sm">Age group</span>
-                  <span className="text-ink font-semibold text-sm">{pd?.ageGroup}</span>
+                  <span className="text-ink font-semibold text-sm">{ageGroupLabel(pd?.ageGroup)}</span>
                 </div>
                 <div className="flex justify-between py-2">
                   <span className="text-fg-muted text-sm">Gender</span>
