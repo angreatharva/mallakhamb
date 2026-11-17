@@ -42,6 +42,8 @@ export const deskAPI = {
   createPaymentOrder: (id) => api.post(`${draft(id)}/payment/order`),
   verifyPayment: (id, payload) => api.post(`${draft(id)}/payment/verify`, payload),
   quoteDiscount: (id, discountCode) => api.post(`${draft(id)}/payment/discount/quote`, { discountCode }),
+  // A reopened team with nobody new to pay for.
+  resubmitPaid: (id) => api.post(`${draft(id)}/payment/resubmit`),
   redeemDiscount: (id, discountCode) => api.post(`${draft(id)}/payment/discount`, { discountCode }),
 
   slip: (id) => api.get(`${draft(id)}/slip`),

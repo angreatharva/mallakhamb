@@ -76,6 +76,7 @@ function createWalkInController(container) {
 
     quoteDiscount: asyncHandler(async (req, res) => ok(res, await service().quoteDiscount(actorOf(req), req.params.draftId, req.body.discountCode))),
 
+    resubmitPaid: asyncHandler(async (req, res) => ok(res, await service().resubmitPaid(actorOf(req), req.params.draftId), 'Entry submitted — nothing new to pay')),
     redeemDiscount: asyncHandler(async (req, res) => ok(res, await service().redeemDiscount(actorOf(req), req.params.draftId, req.body.discountCode), 'Entry submitted')),
 
     slip: asyncHandler(async (req, res) => {

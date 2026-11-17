@@ -216,6 +216,17 @@ describe('walk-in desk', () => {
     const slip = await service.slip(actor, draft._id);
     expect(slip.players.map((p) => p.loginId)).toHaveLength(2);
     expect(slip.players.find((p) => p.gender === 'Female').name).toBe("Anaya D'Souza");
+
+    // The Super Admin reopens the paid team (owner, 2026-11-17): the desk
+    // prices only unpaid players (none here) and submits again at no charge.
+    expect((await Competition.findById(competition._id).lean()).registeredTeams[0].paidEntries).toHaveLength(2);
+    await Competition.updateOne({ _id: competition._id }, { $set: { 'registeredTeams.0.isSubmitted': false } });
+    await WalkInRegistration.updateOne({ _id: draft._id }, { $set: { status: 'submitted' } });
+    const reopened = await service.view(actor, draft._id);
+    expect(reopened.registration).toMatchObject({ amountDue: 0, paidPlayers: 2 });
+    const again = await service.resubmitPaid(actor, draft._id);
+    expect(again.submitted).toBe(true);
+    expect((await Competition.findById(competition._id).lean()).registeredTeams[0].isSubmitted).toBe(true);
   });
 
   test('a scanned page lands in the draft as rows from its sections', async () => {

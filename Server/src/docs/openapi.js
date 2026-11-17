@@ -2516,6 +2516,10 @@ function buildPaths() {
     requestBody: jsonBody(inline({ razorpay_order_id: S.str, razorpay_payment_id: S.str, razorpay_signature: S.str }, ['razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature'])),
     responses: { 200: ok('Paid'), ...VALIDATION_ERROR },
   });
+  desk('/api/desk/drafts/{draftId}/payment/resubmit', 'post', {
+    operationId: 'deskResubmitPaid', summary: 'Submit a reopened team whose players are all paid for (nothing to charge)',
+    parameters: draftParam, responses: { 200: ok('Submitted'), ...VALIDATION_ERROR },
+  });
   desk('/api/desk/drafts/{draftId}/payment/discount/quote', 'post', {
     operationId: 'deskDiscountQuote', summary: 'Price the entry with the discount code',
     parameters: draftParam, requestBody: jsonBody(inline({ discountCode: S.str }, ['discountCode'])),

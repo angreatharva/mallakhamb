@@ -636,7 +636,10 @@ class WalkInService {
         paymentStatus: registration.paymentStatus,
         paymentAmount: registration.paymentAmount ?? null,
         paymentId: registration.paymentId || null,
-        amountDue: registration.isSubmitted ? 0 : calculateTeamPaymentAmount(registration.players || [], competition),
+        // Players already paid for (a team the Super Admin reopened) are not
+        // charged again, exactly as the checkout prices it (owner, 2026-11-17).
+        amountDue: registration.isSubmitted ? 0 : calculateTeamPaymentAmount(registration.players || [], competition, new Date(), registration.paidEntries || []),
+        paidPlayers: (registration.paidEntries || []).length,
       } : null,
       submittedAt: draft.submittedAt || null,
       paidAt: draft.paidAt || null,
@@ -1026,6 +1029,17 @@ class WalkInService {
     const { coachId, competitionId } = await this._payable(actor, draftId);
     const result = await this.coachService.verifyTeamPaymentAndSubmit(coachId, competitionId, payload, { recordedBy: actor.id });
     await this._markPaid(actor, draftId, 'razorpay');
+    return { ...result, draft: await this.view(actor, draftId) };
+  }
+
+  /**
+   * A reopened team with nobody new to pay for: lock it again at no charge
+   * (CoachService.resubmitPaidTeam refuses if anyone still owes).
+   */
+  async resubmitPaid(actor, draftId) {
+    const { coachId, competitionId } = await this._payable(actor, draftId);
+    const result = await this.coachService.resubmitPaidTeam(coachId, competitionId);
+    await this._markPaid(actor, draftId, 'already-paid');
     return { ...result, draft: await this.view(actor, draftId) };
   }
 

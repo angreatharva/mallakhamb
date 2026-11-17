@@ -55,6 +55,8 @@ function createWalkInRoutes(container) {
 
   router.post('/drafts/:draftId/payment/order', check(v.draftId()), controller.createPaymentOrder);
   router.post('/drafts/:draftId/payment/verify', check(v.verifyPayment()), controller.verifyPayment);
+  // A reopened team whose players are all paid for already: nothing to charge.
+  router.post('/drafts/:draftId/payment/resubmit', check(v.draftId()), controller.resubmitPaid);
   // The discount code is a shared secret worth a team's fee: rate limited per
   // user, exactly as on the coach's own routes.
   router.post('/drafts/:draftId/payment/discount/quote', userRateLimit, check(v.discount()), controller.quoteDiscount);

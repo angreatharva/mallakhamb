@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
-import { CreditCard, Tag as TagIcon } from 'lucide-react';
+import { CheckCircle, CreditCard, Tag as TagIcon } from 'lucide-react';
 import { deskAPI } from '@/services/user/desk.api';
 import { logger } from '@/infrastructure/logger';
 import { loadRazorpayScript, RAZORPAY_THEME } from '@/utils/payment/razorpay';
@@ -21,6 +21,9 @@ const DeskPayStep = ({ draft, onDraft }) => {
   const [quote, setQuote] = useState(null);
   const due = draft.registration?.amountDue ?? 0;
   const players = draft.registration?.players ?? 0;
+  // A team the Super Admin reopened: these players paid before and owe nothing.
+  const paidPlayers = draft.registration?.paidPlayers ?? 0;
+  const nothingNewToPay = paidPlayers > 0 && due === 0 && players > 0;
   const late = draft.competition.feePhase === 'late';
 
   const pay = async () => {
@@ -81,6 +84,19 @@ const DeskPayStep = ({ draft, onDraft }) => {
     }
   };
 
+  const resubmit = async () => {
+    setProcessing(true);
+    try {
+      const res = await deskAPI.resubmitPaid(draft._id);
+      toast.success('Entry submitted — nothing new to pay');
+      onDraft(res.data?.data?.draft);
+    } catch (error) {
+      toast.error(errorText(error, 'Could not submit the entry'));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const redeem = async () => {
     setProcessing(true);
     try {
@@ -100,6 +116,7 @@ const DeskPayStep = ({ draft, onDraft }) => {
       <SpecList items={[
         { label: 'Team', value: draft.team?.name || '—' },
         { label: 'Players in this entry', value: String(players) },
+        ...(paidPlayers > 0 ? [{ label: 'Already paid for', value: `${paidPlayers} player${paidPlayers === 1 ? '' : 's'}` }] : []),
         { label: 'Amount due', value: rupees(due) },
       ]} />
       {late && (
@@ -107,14 +124,20 @@ const DeskPayStep = ({ draft, onDraft }) => {
           Past the fee deadline: {rupees(draft.competition.lateFeePerPlayer)} per player is included.
         </Notice>
       )}
-      <Button icon={CreditCard} loading={processing} onClick={pay}>Take payment · {rupees(due)}</Button>
+      {nothingNewToPay ? (
+        <Button icon={CheckCircle} loading={processing} onClick={resubmit}>Submit entry — nothing new to pay</Button>
+      ) : (
+        <Button icon={CreditCard} loading={processing} onClick={pay}>Take payment · {rupees(due)}</Button>
+      )}
 
+      {!nothingNewToPay && (
       <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <Field id="desk-discount" label="Discount code (if the coach has one)">
           <Input autoComplete="off" value={code} onChange={(e) => { setCode(e.target.value); setQuote(null); }} />
         </Field>
         <Button variant="line" icon={TagIcon} disabled={!code.trim() || processing} onClick={check}>Check code</Button>
       </div>
+      )}
       {quote && (
         <Notice tone="success" title={`${quote.percent}% off — ${rupees(quote.payableAmount)} to pay`}>
           <Button size="sm" loading={processing} onClick={redeem}>Submit entry with this code</Button>
