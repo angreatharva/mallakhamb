@@ -367,11 +367,20 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
         if (finals) {
           const after = await seatedIn(competition, panel, apparatus);
           const ii = after.filter((s) => s.types.includes('competition_2'));
-          const one = after.filter((s) => s.types.includes('competition_1'));
           const wrongII = ii.filter((s) => s.accountId !== String(accountId[s.judgeType]));
-          const movedI = one.filter((s) => s.accountId !== String(ownHolders[s.judgeType]));
           if (ii.length !== seats.length || wrongII.length) throw new Error(`Competition II panel is ${ii.length} seat(s), ${wrongII.length} not the people seated`);
-          if (one.length !== seats.length || movedI.length) throw new Error(`seating Competition II changed the Competition I panel (${movedI.map((s) => s.judgeType).join(', ') || `${one.length} seats`})`);
+          // Competition II is one "All ages" final per gender (2026-11-17), a
+          // category with no Competition I panel of its own: the Competition I
+          // panels it must leave alone are each age group's of that gender.
+          const iPanels = panel.ageGroup === 'AllAges'
+            ? meetPlan.panels.filter((p) => p.gender === panel.gender)
+            : [panel];
+          for (const iPanel of iPanels) {
+            const one = (await seatedIn(competition, iPanel, apparatus)).filter((s) => s.types.includes('competition_1'));
+            const movedI = one.filter((s) => s.accountId !== String(ownHolders[s.judgeType]));
+            const want = seatsFor(iPanel.size).length;
+            if (one.length !== want || movedI.length) throw new Error(`seating Competition II changed the ${iPanel.ageGroup} Competition I panel (${movedI.map((s) => s.judgeType).join(', ') || `${one.length} seats`})`);
+          }
         }
 
         summary.push({
