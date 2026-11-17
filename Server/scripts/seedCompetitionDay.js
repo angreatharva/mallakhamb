@@ -597,8 +597,23 @@ async function stepFinals() {
       expectThat(early.length === 0, `${meet.place}: the public sees no final before Finalize`, `${early.length} shown`);
     }
 
-    const ties = await settleTies(admin, finals, meet.place);
-    if (ties) finals = dataOf(await admin.post('/api/admin/finals/recompute', {}))?.finals || await finalsOf(admin);
+    /*
+     * Settle ties the way the admin does: Recompute, draw what is waiting,
+     * Recompute again, until no final waits for a draw. One pass was not
+     * enough: the corrections step unlocks and re-locks Competition I sheets,
+     * and on the All-ages Competition II final a draw for one age group
+     * recomputes the whole final, which can surface a tie in another age
+     * group the first list did not show (Mumbai Boys Above 18, 2026-11-17).
+     */
+    const recompute = async () => dataOf(await admin.post('/api/admin/finals/recompute', {}))?.finals || await finalsOf(admin);
+    let ties = 0;
+    finals = await recompute();
+    for (let round = 0; round < 5 && finals.some((f) => f.status === 'waiting_draw'); round += 1) {
+      const settled = await settleTies(admin, finals, meet.place);
+      ties += settled;
+      finals = await recompute();
+      if (!settled) break;
+    }
 
     const all = await admin.post('/api/admin/finals/finalize-all', {});
     if (!expectThat(all.ok, `${meet.place}: Finalize all ready finals (admin)`, reasonOf(all))) continue;
