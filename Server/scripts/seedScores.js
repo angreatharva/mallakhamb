@@ -67,7 +67,7 @@ const { JUDGES_PATH } = require('./lib/judges');
 
 const API = (process.env.SEED_API_URL || 'http://127.0.0.1:5000/api').replace(/\/$/, '');
 const PLAN_PATH = path.join(__dirname, 'seed', 'panel-plan.json');
-const { panelsForType, finalsPanelSeats } = require('./lib/panel-plan');
+const { panelsForType, finalsPanelSeats, seatsFor } = require('./lib/panel-plan');
 const CAPTURE_PATH = path.join(__dirname, 'seed', 'registrations.generated.json');
 
 /** Evaluation seats in slot order. The Scorer is not one of them. */
@@ -534,7 +534,12 @@ async function main(extraArgv = []) {
     if (!finalsPanel.relief) return tokens;
     if (!finalsTokens) {
       console.log(`  Competition II judged by a relief panel: ${finalsPanel.from}'s judges`);
-      finalsTokens = await signInSeats({ seats: finalsPanel.seats }, await judgePasswords(), competitionId);
+      // Only the relief judges this meet's Competition II panels seat: a
+      // 3- or 4-judge All-ages panel leaves the relief meet's Judge 4 with no
+      // seat here, and opening the meet as them is rightly a 403.
+      const used = new Set(panelsForType(meetPlan, 'competition_2').flatMap((p) => seatsFor(p.size)));
+      const seats = Object.fromEntries(Object.entries(finalsPanel.seats).filter(([seat]) => used.has(seat)));
+      finalsTokens = await signInSeats({ seats }, await judgePasswords(), competitionId);
     }
     return finalsTokens;
   };
