@@ -855,7 +855,10 @@ async function stepJudges() {
   for (const meet of meets.filter((m) => competitionTypesOf(m).includes('competition_2'))) {
     const finalsPanel = finalsPanelSeats(plan, meet.place);
     if (!finalsPanel.relief) continue;
-    for (const [seat, email] of Object.entries(withTimeKeeper(finalsPanel.seats))) {
+    // Only the seats this meet's All-ages Competition II panels use: a 3- or
+    // 4-judge panel leaves the relief meet's Judge 4 with no seat here.
+    const used = new Set(panelsForType(meet.plan, 'competition_2').flatMap((p) => seatsFor(p.size)));
+    for (const [seat, email] of Object.entries(withTimeKeeper(finalsPanel.seats)).filter(([s]) => used.has(s))) {
       reliefOf.set(email, [...(reliefOf.get(email) || []), { meet, seat }]);
     }
   }
@@ -899,7 +902,10 @@ async function stepJudges() {
       expectThat(same(gotSeats, wantSeats), `${judge.email} @ ${meetPlace}: holds the plan's seat`, `${gotSeats.join('+')} vs plan ${wantSeats.join('+')}`);
       // Judge 3 sits only on 4- and 5-judge panels, Judge 4 only on 5s: every panel that HAS the seat.
       const panels = new Set(assignments.map((a) => `${a.gender}/${a.ageGroup}`));
-      const owed = [...meet.plan.panels, ...(competitionTypesOf(meet).includes('competition_2') ? panelsForType(meet.plan, 'competition_2') : [])]
+      // The All-ages Competition II panels count only where the meet's OWN
+      // judges seat them; at a relief meet another meet's judges do.
+      const ownFinals = competitionTypesOf(meet).includes('competition_2') && !finalsPanelSeats(plan, meet.place).relief;
+      const owed = [...meet.plan.panels, ...(ownFinals ? panelsForType(meet.plan, 'competition_2') : [])]
         .filter((p) => wantSeats.some((seat) => seatsFor(p.size).includes(seat)));
       expectThat(panels.size === owed.length, `${judge.email} @ ${meetPlace}: seated on every panel with their seat`, `${panels.size}/${owed.length}`);
       const comp = await there.get(`/api/judge/competition/${id}`);
