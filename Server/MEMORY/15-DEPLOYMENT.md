@@ -138,11 +138,14 @@ overrides the plan text: see the "what was actually built" box at the top of
 phases C0 code fixes → C9 decommission, runbooks), `deploy/oci/PLAN.md`
 (recommended: Oracle Cloud Always Free on a Pay-As-You-Go account, Mumbai,
 Arm 2 OCPU / 12 GB, Caddy for both API and SPA) and `deploy/aws/PLAN.md`
-(fallback: EC2 + CloudFront/S3). Target hosts are on
-`mallakhambcompetition.com`, which **already runs a live PHP site and a
-Laravel `api.`**, with DNS and email at BigRock — whether the app replaces
-or sits beside them (decision D1/D2) is open, and the domain expires
-2026-11-14.
+(fallback: EC2 + CloudFront/S3). **Since 2026-11-17 the OCI app is
+live at `https://www.mallakhambcompetition.com`** (API `api.`, OCR `ocr.`;
+the bare name and `app.` redirect to `www`). DNS is at GoDaddy, the domain
+is renewed to 2027-11-14, and the old PHP site survives only as `old.` on
+BigRock while that hosting is paid. The API's allowed origins are the
+Vault `CORS_ORIGINS` value, and the web build's API address is
+`/etc/mallakhamb/web.env`, so a new hostname needs both, plus the CSP
+`connect-src` in `Web/index.html`. Details: `deploy/oci/GO-LIVE-PLAN.md` §3.
 
 What the plan changes about this doc's assumptions:
 - **One Node process on one server, still.** No Socket.IO Redis adapter and

@@ -6,7 +6,7 @@ OCI only (Render is left out). As running on **2026-10-30**: both app VMs on mas
 
 ## How a request travels
 
-1. **DNS** turns the site name into **137.23.63.84**, the *site IP*. Today that's `sslip.io`; at the cutover it will be `mallakhambcompetition.com` at BigRock.
+1. **DNS** turns the site name into **137.23.63.84**, the *site IP*. Since 2026-11-17 that's `www.mallakhambcompetition.com` (DNS at GoDaddy; bare name and `app.` redirect to `www`; `api.` and `ocr.` too). The sslip.io names still work as a second address.
 2. The request passes **three firewalls**: the OCI security list (only 80/443 from the internet), the NSG (database port only inside the network) and the VM's own `iptables`.
 3. The **Internet Gateway** delivers it to whichever VM holds the site IP. Today that's **app-01**.
 4. **Caddy** terminates HTTPS, serves the web app (the SPA) as files, and forwards `/api` and live-scoring sockets to the **Node API**.

@@ -1,6 +1,8 @@
 # OCI becomes production, Render becomes the backup
 
-Written 2026-11-12, the day Oracle's Free Trial ended. **Status: PLAN, nothing done yet.**
+Written 2026-11-12, the day Oracle's Free Trial ended. **Status: §2 labels done 2026-11-12; §3
+steps 1, 2 and 5 (domain, DNS, production hosts) done 2026-11-17. Still open: live keys, data,
+Grafana, Render fallback, real-device tests, GO.**
 
 Owner decisions (2026-11-12):
 - OCI is the main system. The December meets (12–13 Dec and 19–20 Dec) run on OCI.
@@ -8,7 +10,7 @@ Owner decisions (2026-11-12):
 - PAYG only while every usage line stays inside Always Free (cost SGD 0).
 - Rename "staging" to "prod" everywhere, without losing any infrastructure.
 
-Hard dates: domain expires **14 Nov**. Cutover finished by **5 Dec** (no change within 7 days of a
+Hard dates: domain renewed, now expires **14 Nov 2027**. Cutover finished by **5 Dec** (no change within 7 days of a
 meet). Freeze **5 Dec → 21 Dec**: no push to master, no deploys, no VM resize or reboot.
 
 ---
@@ -96,17 +98,54 @@ sign-in.
 
 | # | Step | Who | Downtime |
 |---|---|---|---|
-| 1 | Renew the domain, turn on auto-renew, lock and 2FA (readiness 7.1–7.5) | owner | none |
-| 2 | Export every DNS record and take a cPanel backup (7.6–7.7) | owner + me | none |
+| 1 | ~~Renew the domain~~ **DONE 2026-11-14** (expires 2027-11-14). Still to check: auto-renew, lock, 2FA (readiness 7.2–7.3) | owner | none |
+| 2 | ~~Export every DNS record and take a cPanel backup~~ **DONE**: public records captured before the switch; the owner reports the PHP site backup taken (7.6–7.7) | owner + me | none |
 | 3 | **Decide the data** (question 1 below) | owner | none |
 | 4 | Add Razorpay live keys and the real discount code to the Vault env. The Razorpay live webhook points at `https://api.mallakhambcompetition.com/api/webhooks/razorpay`, and Razorpay's website URL becomes the new domain (approval can take days, so **start early**) | owner | none |
-| 5 | DNS at BigRock: `www` and `api` → `137.23.63.84`, TTL 300; keep the apex and email untouched. Caddy production hosts + Let's Encrypt certificates; `web.env`; CSP `connect-src` (7.12) | me | none (new names) |
+| 5 | ~~DNS, Caddy production hosts, certificates, `web.env`, CSP~~ **DONE 2026-11-17**, see "Domain switch" below | me | ~1 h of certificate errors on the old site's name (see below) |
 | 6 | Data move (if step 3 says so): announce a 30-min write freeze → final dump from Atlas → restore into `mallakhambcompetition_prod` → counts match | me | ~30 min of writes |
 | 7 | Render → fallback mode (§4) | me | none |
 | 8 | Smoke tests on Android, iPhone and laptop: login, register, ₹1 live payment, full judge panel on phones (readiness 6.2–6.4) | owner + me | none |
 | 9 | GO / NO-GO; announce the new address to coaches, judges and admins | owner | — |
 
 The old sslip addresses keep working until we remove them after the meets.
+
+### Domain switch, done 2026-11-17
+
+The plan assumed DNS stays at BigRock. It didn't: the BigRock hosting account was suspended on
+14 Nov, then reactivated for about a month only, and the previous developer confirmed no mailbox
+on the domain is used. So DNS moved to GoDaddy's free nameservers and BigRock is no longer needed.
+
+- **Nameservers:** GoDaddy default (`ns57`/`ns58.domaincontrol.com`). Every DNS save at GoDaddy
+  asks the owner for an SMS code, so put several records into one save.
+- **Records (A, TTL 600 / 30 min):** `@`, `www`, `api`, `app`, `ocr` → `137.23.63.84`;
+  `old` → `119.18.58.248` (the PHP "MCM 2026" site as a backup, only while BigRock hosting is
+  paid). No MX: there is no email on the domain.
+- **Main address `https://www.mallakhambcompetition.com`.** Caddy redirects the bare name and
+  `app.` to it (one origin = one login session). `api.` and `ocr.` are their own sites. The site
+  files gained the names on their first line, as §2 planned, plus the redirect block at the end of
+  `web.caddy`, in `sites/` and `sites-standby/` on app-01 and `sites-standby/` on app-02.
+- **`web.env`** on both VMs: `VITE_API_URL='https://api.mallakhambcompetition.com/api'`.
+- **CSP** (`Web/index.html`): `https://` and `wss://api.mallakhambcompetition.com` added; the
+  sslip and onrender entries stay.
+- **Vault `api-env` v10:** `CLIENT_URL`, `FRONTEND_URL`, `PRODUCTION_URL` = the `www` address;
+  `CORS_ORIGINS` = `www`, bare name, `app.`, sslip app. Changed from Cloud Shell, because the VMs
+  may only read secrets.
+- **Deployed `5a3eeeb`:** app-01 DEPLOYED, app-02 STANDBY UPDATED, same release tag
+  (`5a3eeeb…-c6c663ef`) on both.
+- **Checked:** certificates valid on all five names; bare name and `app.` answer 301 to `www`;
+  `www` serves the build that calls the new API; CORS allows `www` with credentials and refuses
+  unknown sites; socket.io handshake OK; sslip site still 200; in Chrome `/scores` loads the
+  competition list from `api.mallakhambcompetition.com` with no console errors. Google, Cloudflare
+  and Quad9 DNS all answer `137.23.63.84`. **Not checked:** real iPhone and Android sign-in.
+- **What went wrong:** DNS was pointed at OCI before Caddy knew the names, so for about an hour the
+  domain showed a certificate error. Next time add the Caddy names first; Caddy can't get a
+  certificate until DNS points at it, but it retries on its own.
+- **Reaching the VMs:** port 22 is not public. Create an OCI Bastion session in Cloud Shell (one per
+  VM, 3 h) and run the printed `ssh` line from a computer that holds the private key.
+- **Backups of the old files:** `/root/caddy-backup-202611171617` and `/root/web.env.bak-*` on
+  app-01, `/root/caddy-backup-202611171637` on app-02.
+- **Payments are still Razorpay TEST keys.** Step 4 is still open.
 
 ## 4. Render as the backup
 
@@ -121,17 +160,18 @@ Render to serve the current data during an OCI outage:
   failover between app-01 and app-02 covers a single lost server in ~4 min, so this is only for
   "both VMs / the whole region down".
 - **How:** wake Render (open the URL a few minutes before) → switch DNS `www`/`api` to Render
-  (CNAME, TTL 300) → announce. Afterwards, writes made on Render are copied back to OCI by hand
+  at **GoDaddy** (CNAME; delete the A record first; the owner enters an SMS code) → announce.
+  Render must first have `www`/`api` added as custom domains, or it won't serve them. Afterwards, writes made on Render are copied back to OCI by hand
   before switching back. Rehearse once before 5 Dec.
 
 ## 5. Order and dates
 
 | By | What |
 |---|---|
-| **14 Nov** | Domain renewed (owner) |
+| **14 Nov** | ~~Domain renewed (owner)~~ done |
 | 16 Nov | Budget alert at SGD 0.01; PAYG upgrade (owner); usage checked daily for 7 days |
 | 20 Nov | Labels renamed in the repo (§2.1); Razorpay website URL change requested |
-| 25 Nov | DNS + Caddy production hosts live next to sslip (§3 step 5); Grafana relabelled |
+| 25 Nov | ~~DNS + Caddy production hosts live next to sslip (§3 step 5)~~ done 17 Nov; Grafana relabelled |
 | 28 Nov | Real-device tests and judge panel on the real domain; Render fallback rehearsed |
 | **≤ 5 Dec** | Data move + live keys + GO; freeze starts |
 | 12–13, 19–20 Dec | Meets. Meet-mode backups on |

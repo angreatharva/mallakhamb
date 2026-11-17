@@ -106,6 +106,7 @@ Phones / laptops (India)
      ├─ 4 dashboards + alert rules (re-sized for the VM)
      └─ synthetic checks from Mumbai + Hyderabad on <API_HOST> and <APP_HOST>
 DNS: stays at BigRock (only A/CNAME records change). Email: untouched at BigRock.
+(Superseded 2026-11-17: DNS moved to GoDaddy, no email on the domain — see oci/GO-LIVE-PLAN.md §3.)
 ```
 
 ### 4a. One active server + one warm standby (and why not two active ones)

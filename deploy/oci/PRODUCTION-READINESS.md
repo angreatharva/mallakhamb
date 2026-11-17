@@ -133,29 +133,32 @@ Oracle may stop an Always Free VM whose CPU p95, network **and** memory are all 
 - [x] **6.8 Failover drill with a judge panel running** (C6F). *Done 2026-10-30 19:39–19:53 UTC, with **automatic** failover ([AUTO-FAILOVER.md](AUTO-FAILOVER.md)). A simulated meet ran from the laptop against the public staging API: `meetDay.js --minutes=14 --panels=4 --spectators=50 --think=5-10 --slips` (28 seats: Sr Judge, Judges 1–4, Scorer, Time Keeper on 4 categories, posting slips, plus 50 spectators). The data was the seedScale fixture (100 teams, 12 categories) in the scratch database `mallakhambcompetition_prod_restoretest`, served by the staging API through a temporary systemd override, removed afterwards (scratch DB dropped). app-01 was hard-stopped at 19:43:13. app-02 saw `oci=STOPPED seen-by-me=0 seen-by-db03=0` for 6 ticks, took the site IP and promoted itself: **site down 19:43:19 → ~19:47:00 (3 min 40 s)**. All 767 unanswered requests and 53 × 5xx (502 while app-02's API started) fall inside that window. **From 19:48 all 28 sessions carried on at the same rate with zero errors and no re-login**; slips posted during the outage got an error back (a judge retries), none was silently lost; MongoDB rollback files on the returning app-01: **0**. app-01 restarted, demoted itself, took DB PRIMARY back; failback by `mallakhamb-role takeover` (~5 s). Real phones (6.4) are still to do.*
 - [ ] **6.9 D9:** RPO/RTO (≤ 15 min data loss on meet days, ≤ 10 min down) agreed in writing. *Measured 2026-10-30, for the owner to sign off: lost server → **~4 min down (3 min 40 s drilled twice), 0 acknowledged writes lost**; planned switch ~5–8 s; bad data → restore to any minute from 15-minute oplog slices; region lost → Atlas copy ≤ 1 h old.*
 
-## 7. Domain — when the credentials arrive
+## 7. Domain — DONE 2026-11-17 (except 7.2, 7.3)
 
-GoDaddy is only the **registrar**. DNS and email are at **BigRock** (`ns1/ns2.md-in-89.bigrockservers.com`).
+Registrar **and DNS** are now both at **GoDaddy** (`ns57`/`ns58.domaincontrol.com`). The BigRock
+hosting was suspended on 14 Nov, then reactivated for about a month; the previous developer
+confirmed no mailbox is used, so nothing needs BigRock any more. Full record in
+[GO-LIVE-PLAN.md](GO-LIVE-PLAN.md) §3 "Domain switch".
 
 **At GoDaddy**
-- [ ] **7.1 Renew** `mallakhambcompetition.com` for 2+ years — **before 2026-11-14** (C0.1).
-- [ ] **7.2** Auto-renew ON; check the card on file.
-- [ ] **7.3** Domain lock ON; 2FA on the GoDaddy account.
-- [ ] **7.4** Nameservers still BigRock — **do not change them** (it would break the old site, the Laravel `api.` app and email).
-- [ ] **7.5** Verify expiry is after 2027-11-14; record who holds the login (C0.4).
+- [x] **7.1 Renew** — done 2026-11-14; registry expiry **2027-11-14**.
+- [ ] **7.2** Auto-renew ON; check the card on file. *(owner)*
+- [ ] **7.3** Domain lock ON; 2FA on the GoDaddy account. *(owner; DNS saves already ask for an SMS code)*
+- [x] **7.4** Nameservers → GoDaddy default (reversed: the plan said keep BigRock; superseded by the suspension).
+- [x] **7.5** Expiry verified by RDAP: 2027-11-14. Login holder: the owner (SMS codes go to their phone).
 
-**At BigRock (needs that login too)**
-- [ ] **7.6** Export / screenshot every DNS record (type, name, value, TTL, MX priority); store twice (C0.2).
-- [ ] **7.7** cPanel full backup (files, MySQL, email); store twice (C0.3).
-- [ ] **7.8** Decide **Option A** (`www` + `api`, replaces old site) or **Option B** (`app.` + `server.`, beside it). First answer D1/D2: is the Laravel `api.` still used, does the old site take Razorpay payments.
-- [ ] **7.9** Add **only** `staging` A and `staging-api` A → 137.23.63.84, TTL 300 (C3.2).
-- [ ] **7.10** CAA check: if any exist they must allow `letsencrypt.org`; if none, add none (C3.3).
-- [ ] **7.11** Verify with `nslookup … 8.8.8.8`; old site and email still work (C3.4).
-- Never touch MX, `mail.`, TXT/SPF.
+**Old BigRock hosting**
+- [x] **7.6** Public records captured before the switch (`@`, `www`, `api`, `mail` → 119.18.58.248; MX → `mail.`; SPF). No others were needed: no mailbox in use.
+- [x] **7.7** PHP site backup — the owner reports it taken. Still reachable at `old.mallakhambcompetition.com` while BigRock hosting is paid.
+- [x] **7.8** **Option A**, with `www` as the main address; bare name and `app.` redirect to it. The Laravel `api.` app is replaced (nothing on OCI used it).
+- [x] **7.9** n/a — no `staging.` names; the sslip names stay as the second address until after the meets.
+- [x] **7.10** CAA: none exist; Let's Encrypt issued all five certificates.
+- [x] **7.11** Verified with 8.8.8.8, 1.1.1.1 and 9.9.9.9 → 137.23.63.84; `old.` → the PHP site.
+- No email on the domain: no MX, no SPF. Add them only if mail is set up later.
 
-**Then in the repo / on the servers**
-- [ ] **7.12** Production `<API_HOST>` in the CSP `connect-src` (`Web/index.html`); keep onrender entries until C9 (C1.2).
-- [ ] **7.13** Staging Caddy site files + `web.env` for the `staging.` hosts; repeat section 6 on them if the hosts changed.
+**In the repo / on the servers**
+- [x] **7.12** `https://` and `wss://api.mallakhambcompetition.com` in the CSP `connect-src` (`5a3eeeb`); onrender and sslip entries stay until C9.
+- [x] **7.13** Caddy site files (both folders, both VMs), `web.env` on both VMs, Vault `api-env` v10 (site URLs + `CORS_ORIGINS`). Section 6 phone checks on the new names are still owed (6.2–6.4).
 
 ## 8. Cutover (C7) — one planned window, ~2.5 h
 
@@ -174,4 +177,4 @@ GoDaddy is only the **registrar**. DNS and email are at **BigRock** (`ns1/ns2.md
 
 ## Suggested order
 
-1 → 2 → 5 → 3 → 4 → 6 → **7.1–7.5 (as soon as GoDaddy access arrives; hard deadline 2026-11-14)** → 7.6–7.13 → 8 → 9.
+1 → 2 → 5 → 3 → 4 → 6 → ~~7~~ (done 2026-11-17; 7.2–7.3 owner) → 8 → 9.

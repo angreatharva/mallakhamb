@@ -67,9 +67,9 @@ The plan reviewed was `oci-production-architecture-plan.md`: **two active API VM
 
 ## Decisions needed now (COMMON §2)
 
-1. **D1 / D2: the domain already runs a live site.** `www`/apex serve the PHP site "MCM 2026"; `api.` serves a Laravel app. Should the new app **replace** it (Option A: `www` + `api`) or **sit beside** it (Option B: `app.` + `server.`)?
-2. **D3:** who controls the **BigRock hosting**? It serves the domain's **DNS and email**.
-3. **Renew the domain now.** GoDaddy registration **expires 2026-11-14** (COMMON C0.1).
+1. ~~**D1 / D2:** replace the PHP site or sit beside it?~~ **Decided: Option A**, live 2026-11-17. `www` serves the new app; the PHP site stays at `old.` as a backup ([oci/GO-LIVE-PLAN.md](oci/GO-LIVE-PLAN.md) §3).
+2. ~~**D3:** who controls the BigRock hosting?~~ **Resolved:** DNS moved to GoDaddy; BigRock is no longer used (no email on the domain).
+3. ~~**Renew the domain now.**~~ **Done:** renewed to 2027-11-14.
 4. **D9:** accept §4b's recovery objectives (≤ 15 min of data on meet days, ≤ 24 h otherwise; ≤ 10 min down on server loss), or pay for M10 + continuous backup.
 5. D4 platform, D5 rate limits, D6 repo visibility, D7 log shipping, D8 cutover date, D10 standby.
 
