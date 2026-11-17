@@ -43,33 +43,32 @@ describe('Competition III: top 10 per apparatus, at most 2 per team', () => {
   });
 });
 
-describe('Competition II: top 10 per age group on the sum of every apparatus, at most 2 per team', () => {
+describe('Competition II: the top 2 of an age group on the sum of every apparatus, no team cap', () => {
   const s = (id, team, finalScore) => ({ playerId: id, playerName: id, teamId: team, finalScore, panelSize: 5, judgeScores: {} });
 
   test('ranked on the sum; an apparatus not performed counts 0', () => {
     const result = allRoundAgeGroup({
       Pole: [s('a', 'A', 8), s('b', 'B', 7.5), s('c', 'C', 9.6)],
       Rope: [s('a', 'A', 8), s('b', 'B', 7.9)], // c did only Pole: 9.6 total
-    });
+    }, { size: 3 });
     expect(result.qualifiers.map((q) => q.playerId)).toEqual(['a', 'b', 'c']); // 16, 15.4, 9.6
     expect(result.qualifiers[0].score).toBe(16);
   });
 
-  test("the owner's Girls Under 16 example: a team's third is passed over (2026-11-15)", () => {
+  test('takes the top 2, both from one team if they are best (owner, 2026-11-17)', () => {
     const result = allRoundAgeGroup({
-      Rope: [
-        s('Gauri', 'SGAM', 7.73), s('Vaidavi', 'SGAM', 6.5), s('Anvika', 'SGAM', 6.3), s('Shreeja', 'SGAM', 1.73),
-        s('Myra', 'TeamA', 7.13), s('Reeva', 'TeamA', 3.3), s('Krishika', 'TeamA', 2.37),
-      ],
+      Rope: [s('Gauri', 'SGAM', 7.73), s('Vaidavi', 'SGAM', 6.5), s('Myra', 'TeamA', 7.13)],
     });
     expect(result.status).toBe('ready');
-    expect(result.qualifiers.map((q) => q.playerId)).toEqual(['Gauri', 'Myra', 'Vaidavi', 'Reeva']);
-    expect(result.skipped.filter((x) => x.reason === 'team_cap').map((x) => x.playerId)).toEqual(['Anvika', 'Krishika', 'Shreeja']);
+    expect(result.qualifiers.map((q) => q.playerId)).toEqual(['Gauri', 'Myra']);
+    const sameTeam = allRoundAgeGroup({ Rope: [s('x', 'T', 9), s('y', 'T', 8), s('z', 'U', 7)] });
+    expect(sameTeam.qualifiers.map((q) => q.playerId)).toEqual(['x', 'y']);
+    expect(sameTeam.skipped).toEqual([]);
   });
 
-  test('takes at most 10', () => {
-    const rows = { Pole: Array.from({ length: 14 }, (_, i) => s(`p${i}`, `T${i}`, 9 - i * 0.1)) };
-    expect(allRoundAgeGroup(rows).qualifiers).toHaveLength(10);
+  test('a positive teamCap still passes the extra player of a team over', () => {
+    const result = allRoundAgeGroup({ Rope: [s('x', 'T', 9), s('y', 'T', 8), s('z', 'U', 7)] }, { teamCap: 1 });
+    expect(result.qualifiers.map((q) => q.playerId)).toEqual(['x', 'z']);
   });
 
   test('a tie on the sum at the cut that no step breaks waits for a draw, then follows it', () => {

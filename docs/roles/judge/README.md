@@ -51,7 +51,7 @@ Home page → **Judge** → **Register**. The page says an organiser will add yo
 **Select Judging Category** (a window over the dashboard). Choose in order:
 1. **Competition**: every meet where you hold a seat, with its place and level.
 2. **Gender** and **Age group**: filled in from your seat when only one answer fits.
-3. **Competition type**: I, II or III. Competition II is a final per age group, like the others.
+3. **Competition type**: I, II or III. Competition II is one **All ages** final per gender. Finals run player by player: the list is the finalists in their running order, whatever their team.
 4. **Apparatus**: Pole, Hanging or Rope, as the meet offers it for that gender.
 5. **Continue to Dashboard**.
 
@@ -100,7 +100,7 @@ Each slip is out of **10.00** and has four parts. The **Final Score** at the top
 **Every judge** (`/judge/scoring/panel-review`)
 - Progress, for example "2 / 3 judges submitted · 3-judge panel".
 - Your own slip in full. Judges 1–4 see **only their own** slip; the Senior Judge sees everyone's.
-- **Edit My Score** reopens **your own** slip to correct it. **Each judge (the Senior Judge too) can change a submitted slip at most 3 times**; the screen shows how many edits are left, and the button is disabled at 0. An admin can restore your edits.
+- **Edit My Score** reopens **your own** slip to correct it. **Each judge (the Senior Judge too) can change a submitted slip up to 3 times.** The screen shows one fewer ("2 of 2 edits left", then 1, then 0); the third edit is a spare, so the button still works at "0 of 2". After it, "No edits left — ask the admin" and the button is disabled. An admin can restore your edits.
 - **No judge can edit another judge's score**, not even the Senior Judge. To get a slip fixed, call that judge over.
 
 **Mismatch check**

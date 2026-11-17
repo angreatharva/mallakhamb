@@ -164,9 +164,9 @@ async function season() {
 }
 
 /**
- * The categories a competition type is judged in: per age group, Competition
- * II included since 2026-11-14 (docs/qualification-plan.md). See
- * scripts/lib/panel-plan#panelsForType.
+ * The categories a competition type is judged in: Competition I per age group,
+ * Competition II as one "All ages" final per gender (automatic finals,
+ * docs/qualification-plan.md). See scripts/lib/panel-plan#panelsForType.
  */
 const categoriesOf = (meet, type = 'competition_1') => panelsForType(meet.plan, type)
   .map((p) => ({ gender: p.gender, ageGroup: p.ageGroup, size: p.size }));
@@ -174,6 +174,16 @@ const isFinal = (type) => type !== 'competition_1';
 
 // ── order ───────────────────────────────────────────────────────────────────
 function checkOrder(roster_, where) {
+  // A final (Competition II / III) runs player-wise: ONE order of every
+  // finalist, whatever the team (owner, 2026-11-17).
+  if (roster_.playerWise) {
+    const athletes = roster_.athletes || [];
+    const positions = athletes.map((a) => a.position);
+    const lots = athletes.map((a) => a.lotNo).sort((a, b) => a - b);
+    let ok = expectThat(roster_.hasOrder && athletes.length > 0 && same(positions, athletes.map((_, i) => i)), `${where}: one athlete order 0…${athletes.length - 1}, player-wise`, JSON.stringify(positions));
+    ok = expectThat(same(lots, athletes.map((_, i) => i + 1)), `${where}: athlete lots 1…${athletes.length}`, JSON.stringify(lots)) && ok;
+    return ok;
+  }
   const teams = roster_.teams || [];
   const positions = teams.map((t) => t.position);
   const lots = teams.map((t) => t.lotNo).sort((a, b) => a - b);
@@ -420,8 +430,8 @@ async function stepResults() {
  *  - finalize-all as the ADMIN: every final with qualifiers is finalized and
  *    nothing is left "not ready";
  *  - Competition II recomputed here from the PUBLIC Competition I results (one
- *    final per age group: top 10 by the sum over every apparatus, at most 2 per
- *    team); Competition III from the admin standing (top 10, at most 2 per
+ *    All-ages final per gender: the top 2 of every age group by the sum over
+ *    every apparatus, no team cap); Competition III from the admin standing (top 10, at most 2 per
  *    team, by rank);
  *  - every final category's squad is exactly its qualifiers, the public page
  *    lists the finalized finals, the admin cannot reopen one and the Super
@@ -445,7 +455,7 @@ async function squadOf(admin, gender, ageGroup, competitionType) {
     .flatMap((t) => (t.players || []).map((e) => String(e.player?._id || e.player)));
 }
 
-/** The final categories of a meet: II and III both per gender + age group. */
+/** The final categories of a meet: II one All ages per gender, III per gender + age group. */
 const finalCategories = (meet) => finalTypesOf(meet)
   .flatMap((type) => categoriesOf(meet, type).map((cat) => ({ ...cat, type })));
 
@@ -476,59 +486,44 @@ async function settleTies(admin, finals, where) {
 }
 
 /**
- * Competition II (owner, 2026-11-14 / 2026-11-15): one final per gender + age
- * group; the TOP 10 of the age group by the sum of their Competition I scores
- * over every apparatus, AT MOST 2 PER TEAM — recomputed here from the PUBLIC
- * Competition I results, independently of the engine.
+ * Competition II (owner, 2026-11-17): ONE "All ages" final per gender; the TOP
+ * 2 of every age group by the sum of their Competition I scores over every
+ * apparatus, no team cap — recomputed here from the PUBLIC Competition I
+ * results, independently of the engine.
  */
 async function checkAllRound(pub, meet, final, where) {
   const competitionId = String(meet.competition._id);
-  const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId, gender: final.gender, ageGroup: final.ageGroup, competitionType: 'competition_1' } }));
-  const totals = new Map();
-  const teamOf = new Map();
-  for (const doc of docs) {
-    const team = String(doc.teamId?._id || doc.teamId || doc.teamName);
-    for (const row of doc.playerScores || []) {
-      // An athlete marked Absent never qualifies on that apparatus (a5fdcff).
-      if (row.isAbsent) continue;
-      const id = String(row.playerId);
-      totals.set(id, round2((totals.get(id) || 0) + Number(row.finalScore || 0)));
-      teamOf.set(id, team);
+  const groups = categoriesOf(meet, 'competition_1').filter((c) => c.gender === final.gender).map((c) => c.ageGroup);
+  const want = [];
+  let full = 0;
+  for (const ageGroup of groups) {
+    const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId, gender: final.gender, ageGroup, competitionType: 'competition_1' } }));
+    const totals = new Map();
+    for (const doc of docs) {
+      for (const row of doc.playerScores || []) {
+        // An athlete marked Absent never qualifies on that apparatus (a5fdcff).
+        if (row.isAbsent) continue;
+        const id = String(row.playerId);
+        totals.set(id, round2((totals.get(id) || 0) + Number(row.finalScore || 0)));
+      }
     }
+    const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+    const taken = ranked.slice(0, 2);
+    if (taken.length === 2) full += 1;
+    // A level total at the last place is the tie-break's (or the draw's) to settle.
+    const cut = taken.length === 2 ? taken[1][1] : null;
+    const contested = cut !== null && ranked.slice(2).some(([, t]) => t === cut);
+    want.push(...taken.filter(([, t]) => !(contested && t === cut)).map(([id]) => id));
   }
-  const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
-  // Walk down the ranking: a team's third player is passed over, the next one gets the place.
-  const perTeam = new Map();
-  const taken = [];
-  const cappedAt = new Map(); // team -> totals of players the cap passed over
-  for (const [id, total] of ranked) {
-    if (taken.length === 10) break;
-    const team = teamOf.get(id);
-    const n = perTeam.get(team) || 0;
-    if (n === 2) { cappedAt.set(team, [...(cappedAt.get(team) || []), total]); continue; }
-    perTeam.set(team, n + 1);
-    taken.push([id, total]);
-  }
-  // A level total at the last place is the tie-break's (or the draw's) to settle,
-  // and so is WHICH of a team's level players the cap passes over.
-  const cut = taken.length === 10 ? taken[9][1] : null;
-  const contested = cut !== null && ranked.some(([id, t]) => t === cut && !taken.some(([x]) => x === id) && (perTeam.get(teamOf.get(id)) || 0) < 2);
-  const want = taken
-    .filter(([, t]) => !(contested && t === cut))
-    .filter(([id, t]) => !(cappedAt.get(teamOf.get(id)) || []).includes(t))
-    .map(([id]) => id);
 
   const got = final.qualifiers.map((q) => String(q.player));
   const missing = want.filter((id) => !got.includes(id));
-  expectThat(final.ageGroup && final.ageGroup !== 'AllAges', `${where}: a final per age group, not "All ages"`, String(final.ageGroup));
-  expectThat(missing.length === 0, `${where}: the top 10 of the age group by the sum of every apparatus, at most 2 per team`,
+  expectThat(final.ageGroup === 'AllAges', `${where}: one "All ages" final per gender`, String(final.ageGroup));
+  expectThat(missing.length === 0, `${where}: the top 2 of every age group by the sum of every apparatus`,
     `${missing.length} missing of ${want.length}`);
-  const teams = new Map();
-  for (const q of final.qualifiers) teams.set(String(q.team?._id || q.team), (teams.get(String(q.team?._id || q.team)) || 0) + 1);
-  expectThat(got.length <= 10 && [...teams.values()].every((n) => n <= 2), `${where}: never more than 10, never 3 from one team`,
-    `${got.length} qualifiers, most from one team ${Math.max(0, ...teams.values())}`);
-  const lastRank = Math.max(0, ...final.qualifiers.map((q) => Number(q.rank) || 0));
-  return { full: got.length === 10, capped: final.skipped.filter((sk) => sk.reason === 'team_cap' && (Number(sk.rank) || 0) <= lastRank).length };
+  expectThat(got.length <= groups.length * 2 && !final.skipped.some((sk) => sk.reason === 'team_cap'), `${where}: never more than 2 per age group, no team cap`,
+    `${got.length} qualifiers over ${groups.length} age groups`);
+  return { full: full === groups.length && groups.length > 0, capped: 0 };
 }
 
 /** Competition III: top 10 on the apparatus, at most 2 per team, in rank order. */
@@ -664,10 +659,10 @@ async function stepFinals() {
     }
     say('ok', meet.place, `${shape}: ${live.length} finals finalized${ties ? `, ${ties} tie(s) drawn` : ''}, ${drawn} final orders drawn`);
   }
-  for (const [type, seen] of Object.entries(exercised)) {
-    expectThat(seen.full > 0, `${DISPLAY[type]}: some final is full (10 qualifiers), so the cut at 10 decides who is in`, `${seen.full} full`);
-    expectThat(seen.capped > 0, `${DISPLAY[type]}: in some final the team cap keeps a player out of the top 10`, `${seen.capped} finals`);
-  }
+  expectThat(exercised.competition_2.full > 0, `${DISPLAY.competition_2}: some All-ages final has 2 from every age group`, `${exercised.competition_2.full} full`);
+  // Competition III alone has a cut at 10 and a team cap (Competition II has neither).
+  expectThat(exercised.competition_3.full > 0, `${DISPLAY.competition_3}: some final is full (10 qualifiers), so the cut at 10 decides who is in`, `${exercised.competition_3.full} full`);
+  expectThat(exercised.competition_3.capped > 0, `${DISPLAY.competition_3}: in some final the team cap keeps a player out of the top 10`, `${exercised.competition_3.capped} finals`);
   say('ok', 'season', `finals exercised — II: ${exercised.competition_2.full} full, ${exercised.competition_2.capped} capped; III: ${exercised.competition_3.full} full, ${exercised.competition_3.capped} capped`);
 }
 
@@ -889,8 +884,7 @@ async function stepJudges() {
       expectThat(same(gotSeats, wantSeats), `${judge.email} @ ${meetPlace}: holds the plan's seat`, `${gotSeats.join('+')} vs plan ${wantSeats.join('+')}`);
       // Judge 3 sits only on 4- and 5-judge panels, Judge 4 only on 5s: every panel that HAS the seat.
       const panels = new Set(assignments.map((a) => `${a.gender}/${a.ageGroup}`));
-      // One panel per age group judges every competition of the meet.
-      const owed = meet.plan.panels
+      const owed = [...meet.plan.panels, ...(competitionTypesOf(meet).includes('competition_2') ? panelsForType(meet.plan, 'competition_2') : [])]
         .filter((p) => wantSeats.some((seat) => seatsFor(p.size).includes(seat)));
       expectThat(panels.size === owed.length, `${judge.email} @ ${meetPlace}: seated on every panel with their seat`, `${panels.size}/${owed.length}`);
       const comp = await there.get(`/api/judge/competition/${id}`);

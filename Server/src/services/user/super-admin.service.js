@@ -1225,6 +1225,13 @@ class SuperAdminService {
           gender: gender,
           apparatus: entryApparatus
         });
+        // Settled by the Super Admin's own add-a-player payment (its
+        // Transaction holds the amount): if the team is reopened later, this
+        // player is not charged again (owner, 2026-11-17).
+        registeredTeam.paidEntries = [
+          ...(registeredTeam.paidEntries || []),
+          { player: player._id, amount: 0, paidAt: new Date() },
+        ];
 
         await this.competitionRepository.updateById(competitionId, {
           registeredTeams: competition.registeredTeams

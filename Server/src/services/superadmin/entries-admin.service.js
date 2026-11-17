@@ -21,6 +21,7 @@ const { requireReason } = require('./correction.service');
 const { checkAgeGroup, groupLabel } = require('../../utils/data/age-eligibility.util');
 const { hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
+const { paidEntriesAfterPayment } = require('../../config/payment.config');
 const { isAgeGroup, isCustomAgeGroup, GENDERS, APPARATUS } = require('../../config/cop-rules');
 
 const same = (a, b) => String(a?._id || a) === String(b?._id || b);
@@ -217,6 +218,17 @@ class EntriesAdminService {
       fields.paymentStatus = body.paymentStatus;
     }
     if (!Object.keys(fields).length) throw new ValidationError('Nothing to change');
+    /*
+     * Reopening a submitted, paid team (owner, 2026-11-17): everyone in the
+     * squad now is paid for, so they are written into `paidEntries` — when the
+     * coach submits again, only the players added after this are charged. A
+     * team paid before `paidEntries` existed, or marked paid by hand, is
+     * covered the same way.
+     */
+    const reopening = fields.isSubmitted === false && reg.isSubmitted && reg.paymentStatus === 'completed';
+    if (reopening) {
+      fields.paidEntries = paidEntriesAfterPayment(reg.players || [], reg.paidEntries || [], meet, reg.submittedAt || new Date());
+    }
     await this.competitions.updateRegistrationFields(meet._id, teamId, fields);
     const team = await this.Team.findById(teamId, { name: 1 }).lean();
     await this.corrections.record({

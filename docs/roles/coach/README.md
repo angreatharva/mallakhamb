@@ -130,7 +130,7 @@ Paying (or using a valid discount code) **submits** the team.
 
 ### After submission
 - **Save Team**, **Add Player** and **Scan Paper Form** lock once the squad is submitted **or** paid. **Register Player** stays open, because it creates an account, not a squad place.
-- To change the squad now, contact the organisers (the Super Admin uses Fix → Entries & payments).
+- To change the squad now, contact the organisers. The Super Admin can **reopen** the team (Fix → Entries & payments → Submitted: Not submitted). Your buttons open again; when you press **Pay Fees**, players already paid show **Paid** and **you pay only for the players you added**. If you added nobody, **Submit Team — Nothing New to Pay** locks it again at no charge. [Demo](../media/coach-reopened-team-pays-only-new-players.gif).
 - **Team Performance**: choose a competition type tab. For each apparatus you see how many athletes are finalised ("2 / 2 finalized") and your athletes' ranks and scores; tap one for the breakdown. A score appears once the panel has finalized it and the Scorer has locked the sheet.
 
 ### Other competitions
@@ -139,7 +139,7 @@ Each competition has its **own** squad and payment. Use the **Competition** swit
 ## 7. Finals (Competition II and III)
 
 You enter players for **Competition I only**. The finals fill automatically from the Competition I results, and nobody is entered until the organisers **finalize** a final. When they do, you're emailed and the players appear under **Finals: your qualifiers**. There's **no extra fee** for finals.
-- **Competition II (All Round):** a final per age group: the top 10, at most 2 from one team, by the sum of every apparatus.
+- **Competition II (All Round):** one "All ages" final per gender: the top 2 of every age group by the sum of every apparatus. Two from the same team is fine.
 - **Competition III (Apparatus):** the top 10 per apparatus in each age group, with at most 2 from one team.
 
 ## 8. Requests from your players

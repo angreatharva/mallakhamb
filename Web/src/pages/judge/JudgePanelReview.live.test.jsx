@@ -155,3 +155,29 @@ describe('Panel Review — alerts follow the live feed', () => {
     expect(payload.playerScores[0].baseScoreApplied).toBe(true);
   });
 });
+
+describe('Panel Review — Edit My Score shows one edit fewer than allowed (owner, 2026-11-17)', () => {
+  const mine = (editCount) => ({ 'Senior Judge': { ...slip('Senior Judge', 2.4, 1.6, 8), editCount } });
+  const label = () => screen.getByTestId('edits-left');
+  const editButton = () => screen.getByRole('button', { name: /Edit My Score/ });
+
+  it.each([
+    [0, '2 of 2 edits left'],
+    [1, '1 of 2 edits left'],
+    [2, '0 of 2 edits left'],
+  ])('%i edits used reads "%s", and the button still works', (used, text) => {
+    window.scrollTo = vi.fn();
+    render(<JudgePanelReview />);
+    push(mine(used));
+    expect(label()).toHaveTextContent(text);
+    expect(editButton()).not.toBeDisabled();
+  });
+
+  it('all 3 used: no edits left, the button is off', () => {
+    window.scrollTo = vi.fn();
+    render(<JudgePanelReview />);
+    push(mine(3));
+    expect(label()).toHaveTextContent('No edits left — ask the admin');
+    expect(editButton()).toBeDisabled();
+  });
+});

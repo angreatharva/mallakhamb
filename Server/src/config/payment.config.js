@@ -234,6 +234,61 @@ function requireCompetitionPlayerFeePerPlayer(competitionPlayerFee) {
   return n;
 }
 
+/** The player id of a squad entry, whether `player` is an id or a populated document. */
+const entryPlayerId = (entry) => {
+  const p = entry?.player;
+  const id = p && typeof p === 'object' && p._id !== undefined ? p._id : p;
+  return id === undefined || id === null ? null : String(id);
+};
+
+/**
+ * The players of a registration whose fee is already paid
+ * (`registeredTeams.paidEntries`, stamped on every payment that submits the
+ * team, and on a Super Admin reopen of a paid team).
+ * @param {Array} [paidEntries]
+ * @returns {Set<string>} player ids
+ */
+function paidPlayerIds(paidEntries) {
+  return new Set((paidEntries || []).map((e) => entryPlayerId(e)).filter(Boolean));
+}
+
+/**
+ * The squad entries that still owe their fee: every entry whose player is not
+ * in `paidEntries`. After the Super Admin reopens a paid team (owner,
+ * 2026-11-17) only the players added since are charged; a player who has paid
+ * is never charged again.
+ * @param {Array} players
+ * @param {Array} [paidEntries]
+ * @returns {Array}
+ */
+function unpaidPlayers(players, paidEntries) {
+  const paid = paidPlayerIds(paidEntries);
+  return (players || []).filter((entry) => !paid.has(entryPlayerId(entry)));
+}
+
+/**
+ * `paidEntries` after a payment covering `players`: the earlier ones, plus
+ * every player of `players` not yet in it with the fee they paid now.
+ * @param {Array} players - the squad the payment was priced on
+ * @param {Array} [paidEntries]
+ * @param {Object} competition
+ * @param {Date} [at]
+ * @returns {Array<{player: *, amount: number, paidAt: Date}>}
+ */
+function paidEntriesAfterPayment(players, paidEntries, competition, at = new Date()) {
+  const kept = (paidEntries || []).map((e) => ({ player: e.player?._id ?? e.player, amount: e.amount, paidAt: e.paidAt }));
+  // The amount is a record only (nothing prices from it), so a meet without a
+  // valid fee records 0 rather than refusing to mark the players paid.
+  const feeOf = (entry) => {
+    try { return calculatePlayerFee(entry, competition) + getLateFeePerPlayer(competition, at); } catch { return 0; }
+  };
+  for (const entry of unpaidPlayers(players, paidEntries)) {
+    if (!entryPlayerId(entry)) continue;
+    kept.push({ player: entry.player?._id ?? entry.player, amount: feeOf(entry), paidAt: at });
+  }
+  return kept;
+}
+
 /**
  * Total for team submission: sums the calculated fee for each player based on
  * their apparatuses, plus the per-player late fee if `at` falls after the
@@ -242,18 +297,24 @@ function requireCompetitionPlayerFeePerPlayer(competitionPlayerFee) {
  * The late fee is PER PLAYER, like the base fee and the apparatus add-ons it
  * sits beside — a 70-athlete squad paying late owes 70 penalties, not one.
  *
+ * Players in `paidEntries` are skipped: they paid when the team was first
+ * submitted, and a team the Super Admin reopened pays only for the players
+ * added since (owner, 2026-11-17).
+ *
  * @param {Array} players - The players array from registeredTeam
  * @param {Object} competition - The competition document
  * @param {Date} [at] - when the payment is being made; decides the fee phase
+ * @param {Array} [paidEntries] - registeredTeam.paidEntries
  * @returns {number} Total INR
  */
-function calculateTeamPaymentAmount(players, competition, at = new Date()) {
-  if (!players || !Array.isArray(players) || players.length === 0) return 0;
+function calculateTeamPaymentAmount(players, competition, at = new Date(), paidEntries = []) {
+  const owing = unpaidPlayers(players, paidEntries);
+  if (owing.length === 0) return 0;
 
   const lateFee = getLateFeePerPlayer(competition, at);
 
   let total = 0;
-  for (const player of players) {
+  for (const player of owing) {
     total += calculatePlayerFee(player, competition) + lateFee;
   }
   return total;
@@ -333,6 +394,9 @@ module.exports = {
   applyDiscountCode,
   assertDiscountCodeValid,
   calculateTeamPaymentAmount,
+  unpaidPlayers,
+  paidPlayerIds,
+  paidEntriesAfterPayment,
   calculatePlayerAdditionAmount,
   calculatePlayerFee,
   resolveFeeWindow,

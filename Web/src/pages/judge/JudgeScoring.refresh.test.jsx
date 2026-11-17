@@ -77,7 +77,7 @@ describe('JudgeScoring — refresh', () => {
 
     render(<JudgeScoring />);
 
-    await waitFor(() => expect(executionField()).toHaveValue('3.5'));
+    await waitFor(() => expect(executionField()).toHaveValue('3.50'));
     // …and the restore did not overwrite the cache with an empty slip.
     expect(JSON.parse(localStorage.getItem(CACHE_KEY)).execution).toBe(3.5);
   });

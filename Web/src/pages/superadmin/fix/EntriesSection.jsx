@@ -194,6 +194,13 @@ const EntryDetail = ({ competitionId, teamId, onBack }) => {
             </Field>
             <Button variant="line" disabled={status.isSubmitted === entry.isSubmitted && status.paymentStatus === (entry.paymentStatus || 'pending')} onClick={() => setDialog('status')}>Save status</Button>
           </div>
+          {/* Reopening a paid team (owner, 2026-11-17). */}
+          {entry.isSubmitted && !status.isSubmitted && entry.paymentStatus === 'completed' && (
+            <p className="type-caption text-fg-muted m-0" data-testid="reopen-note">
+              Reopens the team: the coach can change the squad and submits it again from Pay Fees.
+              Everyone in the squad now is marked paid — the coach pays only for players added after this.
+            </p>
+          )}
         </div>
 
         <div className="grid gap-2 p-3 rounded-lg border border-line">

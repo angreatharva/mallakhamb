@@ -73,6 +73,33 @@ const teamPlayerOrderSchema = new mongoose.Schema({
   players: [orderedPlayerSchema]
 }, { _id: false });
 
+/*
+ * One athlete in a FINAL's running order (Competition II / III). Finals are
+ * about the player, not the team (owner, 2026-11-17: "in sequence it must not
+ * be team wise but player wise"), so a final's order is one flat list of
+ * athletes from every team; `team` is kept so a screen can tag the athlete.
+ */
+const orderedAthleteSchema = new mongoose.Schema({
+  player: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Player',
+    required: true
+  },
+  team: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null
+  },
+  lotNo: {
+    type: Number,
+    default: null
+  },
+  position: {
+    type: Number,
+    required: true
+  }
+}, { _id: false });
+
 const performanceOrderSchema = new mongoose.Schema({
   competition: {
     type: mongoose.Schema.Types.ObjectId,
@@ -94,8 +121,11 @@ const performanceOrderSchema = new mongoose.Schema({
     enum: ['competition_1', 'competition_2', 'competition_3'],
     required: [true, 'Competition type is required']
   },
+  // Competition I: teams, then athletes inside each team.
   teamOrder: [orderedTeamSchema],
   playerOrders: [teamPlayerOrderSchema],
+  // Competition II / III: one flat order of athletes (orderedAthleteSchema).
+  athleteOrder: [orderedAthleteSchema],
 
   // ── Audit ──────────────────────────────────────────────────────────────
   // `updatedBy` is intentionally an un-ref'd ObjectId: the writer is an Admin

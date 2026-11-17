@@ -97,24 +97,24 @@ describe('AdminFinals', () => {
   });
 });
 
-describe('Competition II categories (a final per gender + age group since 2026-11-14)', () => {
+describe('Competition II categories (one All-ages final per gender, owner 2026-11-17)', () => {
   const meet = { competitionTypes: ['competition_1', 'competition_2'] };
-  const oldAllAgesMeet = { ...meet, allAgesFinals: true };
+  const perAgeMeet = { ...meet, perAgeGroupFinals: true };
   const types = [{ value: 'competition_1' }, { value: 'competition_2' }];
 
-  it('a meet running Competition II offers its own age groups only — no All ages', () => {
-    expect(withAllAges([{ value: 'Under14' }], meet).map((o) => o.value)).toEqual(['Under14']);
+  it('a meet running Competition II offers All ages, Competition II only', () => {
+    expect(withAllAges([{ value: 'Under14' }], meet).map((o) => o.value)).toEqual(['Under14', 'AllAges']);
+    expect(typesForAgeGroup(types, { value: 'AllAges' }, meet).map((o) => o.value)).toEqual(['competition_2']);
+    expect(typesForAgeGroup(types, { value: 'Under14' }, meet).map((o) => o.value)).toEqual(['competition_1']);
+  });
+
+  it('a legacy-finals meet offers no All ages', () => {
     expect(withAllAges([{ value: 'Under14' }], { ...meet, legacyFinals: true }).map((o) => o.value)).toEqual(['Under14']);
   });
 
-  it('every age group offers Competition II (its judges are seated there)', () => {
-    expect(typesForAgeGroup(types, { value: 'Under14' }, meet).map((o) => o.value)).toEqual(['competition_1', 'competition_2']);
-  });
-
-  it('a meet whose All-ages final had started keeps All ages, Competition II only', () => {
-    expect(withAllAges([{ value: 'Under14' }], oldAllAgesMeet).map((o) => o.value)).toEqual(['Under14', 'AllAges']);
-    expect(typesForAgeGroup(types, { value: 'AllAges' }, oldAllAgesMeet).map((o) => o.value)).toEqual(['competition_2']);
-    expect(typesForAgeGroup(types, { value: 'Under14' }, oldAllAgesMeet).map((o) => o.value)).toEqual(['competition_1']);
+  it('a meet that kept its started per-age-group finals offers Competition II in every age group, no All ages', () => {
+    expect(withAllAges([{ value: 'Under14' }], perAgeMeet).map((o) => o.value)).toEqual(['Under14']);
+    expect(typesForAgeGroup(types, { value: 'Under14' }, perAgeMeet).map((o) => o.value)).toEqual(['competition_1', 'competition_2']);
   });
 
   it('every age group belongs to All ages', () => {

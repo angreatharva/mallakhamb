@@ -123,7 +123,7 @@ describe('qualification service', () => {
     expect(otpService.notifyCoachOfQualifiers).toHaveBeenCalled();
   });
 
-  test('II: a final per gender + age group, the top 10 by the sum of every apparatus, at most 2 per team', async () => {
+  test('II: one All-ages final per gender, the top 2 of each age group by the sum of every apparatus, no team cap', async () => {
     const { service } = build();
     const a = await team('Alpha2');
     const [y1, y2, y3, o1, o2] = [await player('Y1', 11), await player('Y2', 11), await player('Y3', 11), await player('O1', 13), await player('O2', 13)];
@@ -135,26 +135,26 @@ describe('qualification service', () => {
 
     await service.recomputeAll(competition._id);
     let finals = await service.list(competition._id);
-    const ii = (ageGroup) => finals.find((f) => f.competitionType === 'competition_2' && f.ageGroup === ageGroup);
-    expect(finals.map((f) => f.ageGroup).sort()).toEqual(['Under12', 'Under14']); // no All-ages final
-    expect(ii('Under12')).toMatchObject({ status: 'set', label: 'Competition II (All Round) — Boys Under 12' });
-    expect(ii('Under12').qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q', 'Y3 Q']); // 18 and 16.5; Y2 (9.9, Pole only) is Alpha2's third
-    expect(ii('Under12').skipped).toEqual([expect.objectContaining({ playerName: 'Y2 Q', reason: 'team_cap' })]);
-    expect(ii('Under14').status).toBe('waiting'); // Under 14 not locked yet
+    const ii = () => finals.find((f) => f.competitionType === 'competition_2');
+    expect(finals.map((f) => f.ageGroup)).toEqual(['AllAges']);
+    expect(ii().label).toBe('Competition II (All Round) — Boys All ages');
+    expect(ii().status).toBe('waiting'); // Under 14 not locked yet
+    // 18 and 16.5 — Y2 (9.9, Pole only) is third; two from one team is fine.
+    expect(ii().qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q', 'Y3 Q']);
+    expect(ii().skipped.filter((x) => x.reason === 'team_cap')).toEqual([]);
 
     await scores(competition, a, 'Under14', [[o1, POLE, 7], [o1, ROPE, 7], [o2, POLE, 6], [o2, ROPE, 6]]);
     await service.onCompetitionOneChange(competition._id, 'Male', 'Under14');
     finals = await service.list(competition._id);
-    expect(ii('Under14').status).toBe('set');
-    expect(ii('Under14').qualifiers.map((q) => q.playerName)).toEqual(['O1 Q', 'O2 Q']);
-    expect(ii('Under12').qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q', 'Y3 Q']);
+    expect(ii().status).toBe('set');
+    expect(ii().qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q', 'Y3 Q', 'O1 Q', 'O2 Q']);
 
-    // Finalizing one age group's final enters only its finalists.
-    await service.finalize({ id: null }, ii('Under12')._id);
+    await service.finalize({ id: null }, ii()._id);
     const saved = await Competition.findById(competition._id).lean();
     const entryOf = (p) => saved.registeredTeams.flatMap((rt) => rt.players).find((e) => String(e.player) === String(p._id));
     expect(entryOf(y1).apparatus.competition_2).toEqual([POLE, ROPE]);
-    expect(entryOf(o1).apparatus.competition_2).toBeUndefined();
+    expect(entryOf(o2).apparatus.competition_2).toEqual([POLE, ROPE]);
+    expect(entryOf(y2).apparatus.competition_2).toBeUndefined();
   });
 
   test('II: a final whose first score came before its list existed gets its list, frozen', async () => {
@@ -163,7 +163,7 @@ describe('qualification service', () => {
     const [y1, y2] = [await player('E1', 11), await player('E2', 11)];
     const competition = await meet([{ team: a, players: [{ player: y1, ageGroup: 'Under12' }, { player: y2, ageGroup: 'Under12' }] }], ['competition_1', 'competition_2']);
     await scores(competition, a, 'Under12', [[y1, POLE, 9], [y1, ROPE, 9], [y2, POLE, 8], [y2, ROPE, 8]]);
-    await Score.create({ competition: competition._id, teamId: a._id, gender: 'Male', ageGroup: 'Under12', competitionType: 'Competition II',
+    await Score.create({ competition: competition._id, teamId: a._id, gender: 'Male', ageGroup: 'AllAges', competitionType: 'Competition II',
       playerScores: [{ playerId: y1._id, playerName: 'E1 Q', apparatus: POLE, finalScore: 0, isFinalized: false }] });
     await service.recomputeAll(competition._id);
     const [ii] = await service.list(competition._id);
@@ -171,32 +171,21 @@ describe('qualification service', () => {
     expect(ii.qualifiers.map((q) => q.playerName)).toEqual(['E1 Q', 'E2 Q']);
   });
 
-  test('II: an age group nobody entered has no final', async () => {
-    const { service } = build();
-    const a = await team('Alpha4');
-    const y1 = await player('Y1', 11);
-    const competition = await meet([{ team: a, players: [{ player: y1, ageGroup: 'Under12' }] }], ['competition_1', 'competition_2']);
-    await scores(competition, a, 'Under12', [[y1, POLE, 9], [y1, ROPE, 9]]);
-    await service.recomputeAll(competition._id);
-    expect((await service.list(competition._id)).map((f) => f.ageGroup)).toEqual(['Under12']);
-  });
-
-  test('II on a meet whose All-ages final had started (allAgesFinals) stays one final per gender', async () => {
+  test('II on a meet that kept its started per-age-group finals (perAgeGroupFinals) stays one final per age group', async () => {
     const { service } = build();
     const a = await team('Alpha3');
     const [y1, o1] = [await player('Y1', 11), await player('O1', 13)];
     const competition = await meet([{ team: a, players: [
       { player: y1, ageGroup: 'Under12' }, { player: o1, ageGroup: 'Under14' },
     ] }], ['competition_1', 'competition_2']);
-    await Competition.updateOne({ _id: competition._id }, { $set: { allAgesFinals: true } });
+    await Competition.updateOne({ _id: competition._id }, { $set: { perAgeGroupFinals: true } });
     await scores(competition, a, 'Under12', [[y1, POLE, 9], [y1, ROPE, 9]]);
     await scores(competition, a, 'Under14', [[o1, POLE, 7], [o1, ROPE, 7]]);
 
-    await service.onCompetitionOneChange(competition._id, 'Male', 'Under14');
+    await service.recomputeAll(competition._id);
     const finals = await service.list(competition._id);
-    expect(finals).toHaveLength(1);
-    expect(finals[0]).toMatchObject({ competitionType: 'competition_2', ageGroup: 'AllAges', status: 'set' });
-    expect(finals[0].qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q', 'O1 Q']);
+    expect(finals.map((f) => f.ageGroup).sort()).toEqual(['Under12', 'Under14']);
+    expect(finals.find((f) => f.ageGroup === 'Under12').qualifiers.map((q) => q.playerName)).toEqual(['Y1 Q']);
   });
 
   test('a withdrawal is replaced by the next in rank; after the first final score the list is frozen', async () => {

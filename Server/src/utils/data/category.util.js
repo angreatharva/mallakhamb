@@ -1,11 +1,11 @@
 /**
  * A category's age group and who is in it.
  *
- * Competition II is a final per gender AND age group (owner, 2026-11-14), so a
- * Competition II category is an ordinary age group. The one exception is a
- * meet whose Competition II had already started as ONE "All ages" final per
- * gender (`allAgesFinals`, migration 017): it keeps that category, which holds
- * every age group's qualifiers (docs/qualification-plan.md).
+ * Competition II is ONE "All ages" final per gender, holding the top 2 of every
+ * age group (owner, 2026-11-17; docs/qualification-plan.md). From 14 to 17 Nov
+ * it ran as a final per gender AND age group; a meet where one of those had
+ * already started keeps that shape (`perAgeGroupFinals`, migration 018), so its
+ * scores and results stay readable.
  *
  * @module utils/data/category.util
  */
@@ -32,14 +32,18 @@ function entryInCompetition(entry, competitionType, apparatus = null) {
   return apparatus ? list.includes(apparatus) : list.length > 0;
 }
 
-/** Does this meet run Competition II as the old one "All ages" final per gender? */
+/**
+ * Does this meet run Competition II as one "All ages" final per gender? Yes,
+ * unless it runs no automatic Competition II (`legacyFinals`) or kept the
+ * 14–17 Nov per-age-group finals (`perAgeGroupFinals`).
+ */
 function runsAllAges(competition) {
   return (competition?.competitionTypes || []).includes('competition_2')
     && !competition?.legacyFinals
-    && competition?.allAgesFinals === true;
+    && competition?.perAgeGroupFinals !== true;
 }
 
-/** The meet's category age groups for a gender: its own, plus All ages on an `allAgesFinals` meet. */
+/** The meet's category age groups for a gender: its own, plus All ages when Competition II runs as one. */
 function categoryAgeGroups(competition, gender) {
   const own = (competition?.ageGroups || []).filter((g) => !gender || g.gender === gender).map((g) => g.ageGroup);
   return runsAllAges(competition) ? [...own, ALL_AGES] : own;

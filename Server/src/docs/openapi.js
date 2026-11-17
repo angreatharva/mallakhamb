@@ -1136,6 +1136,17 @@ function buildPaths() {
     responses: { 200: ok('Submitted at no charge'), ...VALIDATION_ERROR, ...NOT_FOUND },
   }));
 
+  add('/api/coaches/payments/resubmit', 'post', op({
+    tag: 'Coaches', roles: 'coach', competitionContext: true, operationId: 'coachResubmitPaidTeam',
+    summary: 'Submit a reopened team again when every player is already paid for',
+    description:
+      'The Super Admin can reopen a submitted, paid team (Fix → Entries → "Submitted: No"); '
+      + 'everyone then in the squad is recorded in `paidEntries`. If the coach adds nobody new, '
+      + 'there is nothing to charge and Razorpay has no ₹0 order, so this submits the team '
+      + 'directly and records a ₹0 transaction. Refused while any player still owes.',
+    responses: { 200: ok('Submitted again, nothing charged'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  }));
+
   // ===================== Teams =====================
 
   add('/api/teams', 'get', op({

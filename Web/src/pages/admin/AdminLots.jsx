@@ -96,6 +96,22 @@ const AdminLots = () => {
     setTeams(next);
   }, []);
 
+  /*
+   * A final (Competition II / III) runs PLAYER-wise (owner, 2026-11-17): one
+   * list of every finalist, whatever the team, tracked the same way.
+   */
+  const [athletes, setAthletes] = useState([]);
+  const athletesRef = useRef([]);
+  const setAthletesTracked = useCallback((next) => {
+    athletesRef.current = next;
+    setAthletes(next);
+  }, []);
+  const applyRoster = useCallback((data) => {
+    setRoster(data);
+    setTeamsTracked(data?.teams || []);
+    setAthletesTracked(data?.athletes || []);
+  }, [setTeamsTracked, setAthletesTracked]);
+
   const activeCompetitionId = isSuperAdmin ? selectedCompetition?.value : currentCompetition?._id;
   const activeCompetition = isSuperAdmin
     ? competitions.find((c) => c._id === selectedCompetition?.value)
@@ -147,23 +163,20 @@ const AdminLots = () => {
   useEffect(() => { setSelectedAgeGroup(null); }, [selectedGender]);
 
   const fetchRoster = useCallback(async () => {
-    if (!categoryParams) { setRoster(null); setTeamsTracked([]); return; }
+    if (!categoryParams) { applyRoster(null); return; }
     setLoading(true);
     try {
       const response = await lotsAPI.getOrder(categoryParams);
-      const data = response.data?.data || null;
-      setRoster(data);
-      setTeamsTracked(data?.teams || []);
+      applyRoster(response.data?.data || null);
       setExpandedTeamId(null);
     } catch (error) {
       logger.error('Failed to load running order:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to load running order');
-      setRoster(null);
-      setTeamsTracked([]);
+      applyRoster(null);
     } finally {
       setLoading(false);
     }
-  }, [categoryParams, lotsAPI, setTeamsTracked]);
+  }, [categoryParams, lotsAPI, applyRoster]);
 
   useEffect(() => { fetchRoster(); }, [fetchRoster]);
 
@@ -173,9 +186,10 @@ const AdminLots = () => {
     try {
       const response = await lotsAPI.drawLots({ ...categoryParams, includePlayers: true });
       const data = response.data?.data || null;
-      setRoster(data);
-      setTeamsTracked(data?.teams || []);
-      toast.success(`Lots drawn for ${data?.teams?.length || 0} teams`);
+      applyRoster(data);
+      toast.success(data?.playerWise
+        ? `Lots drawn for ${data?.athletes?.length || 0} finalists`
+        : `Lots drawn for ${data?.teams?.length || 0} teams`);
     } catch (error) {
       logger.error('Failed to draw lots:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to draw lots');
@@ -222,6 +236,22 @@ const AdminLots = () => {
     }
   };
 
+  /** A final's whole order: every finalist, no team. */
+  const persistAthleteOrder = async (nextAthletes) => {
+    if (!categoryParams) return;
+    setSaving(true);
+    try {
+      await lotsAPI.setPlayerOrder({ ...categoryParams, playerIds: nextAthletes.map((a) => String(a._id)) });
+      toast.success('Running order saved');
+    } catch (error) {
+      logger.error('Failed to save running order:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to save running order');
+      fetchRoster();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handlePlayersReorder = (teamId, nextPlayers) => {
     const next = teamsRef.current.map((t) =>
       (String(t._id) === String(teamId) ? { ...t, players: nextPlayers } : t)
@@ -238,7 +268,8 @@ const AdminLots = () => {
     label: `${c.name}${c.year ? ` (${c.year})` : ''}${c.place ? ` — ${c.place}` : ''}`,
   }));
 
-  const hasLots = teams.some((t) => t.lotNo != null);
+  const playerWise = !!roster?.playerWise;
+  const hasLots = playerWise ? athletes.some((a) => a.lotNo != null) : teams.some((t) => t.lotNo != null);
 
   return (
     <div className="space-y-6">
@@ -249,7 +280,9 @@ const AdminLots = () => {
         title={hasLots ? 'Redraw Lots' : 'Draw Lots'}
         message={hasLots
           ? 'This replaces the existing lot numbers and the current running order for this category, including any sequence the Senior Judge or Scorer has set.\n\nContinue?'
-          : 'Randomly draw lot numbers for every submitted team in this category, and for the athletes inside each team.\n\nContinue?'}
+          : playerWise
+            ? 'Randomly draw lot numbers for every finalist in this category, as one list whatever their team.\n\nContinue?'
+            : 'Randomly draw lot numbers for every submitted team in this category, and for the athletes inside each team.\n\nContinue?'}
         confirmText={hasLots ? 'Redraw' : 'Draw Lots'}
         cancelText="Cancel"
         variant={hasLots ? 'danger' : 'default'}
@@ -297,9 +330,80 @@ const AdminLots = () => {
             <div className="w-5 h-5 border-2 border-ink/10 rounded-full animate-spin border-t-accent"/>
             <span className="text-fg-muted text-sm">Loading running order…</span>
           </div>
+        ) : playerWise && athletes.length === 0 ? (
+          <EmptyState icon={Trophy} title="No finalists yet"
+            desc="Nobody is entered in this final yet. Finalize it on the Finals tab first, then draw its running order." />
         ) : teams.length === 0 ? (
           <EmptyState icon={Trophy} title="No submitted teams"
             desc="No coach has submitted a team for this category yet, so there is nothing to draw." />
+        ) : playerWise ? (
+          <div className="space-y-4" data-testid="final-running-order">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-surface-sunken border-line">
+              <div className="text-sm">
+                <p className="text-ink font-bold">
+                  {athletes.length} finalist{athletes.length !== 1 ? 's' : ''} in running order
+                </p>
+                <p className="text-fg-muted text-xs mt-0.5">
+                  {roster?.lotsDrawnAt
+                    ? `Lots drawn ${new Date(roster.lotsDrawnAt).toLocaleString()}${roster.lotsDrawnByName ? ` by ${roster.lotsDrawnByName}` : ''}`
+                    : 'No lots drawn yet'}
+                  {roster?.updatedByName && roster?.updatedByRole
+                    ? ` · last changed by ${roster.updatedByName} (${roster.updatedByRole})`
+                    : ''}
+                </p>
+              </div>
+              <button onClick={() => setShowDrawConfirm(true)} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed bg-accent text-on-accent">
+                <Shuffle className="w-4 h-4" />
+                {hasLots ? 'Redraw Lots' : 'Draw Lots'}
+              </button>
+            </div>
+
+            <div className="flex items-start gap-2 text-xs text-fg-muted px-1">
+              <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              <p>
+                A final runs player by player, not team by team. Drag by the grip to change who performs when;
+                lot numbers stay with the athlete who drew them. Every change is pushed live to the judges of this panel.
+              </p>
+            </div>
+
+            <SearchField
+              value={teamQuery}
+              onChange={setTeamQuery}
+              placeholder="Search finalists or teams…"
+              label="Search finalists"
+            />
+            {teamQuery && (
+              <p className="text-xs text-fg-muted px-1 m-0">Clear the search to drag finalists into a new order.</p>
+            )}
+
+            <SortableList
+              items={teamQuery ? athletes.filter((a) => matchesSearch(teamQuery, a.name, a.team?.name)) : athletes}
+              emptyMessage={`No finalists match "${teamQuery}".`}
+              getKey={(athlete) => String(athlete._id)}
+              onReorder={setAthletesTracked}
+              onCommit={() => persistAthleteOrder(athletesRef.current)}
+              accent={'rgb(var(--accent))'}
+              disabled={Boolean(teamQuery)}
+              renderItem={(athlete, index) => (
+                <div className="flex items-center gap-3">
+                  <LotBadge lotNo={athlete.lotNo} position={teamQuery ? athletes.indexOf(athlete) : index} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-ink text-sm truncate">{athlete.name}</p>
+                    <p className="text-xs text-fg-muted truncate">
+                      {athlete.team?.name || 'Team'} · {ageGroupLabel(athlete.ageGroup)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            />
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              {saving && <span className="text-xs text-fg-muted">Saving…</span>}
+              <button onClick={() => persistAthleteOrder(athletesRef.current)} disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-ink min-h-[44px] disabled:opacity-50 bg-accent text-on-accent">
+                <Save className="w-4 h-4" /> Save Order
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-surface-sunken border-line">

@@ -191,6 +191,12 @@ function createCoachController(container) {
       });
     }),
 
+    /** @route POST /api/coaches/payments/resubmit — a reopened team with nothing new to pay. */
+    resubmitPaidTeam: asyncHandler(async (req, res) => {
+      const result = await coachService.resubmitPaidTeam(teamCoachOf(req), req.competitionId);
+      res.json({ success: true, data: result, message: 'Team submitted again — nothing new to pay.' });
+    }),
+
     /** @route POST /api/coach/team/payment/verify */
     verifyTeamPaymentAndSubmit: asyncHandler(async (req, res) => {
       const result = await coachService.verifyTeamPaymentAndSubmit(

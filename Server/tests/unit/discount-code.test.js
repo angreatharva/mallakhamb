@@ -349,3 +349,43 @@ describe('the discount switch as the client sees it', () => {
     expect(service.getDiscountAvailability().enabled).toBe(false);
   });
 });
+
+describe('a team the Super Admin reopened (owner, 2026-11-17)', () => {
+  const squad = [{ player: 'p1', apparatus: {} }, { player: 'p2', apparatus: {} }, { player: 'p3', apparatus: {} }];
+  const reopened = (paidEntries, players = squad) => ({
+    registeredTeams: [{ team: TEAM_ID, coach: COACH_ID, players, isSubmitted: false, paymentStatus: 'completed', paidEntries }],
+  });
+
+  it('the discount code prices only the player added since', async () => {
+    const { service } = buildService({ competitionOverrides: reopened([{ player: 'p1' }, { player: 'p2' }]) });
+    const quote = await service.quoteTeamPaymentWithDiscount(COACH_ID, COMPETITION_ID, CODE);
+    expect(quote.originalAmount).toBe(500);
+    expect(quote.playerCount).toBe(1);
+  });
+
+  it('redeeming marks the new player paid and keeps the earlier ones', async () => {
+    const { service, updates } = buildService({ competitionOverrides: reopened([{ player: 'p1' }, { player: 'p2' }]) });
+    await service.redeemDiscountAndSubmit(COACH_ID, COMPETITION_ID, CODE);
+    expect(updates[0].fields.paidEntries.map((e) => String(e.player))).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('nobody new: submits again with nothing charged', async () => {
+    const { service, updates, transactions } = buildService({ competitionOverrides: reopened([{ player: 'p1' }, { player: 'p2' }, { player: 'p3' }]) });
+    const result = await service.resubmitPaidTeam(COACH_ID, COMPETITION_ID);
+    expect(result).toMatchObject({ submitted: true, amountPaid: 0 });
+    expect(updates[0].fields).toMatchObject({ isSubmitted: true, paymentStatus: 'completed' });
+    expect(transactions[0]).toMatchObject({ amount: 0, type: 'team_submission' });
+  });
+
+  it('a removed player leaves nothing to pay either', async () => {
+    const { service } = buildService({ competitionOverrides: reopened([{ player: 'p1' }, { player: 'p2' }, { player: 'p3' }], squad.slice(0, 2)) });
+    await expect(service.resubmitPaidTeam(COACH_ID, COMPETITION_ID)).resolves.toMatchObject({ submitted: true });
+  });
+
+  it('refuses to resubmit while a new player owes, and refuses a team that never paid', async () => {
+    const owes = buildService({ competitionOverrides: reopened([{ player: 'p1' }]) });
+    await expect(owes.service.resubmitPaidTeam(COACH_ID, COMPETITION_ID)).rejects.toThrow(/still due/);
+    const never = buildService();
+    await expect(never.service.resubmitPaidTeam(COACH_ID, COMPETITION_ID)).rejects.toThrow(/has not paid yet/);
+  });
+});

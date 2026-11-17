@@ -28,7 +28,7 @@ import {
   calculateAverageMarks,
   panelScoresToJudgeFields,
 } from '@/utils/scoring/copRules';
-import { J, JudgeAmbience, MismatchModal, ToleranceModal, SCORING_PATH, SLIP_EDIT_LIMIT, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey, JudgeHeader, ScoringFor } from './judgeShared';
+import { J, JudgeAmbience, MismatchModal, ToleranceModal, SCORING_PATH, SLIP_EDIT_LIMIT, SHOWN_EDIT_LIMIT, ACTIVE_SESSION_KEY, PANEL_TYPES, playerIdOf, normalizeBreakdown, scoringCacheKey, JudgeHeader, ScoringFor } from './judgeShared';
 import { useJudgeSession, useJudgeInfo, useJudgePanelData } from './useJudgePanelData';
 
 const JudgePanelReview = () => {
@@ -94,6 +94,10 @@ const JudgePanelReview = () => {
   const myEditsUsed = Number(panelScores[myJudgeType]?.editCount) || 0;
   const myEditsLeft = Math.max(0, SLIP_EDIT_LIMIT - myEditsUsed);
   const outOfEdits = !!panelScores[myJudgeType] && myEditsLeft === 0;
+  // The judge is SHOWN one edit fewer than they have (owner, 2026-11-17: "max
+  // 3 but we will show 2 max"); the last one is a quiet spare for a genuine
+  // slip, so Edit My Score still works while the count reads 0.
+  const shownEditsLeft = Math.max(0, myEditsLeft - 1);
 
   // Two separate blocks, each with its own alert. A slip mismatch means the
   // panel recorded different routines; a tolerance breach means they recorded
@@ -379,7 +383,7 @@ const JudgePanelReview = () => {
                   data-testid="edits-left"
                   className={`text-xs font-bold px-2.5 py-1.5 rounded-full ${outOfEdits ? 'bg-danger-tint text-danger-fg' : 'bg-surface-sunken text-fg-muted'}`}
                 >
-                  {outOfEdits ? 'No edits left — ask the admin' : `${myEditsLeft} of ${SLIP_EDIT_LIMIT} edits left`}
+                  {outOfEdits ? 'No edits left — ask the admin' : `${shownEditsLeft} of ${SHOWN_EDIT_LIMIT} edits left`}
                 </span>
               )}
               {finalized && (

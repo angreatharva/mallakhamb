@@ -8,13 +8,12 @@
  *    apparatus, the TOP 10 on that apparatus in Competition I, at most TWO from
  *    one registered team (a team's third player is passed over and the next
  *    player gets the place). No minimum score.
- *  - Competition II (All Round Individual): per gender × age group (owner,
- *    2026-11-15; was one final per gender with the top 2 of each age group),
- *    the TOP 10, at most TWO from one registered team, ranked on the SUM of
- *    their Competition I final scores over every apparatus of their gender (an
- *    apparatus not performed counts 0). No minimum score. A meet still on the
- *    old one "All ages" final takes the same top 10 / 2 per team from each age
- *    group.
+ *  - Competition II (All Round Individual): per gender, ONE "All ages" final
+ *    with the TOP 2 of every age group (owner, 2026-11-17 — back to the
+ *    2026-10-29 rule after a per-age-group spell from 14 to 17 Nov), ranked on
+ *    the SUM of their Competition I final scores over every apparatus of their
+ *    gender (an apparatus not performed counts 0). No team cap. No minimum
+ *    score.
  *
  * Ties at the cut line follow the COP tie-break. For III the Competition I
  * standing already carries it (ranking.util + recorded lucky draws), so a tie
@@ -33,8 +32,9 @@ const { baseScoreOf, fourJudgeAverageOf, fourJudgeAverageWithChiefOf } = require
 
 const APPARATUS_FINAL_SIZE = 10;
 const APPARATUS_TEAM_CAP = 2;
-const ALL_ROUND_PER_AGE_GROUP = 10;
-const ALL_ROUND_TEAM_CAP = 2;
+const ALL_ROUND_PER_AGE_GROUP = 2;
+// 0 = no team cap (owner, 2026-11-17). Was 2 while Competition II ran per age group.
+const ALL_ROUND_TEAM_CAP = 0;
 const EPSILON = 1e-6;
 
 const idOf = (value) => (value?._id ?? value)?.toString?.() ?? null;
@@ -99,15 +99,15 @@ function apparatusFinal(ranked, { size = APPARATUS_FINAL_SIZE, teamCap = APPARAT
 }
 
 /**
- * Competition II: one age group's top 10 by the sum over every apparatus, at
- * most two from one team (a team's third is passed over and the next player
- * gets the place — the same walk as Competition III).
+ * Competition II: one age group's top two by the sum over every apparatus. No
+ * team cap by default (`teamCap` 0); a positive cap passes a team's extra
+ * player over and the next player gets the place.
  *
  * @param {Object<string, Array<Object>>} rowsByApparatus - published
  *   Competition I rows of this gender + age group, keyed by apparatus
  * @param {Object} [options]
- * @param {number} [options.size=10]
- * @param {number} [options.teamCap=2]
+ * @param {number} [options.size=2]
+ * @param {number} [options.teamCap=0]
  * @param {Set<string>} [options.withdrawn]
  * @param {Array<string>} [options.drawOrder] - player ids in the order the
  *   admin drew them, for a tie the rules cannot break

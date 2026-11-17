@@ -2,7 +2,13 @@
 
 Product decisions settled with the owner on 2026-10-29 (Q&A); the three open decisions were confirmed the same day. **Built on `feature/qualification-finals` (2026-10-30).** As built, the qualifiers are kept in `Qualification` documents AND written into each qualifier's squad entry as their Competition II / III apparatus (the engine owns those two keys), so panels, lots, scoring and public results use their existing paths; see `Server/MEMORY/modules/scoring.md`.
 
-## Change 2026-11-14 (owner)
+## Change 2026-11-17 (owner) — Competition II is "All ages" again
+
+- **Competition II** is one **"All ages"** final per gender again: the **top 2 of every age group** by the sum of every apparatus, **no team cap** (the 2026-10-29 rule). Competition III is unchanged (top 10 per gender × age group × apparatus, at most 2 per team).
+- Migration 018: a meet where a per-age-group Competition II final had already started keeps it (`Competition.perAgeGroupFinals`); elsewhere the per-age-group lists are deleted (the engine recomputes the All-ages one), entries of a finalized-but-unstarted one are cleared, and Competition-II-only judge seats move to All ages.
+- **Finals run player-wise:** a Competition II / III running order is one flat list of athletes from every team (`PerformanceOrder.athleteOrder`), drawn and dragged as one list. Competition I stays team → athletes.
+
+## Change 2026-11-14 (owner) — superseded on 2026-11-17 for Competition II
 
 - **"Finals must not be on gender, but on gender + age group":** Competition II is one final per gender × age group. On 2026-11-15 the owner set its size: the **top 10, at most 2 per team**, by the sum of every apparatus (Competition III unchanged). The "All ages" category below is kept only for a meet whose All-ages final had already started (`Competition.allAgesFinals`, migration 017).
 - **"Once the finals are confirmed there must be a provision to add judges to Competition II":** a judge seat's unique keys now include `competitionTypes`, so an age group's Competition II panel is its own (other people allowed); the Finals tab's **Seat judges** on a finalized Competition II final opens the Judges tab on its category.
@@ -13,10 +19,10 @@ Product decisions settled with the owner on 2026-10-29 (Q&A); the three open dec
 
 | | Competition II — All Round Individual | Competition III — Apparatus Championship |
 |---|---|---|
-| One final per | gender × **age group** (owner, 2026-11-14; was all age groups together) | gender × age group × apparatus |
-| Who qualifies | the **top 10** of the age group (was the top 2 until 2026-11-15) | the **top 10** on that apparatus in that age group |
+| One final per | gender, **all ages together** (owner, 2026-11-17; per age group 14–17 Nov) | gender × age group × apparatus |
+| Who qualifies | the **top 2 of every age group** (top 10 per age group 15–17 Nov) | the **top 10** on that apparatus in that age group |
 | Ranked by | the **sum** of the player's Competition I final scores on every apparatus of their gender (an apparatus not performed counts 0) | the player's Competition I final score on that apparatus |
-| Team cap | **at most 2 per registered team** (since 2026-11-15) | **at most 2 per registered team**: a 3rd player from the same team is skipped and the next eligible player gets the place |
+| Team cap | **none** (2 per team 15–17 Nov) | **at most 2 per registered team**: a 3rd player from the same team is skipped and the next eligible player gets the place |
 | What they perform | every apparatus the meet runs for their gender in Competition II | that apparatus |
 
 - **No minimum score** (the COP's 60% does not apply).

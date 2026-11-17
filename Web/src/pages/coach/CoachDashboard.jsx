@@ -541,8 +541,13 @@ const CoachDashboard = () => {
    * are off. Either signal counts: the checkout/discount paths set both, but
    * the Razorpay webhook records `paymentStatus: 'completed'` on its own.
    * Register Player stays open — it makes an account, not a squad place.
+   *
+   * A team the Super Admin REOPENED (owner, 2026-11-17) is the exception: it is
+   * not submitted and lists who is paid for (`paidEntries`), so the squad is
+   * open again and Pay Fees charges only the players added since.
    */
-  const feesPaid = Boolean(team?.isSubmitted || team?.paymentStatus === 'completed');
+  const reopened = !team?.isSubmitted && (team?.paidEntries?.length || 0) > 0;
+  const feesPaid = Boolean(team?.isSubmitted || (team?.paymentStatus === 'completed' && !reopened));
   const paidTitle = 'Fees are paid — the squad is locked. Contact admin to make changes.';
 
   return (

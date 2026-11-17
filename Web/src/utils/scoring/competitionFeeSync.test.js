@@ -117,3 +117,33 @@ describe('the late fee sits on top of the per-athlete fee, not beside it', () =>
     expect(after - before).toBe(COMPETITION.lateFee * PLAYERS.length);
   });
 });
+
+describe('a reopened team pays only for players not paid yet (owner, 2026-11-17)', () => {
+  const squad = [
+    { player: 'p1', apparatus: { competition_1: ['Pole Mallakhamb'] } },
+    { player: { _id: 'p2' }, apparatus: { competition_1: ['Rope Mallakhamb'] } },
+    { player: 'p3', apparatus: {} },
+  ];
+  const paid = [{ player: 'p1', amount: 600 }, { player: 'p2', amount: 550 }];
+
+  it.each([
+    ['on time', day('2026-11-01')],
+    ['late', day('2026-12-08')],
+  ])('%s: both stacks charge the new player only', (_label, at) => {
+    const client = calculateTeamPaymentAmount(squad, COMPETITION, at, paid);
+    const server = serverPayment.calculateTeamPaymentAmount(squad, COMPETITION, at, paid);
+    expect(client).toBe(server);
+    expect(client).toBe(calculatePlayerFee(squad[2], COMPETITION) + (at > day('2026-12-05') ? 200 : 0));
+  });
+
+  it('nothing new: nothing to pay', () => {
+    const all = [...paid, { player: 'p3', amount: 500 }];
+    expect(calculateTeamPaymentAmount(squad, COMPETITION, day('2026-11-01'), all)).toBe(0);
+    expect(serverPayment.calculateTeamPaymentAmount(squad, COMPETITION, day('2026-11-01'), all)).toBe(0);
+  });
+
+  it('no paidEntries: everyone pays, as before', () => {
+    expect(calculateTeamPaymentAmount(squad, COMPETITION, day('2026-11-01')))
+      .toBe(serverPayment.calculateTeamPaymentAmount(squad, COMPETITION, day('2026-11-01')));
+  });
+});

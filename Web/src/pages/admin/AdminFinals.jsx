@@ -50,7 +50,7 @@ const FinalCard = ({ final, onWithdraw, onReinstate, onDraw, onFinalize, onReope
   const started = final.status === 'started';
   const ready = final.status === 'set' && !(final.blockers || []).length;
   const drawGroups = isII ? [...new Set(final.tied.map((t) => t.ageGroup))] : [];
-  // Only the old one-final-per-gender Competition II mixes age groups.
+  // The All-ages Competition II final mixes age groups: show each player's.
   const mixedAges = isII && final.ageGroup === ALL_AGES;
   const confirmed = ['finalized', 'started'].includes(final.status);
   return (
@@ -163,8 +163,9 @@ FinalizeSummary.propTypes = { finals: PropTypes.array.isRequired };
 
 /**
  * Admin / Super Admin → Finals: who moved from Competition I into Competition
- * II (All Round) and III (Apparatus), each a final per gender + age group,
- * automatically as Competition I is locked (docs/qualification-plan.md).
+ * II (All Round, one All-ages final per gender) and III (Apparatus, per age
+ * group), automatically as Competition I is locked
+ * (docs/qualification-plan.md).
  */
 const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = null }) => {
   const api = (isSuperAdmin ? superAdminAPI : adminAPI).finals;
@@ -237,7 +238,7 @@ const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = 
         <div className="grid gap-1">
           <Heading level={2} step="display-m">Finals</Heading>
           <p className="type-body-s text-fg-muted m-0">
-            Filled automatically when Competition I is locked. Competition III: top 10 per apparatus and age group, at most 2 per team. Competition II: top 10 per age group by the sum of every apparatus, at most 2 per team. Once a final is finalized, seat its judges.
+            Filled automatically when Competition I is locked. Competition III: top 10 per apparatus and age group, at most 2 per team. Competition II: the top 2 of each age group by the sum of every apparatus, all ages together. Once a final is finalized, seat its judges.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

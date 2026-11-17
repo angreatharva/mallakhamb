@@ -110,7 +110,7 @@ Open it from the account menu: **My profile**, **Change password** or **Update e
 - **Routine time:** 60–90 seconds. Time outside the window costs 0.20–0.50.
 - **Competition types:**
   - **I**: Team Championship & Qualifier. Your coach enters you.
-  - **II**: All Round Individual Final, one per age group. The top 10 of the age group by the total over every apparatus, at most 2 per team.
+  - **II**: All Round Individual Final, one per gender ("All ages"). The top 2 of every age group by the total over every apparatus.
   - **III**: Apparatus Championship. The top 10 per apparatus, with at most 2 per team.
   - You reach II and III **automatically** from your Competition I results.
 - **After the end date** a competition is locked and read-only, but your scores stay visible.

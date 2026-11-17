@@ -82,6 +82,15 @@ const JudgeSequence = () => {
     setTeams(next);
   }, []);
 
+  // A final (Competition II / III) runs PLAYER-wise (owner, 2026-11-17): one
+  // list of every finalist, whatever the team, tracked the same way.
+  const [athletes, setAthletes] = useState([]);
+  const athletesRef = useRef([]);
+  const setAthletesTracked = useCallback((next) => {
+    athletesRef.current = next;
+    setAthletes(next);
+  }, []);
+
   // The judge dashboard writes the active category into sessionStorage when the
   // judge confirms their selection; this screen is always reached from there.
   const category = useMemo(() => ({
@@ -134,13 +143,14 @@ const JudgeSequence = () => {
       const data = response.data?.data || null;
       setRoster(data);
       setTeamsTracked(data?.teams || []);
+      setAthletesTracked(data?.athletes || []);
     } catch (error) {
       logger.error('Failed to load running order:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to load running order');
     } finally {
       setLoading(false);
     }
-  }, [categoryParams, setTeamsTracked]);
+  }, [categoryParams, setTeamsTracked, setAthletesTracked]);
 
   useEffect(() => {
     if (!judgeInfo) return;
@@ -213,6 +223,11 @@ const JudgeSequence = () => {
     })
   );
 
+  /** A final's whole order: every finalist, no team. */
+  const persistAthleteOrder = (nextAthletes) => runSave('Running order', () =>
+    judgeLotsAPI.setPlayerOrder({ ...categoryParams, playerIds: nextAthletes.map((a) => String(a._id)) })
+  );
+
   const handlePlayersReorder = (teamId, nextPlayers) => {
     setTeamsTracked(teamsRef.current.map((t) =>
       (String(t._id) === String(teamId) ? { ...t, players: nextPlayers } : t)
@@ -223,6 +238,8 @@ const JudgeSequence = () => {
     teamsRef.current.find((t) => String(t._id) === String(teamId))?.players || [];
 
   if (!judgeInfo) return null;
+
+  const playerWise = !!roster?.playerWise;
 
   return (
     <div className="min-h-dvh relative flex flex-col bg-bg text-fg">
@@ -266,6 +283,58 @@ const JudgeSequence = () => {
               style={{ borderColor: J.purple, borderTopColor: 'transparent' }} />
             <span className="text-sm text-fg-muted">Loading running order…</span>
           </div>
+        ) : playerWise ? (
+          athletes.length === 0 ? (
+            <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
+              <Users className="w-12 h-12 mb-4 text-ink/20" />
+              <p className="text-lg font-bold text-ink/70">No finalists yet</p>
+              <p className="text-sm text-fg-muted mt-2 max-w-sm text-center">
+                The admin has not finalized this final yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4 pb-12" data-testid="final-running-order">
+              <p className="text-xs text-fg-muted px-1 m-0">A final runs player by player, not team by team.</p>
+              <SearchField
+                value={teamQuery}
+                onChange={setTeamQuery}
+                placeholder="Search finalists or teams…"
+                label="Search finalists"
+              />
+              {teamQuery && (
+                <p className="text-xs text-fg-muted px-1 m-0">Clear the search to drag finalists into a new order.</p>
+              )}
+              <SortableList
+                items={teamQuery ? athletes.filter((a) => matchesSearch(teamQuery, a.name, a.team?.name)) : athletes}
+                emptyMessage={`No finalists match "${teamQuery}".`}
+                getKey={(athlete) => String(athlete._id)}
+                onReorder={setAthletesTracked}
+                onCommit={() => persistAthleteOrder(athletesRef.current)}
+                accent={J.purple}
+                disabled={competitionLocked || Boolean(teamQuery)}
+                renderItem={(athlete, index) => (
+                  <div className="flex items-center gap-3">
+                    <OrderBadge lotNo={athlete.lotNo} position={teamQuery ? athletes.indexOf(athlete) : index} accent={'rgb(var(--accent-fg))'} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-ink text-sm truncate">{athlete.name}</p>
+                      <p className="text-xs text-fg-muted truncate">
+                        {athlete.team?.name || 'Team'} · {ageGroupLabel(athlete.ageGroup)}
+                        {athlete.lotNo ? ` · Lot ${athlete.lotNo}` : ''}
+                        {athlete.isFinalized ? ' · finalized' : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              />
+              {!competitionLocked && (
+                <div className="flex justify-end">
+                  <button onClick={() => persistAthleteOrder(athletesRef.current)} disabled={saving} className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-on-accent min-h-[48px] disabled:opacity-50" style={{ background: 'rgb(var(--accent))' }}>
+                    <Save className="w-4 h-4" /> Save Order
+                  </button>
+                </div>
+              )}
+            </div>
+          )
         ) : teams.length === 0 ? (
           <div className="text-center py-16 flex flex-col items-center flex-1 justify-center rounded-2xl border border-ink/5 bg-ink/5">
             <Users className="w-12 h-12 mb-4 text-ink/20" />

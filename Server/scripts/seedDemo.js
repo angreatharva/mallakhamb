@@ -595,9 +595,14 @@ async function judgeAccountIdOf(client, email) {
 
 const evalSeats = (size) => ['Senior Judge', 'Judge 1', 'Judge 2', 'Judge 3', 'Judge 4'].slice(0, size);
 
-/** The panels a meet needs, per competition type (every final is per age group since 2026-11-14). */
-function panelsOf(meet, _type) {
-  return meet.panels;
+/** The panels a meet needs, per competition type (II is one All-ages final per gender). */
+function panelsOf(meet, type) {
+  if (type !== 'competition_2') return meet.panels;
+  return ['Male', 'Female'].map((gender) => {
+    const own = meet.panels.filter((p) => p.gender === gender);
+    const like = own.find((p) => p.ageGroup === 'Under14') || own[0];
+    return { gender, ageGroup: 'AllAges', size: like.size };
+  });
 }
 
 async function stepPanels() {

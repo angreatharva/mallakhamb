@@ -71,7 +71,7 @@ const {
   findCompetition,
   resolveSeatAccounts,
 } = require('./lib/admin-api');
-const { readPlan, planForPlace, seatsFor, withTimeKeeper, finalsPanelSeats } = require('./lib/panel-plan');
+const { readPlan, planForPlace, seatsFor, withTimeKeeper, finalsPanelSeats, panelsForType } = require('./lib/panel-plan');
 
 function parseArgs(argv) {
   const value = (name) => {
@@ -227,14 +227,14 @@ async function seatMeet(meetPlan, plan, csrfToken, { only, apparatus: apparatusO
   console.log();
 
   /*
-   * Each panel with the competition types it judges. Every competition is per
-   * age group (Competition II too since 2026-11-14). Competition II's panel is
-   * its own seats (migration 017 put competitionTypes in the unique keys), so
-   * it can be other people; it is seated only for the age groups whose final
-   * the admin has finalized.
+   * Each panel with the competition types it judges. Competition I and III
+   * are per age group; Competition II is ONE "All ages" final per gender
+   * (owner, 2026-11-17), so `--finals` seats an All-ages panel per gender —
+   * its own seats (competitionTypes is in the unique keys, migration 017), so
+   * it can be other people — once the admin has finalized that final.
    */
   const ready = finals ? await finalizedAllRound(competition) : null;
-  const all = meetPlan.panels
+  const all = (finals ? panelsForType(meetPlan, 'competition_2') : meetPlan.panels)
     .filter((p) => !ready || ready.has(`${p.gender}/${p.ageGroup}`))
     .map((p) => ({ ...p, types: meetTypes }));
   const wanted = only

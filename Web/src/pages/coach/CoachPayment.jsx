@@ -9,7 +9,7 @@ import { loadRazorpayScript, RAZORPAY_THEME } from '@/utils/payment/razorpay';
 import { Button, Heading, Input, Notice, Panel, Tag as UiTag, TextLink } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 import {
-  getCompetitionPlayerFeeRupees, calculateTeamPaymentAmount, calculatePlayerFee,
+  getCompetitionPlayerFeeRupees, calculateTeamPaymentAmount, calculatePlayerFee, unpaidPlayers, isPlayerPaid,
   resolveFeeWindow, formatFeeWindowDate, FEE_PHASE,
 } from '@/utils/scoring/competitionFee';
 
@@ -131,6 +131,27 @@ const CoachPayment = () => {
       // The code may have been switched off between quoting and redeeming, so
       // drop the quote rather than leaving a ₹0 total the server will refuse.
       setAppliedDiscount(null);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  /**
+   * A reopened team with nobody new to pay for (owner, 2026-11-17): every
+   * player is already paid, Razorpay has no ₹0 order, so it is submitted
+   * directly — the server refuses if anyone still owes.
+   */
+  const handleResubmit = async () => {
+    try {
+      setProcessing(true);
+      await coachAPI.resubmitPaidTeam();
+      setSubmittedVia('free');
+      toast.success('Team submitted again — nothing new to pay.');
+      await fetchTeamData();
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.response?.data?.error?.message || 'Could not submit the team.';
+      toast.error(message);
+      logger.error('Resubmit failed:', { error: message });
     } finally {
       setProcessing(false);
     }
@@ -266,13 +287,17 @@ const CoachPayment = () => {
    * Razorpay asks for base + late fee is worse than one that refuses to load.
    */
   const feeWindow = resolveFeeWindow(team?.competition);
-  const playerCount = team?.players?.length || 0;
+  // A team the Super Admin reopened lists who has paid: only the others owe.
+  const paidEntries = team?.paidEntries || [];
+  const reopened = paidEntries.length > 0;
+  const playerCount = unpaidPlayers(team?.players || [], paidEntries).length;
   const lateFeeTotal = feeWindow.lateFeePerPlayer * playerCount;
+  const nothingNewToPay = reopened && playerCount === 0 && (team?.players?.length || 0) > 0;
 
   /** What the entry costs before any discount. */
   const calculateTotal = () => {
     if (!feeConfigured || !team?.players) return 0;
-    return calculateTeamPaymentAmount(team.players, team.competition);
+    return calculateTeamPaymentAmount(team.players, team.competition, new Date(), paidEntries);
   };
 
   /*
@@ -334,7 +359,7 @@ const CoachPayment = () => {
    * checkout would only offer a button that answers with an error — this says
    * which dates apply instead.
    */
-  if (team && !feeWindow.canPay) {
+  if (team && !feeWindow.canPay && !nothingNewToPay) {
     const notOpen = feeWindow.phase === FEE_PHASE.NOT_OPEN;
     return (
       <PayMessage onBack={() => navigate('/coach/dashboard')} tag="Payment" title={notOpen ? 'Registration has not opened yet' : 'Registration is closed'}>
@@ -424,6 +449,14 @@ const CoachPayment = () => {
               </p>
             )}
 
+            {reopened && (
+              <Notice tone="info" title="Team reopened by the admin" className="mb-5">
+                {nothingNewToPay
+                  ? 'Every player is already paid for. Submit the team again to lock it — nothing is charged.'
+                  : `Players already paid for are not charged again. You pay only for the ${playerCount} new player${playerCount === 1 ? '' : 's'}.`}
+              </Notice>
+            )}
+
             {/* Fee breakdown */}
             <div className="mb-6 pay-sheet">
               {team?.players?.length > 0 ? (
@@ -436,7 +469,9 @@ const CoachPayment = () => {
                           ({typeof p.apparatus === 'string' ? p.apparatus : (Object.keys(p.apparatus||{}).length > 0 ? 'Multiple' : 'Base')})
                         </span>
                       </div>
-                      <span className="text-fg tabular-nums">₹{calculatePlayerFee(p, team.competition).toLocaleString()}</span>
+                      {isPlayerPaid(p, paidEntries)
+                        ? <span className="text-success-fg type-caption">Paid</span>
+                        : <span className="text-fg tabular-nums">₹{calculatePlayerFee(p, team.competition).toLocaleString()}</span>}
                     </div>
                   ))}
                 </div>
@@ -487,7 +522,7 @@ const CoachPayment = () => {
             </div>
 
             {/* Discount code — only when the server says codes are being taken */}
-            {discountEnabled && (
+            {discountEnabled && !nothingNewToPay && (
               <div className="mb-6">
                 {discountApplied ? (
                   <Notice tone="success" title={`${appliedDiscount.percent}% off applied`}>
@@ -534,20 +569,22 @@ const CoachPayment = () => {
               <Button
                 size="lg"
                 block
-                onClick={discountApplied ? handleFreeSubmit : handlePayment}
+                onClick={nothingNewToPay ? handleResubmit : discountApplied ? handleFreeSubmit : handlePayment}
                 loading={processing}
-                icon={processing ? null : (discountApplied ? CheckCircle : CreditCard)}
+                icon={processing ? null : (discountApplied || nothingNewToPay ? CheckCircle : CreditCard)}
               >
                 {processing
-                  ? (discountApplied ? 'Submitting Team…' : 'Processing Payment...')
-                  : discountApplied
-                    ? 'Submit Team — No Payment Due'
-                    : `Pay ₹${calculateTotal().toLocaleString()}`}
+                  ? (discountApplied || nothingNewToPay ? 'Submitting Team…' : 'Processing Payment...')
+                  : nothingNewToPay
+                    ? 'Submit Team — Nothing New to Pay'
+                    : discountApplied
+                      ? 'Submit Team — No Payment Due'
+                      : `Pay ₹${calculateTotal().toLocaleString()}`}
               </Button>
 
               <p className="flex items-center justify-center gap-2 text-fg-muted type-caption m-0">
                 <Lock className="w-3 h-3" aria-hidden="true" />
-                {discountApplied ? 'Discount verified on the server' : 'Secure Razorpay checkout'}
+                {nothingNewToPay ? 'Checked on the server: every player is paid for' : discountApplied ? 'Discount verified on the server' : 'Secure Razorpay checkout'}
               </p>
             </div>
           </Panel>

@@ -36,6 +36,8 @@ const { idStr } = require('../../utils/data/objectid.util');
 const { rosterAtLevelFilter } = require('../../utils/data/player-team.util');
 const {
   calculateTeamPaymentAmount,
+  unpaidPlayers,
+  paidEntriesAfterPayment,
   resolveFeeWindow,
   assertPaymentWindowOpen,
   applyDiscountCode,
@@ -429,6 +431,11 @@ class CoachService extends UserService {
         paymentStatus: registeredTeam.paymentStatus,
         paymentAmount: registeredTeam.paymentAmount,
         submittedAt: registeredTeam.submittedAt,
+        // Who has paid already: a team the Super Admin reopened pays only for
+        // the players added since (owner, 2026-11-17). Ids and amounts only.
+        paidEntries: (registeredTeam.paidEntries || []).map((e) => ({
+          player: String(e.player?._id ?? e.player), amount: e.amount, paidAt: e.paidAt,
+        })),
         /*
          * Everything the payment page needs to price the entry ITSELF.
          *
@@ -835,7 +842,11 @@ class CoachService extends UserService {
     const quotedAt = new Date();
     const feeWindow = assertPaymentWindowOpen(competition, quotedAt);
 
-    const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, quotedAt);
+    const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, quotedAt, registeredTeam.paidEntries);
+    const owing = unpaidPlayers(registeredTeam.players, registeredTeam.paidEntries).length;
+    if (amount === 0) {
+      throw new ValidationError('There is nothing to pay — every player is already paid for. Submit the team instead.');
+    }
     const discount = applyDiscountCode(amount, discountCode, discountConfig);
 
     this.logger?.info?.('Discount code quoted', {
@@ -847,15 +858,73 @@ class CoachService extends UserService {
 
     return {
       ...discount,
-      playerCount: registeredTeam.players?.length || 0,
+      playerCount: owing,
       currency: 'INR',
       fee: {
         phase: feeWindow.phase,
         isLate: feeWindow.isLate,
         lateFeePerPlayer: feeWindow.lateFeePerPlayer,
-        lateFeeTotal: feeWindow.lateFeePerPlayer * (registeredTeam.players?.length || 0),
+        lateFeeTotal: feeWindow.lateFeePerPlayer * owing,
       },
     };
+  }
+
+  /**
+   * Submit a reopened team that owes nothing (owner, 2026-11-17).
+   *
+   * The Super Admin can reopen a submitted, paid team (Fix → Entries →
+   * "Submitted: No") so its coach can change the squad. If the coach then adds
+   * nobody new — or only removes players — every player left is already paid
+   * for, and Razorpay has no ₹0 order, so the team is submitted here directly.
+   * A team with ANY unpaid player is refused: it goes through Pay Fees.
+   *
+   * No fee-window check: nothing is being bought, and a reopened team must be
+   * able to lock itself again even after the fee deadline. The competition
+   * end-date lock still applies (route guard).
+   *
+   * @param {string} coachId
+   * @param {string} competitionId
+   * @returns {Promise<Object>}
+   */
+  async resubmitPaidTeam(coachId, competitionId) {
+    const { competition, registeredTeam } = await this._loadRegistration(coachId, competitionId);
+    if (registeredTeam.isSubmitted) {
+      return { coachId, competitionId, submitted: true, alreadySubmitted: true, amountPaid: 0 };
+    }
+    if (!(registeredTeam.paidEntries || []).length) {
+      throw new ValidationError('This team has not paid yet — use Pay Fees to submit it.');
+    }
+    if (!(registeredTeam.players || []).length) {
+      throw new ValidationError('Add at least one player before submitting the team.');
+    }
+    const now = new Date();
+    const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, now, registeredTeam.paidEntries);
+    if (amount !== 0) {
+      throw new ValidationError(`₹${amount} is still due for the players added since the team was paid — use Pay Fees.`);
+    }
+    await this.competitionRepository.updateRegistrationFields(competitionId, registeredTeam.team, {
+      isSubmitted: true,
+      submittedAt: now,
+      paymentStatus: 'completed',
+    });
+    if (this.transactionRepository) {
+      const team = await this.teamRepository.findById(registeredTeam.team);
+      await this.transactionRepository.create([{
+        source: 'coach',
+        type: 'team_submission',
+        amount: 0,
+        competition: competitionId,
+        team: registeredTeam.team,
+        coach: coachId,
+        paymentStatus: 'completed',
+        description: `Team ${team?.name || '(unnamed)'} submitted again after a reopen — every player already paid`,
+        metadata: { resubmitted: true, playerCount: registeredTeam.players.length, submittedAt: now },
+      }]);
+    }
+    this.logger?.info?.('Reopened team submitted again, nothing to pay', {
+      coachId, competitionId, teamId: registeredTeam.team, playerCount: registeredTeam.players.length,
+    });
+    return { coachId, competitionId, submitted: true, amountPaid: 0 };
   }
 
   /**
@@ -905,8 +974,11 @@ class CoachService extends UserService {
       const redeemedAt = new Date();
       assertPaymentWindowOpen(competition, redeemedAt);
 
-      const playerCount = registeredTeam.players?.length || 0;
-      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, redeemedAt);
+      const playerCount = unpaidPlayers(registeredTeam.players, registeredTeam.paidEntries).length;
+      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, redeemedAt, registeredTeam.paidEntries);
+      if (amount === 0) {
+        throw new ValidationError('There is nothing to pay — every player is already paid for. Submit the team instead.');
+      }
       const discount = applyDiscountCode(amount, discountCode, discountConfig);
 
       /*
@@ -936,6 +1008,8 @@ class CoachService extends UserService {
           paymentStatus: 'completed',
           paymentAmount: 0,
           paymentVerifiedAt: redeemedAt,
+          // The fee of every player in this submission is settled (waived).
+          paidEntries: paidEntriesAfterPayment(registeredTeam.players, registeredTeam.paidEntries, competition, redeemedAt),
           // `paymentGateway` is left unset on purpose: its enum is ['razorpay']
           // and no gateway was involved.
         }
@@ -1037,8 +1111,12 @@ class CoachService extends UserService {
       const feeWindow = assertPaymentWindowOpen(competition, quotedAt);
 
       // Calculate payment amount using centralized config with competition-specific player fee
-      const playerCount = registeredTeam.players?.length || 0;
-      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, quotedAt);
+      // Only the players not paid for yet (a reopened team, owner 2026-11-17).
+      const playerCount = unpaidPlayers(registeredTeam.players, registeredTeam.paidEntries).length;
+      const amount = calculateTeamPaymentAmount(registeredTeam.players, competition, quotedAt, registeredTeam.paidEntries);
+      if (amount === 0) {
+        throw new ValidationError('There is nothing to pay — every player is already paid for. Submit the team instead.');
+      }
       const lateFeeTotal = feeWindow.lateFeePerPlayer * playerCount;
 
       // Credentials, client and receipt scheme are shared with the super
@@ -1271,9 +1349,9 @@ class CoachService extends UserService {
       // Calculate expected amount using centralized config with competition-specific player fee
       // Use registeredTeam.players (players registered for this competition)
       // NOT team.players (all players in the team)
-      const playerCount = registeredTeam.players?.length || 0;
+      const playerCount = unpaidPlayers(registeredTeam.players, registeredTeam.paidEntries).length;
       const feeWindow = resolveFeeWindow(competition, paidAt);
-      const expectedAmount = calculateTeamPaymentAmount(registeredTeam.players, competition, paidAt) * 100; // Convert to paise
+      const expectedAmount = calculateTeamPaymentAmount(registeredTeam.players, competition, paidAt, registeredTeam.paidEntries) * 100; // Convert to paise
 
       // Verify payment amount
       if (paymentDetails.amount !== expectedAmount) {
@@ -1310,6 +1388,9 @@ class CoachService extends UserService {
           paymentVerifiedAt: new Date(),
           paymentAmount: paymentDetails.amount,
           paymentMethod: paymentDetails.method,
+          // Every player this payment covered is paid for: if the Super Admin
+          // reopens the team, they are not charged again (owner, 2026-11-17).
+          paidEntries: paidEntriesAfterPayment(registeredTeam.players, registeredTeam.paidEntries, competition, paidAt),
         }
       );
 

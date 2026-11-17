@@ -85,7 +85,7 @@ describe('JudgeScoring — re-editing a submitted slip', () => {
     await act(async () => feed.push({ panelScores: submittedSlip(3.1), loaded: true }));
 
     expect(loading()).not.toBeInTheDocument();
-    expect(executionField()).toHaveValue('3.1');
+    expect(executionField()).toHaveValue('3.10');
   });
 
   it('opens on the latest submitted score, not on marks left from an earlier edit', async () => {
@@ -93,7 +93,7 @@ describe('JudgeScoring — re-editing a submitted slip', () => {
     // to nothing — here it is absent, so the server slip is what shows.
     render(<JudgeScoring />);
     await act(async () => feed.push({ panelScores: submittedSlip(2.0), loaded: true }));
-    expect(executionField()).toHaveValue('2');
+    expect(executionField()).toHaveValue('2.00');
   });
 
   it('keeps unsaved edits from this edit across a refresh', async () => {
@@ -107,11 +107,11 @@ describe('JudgeScoring — re-editing a submitted slip', () => {
 
     // The unsaved edit is shown straight away…
     expect(loading()).not.toBeInTheDocument();
-    expect(executionField()).toHaveValue('2.5');
+    expect(executionField()).toHaveValue('2.50');
 
     // …and the submitted slip landing afterwards does not replace it.
     await act(async () => feed.push({ panelScores: submittedSlip(3.1), loaded: true }));
-    expect(executionField()).toHaveValue('2.5');
+    expect(executionField()).toHaveValue('2.50');
   });
 
   it('does not hang when there is no submitted slip to load', async () => {

@@ -356,7 +356,7 @@ class PublicService {
     try {
       const competitions = await this.competitionRepository.findActive({
         sort: { startDate: -1 },
-        select: 'name year place status competitionTypes startDate endDate level apparatusConfig apparatusByGender legacyFinals allAgesFinals ageGroups customAgeGroups',
+        select: 'name year place status competitionTypes startDate endDate level apparatusConfig apparatusByGender legacyFinals allAgesFinals perAgeGroupFinals ageGroups customAgeGroups',
       });
 
       this.logger.info('Public competitions retrieved', { count: competitions.length });

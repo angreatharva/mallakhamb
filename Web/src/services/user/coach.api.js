@@ -34,6 +34,8 @@ export const coachAPI = {
   removePlayerFromAgeGroup: (playerId) => api.delete(`/coaches/remove-player/${playerId}`),
   createPaymentOrder: () => api.post('/coaches/payments/create-order'),
   verifyPaymentAndSubmit: (data) => api.post('/coaches/payments/verify-and-submit', data),
+  // A reopened team where every player is already paid for (nothing to charge).
+  resubmitPaidTeam: () => api.post('/coaches/payments/resubmit'),
   // Two steps on purpose: the first only quotes, so a coach sees the discounted
   // total before committing to a submission they cannot undo. The second
   // re-checks the code from scratch — the quote grants nothing.

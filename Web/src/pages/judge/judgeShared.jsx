@@ -67,6 +67,13 @@ export const scoringCacheKey = (team, player, judgeInfo) => (
  */
 export const SLIP_EDIT_LIMIT = 3;
 
+/**
+ * What the judge is told they have: one fewer than SLIP_EDIT_LIMIT (owner,
+ * 2026-11-17: "max 3 but we will show 2 max"). The third edit is a spare the
+ * label never counts, so "0 of 2 edits left" still lets one more edit through.
+ */
+export const SHOWN_EDIT_LIMIT = SLIP_EDIT_LIMIT - 1;
+
 export const normalizeBreakdown = (breakdown, fallbackScore) => {
   if (!breakdown) {
     return {
@@ -245,7 +252,9 @@ export const DIFFICULTY_CLASSES = Object.freeze([
 // for 4.40 without hunting for the "." key. Typing the point (2.20) works as
 // before. At most three digits without a point; a 4th is ignored. A single
 // digit is still a whole mark (3 → 3.00), so nothing typed today changes.
-const toDraft = (v) => (Number(v) ? String(Number(v)) : '');
+// A kept mark always READS with two decimals — 2.20, never 2.2 (owner,
+// 2026-11-17: "while display it must show 2.20 but while typing 220").
+const toDraft = (v) => (Number(v) ? Number(v).toFixed(2) : '');
 
 /** The mark a draft stands for: "220" → 2.2 with implied decimals, else as written. */
 export const parseDecimalDraft = (text, impliedDecimal = false) => {

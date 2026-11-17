@@ -807,7 +807,10 @@ const JudgeDashboard = () => {
       playerPosition: orderIndex.players.get(`${String(team._id)}:${String(entry.player._id)}`)?.position ?? Number.MAX_SAFE_INTEGER,
     })))
       .filter(({ entry, team }) => `${entry.player.firstName} ${entry.player.lastName} ${team.name}`.toLowerCase().includes(searchQuery.toLowerCase()))
-      .sort((a, b) => a.teamPosition - b.teamPosition || a.playerPosition - b.playerPosition
+      // A final runs player-wise (owner, 2026-11-17): the athlete's place in
+      // the final's ONE order decides, whatever the team. Teams only order the
+      // athletes nobody has placed yet.
+      .sort((a, b) => a.playerPosition - b.playerPosition || a.teamPosition - b.teamPosition
         || `${a.entry.player.firstName} ${a.entry.player.lastName}`.localeCompare(`${b.entry.player.firstName} ${b.entry.player.lastName}`))
     : [];
 

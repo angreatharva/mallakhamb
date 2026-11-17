@@ -12,6 +12,7 @@ import {
 } from './support/admin-flows.js';
 import {
   meetCompetitionTypes,
+  panelsForType,
   PLAN_PROVENANCE,
   seatsFor,
   withTimeKeeper,
@@ -99,12 +100,16 @@ test.beforeAll(() => {
 
 for (const meet of MEETS) {
   /*
-   * The meet's own competitions, all judged per age group (Competition II is a
-   * final per gender + age group since 2026-11-14), so one panel per age group
-   * is seated for every competition the meet runs.
+   * The meet's own competitions. I and III are judged per age group; II is
+   * one "All ages" final per gender (automatic finals), so its panels are
+   * separate categories seated for Competition II alone.
    */
   const types = meetCompetitionTypes(meet);
-  const panelsHere = meet.panels.map((p) => ({ ...p, types }));
+  const perAge = types.filter((t) => t !== 'competition_2');
+  const panelsHere = [
+    ...(perAge.length ? meet.panels.map((p) => ({ ...p, types: perAge })) : []),
+    ...(types.includes('competition_2') ? panelsForType(meet, 'competition_2').map((p) => ({ ...p, types: ['competition_2'] })) : []),
+  ];
   const wanted = panelsHere.filter(
     (panel) =>
       (!process.env.ONLY_GENDER || process.env.ONLY_GENDER === panel.gender) &&

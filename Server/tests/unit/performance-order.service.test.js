@@ -315,3 +315,56 @@ describe('secureShuffle', () => {
     expect(new Set(results).size).toBeGreaterThan(1);
   });
 });
+
+describe('finals run player-wise (owner, 2026-11-17)', () => {
+  const FINAL = { gender: 'Male', ageGroup: 'Under14', competitionType: 'competition_3' };
+  const finalist = (id, first) => ({ id, first, last: 'Q' });
+  const finalTeam = (id, name, players) => {
+    const t = team(id, name, players);
+    t.players.forEach((e) => { e.apparatus = { competition_3: ['Pole Mallakhamb'] }; });
+    return t;
+  };
+  const teams = () => [
+    finalTeam('t1', 'Alpha', [finalist('a1', 'Aarav'), finalist('a2', 'Arjun')]),
+    finalTeam('t2', 'Bravo', [finalist('b1', 'Bhavin')]),
+  ];
+
+  it('draws ONE list of every finalist, whatever the team, numbered 1..N', async () => {
+    const { service, stored } = buildService({ submittedTeams: teams() });
+    const roster = await service.drawLots(COMPETITION, FINAL, { id: 'admin', role: 'admin' });
+    expect(roster.playerWise).toBe(true);
+    expect(roster.athletes.map((a) => a.lotNo)).toEqual([1, 2, 3]);
+    expect(roster.athletes.map((a) => a.position)).toEqual([0, 1, 2]);
+    expect(new Set(roster.athletes.map((a) => a.team.name))).toEqual(new Set(['Alpha', 'Bravo']));
+    expect(stored.value.athleteOrder).toHaveLength(3);
+    expect(stored.value.teamOrder).toEqual([]);
+  });
+
+  it('re-sequences across teams and keeps each athlete their lot', async () => {
+    const { service } = buildService({
+      submittedTeams: teams(),
+      orderDoc: { athleteOrder: [
+        { player: 'a1', team: 't1', lotNo: 1, position: 0 },
+        { player: 'b1', team: 't2', lotNo: 2, position: 1 },
+        { player: 'a2', team: 't1', lotNo: 3, position: 2 },
+      ] },
+    });
+    const roster = await service.setPlayerOrder(COMPETITION, FINAL, null, ['a2', 'a1', 'b1'], { id: 'sj', role: 'judge' });
+    expect(roster.athletes.map((a) => `${a._id}:${a.lotNo}`)).toEqual(['a2:3', 'a1:1', 'b1:2']);
+    // Inside a team, the athletes follow the final's order too.
+    expect(roster.teams.find((t) => t._id === 't1').players.map((p) => p.position)).toEqual([0, 1]);
+  });
+
+  it('refuses a player who is not a finalist, and a team order', async () => {
+    const { service } = buildService({ submittedTeams: teams() });
+    await expect(service.setPlayerOrder(COMPETITION, FINAL, null, ['zz'], {})).rejects.toThrow(ValidationError);
+    await expect(service.setTeamOrder(COMPETITION, FINAL, ['t1', 't2'], {})).rejects.toThrow(ValidationError);
+  });
+
+  it('Competition I stays team-wise', async () => {
+    const { service } = buildService({ submittedTeams: [team('t1', 'Alpha', [finalist('a1', 'Aarav')])] });
+    const roster = await service.getOrderedRoster(COMPETITION, CATEGORY);
+    expect(roster.playerWise).toBe(false);
+    expect(roster.athletes).toEqual([]);
+  });
+});

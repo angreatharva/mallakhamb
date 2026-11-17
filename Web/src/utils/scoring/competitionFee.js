@@ -168,25 +168,55 @@ export function calculatePlayerFee(player, competition) {
   return totalFee;
 }
 
+/** The player id of a squad entry, whether `player` is an id or a populated document. */
+const entryPlayerId = (entry) => {
+  const p = entry?.player;
+  const id = p && typeof p === 'object' && p._id !== undefined ? p._id : p;
+  return id === undefined || id === null ? null : String(id);
+};
+
+/**
+ * The squad entries that still owe their fee: every entry whose player is not
+ * in `paidEntries` (Server payment.config#unpaidPlayers). After the Super
+ * Admin reopens a paid team only the players added since are charged.
+ *
+ * @param {Array} players
+ * @param {Array} [paidEntries] - registeredTeam.paidEntries
+ * @returns {Array}
+ */
+export function unpaidPlayers(players, paidEntries) {
+  const paid = new Set((paidEntries || []).map((e) => entryPlayerId(e)).filter(Boolean));
+  return (players || []).filter((entry) => !paid.has(entryPlayerId(entry)));
+}
+
+/** Has this squad entry's fee been paid already? */
+export function isPlayerPaid(entry, paidEntries) {
+  const id = entryPlayerId(entry);
+  return !!id && (paidEntries || []).some((e) => entryPlayerId(e) === id);
+}
+
 /**
  * Total for team submission, including the per-player late fee when `at` falls
  * after the competition's fee deadline.
  *
  * The late fee is charged PER PLAYER, beside the base fee and apparatus add-ons
  * it belongs to — a 70-athlete squad paying late owes 70 penalties, not one.
+ * Players already paid for (`paidEntries`) are skipped.
  *
  * @param {Array} players - Array of players registered
  * @param {Object} competition - The competition object
  * @param {Date} [at] - when the payment is being made; decides the fee phase
+ * @param {Array} [paidEntries] - registeredTeam.paidEntries
  * @returns {number} Total INR
  */
-export function calculateTeamPaymentAmount(players, competition, at = new Date()) {
-  if (!players || !Array.isArray(players) || players.length === 0) return 0;
+export function calculateTeamPaymentAmount(players, competition, at = new Date(), paidEntries = []) {
+  const owing = unpaidPlayers(players, paidEntries);
+  if (owing.length === 0) return 0;
 
   const lateFee = getLateFeePerPlayer(competition, at);
 
   let total = 0;
-  for (const player of players) {
+  for (const player of owing) {
     total += calculatePlayerFee(player, competition) + lateFee;
   }
   return total;

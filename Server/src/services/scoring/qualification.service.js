@@ -7,11 +7,10 @@
  *
  *  - every Competition III final of that gender + age group (one per apparatus
  *    the meet runs in Competition III for the gender);
- *  - the Competition II final of that gender + age group (owner, 2026-11-14:
- *    "finals must not be on gender, but on gender + age group"). A meet whose
- *    Competition II had already started as one "All ages" final per gender
- *    (`allAgesFinals`, migration 017) keeps that one final, fed by every age
- *    group.
+ *  - the gender's "All ages" Competition II final, that age group's top 2
+ *    (owner, 2026-11-17). A meet where a per-age-group Competition II final
+ *    (the 14–17 Nov rule) had already started keeps one final per age group
+ *    (`perAgeGroupFinals`, migration 018).
  *
  * A final takes players only from Competition I scores that are PUBLISHED —
  * saved and locked by the Senior Judge and the Scorer, the same moment the
@@ -257,8 +256,8 @@ class QualificationService {
   // ── Competition II ──────────────────────────────────────────────────────
 
   /**
-   * One Competition II final per gender + age group; on an `allAgesFinals`
-   * meet, the old single "All ages" final of the gender instead.
+   * One "All ages" Competition II final per gender; on a `perAgeGroupFinals`
+   * meet, one per gender + age group instead.
    * @private
    */
   async _recomputeAllRound(competition, gender, onlyAgeGroup = null) {
@@ -288,9 +287,11 @@ class QualificationService {
     const skipped = [];
     const waitingFor = [];
 
+    let anyEntered = false;
     for (const ageGroup of sourceAgeGroups) {
       const inputs = await this._categoryInputs(competition, gender, ageGroup);
       const blocking = Object.entries(inputs.missing).filter(([, teams]) => teams.length);
+      if (inputs.expected.size) anyEntered = true;
       if (!inputs.expected.size) {
         // Nobody entered in this age group. On a per-age final that is no
         // final at all: none is listed (one left from an earlier entry goes,
@@ -322,6 +323,16 @@ class QualificationService {
       qualifiers.push(...result.qualifiers.map((q) => this._person(q, ageGroup, existing)));
       tied.push(...result.tied.map((q) => this._person(q, ageGroup)));
       skipped.push(...result.skipped.map((q) => ({ ...this._person(q, ageGroup), reason: q.reason })));
+    }
+
+    // An All-ages final with nobody entered in any age group (a gender the
+    // meet has no players of) is no final either, unless it already counts.
+    if ((!anyEntered && sourceAgeGroups.length > 1) || !sourceAgeGroups.length) {
+      if (!existing) return;
+      if (!existing.finalizedAt && !existing.frozenAt) {
+        await this.qualifications.model.deleteOne({ _id: existing._id });
+        return;
+      }
     }
 
     const status = slices.length && slices.every((s) => s.status === 'set') ? 'set'

@@ -25,6 +25,13 @@ const { ageMatches, entryInCompetition } = require('../../utils/data/category.ut
 const { SEQUENCE_JUDGE_TYPES } = require('../../utils/data/judge-assignment.util');
 
 /**
+ * Competition II / III run PLAYER-wise (owner, 2026-11-17): one flat order of
+ * athletes from every team, drawn and re-sequenced as one list. Competition I
+ * stays team-wise (teams, then athletes inside each team).
+ */
+const isPlayerWise = (identity) => identity?.competitionType === 'competition_2' || identity?.competitionType === 'competition_3';
+
+/**
  * Fisher-Yates using crypto.randomInt rather than Math.random.
  *
  * This is a competition draw — the order it produces decides who performs
@@ -195,8 +202,15 @@ class PerformanceOrderService {
       teamLots.set(idStr(entry.team), entry.lotNo ?? null);
     }
 
+    const playerWise = isPlayerWise(identity);
+    // A final's athletes carry their place in the ONE flat order.
+    const athleteSlots = new Map();
+    for (const entry of (playerWise ? orderDoc?.athleteOrder : null) || []) {
+      athleteSlots.set(idStr(entry.player), { position: entry.position, lotNo: entry.lotNo ?? null });
+    }
+
     const playerOrderByTeam = new Map();
-    for (const entry of orderDoc?.playerOrders || []) {
+    for (const entry of (playerWise ? [] : orderDoc?.playerOrders) || []) {
       const byPlayer = new Map();
       for (const p of entry.players || []) {
         byPlayer.set(idStr(p.player), { position: p.position, lotNo: p.lotNo ?? null });
@@ -215,7 +229,7 @@ class PerformanceOrderService {
           && entryInCompetition(entry, identity.competitionType))
         .map((entry) => {
           const playerId = idStr(entry.player._id);
-          const stored = playerOrder?.get(playerId);
+          const stored = playerWise ? athleteSlots.get(playerId) : playerOrder?.get(playerId);
           return {
             _id: entry.player._id,
             name: `${entry.player.firstName || ''} ${entry.player.lastName || ''}`.trim(),
@@ -239,15 +253,26 @@ class PerformanceOrderService {
       };
     });
 
+    const sortedTeams = this.sortByStoredPosition(teams, (t) => t.name);
+    // Every athlete of a final in ONE running order, each tagged with a team.
+    const athletes = playerWise
+      ? this.sortByStoredPosition(
+        sortedTeams.flatMap((t) => t.players.map((p) => ({ ...p, team: { _id: t._id, name: t.name } }))),
+        (p) => p.name
+      )
+      : [];
+
     return {
       ...identity,
+      playerWise,
+      athletes,
       lotsDrawnAt: orderDoc?.lotsDrawnAt || null,
       lotsDrawnByName: orderDoc?.lotsDrawnByName || '',
       updatedAt: orderDoc?.updatedAt || null,
       updatedByName: orderDoc?.updatedByName || '',
       updatedByRole: orderDoc?.updatedByRole || '',
       hasOrder: !!orderDoc,
-      teams: this.sortByStoredPosition(teams, (t) => t.name),
+      teams: sortedTeams,
     };
   }
 
@@ -301,6 +326,34 @@ class PerformanceOrderService {
     }
 
     const now = new Date();
+
+    if (roster.playerWise) {
+      // A final draws its athletes as ONE list, whatever their team.
+      if (!roster.athletes.length) throw new NotFoundError('Finalists for this category');
+      const athleteOrder = secureShuffle(roster.athletes).map((athlete, index) => ({
+        player: athlete._id,
+        team: athlete.team?._id || null,
+        lotNo: index + 1,
+        position: index,
+      }));
+      const saved = await this.performanceOrderRepository.upsertByCategory(identity, {
+        athleteOrder,
+        teamOrder: [],
+        playerOrders: [],
+        lotsDrawnAt: now,
+        lotsDrawnBy: actor?.id || null,
+        lotsDrawnByName: actor?.name || '',
+        updatedBy: actor?.id || null,
+        updatedByRole: actor?.role || '',
+        updatedByName: actor?.name || '',
+      });
+      this.logger.info('Lots drawn (player-wise final)', {
+        ...identity, athleteCount: athleteOrder.length, drawnBy: actor?.id, role: actor?.role,
+      });
+      const result = await this.getOrderedRoster(competitionId, filters);
+      this.broadcast(identity, 'lots_drawn', result, actor);
+      return { ...result, _id: saved?._id };
+    }
     const shuffledTeams = secureShuffle(roster.teams);
 
     const teamOrder = shuffledTeams.map((team, index) => ({
@@ -363,6 +416,9 @@ class PerformanceOrderService {
    */
   async setTeamOrder(competitionId, filters, teamIds, actor) {
     const identity = this.buildIdentity(competitionId, filters);
+    if (isPlayerWise(identity)) {
+      throw new ValidationError('A final runs player-wise: set the order of its athletes, not of teams');
+    }
 
     if (!Array.isArray(teamIds) || teamIds.length === 0) {
       throw new ValidationError('teamIds must be a non-empty array');
@@ -438,6 +494,10 @@ class PerformanceOrderService {
   async setPlayerOrder(competitionId, filters, teamId, playerIds, actor) {
     const identity = this.buildIdentity(competitionId, filters);
 
+    if (isPlayerWise(identity)) {
+      return this.setAthleteOrder(competitionId, filters, playerIds, actor);
+    }
+
     if (!teamId) {
       throw new ValidationError('teamId is required');
     }
@@ -503,6 +563,61 @@ class PerformanceOrderService {
   }
 
   /**
+   * Replace a final's running order (Competition II / III): one flat list of
+   * athletes from every team. Lot numbers stay with the athlete who drew them,
+   * as in setTeamOrder.
+   *
+   * @param {string} competitionId
+   * @param {Object} filters
+   * @param {string[]} playerIds - full running order, first to last
+   * @param {Object} actor - { id, name, role }
+   * @returns {Promise<Object>} the ordered roster after the change
+   */
+  async setAthleteOrder(competitionId, filters, playerIds, actor) {
+    const identity = this.buildIdentity(competitionId, filters);
+    if (!Array.isArray(playerIds) || playerIds.length === 0) {
+      throw new ValidationError('playerIds must be a non-empty array');
+    }
+
+    const roster = await this.getOrderedRoster(competitionId, filters);
+    const teamOf = new Map(roster.athletes.map((a) => [idStr(a._id), a.team?._id || null]));
+    const seen = new Set();
+    const cleaned = [];
+    for (const raw of playerIds) {
+      const id = idStr(raw);
+      if (!teamOf.has(id)) throw new ValidationError(`Player ${id} is not a finalist in this category`);
+      if (seen.has(id)) throw new ValidationError(`Player ${id} appears more than once in the order`);
+      seen.add(id);
+      cleaned.push(id);
+    }
+    // A finalist the client did not send keeps a place at the end.
+    const finalOrder = [...cleaned, ...roster.athletes.map((a) => idStr(a._id)).filter((id) => !seen.has(id))];
+
+    const existing = await this.performanceOrderRepository.findByCategory(identity);
+    const lotByPlayer = new Map((existing?.athleteOrder || []).map((e) => [idStr(e.player), e.lotNo ?? null]));
+    const athleteOrder = finalOrder.map((id, index) => ({
+      player: id,
+      team: teamOf.get(id),
+      lotNo: lotByPlayer.get(id) ?? null,
+      position: index,
+    }));
+
+    await this.performanceOrderRepository.upsertByCategory(identity, {
+      athleteOrder,
+      updatedBy: actor?.id || null,
+      updatedByRole: actor?.role || '',
+      updatedByName: actor?.name || '',
+    });
+    this.logger.info('Final running order updated', {
+      ...identity, athleteCount: athleteOrder.length, updatedBy: actor?.id, role: actor?.role,
+    });
+
+    const result = await this.getOrderedRoster(competitionId, filters);
+    this.broadcast(identity, 'player_order', result, actor);
+    return result;
+  }
+
+  /**
    * Push the new order to every judge sitting on this panel.
    *
    * Emits into BOTH room-id forms for the category. The codebase addresses the
@@ -544,6 +659,10 @@ class PerformanceOrderService {
           position: t.position,
           players: t.players.map((p) => ({ _id: idStr(p._id), lotNo: p.lotNo, position: p.position })),
         })),
+        playerWise: !!roster.playerWise,
+        athletes: (roster.athletes || []).map((a) => ({
+          _id: idStr(a._id), team: idStr(a.team?._id), lotNo: a.lotNo, position: a.position,
+        })),
         updatedByName: actor?.name || '',
         updatedByRole: actor?.role || '',
         timestamp: new Date().toISOString(),
@@ -569,3 +688,4 @@ class PerformanceOrderService {
 module.exports = PerformanceOrderService;
 module.exports.SEQUENCE_JUDGE_TYPES = SEQUENCE_JUDGE_TYPES;
 module.exports.secureShuffle = secureShuffle;
+module.exports.isPlayerWise = isPlayerWise;

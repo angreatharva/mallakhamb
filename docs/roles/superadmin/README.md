@@ -138,6 +138,17 @@ Every Fix action asks for a **reason of at least 5 characters**, which History k
 | **Entries & payments** | For each competition and team: add an athlete; change their gender, age group or apparatus; remove an athlete who has no scores. The age rule and squad limit apply unless you give an explicit override (recorded). You can also correct the registration's submitted or payment status, and **record money paid or refunded outside the app** as a ledger line. Refunds are negative, and this never contacts Razorpay. |
 | **Restore** | Bring back deleted competitions. |
 
+### Reopen a submitted, paid team (owner, 2026-11-17)
+
+A coach's squad locks once the fees are paid. To let them change it:
+
+1. **Fix → Entries & payments** → choose the competition → choose the team.
+2. Under **Registration status**, set **Submitted** to **Not submitted** (leave **Payment** on Completed) → **Save status** → type a reason → **Save**.
+3. Everyone in the squad at that moment is recorded as **paid**. The coach's Save Team / Add Player / Pay Fees buttons open again.
+4. The coach adds players and presses **Pay Fees**: the players already paid read **Paid**, and only the new players are charged (with the late fee if it applies). If nobody new was added, the button reads **Submit Team — Nothing New to Pay** and nothing is charged.
+
+Demos (local test copy, Latur meet): [Super Admin reopens the team](../media/superadmin-reopen-paid-team.gif) and [the coach pays only for the new player](../media/coach-reopened-team-pays-only-new-players.gif).
+
 Owner decisions that shape Fix: scores in finished meets are corrected directly, with a reason and without reopening the meet (D2). Coaches and players are **not** emailed about corrections (D3).
 
 ## 8. History
@@ -166,7 +177,7 @@ At **23:59 UTC on the end date** a competition becomes read-only for admins, jud
 - Team Championship (Competition I): per apparatus, the best 3 (team size 4) or best 5 (team size 6) scores are summed.
 
 ### 9.4 Finals
-Competition II is a final per gender **and age group**: the top 10, at most 2 from one team, by the sum of every apparatus; once finalized, **Seat judges** on its card seats its own panel. Competition III is the top 10 per gender, age group and apparatus, with at most 2 from one team. Nobody is entered until a final is **finalized**. Only the Super Admin can **Reopen** a finalized final, and only before its first score.
+Competition II is one **"All ages"** final per gender: the **top 2 of every age group** by the sum of their Competition I scores on every apparatus, with no team cap (owner, 2026-11-17); once finalized, **Seat judges** on its card seats its own panel (category "All ages"). A meet where a per-age-group Competition II final had already started keeps that shape. Competition III is the top 10 per gender, age group and apparatus, with at most 2 from one team. Nobody is entered until a final is **finalized**. Only the Super Admin can **Reopen** a finalized final, and only before its first score.
 
 ## 10. Your profile
 

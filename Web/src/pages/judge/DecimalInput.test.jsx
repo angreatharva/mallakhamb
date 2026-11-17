@@ -45,24 +45,24 @@ describe('DecimalInput', () => {
   it('shows what the parent kept after clamping', async () => {
     render(<Execution />);
     await userEvent.type(field(), '5');
-    expect(field()).toHaveValue('4.4');
+    expect(field()).toHaveValue('4.40');
   });
 
   it('snaps to the rounded mark on blur', async () => {
     render(<Execution initial={3} />);
     await userEvent.type(field(), '.02');
     await userEvent.tab();
-    expect(field()).toHaveValue('3');
+    expect(field()).toHaveValue('3.00');
   });
 
   it('rounds x.x5 down and x.x6 up', async () => {
     render(<Execution />);
     await userEvent.type(field(), '2.05');
     await userEvent.tab();
-    expect(field()).toHaveValue('2');
+    expect(field()).toHaveValue('2.00');
     await userEvent.clear(field());
     await userEvent.type(field(), '2.06');
-    expect(field()).toHaveValue('2.1');
+    expect(field()).toHaveValue('2.10');
     expect(screen.getByTestId('kept')).toHaveTextContent('2.1');
   });
 
@@ -93,7 +93,7 @@ describe('DecimalInput — Execution typed without the point (user rule 2026-11-
     await userEvent.type(field(), '220');
     expect(field()).toHaveValue('220');
     await userEvent.tab();
-    expect(field()).toHaveValue('2.2');
+    expect(field()).toHaveValue('2.20');
   });
 
   it('still takes the point the old way: 2.20 and a single digit 3', async () => {

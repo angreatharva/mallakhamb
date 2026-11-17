@@ -341,6 +341,21 @@ function createCoachRoutes(container) {
     coachController.verifyTeamPaymentAndSubmit
   );
 
+  /**
+   * @route   POST /api/coaches/payments/resubmit
+   * @desc    Submit a team the Super Admin reopened, when every player is
+   *          already paid for (nothing new to pay; Razorpay has no ₹0 order)
+   * @access  Authenticated coaches
+   */
+  router.post(
+    '/payments/resubmit',
+    authMiddleware,
+    coachAuth,
+    validateCompetitionContext,
+    requireUnlockedCompetition(),
+    coachController.resubmitPaidTeam
+  );
+
   /*
    * Discount code.
    *

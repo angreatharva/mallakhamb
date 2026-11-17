@@ -546,8 +546,8 @@ async function main(extraArgv = []) {
     && (!args.type || t.slug === args.type)
     && (args.stage !== 'one' || t.slug === 'competition_1')
     && (args.stage !== 'finals' || t.slug !== 'competition_1'));
-  // Every competition's panels are per age group (Competition II too since
-  // 2026-11-14; scripts/lib/panel-plan#panelsForType). Types run in order, so
+  // Competition I and III panels are per age group, Competition II one All
+  // ages per gender (scripts/lib/panel-plan#panelsForType). Types run in order, so
   // every Competition I sheet is locked — which is what fills the finals —
   // before a final is judged.
   const panelsOf = (slug) => panelsForType(meetPlan, slug).filter((p) =>

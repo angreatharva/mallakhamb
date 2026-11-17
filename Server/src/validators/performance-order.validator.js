@@ -62,10 +62,14 @@ const setTeamOrder = () => [
   ...objectIdArray('teamIds'),
 ];
 
-/** PUT /lots/players */
+/**
+ * PUT /lots/players — inside one team (Competition I), or with no `teamId` the
+ * whole running order of a final (Competition II / III, player-wise). The
+ * service decides which applies from the category.
+ */
 const setPlayerOrder = () => [
   ...category('body'),
-  body('teamId').trim().notEmpty().withMessage('teamId is required')
+  body('teamId').optional({ values: 'falsy' }).trim()
     .custom((value) => {
       if (!mongoose.Types.ObjectId.isValid(value)) {
         throw new Error('Invalid teamId format');

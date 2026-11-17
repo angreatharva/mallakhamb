@@ -143,6 +143,17 @@ const competitionSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  /*
+   * Competition II is again ONE "All ages" final per gender (owner,
+   * 2026-11-17). Set by migration 018 only on meets where a per-age-group
+   * Competition II final (the 14–17 Nov rule) had already started: those keep
+   * one final per age group for good. `allAgesFinals` above is now history —
+   * All ages is the default and nothing reads it.
+   */
+  perAgeGroupFinals: {
+    type: Boolean,
+    default: false
+  },
   // Ages are measured on 31 December of the year the meet is held — always
   // derived from `startDate` (cop-rules#ageCutoffYear). The old per-meet
   // `ageCutoffYear` override is gone (migration 015 removed saved values).
@@ -212,6 +223,21 @@ const competitionSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    /*
+     * The players whose entry fee is paid (owner, 2026-11-17). Stamped by every
+     * payment that submits the team (Razorpay verify, the 100% discount code)
+     * and by the Super Admin's add-a-player. When the Super Admin reopens a
+     * paid team (Fix → Entries → "Submitted: No") everyone then in the squad
+     * is written here too (so teams paid before this field existed are
+     * covered), and when the coach submits again only the players NOT listed
+     * here are charged (payment.config#calculateTeamPaymentAmount).
+     */
+    paidEntries: [{
+      _id: false,
+      player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
+      amount: { type: Number, default: 0 },
+      paidAt: { type: Date }
+    }],
     submittedAt: {
       type: Date
     },
