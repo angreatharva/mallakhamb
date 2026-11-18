@@ -19,8 +19,8 @@
   // The two targets (COMMON.md C1.7). Production stays on Render until the
   // cutover (COMMON.md C7, step 55); then point these at https://<API_HOST> and
   // https://<APP_HOST> and paste again.
-  const API_URL = 'https://mallakhamb-server.onrender.com/api/health/ready';
-  const WEB_URL = 'https://mallakhamb-web.onrender.com/';
+  const API_URL = 'https://api.mallakhambcompetition.com/api/health/ready';
+  const WEB_URL = 'https://www.mallakhambcompetition.com/';
 
   // Public probes nearest the venues: Mumbai (16) and Hyderabad (101).
   // Looked up by name below so a renumbering on Grafana's side can't break it.

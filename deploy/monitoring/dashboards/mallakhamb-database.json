@@ -46,36 +46,36 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (Render free plan)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "0.1",
+        "query": "1",
         "hide": 2,
         "current": {
-          "text": "0.1",
-          "value": "0.1"
+          "text": "1",
+          "value": "1"
         },
         "options": [
           {
-            "text": "0.1",
-            "value": "0.1",
+            "text": "1",
+            "value": "1",
             "selected": true
           }
         ]
       },
       {
         "name": "mem_limit",
-        "label": "Memory limit, bytes (Render free plan, 512 MiB)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "536870912",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "536870912",
-          "value": "536870912"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "536870912",
-            "value": "536870912",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -100,18 +100,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas M0 connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -190,7 +190,7 @@
           "refId": "A"
         }
       ],
-      "description": "minPoolSize is per replica-set member: DB_POOL_MIN=10 × 3 Atlas members = 30 at idle.",
+      "description": "minPoolSize is per replica-set member the driver reads from: DB_POOL_MIN=10 × 2 (app-01, app-02; db-03 is hidden) = 20 at idle.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -299,7 +299,7 @@
     {
       "id": 3,
       "type": "gauge",
-      "title": "Atlas connections %",
+      "title": "MongoDB connections %",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -321,7 +321,7 @@
           "refId": "A"
         }
       ],
-      "description": "Connections this API holds open as a share of the Atlas M0 cap (500). Other clients (scripts, Compass) count against the same cap.",
+      "description": "Connections this API holds open as a share of 300, the per-member line where the alert \"MongoDB connections high\" fires (the self-hosted replica set; mongod itself allows far more). Backups, the off-site copy and the metrics collector add a few more on the server side.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",

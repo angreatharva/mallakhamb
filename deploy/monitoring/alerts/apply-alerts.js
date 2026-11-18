@@ -23,7 +23,7 @@
  * which need Alloy on the servers; on Render they would fire at once.
  */
 (async () => {
-  const PLATFORM = 'render'; // render | oci | oci-single | aws
+  const PLATFORM = 'oci'; // render | oci | oci-single | aws — 'oci' since the 2026-11-17 domain go-live
   const OWNER_EMAIL = 'angreatharva08@gmail.com';
   const FOLDER_UID = 'mallakhamb';
   const GROUP = 'mallakhamb-api';

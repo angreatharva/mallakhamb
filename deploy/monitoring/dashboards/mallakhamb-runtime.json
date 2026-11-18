@@ -1,7 +1,7 @@
 {
   "uid": "mallakhamb-runtime",
   "title": "Mallakhamb Runtime (Node.js)",
-  "description": "CPU, memory, event loop and GC against the Render free plan (0.1 CPU, 512 MB). Swap for jvm_* panels after the Spring Boot port. PLAN.md §3.2",
+  "description": "CPU, memory, event loop and GC of the API process (one core, 1.5 GiB budget; OCI A1, 1 OCPU / 4 GB per VM), then the VMs themselves (Host row). Swap for jvm_* panels after the Spring Boot port. PLAN.md §3.2",
   "tags": [
     "mallakhamb",
     "runtime"
@@ -46,36 +46,36 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (Render free plan)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "0.1",
+        "query": "1",
         "hide": 2,
         "current": {
-          "text": "0.1",
-          "value": "0.1"
+          "text": "1",
+          "value": "1"
         },
         "options": [
           {
-            "text": "0.1",
-            "value": "0.1",
+            "text": "1",
+            "value": "1",
             "selected": true
           }
         ]
       },
       {
         "name": "mem_limit",
-        "label": "Memory limit, bytes (Render free plan, 512 MiB)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "536870912",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "536870912",
-          "value": "536870912"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "536870912",
-            "value": "536870912",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -100,18 +100,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas M0 connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -248,7 +248,7 @@
           "refId": "A"
         }
       ],
-      "description": "Process CPU as a share of the plan allowance (cpu_limit, 0.1 core on Render free). Alert \"CPU saturated\" fires at 80 % for 15 m.",
+      "description": "Process CPU as a share of one core (cpu_limit = 1): Node runs one event loop, so 100 % here is saturated whatever the VM has. Alert \"CPU saturated\" fires at 80 % for 15 m.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -320,7 +320,7 @@
           "refId": "A"
         }
       ],
-      "description": "Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert \"Memory near limit\" fires at ~81 % (435 MB) for 10 m.",
+      "description": "Resident memory as a share of the API process budget (mem_limit, 1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -459,7 +459,7 @@
           "refId": "A"
         }
       ],
-      "description": "Process CPU as a share of the plan allowance (cpu_limit, 0.1 core on Render free). Alert \"CPU saturated\" fires at 80 % for 15 m. Dashed lines: 70 / 80 / 90 %.",
+      "description": "Process CPU as a share of one core (cpu_limit = 1): Node runs one event loop, so 100 % here is saturated whatever the VM has. Alert \"CPU saturated\" fires at 80 % for 15 m. Dashed lines: 70 / 80 / 90 %.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -541,7 +541,7 @@
           "refId": "A"
         }
       ],
-      "description": "Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert \"Memory near limit\" fires at ~81 % (435 MB) for 10 m. Dashed lines: 70 / 80 / 90 %.",
+      "description": "Resident memory as a share of the API process budget (mem_limit, 1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m. Dashed lines: 70 / 80 / 90 %.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -907,6 +907,844 @@
           "mode": "multi",
           "sort": "desc"
         }
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Host: the VMs (Alloy; active = mallakhamb-host, standby = mallakhamb-host-standby)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "Release",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "mallakhamb_release_info{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "description": "Which commit each VM holds, and its role. Active and standby should show the same sha (alert \"Standby behind the active\").",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "scrape_job": true,
+              "Value": true,
+              "platform": true
+            },
+            "renameByName": {
+              "Value": "Value"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Last backup age (active)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "time() - max by (instance) (mallakhamb_backup_last_success_timestamp_seconds{scrape_job=\"mallakhamb-host\"})",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Time since mallakhamb-backup last succeeded on the active, the only VM that backs up (alert \"Backup stale\" above 26 h). The standby is left out: it keeps the age it was cloned with, which would read red for ever.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 93600
+              },
+              {
+                "color": "red",
+                "value": 172800
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Host CPU busy %",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",mode=\"idle\"}[5m])))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "All cores, every process on the VM. Dashed lines: 70 / 80 / 90 %.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "softMax": 100,
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Host memory used %",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"} / node_memory_MemTotal_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"})",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "1 − MemAvailable / MemTotal. Alert \"Host memory high\" fires above 85 % for 10 m on the active. Dashed lines: 70 / 80 / 90 %.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "softMax": 100,
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Root disk used %",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (1 - node_filesystem_avail_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",mountpoint=\"/\"} / node_filesystem_size_bytes{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",mountpoint=\"/\"})",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Alerts \"Disk filling\" at 80 % (warning) and 90 % (critical).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "softMax": 100,
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Inodes used %",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (1 - node_filesystem_files_free{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",mountpoint=\"/\"} / node_filesystem_files{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",mountpoint=\"/\"})",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Alert \"Inodes running out\" below 10 % free.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "softMax": 100,
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "orange",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Load (1m)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "node_load1{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Runnable + waiting tasks. Above the core count for long = the VM is the bottleneck.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Network",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 51
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (instance) (rate(node_network_receive_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",device!=\"lo\"}[5m]))",
+          "legendFormat": "{{instance}} in",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (instance) (rate(node_network_transmit_bytes_total{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\",device!=\"lo\"}[5m]))",
+          "legendFormat": "{{instance}} out",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "OOM kills (1h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (instance) (increase(node_vmstat_oom_kill{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}[1h]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "The kernel killed a process for memory. Alert \"Out-of-memory kill\" pages on any.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Nightly e2e: last pass",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 59
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "time() - mallakhamb_e2e_last_success_timestamp_seconds{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"} > 0",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Time since the nightly e2e run (setup:api --drop on a throw-away _e2e database, then verifySeed) last passed on each VM. Meet days are skipped on purpose (NO_E2E or the meet backup timer).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 93600
+              },
+              {
+                "color": "red",
+                "value": 172800
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Nightly e2e: last result",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 59
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "mallakhamb_e2e_last_exit_code{scrape_job=~\"mallakhamb-host|mallakhamb-host-standby\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Exit code of the last nightly run that was not skipped. FAIL → journalctl -u mallakhamb-e2e on that VM. Alert \"E2E failed\".",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "PASS",
+                  "color": "green"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 1,
+                "to": 255,
+                "result": {
+                  "text": "FAIL",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto",
+        "justifyMode": "center"
       }
     }
   ]

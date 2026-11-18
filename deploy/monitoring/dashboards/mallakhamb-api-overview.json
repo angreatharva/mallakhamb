@@ -46,36 +46,36 @@
       },
       {
         "name": "cpu_limit",
-        "label": "CPU limit, cores (Render free plan)",
+        "label": "CPU limit, cores (one Node event loop; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "0.1",
+        "query": "1",
         "hide": 2,
         "current": {
-          "text": "0.1",
-          "value": "0.1"
+          "text": "1",
+          "value": "1"
         },
         "options": [
           {
-            "text": "0.1",
-            "value": "0.1",
+            "text": "1",
+            "value": "1",
             "selected": true
           }
         ]
       },
       {
         "name": "mem_limit",
-        "label": "Memory limit, bytes (Render free plan, 512 MiB)",
+        "label": "Memory budget for the API process, bytes (1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM)",
         "type": "constant",
-        "query": "536870912",
+        "query": "1610612736",
         "hide": 2,
         "current": {
-          "text": "536870912",
-          "value": "536870912"
+          "text": "1610612736",
+          "value": "1610612736"
         },
         "options": [
           {
-            "text": "536870912",
-            "value": "536870912",
+            "text": "1610612736",
+            "value": "1610612736",
             "selected": true
           }
         ]
@@ -100,18 +100,18 @@
       },
       {
         "name": "atlas_conn_limit",
-        "label": "Atlas M0 connection cap",
+        "label": "MongoDB connections per member: the alert line",
         "type": "constant",
-        "query": "500",
+        "query": "300",
         "hide": 2,
         "current": {
-          "text": "500",
-          "value": "500"
+          "text": "300",
+          "value": "300"
         },
         "options": [
           {
-            "text": "500",
-            "value": "500",
+            "text": "300",
+            "value": "300",
             "selected": true
           }
         ]
@@ -473,7 +473,7 @@
           "refId": "A"
         }
       ],
-      "description": "Every deploy is one restart. Several without a deploy = crash or out-of-memory (512 MB).",
+      "description": "Every deploy is one restart (mallakhamb-deploy). Several without a deploy = crash or out-of-memory kill; see Runtime → Host → OOM kills.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -1112,7 +1112,7 @@
           "refId": "A"
         }
       ],
-      "description": "Process CPU as a share of the plan allowance (cpu_limit, 0.1 core on Render free). Alert \"CPU saturated\" fires at 80 % for 15 m.",
+      "description": "Process CPU as a share of one core (cpu_limit = 1): Node runs one event loop, so 100 % here is saturated whatever the VM has. Alert \"CPU saturated\" fires at 80 % for 15 m.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -1184,7 +1184,7 @@
           "refId": "A"
         }
       ],
-      "description": "Resident memory as a share of the plan limit (mem_limit, 512 MiB on Render free). Render restarts the process at 100 %. Alert \"Memory near limit\" fires at ~81 % (435 MB) for 10 m.",
+      "description": "Resident memory as a share of the API process budget (mem_limit, 1.5 GiB; OCI A1, 1 OCPU / 4 GB per VM). The rest of the VM is MongoDB tools, Caddy and the page cache; see the Host row. Alert \"Memory near limit\" fires at 85 % for 10 m.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -1306,7 +1306,7 @@
     {
       "id": 18,
       "type": "gauge",
-      "title": "Atlas connections %",
+      "title": "MongoDB connections %",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1328,7 +1328,7 @@
           "refId": "A"
         }
       ],
-      "description": "Connections this API holds open as a share of the Atlas M0 cap (500). Other clients (scripts, Compass) count against the same cap.",
+      "description": "Connections this API holds open as a share of 300, the per-member line where the alert \"MongoDB connections high\" fires (the self-hosted replica set; mongod itself allows far more). Backups, the off-site copy and the metrics collector add a few more on the server side.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -1761,7 +1761,7 @@
           "refId": "A"
         }
       ],
-      "description": "Full request time as a tablet in India would see it, with DNS, TLS and the Render proxy included.",
+      "description": "Full request time as a tablet in India would see it, with DNS, TLS and the Caddy proxy included.",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
