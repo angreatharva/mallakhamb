@@ -9,7 +9,7 @@
 #   2. on the STANDBY only, watches the active and moves the IP to itself (then promotes) when ALL
 #      of these hold for FAIL_TICKS ticks in a row (6 × 20 s ≈ 2 min):
 #        a. the active's site does not answer /api/health/ready over the VCN;
-#        b. the active MACHINE is gone, not just a process: OCI says it is not RUNNING, or BOTH this
+#        b. the active MACHINE is gone, not just a process: OCI says it is not RUNNING (or STARTING), or BOTH this
 #           VM's mongod and db-03's see its replica-set member as unreachable (two vantage points,
 #           the same majority MongoDB itself trusts);
 #        c. this VM's mongod sees a PRIMARY (otherwise taking over cannot serve anything);
@@ -96,7 +96,10 @@ ROLE=active; [ -f /etc/mallakhamb/STANDBY ] && ROLE=standby
 # Cheap first, every tick: the standby asks the active's site over the VCN (no OCI call).
 CODE=""
 if [ "$ROLE" = standby ]; then
-  AH="$(awk 'NR==1{print $1; exit}' $(ls /etc/caddy/sites/*api*.caddy /etc/caddy/sites-standby/*api*.caddy 2>/dev/null | head -1) 2>/dev/null)"
+  # The site block's first name. Since the domain went live (2026-11-17) the line lists several —
+  # "api-…sslip.io, api.mallakhambcompetition.com {" — so strip the separating comma: with it the
+  # check asked curl for "host,:443" and reported site=000 on every tick.
+  AH="$(awk 'NR==1{sub(/,$/, "", $1); print $1; exit}' $(ls /etc/caddy/sites/*api*.caddy /etc/caddy/sites-standby/*api*.caddy 2>/dev/null | head -1) 2>/dev/null)"
   OPRIV="$(getent hosts "app-$OTHER.db" | awk '{print $1}')"
   CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 --resolve "$AH:443:$OPRIV" "https://$AH/api/health/ready" 2>/dev/null)"
 fi
@@ -201,7 +204,10 @@ OTHER_STATE="$(oci_ compute instance list -c "$C" --display-name "mallakhamb-pro
 read -r H_LOCAL PRIM_LOCAL <<<"$(view localhost)"
 read -r H_DB03 _ <<<"$(view db-03.db)"
 GONE=0
-[ "$OTHER_STATE" != RUNNING ] && [ "$OTHER_STATE" != UNKNOWN ] && GONE=1
+# STARTING is a machine coming up, not one gone: the auto-start schedules (:07, :37) send START to
+# the RUNNING active and OCI briefly reports STARTING (seen 2026-11-17/18: a "gone" tick at every
+# :37). A dead machine is still caught by both database views below.
+case "$OTHER_STATE" in RUNNING|UNKNOWN|STARTING) ;; *) GONE=1 ;; esac
 [ "$H_LOCAL" = 0 ] && [ "$H_DB03" = 0 ] && GONE=1
 WHY="site=${CODE:-none} oci=$OTHER_STATE seen-by-me=$H_LOCAL seen-by-db03=$H_DB03 primary=$PRIM_LOCAL"
 if [ "$GONE" = 0 ]; then
