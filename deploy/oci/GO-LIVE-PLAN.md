@@ -111,7 +111,7 @@ sign-in.
 | 1 | ~~Renew the domain~~ **DONE 2026-11-14** (expires 2027-11-14). Still to check: auto-renew, lock, 2FA (readiness 7.2–7.3) | owner | none |
 | 2 | ~~Export every DNS record and take a cPanel backup~~ **DONE**: public records captured before the switch; the owner reports the PHP site backup taken (7.6–7.7) | owner + me | none |
 | 3 | **Decide the data** (question 1 below) | owner | none |
-| 4 | Add Razorpay live keys and the real discount code to the Vault env. The Razorpay live webhook points at `https://api.mallakhambcompetition.com/api/webhooks/razorpay`, and Razorpay's website URL becomes the new domain (approval can take days, so **start early**) | owner | none |
+| 4 | **DONE 2026-11-18 except the ₹1 test and Razorpay's website-URL approval:** Vault `api-env` v12 has the `rzp_live_` key, its secret and the webhook secret (`DISCOUNT_CODE_ENABLED='false'`); app-01 restarted on it; the live webhook (`payment.captured`, `payment.failed`) → `https://api.mallakhambcompetition.com/api/webhooks/razorpay` refuses unsigned calls (403). Original step: Add Razorpay live keys and the real discount code to the Vault env. The Razorpay live webhook points at `https://api.mallakhambcompetition.com/api/webhooks/razorpay`, and Razorpay's website URL becomes the new domain (approval can take days, so **start early**) | owner | none |
 | 5 | ~~DNS, Caddy production hosts, certificates, `web.env`, CSP~~ **DONE 2026-11-17**, see "Domain switch" below | me | ~1 h of certificate errors on the old site's name (see below) |
 | 6 | Data move (if step 3 says so): announce a 30-min write freeze → final dump from Atlas → restore into `mallakhambcompetition_prod` → counts match | me | ~30 min of writes |
 | 7 | Render → fallback mode (§4) | me | none |
@@ -155,7 +155,7 @@ on the domain is used. So DNS moved to GoDaddy's free nameservers and BigRock is
   VM, 3 h) and run the printed `ssh` line from a computer that holds the private key.
 - **Backups of the old files:** `/root/caddy-backup-202611171617` and `/root/web.env.bak-*` on
   app-01, `/root/caddy-backup-202611171637` on app-02.
-- **Payments are still Razorpay TEST keys.** Step 4 is still open.
+- **Payments:** Razorpay TEST keys until 2026-11-18, LIVE since (step 4).
 
 ## 4. Render as the backup
 
