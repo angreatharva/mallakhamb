@@ -198,8 +198,11 @@ the whole region down". Expect ~15–20 min in total, most of it Render waking a
 5. **Render → each service → Custom Domains → Verify.** Render then issues the certificates.
 6. Check `https://www.mallakhambcompetition.com` and `https://api.mallakhambcompetition.com/api/health`,
    then announce.
-7. **Payments:** Render has its own Razorpay keys and no webhook. Only take payments there if the
-   owner agrees; otherwise use the discount code at the desk.
+7. **Payments work on Render too:** since 2026-11-18 Render has the same live key (`rzp_live_U1fx…`),
+   key secret and webhook secret as OCI, and the webhook URL is the domain, so Razorpay's webhooks
+   follow the DNS switch. After a failover, copy Render's payments back to OCI with the other writes.
+   **Whenever the Razorpay key is regenerated, update BOTH Vault and Render** (Razorpay keeps the
+   old key alive for 24 h only).
 
 **Switching back:** copy the writes made on Render back to OCI by hand (export from the Atlas copy,
 import on OCI), restore the three GoDaddy records to `137.23.63.84`, put Render's `MONGODB_URI` back,
