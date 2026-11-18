@@ -10,6 +10,8 @@
 
 ## Platform
 
+**Since 2026-11-18 `PLATFORM` is `'oci'` and live** (50 rules; the staging group is gone; the scrape job `mallakhamb-api` is the OCI API at `api.mallakhambcompetition.com`). The text below is how it got there.
+
 `PLATFORM` at the top of `apply-alerts.js` stays `'render'` until the cutover (COMMON.md C7, step 55). Then set it to `'oci'` (or the platform moved to) before pasting: that changes the CPU / memory thresholds and wording, and adds the host rules, which read Alloy's `scrape_job="mallakhamb-host"` and would fire at once on Render. See PLAN.md "Move to OCI".
 
 ## Change a rule

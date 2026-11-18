@@ -81,7 +81,17 @@ sign-in.
    - new site files in `/etc/caddy/sites/` and `sites-standby/`
    - `sudo -u caddy caddy validate` (the root-owned log trap)
    - reload
-3. **Grafana:**
+3. **Grafana — DONE 2026-11-18** (only the `mallakhamb-api-render` job is left; it needs the
+   Render `METRICS_TOKEN`, pasted by the owner). What happened: a scrape job can't be renamed and
+   its token must be re-typed on every save, so the Render job `mallakhamb-api` was deleted and
+   re-created for OCI as `mallakhamb-api` → `https://api.mallakhambcompetition.com/metrics`
+   (owner pasted the token; up = 1), then `mallakhamb-api-staging` was deleted. Commit `6caabba`
+   was applied from the signed-in Grafana tab: the six production dashboards imported by uid
+   (`--platform=oci`), the four "(OCI staging)" copies deleted (in "Recently deleted"),
+   `apply-alerts.js` with `PLATFORM='oci'` (50 rules, staging group deleted, none firing),
+   `apply-checks.js` (api-ready 8476 and web-home 8477 now probe the domain). Every gauge returned
+   OCI data. No alerts on the Render job: as a sleeping fallback it would only raise false alarms.
+   The original plan:
    - Scrape job `mallakhamb-api-staging` → `mallakhamb-api`. Render's job becomes
      `mallakhamb-api-render`, and its alerts move to a small "fallback" group.
    - Rebuild the dashboards with `--platform=oci` (no `--staging`), then delete the four
@@ -171,7 +181,7 @@ Render to serve the current data during an OCI outage:
 | **14 Nov** | ~~Domain renewed (owner)~~ done |
 | 16 Nov | Budget alert at SGD 0.01; PAYG upgrade (owner); usage checked daily for 7 days |
 | 20 Nov | Labels renamed in the repo (§2.1); Razorpay website URL change requested |
-| 25 Nov | ~~DNS + Caddy production hosts live next to sslip (§3 step 5)~~ done 17 Nov; Grafana relabelled |
+| 25 Nov | ~~DNS + Caddy production hosts live next to sslip (§3 step 5)~~ done 17 Nov; ~~Grafana relabelled~~ done 18 Nov |
 | 28 Nov | Real-device tests and judge panel on the real domain; Render fallback rehearsed |
 | **≤ 5 Dec** | Data move + live keys + GO; freeze starts |
 | 12–13, 19–20 Dec | Meets. Meet-mode backups on |
