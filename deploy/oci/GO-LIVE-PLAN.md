@@ -81,8 +81,8 @@ sign-in.
    - new site files in `/etc/caddy/sites/` and `sites-standby/`
    - `sudo -u caddy caddy validate` (the root-owned log trap)
    - reload
-3. **Grafana — DONE 2026-11-18** (only the `mallakhamb-api-render` job is left; it needs the
-   Render `METRICS_TOKEN`, pasted by the owner). What happened: a scrape job can't be renamed and
+3. **Grafana — DONE 2026-11-18**, including `mallakhamb-api-render` → `https://mallakhamb-server.onrender.com/metrics`
+   (owner pasted Render's `METRICS_TOKEN`; up = 1). What happened: a scrape job can't be renamed and
    its token must be re-typed on every save, so the Render job `mallakhamb-api` was deleted and
    re-created for OCI as `mallakhamb-api` → `https://api.mallakhambcompetition.com/metrics`
    (owner pasted the token; up = 1), then `mallakhamb-api-staging` was deleted. Commit `6caabba`
