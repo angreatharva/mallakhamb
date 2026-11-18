@@ -140,14 +140,17 @@ services:
       - key: RESEND_FROM_EMAIL
         sync: false
       # Frontend URLs for CORS (where requests come from)
+      # Render is the FALLBACK since 2026-11-17 (deploy/oci/GO-LIVE-PLAN.md §4): if OCI is down,
+      # www/api.mallakhambcompetition.com are pointed here at GoDaddy, so the API must accept the
+      # domain and its mails must link to it. The onrender web address keeps working too.
       - key: CORS_ORIGINS
-        value: https://mallakhamb-web.onrender.com
+        value: https://www.mallakhambcompetition.com,https://mallakhambcompetition.com,https://mallakhamb-web.onrender.com
       - key: CLIENT_URL
-        value: https://mallakhamb-web.onrender.com
+        value: https://www.mallakhambcompetition.com
       - key: FRONTEND_URL
-        value: https://mallakhamb-web.onrender.com
+        value: https://www.mallakhambcompetition.com
       - key: PRODUCTION_URL
-        value: https://mallakhamb-web.onrender.com
+        value: https://www.mallakhambcompetition.com
 
   # Frontend Static Site
   - type: web

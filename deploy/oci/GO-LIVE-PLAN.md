@@ -159,20 +159,51 @@ on the domain is used. So DNS moved to GoDaddy's free nameservers and BigRock is
 
 ## 4. Render as the backup
 
-Render today reads Atlas `BRMC` and never connects to OCI's database (which is VCN-only). For
-Render to serve the current data during an OCI outage:
+**Prepared 2026-11-18.** Render (`mallakhamb-server` API + `mallakhamb-web` site) is a warm copy
+of the same code (it deploys from master) that can take over the public names if OCI is down.
 
-- Point the hourly off-site copy (`mallakhamb-offsite-copy`) at the cluster Render uses, and move
-  Render's `MONGODB_URI` to that copy. Then Render is at most 1 hour behind.
-- Keep Render on master (same code), with Razorpay live keys but **no webhook** (the webhook stays
-  on OCI).
-- **When to use it:** only if OCI is down for more than 15 minutes during a meet. The automatic
-  failover between app-01 and app-02 covers a single lost server in ~4 min, so this is only for
-  "both VMs / the whole region down".
-- **How:** wake Render (open the URL a few minutes before) → switch DNS `www`/`api` to Render
-  at **GoDaddy** (CNAME; delete the A record first; the owner enters an SMS code) → announce.
-  Render must first have `www`/`api` added as custom domains, or it won't serve them. Afterwards, writes made on Render are copied back to OCI by hand
-  before switching back. Rehearse once before 5 Dec.
+What is ready:
+- **Custom domains on Render** (2 of 2 included): `www.mallakhambcompetition.com` and the bare
+  name on `mallakhamb-web`; `api.mallakhambcompetition.com` on `mallakhamb-server`. They show
+  *unverified* until DNS points at Render; that is expected.
+- **Render API** (`render.yaml`): `CORS_ORIGINS` = www, bare name, onrender web; `CLIENT_URL` /
+  `FRONTEND_URL` / `PRODUCTION_URL` = www (mail links).
+- **Render web**: `VITE_API_URL` = `https://api.mallakhambcompetition.com/api` and the same
+  `VITE_STORAGE_KEY` as OCI, so one build works before and after a switch and people stay signed
+  in. In normal times the onrender web address talks to OCI (OCI `CORS_ORIGINS` includes it, Vault
+  v11).
+- **Not ready on purpose — the database.** Render keeps its own Atlas database in normal times.
+  Pointing it at the hourly off-site copy permanently would make the copy's check fail on Render's
+  own writes, and the next hourly copy would overwrite them. The switch is a failover step.
+- **Monitoring:** Grafana job `mallakhamb-api-render` (no alerts; a sleeping fallback would only
+  raise false alarms).
+
+### Failover runbook — only if OCI is down > 15 min during a meet
+
+The automatic app-01 ↔ app-02 failover covers one lost server in ~4 min; this is for "both VMs /
+the whole region down". Expect ~15–20 min in total, most of it Render waking and certificates.
+
+1. **Wake Render:** open `https://mallakhamb-server.onrender.com/api/health` (free plan sleeps).
+2. **Stop the hourly copy** if any OCI VM still runs: `sudo systemctl stop
+   mallakhamb-offsite-copy.timer` on the active. Otherwise it overwrites Render's writes later.
+3. **Point Render at the latest copy.** In Cloud Shell this prints the value to paste (it never
+   leaves Cloud Shell):
+   ```bash
+   oci secrets secret-bundle get-secret-bundle-by-name --secret-name mallakhamb-prod-bom-secret-mongo-offsite-uri --vault-id "$(oci kms management vault list -c "$(oci iam compartment list --compartment-id "$OCI_TENANCY" --name mallakhamb-prod --query 'data[0].id' --raw-output)" --query 'data[0].id' --raw-output)" --query 'data."secret-bundle-content".content' --raw-output | base64 -d | sed -n "s/^OFFSITE_URI='\(mongodb[^/]*\/\/[^/]*\/\)[^?]*\(.*\)'$/mallakhambcompetition_prod_offsite/p"
+   ```
+   Render → `mallakhamb-server` → Environment → `MONGODB_URI` → paste → Save (it redeploys).
+4. **DNS at GoDaddy** (one save, one SMS code): delete the `www` and `api` A records, add
+   `www` CNAME `mallakhamb-web.onrender.com` and `api` CNAME `mallakhamb-server.onrender.com`;
+   change `@` A to `216.24.57.1`. TTL 600.
+5. **Render → each service → Custom Domains → Verify.** Render then issues the certificates.
+6. Check `https://www.mallakhambcompetition.com` and `https://api.mallakhambcompetition.com/api/health`,
+   then announce.
+7. **Payments:** Render has its own Razorpay keys and no webhook. Only take payments there if the
+   owner agrees; otherwise use the discount code at the desk.
+
+**Switching back:** copy the writes made on Render back to OCI by hand (export from the Atlas copy,
+import on OCI), restore the three GoDaddy records to `137.23.63.84`, put Render's `MONGODB_URI` back,
+start `mallakhamb-offsite-copy.timer`. Rehearse once before 5 Dec (not on a meet day).
 
 ## 5. Order and dates
 
