@@ -9,7 +9,7 @@ import { loadRazorpayScript, RAZORPAY_THEME } from '@/utils/payment/razorpay';
 import { Button, Heading, Input, Notice, Panel, Tag as UiTag, TextLink } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 import {
-  getCompetitionPlayerFeeRupees, calculateTeamPaymentAmount, calculatePlayerFee, unpaidPlayers, isPlayerPaid,
+  getCompetitionPlayerFeeRupees, calculateTeamPaymentAmount, calculatePlayerFee, unpaidPlayers, isPlayerPaid, paidButRemoved,
   resolveFeeWindow, formatFeeWindowDate, FEE_PHASE,
 } from '@/utils/scoring/competitionFee';
 
@@ -293,6 +293,11 @@ const CoachPayment = () => {
   const playerCount = unpaidPlayers(team?.players || [], paidEntries).length;
   const lateFeeTotal = feeWindow.lateFeePerPlayer * playerCount;
   const nothingNewToPay = reopened && playerCount === 0 && (team?.players?.length || 0) > 0;
+  // Paid players the coach removed after the reopen: their fee is not refunded.
+  const removedPaid = paidButRemoved(team?.players || [], paidEntries);
+  const removedNote = removedPaid.count > 0
+    ? ` ${removedPaid.count} player${removedPaid.count === 1 ? '' : 's'} removed after payment: entry fees are non-refundable, so ₹${removedPaid.amount.toLocaleString()} is not refunded.`
+    : '';
 
   /** What the entry costs before any discount. */
   const calculateTotal = () => {
@@ -452,8 +457,8 @@ const CoachPayment = () => {
             {reopened && (
               <Notice tone="info" title="Team reopened by the admin" className="mb-5">
                 {nothingNewToPay
-                  ? 'Every player is already paid for. Submit the team again to lock it — nothing is charged.'
-                  : `Players already paid for are not charged again. You pay only for the ${playerCount} new player${playerCount === 1 ? '' : 's'}.`}
+                  ? `Every player is already paid for. Submit the team again to lock it — nothing is charged.${removedNote}`
+                  : `Players already paid for are not charged again. You pay only for the ${playerCount} new player${playerCount === 1 ? '' : 's'}.${removedNote}`}
               </Notice>
             )}
 
@@ -479,6 +484,18 @@ const CoachPayment = () => {
                 <div className="pay-sheet__row">
                   <span className="text-fg-muted">No players</span>
                   <span className="text-fg tabular-nums">₹0</span>
+                </div>
+              )}
+
+              {removedPaid.count > 0 && (
+                <div className="pay-sheet__row pay-sheet__row--rule" data-testid="removed-paid-row">
+                  <span className="text-fg">
+                    Removed after payment
+                    <span className="text-fg-muted type-caption ml-2">
+                      ({removedPaid.count} player{removedPaid.count === 1 ? '' : 's'} · Non-refundable entry fee)
+                    </span>
+                  </span>
+                  <span className="text-fg-muted tabular-nums">₹{removedPaid.amount.toLocaleString()} not refunded</span>
                 </div>
               )}
 

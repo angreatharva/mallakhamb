@@ -20,6 +20,7 @@ import {
   resolveFeeWindow,
   calculateTeamPaymentAmount,
   calculatePlayerFee,
+  paidButRemoved,
 } from './competitionFee';
 
 // Reaching across into the server package is deliberate. This is a monorepo and
@@ -145,5 +146,46 @@ describe('a reopened team pays only for players not paid yet (owner, 2026-11-17)
   it('no paidEntries: everyone pays, as before', () => {
     expect(calculateTeamPaymentAmount(squad, COMPETITION, day('2026-11-01')))
       .toBe(serverPayment.calculateTeamPaymentAmount(squad, COMPETITION, day('2026-11-01')));
+  });
+});
+
+describe('owner scenario 2026-11-18: 4 paid, reopen +1, reopen -2', () => {
+  // ₹100 a player, no apparatus add-ons, paid on time.
+  const FLAT = { ...COMPETITION, playerFee: 100, apparatusFees: {} };
+  const at = day('2026-11-01');
+  const entry = (id) => ({ player: id, apparatus: {} });
+  const both = (players, paid) => {
+    const client = calculateTeamPaymentAmount(players, FLAT, at, paid);
+    expect(serverPayment.calculateTeamPaymentAmount(players, FLAT, at, paid)).toBe(client);
+    return client;
+  };
+
+  const four = ['p1', 'p2', 'p3', 'p4'].map(entry);
+  const paidFour = four.map((e) => ({ player: e.player, amount: 100 }));
+  const five = [...four, entry('p5')];
+  const paidFive = [...paidFour, { player: 'p5', amount: 100 }];
+  const three = five.filter((e) => !['p2', 'p4'].includes(e.player));
+
+  it('1. a new team of 4 pays ₹400', () => {
+    expect(both(four, [])).toBe(400);
+  });
+
+  it('2. reopened, one player added: pays ₹100 for the new player only', () => {
+    expect(both(five, paidFour)).toBe(100);
+  });
+
+  it('3. reopened again, two removed: pays ₹0, and ₹200 is shown as non-refundable', () => {
+    expect(both(three, paidFive)).toBe(0);
+    expect(paidButRemoved(three, paidFive)).toEqual({ count: 2, amount: 200 });
+  });
+
+  it('a removed paid player added back is not charged again', () => {
+    expect(both([...three, entry('p2')], paidFive)).toBe(0);
+    expect(paidButRemoved([...three, entry('p2')], paidFive)).toEqual({ count: 1, amount: 100 });
+  });
+
+  it('nothing removed: no non-refundable row', () => {
+    expect(paidButRemoved(five, paidFive)).toEqual({ count: 0, amount: 0 });
+    expect(paidButRemoved(five, [])).toEqual({ count: 0, amount: 0 });
   });
 });

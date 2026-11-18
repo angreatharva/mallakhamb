@@ -196,6 +196,29 @@ export function isPlayerPaid(entry, paidEntries) {
 }
 
 /**
+ * Fees already paid for players who are no longer in the squad: entries in
+ * `paidEntries` whose player was removed after the team was reopened. Entry fees
+ * are non-refundable (owner, 2026-11-18), so these stay paid — the coach sees
+ * them as "Non-refundable entry fee", and the player is not charged again if
+ * they are added back.
+ *
+ * @param {Array} players - the current squad (registeredTeam.players)
+ * @param {Array} [paidEntries] - registeredTeam.paidEntries
+ * @returns {{ count: number, amount: number }}
+ */
+export function paidButRemoved(players, paidEntries) {
+  const inSquad = new Set((players || []).map((entry) => entryPlayerId(entry)).filter(Boolean));
+  const gone = (paidEntries || []).filter((e) => {
+    const id = entryPlayerId(e);
+    return id && !inSquad.has(id);
+  });
+  return {
+    count: gone.length,
+    amount: gone.reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
+  };
+}
+
+/**
  * Total for team submission, including the per-player late fee when `at` falls
  * after the competition's fee deadline.
  *
