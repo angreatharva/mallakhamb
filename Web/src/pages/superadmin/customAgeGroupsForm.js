@@ -19,7 +19,11 @@ import {
   isCustomAgeGroup,
 } from '@/utils/competition/ageEligibility';
 
-const COP_LABELS = ['under 10', 'under 12', 'under 14', 'under 16', 'under 18', 'above 16', 'above 18'];
+/** The COP bracket names each gender runs (Boys have no Under 16; Girls have no Under 18). */
+const COP_LABELS_BY_GENDER = {
+  Male: ['under 10', 'under 12', 'under 14', 'under 18', 'above 18'],
+  Female: ['under 10', 'under 12', 'under 14', 'under 16', 'above 16'],
+};
 
 let nextUid = 0;
 /** A blank row for "Add custom age group". */
@@ -66,7 +70,10 @@ export function customAgeGroupsError(rows) {
     if (label.length > CUSTOM_AGE_GROUP_LABEL_MAX) return `${label.slice(0, 20)}…: at most ${CUSTOM_AGE_GROUP_LABEL_MAX} characters`;
     if (/[<>]/.test(label)) return `${label}: < and > are not allowed`;
     const lower = label.toLowerCase();
-    if (COP_LABELS.includes(lower)) return `"${label}" is already a COP age group — tick it above instead`;
+    const clashGender = ['Male', 'Female'].find((g) => row[g] && COP_LABELS_BY_GENDER[g].includes(lower));
+    if (clashGender) {
+      return `"${label}" is already a COP age group for ${clashGender === 'Male' ? 'Boys' : 'Girls'} — tick it above instead`;
+    }
     if (seen.has(lower)) return `Two custom age groups are both called "${label}"`;
     seen.add(lower);
     const min = readAge(row.minAge);

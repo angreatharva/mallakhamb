@@ -14,6 +14,7 @@
 const { ValidationError } = require('../../errors');
 const {
   AGE_GROUPS,
+  AGE_GROUPS_BY_GENDER,
   GENDERS,
   MAX_CUSTOM_AGE_GROUPS,
   CUSTOM_AGE_GROUP_LABEL_MAX,
@@ -26,9 +27,6 @@ const {
 const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj || {}, key);
 const plain = (doc) => (doc && typeof doc.toObject === 'function' ? doc.toObject() : doc);
 const fail = (message, extra = {}) => new ValidationError(message, { field: 'customAgeGroups', ...extra });
-
-/** Display labels of the COP brackets, which a custom name may not reuse. */
-const COP_LABELS = new Set(AGE_GROUPS.map((g) => ageGroupLabel(g).toLowerCase()));
 
 /** '' / null / undefined → null; otherwise a whole age 0–99 or a 400. */
 function readAge(value, what, label) {
@@ -63,7 +61,6 @@ function normalizeCustomAgeGroups(list) {
     }
     if (/[<>]/.test(label)) throw fail(`${label}: < and > are not allowed in a name`);
     const lower = label.toLowerCase();
-    if (COP_LABELS.has(lower)) throw fail(`"${label}" is already a COP age group — tick it in the grid instead`);
     if (labels.has(lower)) throw fail(`Two custom age groups are both called "${label}"`);
     labels.add(lower);
 
@@ -171,6 +168,17 @@ function applyAgeGroups(body, existing = null) {
     groups.push({ gender, ageGroup });
   }
   body.ageGroups = groups;
+  // A custom name may not repeat a COP bracket that the gender runs: "Under 16"
+  // is fine for Boys (they have no Under 16) and a clash for Girls.
+  const names = new Map(custom.map((d) => [d.key, d.label.toLowerCase()]));
+  for (const g of groups) {
+    const label = names.get(g.ageGroup);
+    if (!label) continue;
+    const clash = AGE_GROUPS_BY_GENDER[g.gender].some((k) => ageGroupLabel(k).toLowerCase() === label);
+    if (clash) {
+      throw fail(`"${label}" is already a COP age group for ${g.gender === 'Male' ? 'Boys' : 'Girls'} — tick it in the grid instead`);
+    }
+  }
   return body;
 }
 

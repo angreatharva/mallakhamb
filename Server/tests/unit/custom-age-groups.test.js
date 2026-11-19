@@ -113,9 +113,19 @@ describe('writing a competition\'s age groups', () => {
     expect(body.ageGroups).toEqual([{ gender: 'Male', ageGroup: 'Under12' }, { gender: 'Female', ageGroup: 'CustomVeterans35' }]);
   });
 
+  test('a COP name is refused only for a gender that runs that bracket', () => {
+    const write = (label, key, gender) => applyAgeGroups({
+      customAgeGroups: [{ key, label, maxAge: 18 }],
+      ageGroups: [{ gender, ageGroup: key }],
+    });
+    expect(() => write('Under 16', 'CustomUnder16', 'Male')).not.toThrow();
+    expect(() => write('Under 16', 'CustomUnder16', 'Female')).toThrow('already a COP age group for Girls');
+    expect(() => write('Under 18', 'CustomUnder18', 'Female')).not.toThrow();
+    expect(() => write('Under 18', 'CustomUnder18', 'Male')).toThrow('already a COP age group for Boys');
+  });
+
   test.each([
     [[{ label: '' }], 'needs a name'],
-    [[{ label: 'Under 12' }], 'already a COP age group'],
     [[{ label: 'A' }, { label: 'a' }], 'both called'],
     [[{ label: 'A', minAge: 12, maxAge: 10 }], 'above the maximum'],
     [[{ label: 'A', minAge: 1.5 }], 'whole number'],

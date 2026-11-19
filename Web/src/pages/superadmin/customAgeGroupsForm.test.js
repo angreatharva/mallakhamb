@@ -62,11 +62,18 @@ describe('a new row', () => {
   test.each([
     [{ label: '' }, 'Give every custom age group a name'],
     [{ label: 'Under 14' }, 'already a COP age group'],
+    [{ label: 'Under 16', Male: false }, 'already a COP age group for Girls'],
+    [{ label: 'Under 18', Female: false }, 'already a COP age group for Boys'],
     [{ label: 'A', minAge: '12', maxAge: '10' }, 'minimum age is above the maximum'],
     [{ label: 'A', minAge: '1.5' }, 'whole number'],
     [{ label: 'A', Male: false, Female: false }, 'tick Boys, Girls or both'],
   ])('refuses %j', (change, message) => {
     expect(customAgeGroupsError([{ ...blankCustomRow(), ...change }])).toContain(message);
+  });
+
+  test('Under 16 is allowed for Boys, Under 18 for Girls', () => {
+    expect(customAgeGroupsError([{ ...blankCustomRow(), label: 'Under 16', Female: false }])).toBeNull();
+    expect(customAgeGroupsError([{ ...blankCustomRow(), label: 'Under 18', Male: false }])).toBeNull();
   });
 
   test('two rows with one name are refused', () => {
