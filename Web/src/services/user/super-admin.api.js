@@ -75,6 +75,7 @@ export const superAdminAPI = {
     transfer: (data) => api.post('/superadmin/fix/transfer', data),
     listScores: (params) => api.get('/superadmin/fix/scores', { params }),
     correctScore: (scoreId, rowId, data) => api.post(`/superadmin/fix/scores/${scoreId}/rows/${rowId}`, data),
+    unlockForJudges: (scoreId, playerId, apparatus, reason) => api.put(`/superadmin/scores/${scoreId}/players/${playerId}/unlock`, { apparatus, reason }),
     entryTeams: (competitionId) => api.get(`/superadmin/fix/entries/${competitionId}`),
     getEntry: (competitionId, teamId) => api.get(`/superadmin/fix/entries/${competitionId}/${teamId}`),
     addEntryPlayer: (competitionId, teamId, data) => api.post(`/superadmin/fix/entries/${competitionId}/${teamId}/players`, data),

@@ -83,7 +83,7 @@ class ScoreCorrectionService {
           scoreId: sheet._id, rowId: row._id, playerId: row.playerId, playerName: row.playerName,
           team: sheet.teamId ? { _id: sheet.teamId._id || sheet.teamId, name: sheet.teamId.name || null } : null,
           gender: sheet.gender, ageGroup: sheet.ageGroup, competitionType: sheet.competitionType,
-          apparatus: row.apparatus, panelSize: row.panelSize ?? null, isLocked: !!sheet.isLocked,
+          apparatus: row.apparatus, panelSize: row.panelSize ?? null, isLocked: !!sheet.isLocked, isFinalized: !!row.isFinalized,
           ...snapshot(row), executionAverage: row.executionAverage ?? null, toleranceUsed: row.toleranceUsed ?? null,
         });
       }

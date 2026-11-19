@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Search } from 'lucide-react';
+import { LockOpen, Search } from 'lucide-react';
 import { superAdminAPI } from '@/services/api';
 import { levelLabel } from '@/utils/competition/levels';
 import { Button, EmptyState, Field, Input, Panel, Select, Spinner, StatusTag, SearchSelect } from '@/components/ui';
@@ -24,6 +24,7 @@ const RowEditor = ({ row, onSaved, onCancel }) => {
   const [otherDeduction, setOtherDeduction] = useState(String(row.otherDeduction ?? 0));
   const [time, setTime] = useState(row.time === null || row.time === undefined ? '' : String(row.time));
   const [confirming, setConfirming] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
 
   const slipRoles = (row.slips || []).map((s) => s.role).filter((r) => r !== 'CHIEF');
   const seatsWithSlip = new Set(slipRoles.map((r) => ({ SR_JUDGE: 'seniorJudge', J1: 'judge1', J2: 'judge2', J3: 'judge3', J4: 'judge4' }[r])));
@@ -62,6 +63,17 @@ const RowEditor = ({ row, onSaved, onCancel }) => {
       onSaved();
     } catch (error) {
       toast.error(errorOf(error, 'Could not correct the score'));
+    }
+  };
+
+  const unlock = async (reason) => {
+    try {
+      await superAdminAPI.fix.unlockForJudges(row.scoreId, row.playerId, row.apparatus, reason);
+      setUnlocking(false);
+      toast.success(`${row.playerName}: unlocked for the judges`);
+      onSaved();
+    } catch (error) {
+      toast.error(errorOf(error, 'Could not unlock the score'));
     }
   };
 
@@ -129,6 +141,15 @@ const RowEditor = ({ row, onSaved, onCancel }) => {
       </div>
 
       <Button className="justify-self-start" disabled={Object.keys(body).length === 0} onClick={() => setConfirming(true)}>Correct score</Button>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="type-caption text-fg-muted">{row.isFinalized ? 'Final submitted by the panel.' : 'Not final-submitted.'} {row.isLocked ? 'The sheet is locked for the judges.' : ''}</span>
+        <Button size="sm" variant="line" icon={LockOpen} onClick={() => setUnlocking(true)}>Unlock for judges</Button>
+      </div>
+
+      <ReasonDialog open={unlocking} title={`Unlock ${row.playerName}'s ${row.apparatus} for the judges?`} confirmText="Unlock" onClose={() => setUnlocking(false)} onConfirm={unlock}>
+        <p className="type-body-s m-0">The panel can correct its marks for this athlete again. Final submission is cleared, and the Scorer must lock again.</p>
+      </ReasonDialog>
 
 
       <ReasonDialog open={confirming} title={`Correct ${row.playerName}'s ${row.apparatus} score?`} confirmText="Correct score" onClose={() => setConfirming(false)} onConfirm={save}>
