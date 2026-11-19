@@ -118,5 +118,5 @@ Re-fetched whenever `currentCompetition._id` changes (`:173-177`, from
 ## Since the last pass (2026-11-11, against `f5465b4`)
 
 - Save Team, Add Player and Scan Paper Form lock when the squad is submitted
-  **or** `paymentStatus` is completed. Register Player stays open.
+  **or** `paymentStatus` is completed. Register Player locks with them too (owner, 2026-11-19 — it used to stay open as "an account, not a squad place"); all reopen when the Super Admin reopens the team.
 - `CoCoachesPanel` lists co-coaches. Only the main coach removes one.

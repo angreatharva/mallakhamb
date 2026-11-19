@@ -538,10 +538,12 @@ const CoachDashboard = () => {
   const canAdd = selectedPlayer && selectedAgeGroup && selectedGender && selectedApparatus.length > 0;
 
   /*
-   * Fees paid → the squad is closed: Save Team, Add Player and Scan Paper Form
-   * are off. Either signal counts: the checkout/discount paths set both, but
+   * Fees paid → the squad is closed: Save Team, Add Player, Register Player
+   * and Scan Paper Form are off. Either signal counts: the checkout/discount paths set both, but
    * the Razorpay webhook records `paymentStatus: 'completed'` on its own.
-   * Register Player stays open — it makes an account, not a squad place.
+   * Register Player locks too (owner, 2026-11-19): it used to stay open because
+   * it makes an account, not a squad place, but a submitted team is final until
+   * the admin reopens it.
    *
    * A team the Super Admin REOPENED (owner, 2026-11-17) is the exception: it is
    * not submitted and lists who is paid for (`paidEntries`), so the squad is
@@ -586,8 +588,9 @@ const CoachDashboard = () => {
                 title={feesPaid ? paidTitle : undefined}>
                 Add Player
               </Button>
-              {/* An account, not a squad place: open even after the squad is submitted. */}
-              <Button variant="line" icon={UserPlus} onClick={() => setShowRegisterPlayer(true)}>
+              {/* Locked with the squad once fees are paid (owner, 2026-11-19); reopens with it. */}
+              <Button variant="line" icon={UserPlus} onClick={() => setShowRegisterPlayer(true)} disabled={feesPaid}
+                title={feesPaid ? paidTitle : undefined}>
                 Register Player
               </Button>
               {/* A filled paper form, photographed: Player IDs + squad places in one go. Off unless the build flag is set. */}
