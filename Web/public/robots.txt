@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin
+Disallow: /superadmin
+Disallow: /scoring
+Disallow: /scores
+Disallow: /dashboard
+Disallow: /reset-password
+
+Sitemap: https://www.mallakhambcompetition.com/sitemap.xml

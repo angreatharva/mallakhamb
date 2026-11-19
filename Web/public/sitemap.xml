@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.mallakhambcompetition.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://www.mallakhambcompetition.com/player/login</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.mallakhambcompetition.com/player/register</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.mallakhambcompetition.com/coach/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://www.mallakhambcompetition.com/coach/register</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://www.mallakhambcompetition.com/judge/login</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.mallakhambcompetition.com/judge/register</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+</urlset>
