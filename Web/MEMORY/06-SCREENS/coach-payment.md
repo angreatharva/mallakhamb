@@ -37,6 +37,20 @@ that gates whether the discount-code UI renders at all.
 - A late-fee banner (`:528-541`) shows when `feeWindow.isLate`, with the
   exact due-by/close-by dates via `formatFeeWindowDate`.
 
+## Reopened teams — paid players, removals, non-refundable fees (2026-11-17/18)
+
+A team the Super Admin reopened carries `team.paidEntries` (`[{player, amount, paidAt}]`):
+- `unpaidPlayers` / `calculateTeamPaymentAmount(..., paidEntries)` charge only players
+  not in it; paid rows read **Paid**. Nobody new → `nothingNewToPay` →
+  **Submit Team — Nothing New to Pay** (`POST /api/coaches/payments/resubmit`).
+- `paidButRemoved(players, paidEntries)` → `{count, amount}` of paid players no longer in
+  the squad. Owner rule 2026-11-18: entry fees are **non-refundable** — removing them never
+  refunds or deletes the paid record, so the page shows a "Removed after payment
+  (N players · Non-refundable entry fee) — ₹X not refunded" row and the reopened notice
+  says so; re-adding a removed player is free. `competitionFeeSync.test.js` pins the
+  owner's 4 → 5 → 3 scenario on both stacks (₹400, then ₹100, then ₹0 with ₹200 kept).
+- Demos: `docs/roles/media/superadmin-reopen-paid-team-{add-player-pays-100,remove-players-non-refundable}.gif`.
+
 ## The Razorpay flow, step by step
 
 1. `handlePayment` (`:179`) sets `processing = true`, then

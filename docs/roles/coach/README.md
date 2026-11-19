@@ -129,8 +129,8 @@ Paying (or using a valid discount code) **submits** the team.
 | After the competition's end date | "Registration is closed". |
 
 ### After submission
-- **Save Team**, **Add Player** and **Scan Paper Form** lock once the squad is submitted **or** paid. **Register Player** stays open, because it creates an account, not a squad place.
-- To change the squad now, contact the organisers. The Super Admin can **reopen** the team (Fix → Entries & payments → Submitted: Not submitted). Your buttons open again; when you press **Pay Fees**, players already paid show **Paid** and **you pay only for the players you added**. If you added nobody, **Submit Team — Nothing New to Pay** locks it again at no charge. [Demo](../media/coach-reopened-team-pays-only-new-players.gif).
+- **Save Team**, **Add Player** and **Scan Paper Form** (hidden unless the organisers switch it on) lock once the squad is submitted **or** paid. **Register Player** stays open, because it creates an account, not a squad place.
+- To change the squad now, contact the organisers. The Super Admin can **reopen** the team (Fix → Entries & payments → Submitted: Not submitted). Your buttons open again; when you press **Pay Fees**, players already paid show **Paid** and **you pay only for the players you added**. If you added nobody, **Submit Team — Nothing New to Pay** locks it again at no charge. **Entry fees are non-refundable:** if you remove players who were already paid for, the page shows them as *Removed after payment · Non-refundable entry fee* and nothing is refunded; adding one of them back later costs nothing. Demos: [add a player, pay only for them](../media/superadmin-reopen-paid-team-add-player-pays-100.gif) · [remove players, pay nothing](../media/superadmin-reopen-paid-team-remove-players-non-refundable.gif).
 - **Team Performance**: choose a competition type tab. For each apparatus you see how many athletes are finalised ("2 / 2 finalized") and your athletes' ranks and scores; tap one for the breakdown. A score appears once the panel has finalized it and the Scorer has locked the sheet.
 
 ### Other competitions

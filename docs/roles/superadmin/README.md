@@ -147,7 +147,14 @@ A coach's squad locks once the fees are paid. To let them change it:
 3. Everyone in the squad at that moment is recorded as **paid**. The coach's Save Team / Add Player / Pay Fees buttons open again.
 4. The coach adds players and presses **Pay Fees**: the players already paid read **Paid**, and only the new players are charged (with the late fee if it applies). If nobody new was added, the button reads **Submit Team — Nothing New to Pay** and nothing is charged.
 
-Demos (local test copy, Latur meet): [Super Admin reopens the team](../media/superadmin-reopen-paid-team.gif) and [the coach pays only for the new player](../media/coach-reopened-team-pays-only-new-players.gif).
+5. **Entry fees are non-refundable** (owner, 2026-11-18). If the coach **removes** paid players, nothing is refunded and nothing is charged: the payment page shows a **Removed after payment (N players · Non-refundable entry fee) — ₹X not refunded** row, and the total stays ₹0 unless someone new was added. A removed player added back later is not charged again. A refund is only ever a Super Admin decision, recorded under **Record money paid or refunded outside the app**.
+
+Worked example (₹100 per player): 4 players paid ₹400 → reopen, add 1 → the coach pays **₹100** (total paid ₹500) → reopen, remove 2 → the coach pays **₹0**, and ₹200 shows as non-refundable.
+
+Demos (local test copy, Latur meet, ₹100 per player):
+- [Reopen a paid team of 4; the coach adds a player and owes only ₹100](../media/superadmin-reopen-paid-team-add-player-pays-100.gif)
+- [Reopen again; the coach removes 2 players: ₹0, ₹200 non-refundable, submitted at no charge](../media/superadmin-reopen-paid-team-remove-players-non-refundable.gif)
+- Earlier: [Super Admin reopens the team](../media/superadmin-reopen-paid-team.gif) and [the coach pays only for the new player](../media/coach-reopened-team-pays-only-new-players.gif).
 
 Owner decisions that shape Fix: scores in finished meets are corrected directly, with a reason and without reopening the meet (D2). Coaches and players are **not** emailed about corrections (D3).
 
