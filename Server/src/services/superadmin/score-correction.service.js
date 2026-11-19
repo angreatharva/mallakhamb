@@ -67,12 +67,16 @@ class ScoreCorrectionService {
    * Every scored row of a meet, filtered by category, competition type or
    * athlete name. Each row carries what the editor needs.
    */
-  async list({ competitionId, gender, ageGroup, competitionType, q } = {}) {
+  async list({ competitionId, gender, ageGroup, competitionType, teamId, q } = {}) {
     if (!mongoose.isValidObjectId(competitionId)) throw new ValidationError('Choose a competition');
     const query = { competition: competitionId };
     if (gender) query.gender = gender;
     if (ageGroup) query.ageGroup = ageGroup;
     if (competitionType) query.competitionType = competitionType;
+    if (teamId) {
+      if (!mongoose.isValidObjectId(teamId)) throw new ValidationError('Invalid team');
+      query.teamId = teamId;
+    }
     const sheets = await this.Score.find(query).populate('teamId', 'name').lean();
     const rx = q ? new RegExp(String(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').slice(0, 60), 'i') : null;
     const rows = [];
@@ -172,6 +176,31 @@ class ScoreCorrectionService {
 
     const finals = await this._afterCorrection(sheet, row);
     return { row: { scoreId: sheet._id, rowId: row._id, playerName: row.playerName, apparatus: row.apparatus, ...after }, finals };
+  }
+
+  /**
+   * Reopen one athlete for the judges, the same change the Scoring page makes
+   * (scoring.unlockPlayerForJudges), with a reason that History keeps.
+   */
+  async unlockPlayer(actor, scoreId, playerId, body = {}) {
+    const reason = requireReason(body.reason);
+    if (!mongoose.isValidObjectId(scoreId) || !mongoose.isValidObjectId(playerId)) throw new ValidationError('Invalid score');
+    const sheet = await this.Score.findById(scoreId).lean();
+    if (!sheet) throw new NotFoundError('Score sheet');
+    const apparatus = typeof body.apparatus === 'string' && body.apparatus ? body.apparatus : undefined;
+    const row = (sheet.playerScores || []).find((ps) => String(ps.playerId) === String(playerId)
+      && (!apparatus || ps.apparatus === apparatus));
+    if (!row) throw new NotFoundError('Score row');
+
+    await this._scoring.unlockPlayerForJudges(String(sheet._id), { playerId: String(playerId), apparatus: row.apparatus }, actor.id, {});
+
+    const label = `${row.playerName || 'Athlete'} — ${row.apparatus || ''} (${sheet.competitionType})`;
+    await this.corrections.record({
+      actor, entity: 'score', entityId: playerId, action: 'SCORE_UNLOCKED', label, reason,
+      competitionId: sheet.competition,
+      extra: { scoreId: String(sheet._id), apparatus: row.apparatus || null, gender: sheet.gender, ageGroup: sheet.ageGroup, competitionType: sheet.competitionType },
+    });
+    return { unlocked: true, playerId: String(playerId), apparatus: row.apparatus || null };
   }
 
   /** Tell open score screens, and re-run the finals a Competition I change feeds. */

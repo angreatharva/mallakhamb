@@ -163,6 +163,8 @@ const RowEditor = ({ row, onSaved, onCancel }) => {
 const ScoresSection = () => {
   const [competitions, setCompetitions] = useState([]);
   const [competitionId, setCompetitionId] = useState('');
+  const [teams, setTeams] = useState([]);
+  const [teamId, setTeamId] = useState('');
   const [gender, setGender] = useState('');
   const [q, setQ] = useState('');
   const [rows, setRows] = useState(null);
@@ -177,25 +179,34 @@ const ScoresSection = () => {
       .catch(() => setCompetitions([]));
   }, []);
 
+  useEffect(() => {
+    setTeamId('');
+    setTeams([]);
+    if (!competitionId) return;
+    superAdminAPI.fix.entryTeams(competitionId)
+      .then((res) => setTeams(res.data?.data || []))
+      .catch(() => setTeams([]));
+  }, [competitionId]);
+
   const load = async (e) => {
     e?.preventDefault();
     if (!competitionId) return;
     setRows(null);
     try {
-      const res = await superAdminAPI.fix.listScores({ competitionId, ...(gender ? { gender } : {}), ...(q.trim() ? { q: q.trim() } : {}) });
+      const res = await superAdminAPI.fix.listScores({ competitionId, ...(gender ? { gender } : {}), ...(teamId ? { teamId } : {}), ...(q.trim() ? { q: q.trim() } : {}) });
       setRows(res.data?.data || []);
     } catch (error) {
       setRows([]);
       toast.error(errorOf(error, 'Could not load scores'));
     }
   };
-  useEffect(() => { if (competitionId) load(); }, [competitionId, gender]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (competitionId) load(); }, [competitionId, gender, teamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const back = () => { setEditing(null); load(); };
   if (editing) return <RowEditor row={editing} onSaved={back} onCancel={back} />;
   return (
     <div className="grid gap-4">
-      <form className="grid gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,8rem)_1fr_auto] sm:items-end" onSubmit={load}>
+      <form className="grid gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,8rem)_1fr_auto] sm:items-end" onSubmit={load}>
         <SearchSelect
           label="Competition"
           value={competitionId}
@@ -203,6 +214,12 @@ const ScoresSection = () => {
           placeholder="Choose a competition"
           options={competitions.map((c) => ({ value: String(c._id), label: `${c.name} (${c.year}) — ${c.place}${c.level ? ` · ${levelLabel(c.level)}` : ''}` }))}
         />
+        <Field id={`${ID}-team`} label="Team">
+          <Select value={teamId} disabled={!competitionId} onChange={(e) => setTeamId(e.target.value)}>
+            <option value="">All teams</option>
+            {teams.map((t) => <option key={t._id} value={t._id}>{t.name}</option>)}
+          </Select>
+        </Field>
         <Field id={`${ID}-gender`} label="Gender">
           <Select value={gender} onChange={(e) => setGender(e.target.value)}>
             <option value="">Both</option>

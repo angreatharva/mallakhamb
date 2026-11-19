@@ -415,6 +415,7 @@ function bootstrap() {
       logger: c.resolve('logger'),
     });
     Object.defineProperty(service, '_qualification', { get: () => c.resolve('qualificationService'), configurable: true });
+    Object.defineProperty(service, '_scoring', { get: () => c.resolve('scoringService'), configurable: true });
     return service;
   }, 'singleton');
   // Phase 6: competition entries and manual payments.

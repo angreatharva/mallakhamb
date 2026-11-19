@@ -119,6 +119,10 @@ function mountCorrectionRoutes(router, container) {
     res.json({ success: true, data: await scores().correct(actorOf(req), req.params.scoreId, req.params.rowId, req.body || {}), message: 'Score corrected.' });
   }));
 
+  router.post('/fix/scores/:scoreId/players/:playerId/unlock', id('scoreId'), id('playerId'), asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await scores().unlockPlayer(actorOf(req), req.params.scoreId, req.params.playerId, req.body || {}), message: 'Unlocked for the judges.' });
+  }));
+
   // ── Phase 6: entries and manual payments ────────────────────────────────
   const entries = svc(container, 'entriesAdminService');
   const meetTeam = [...id('competitionId'), ...id('teamId')];
