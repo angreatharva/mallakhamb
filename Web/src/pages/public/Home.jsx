@@ -7,7 +7,7 @@ import { Grain } from '@/components/ui/Stage';
 import './home/home.css';
 import sectionsRaw from './home/sections.html?raw';
 import footerHtml from './home/footer.html?raw';
-import { HERO_IMAGE, HERO_IMAGE_TALL, PORTRAIT } from './home/preload';
+import { HERO_IMAGE, HERO_IMAGE_TALL, PORTRAIT, IS_PHONE } from './home/preload';
 import { fillImages } from './home/images';
 import { useDesktopViewport } from './home/desktopViewport';
 import { useMediaQuery } from '@/hooks/useResponsive';
@@ -22,8 +22,6 @@ const sectionsHtml = fillImages(sectionsRaw);
  * size. home.css raises only the small text under [data-device="phone"]; the layout is untouched.
  * Read once at module load, so the first paint and the motion runtime already see the final sizes.
  */
-const IS_PHONE = typeof window !== 'undefined' && window.screen
-  && Math.min(window.screen.width, window.screen.height) < 600;
 
 /*
  * Mallakhamb India: the landing page.
@@ -148,6 +146,7 @@ const Home = () => {
               <h2 id="portal-h" className="portal__h">Log in or register</h2>
               <p>Pick your role to continue.</p>
             </div>
+            <Link className="portal__live" to="/scores"><span className="dot" aria-hidden="true" />Live scores</Link>
             {ROLES.map((role) => (
               <div className={`role role--${role.key}`} key={role.key}>
                 <h3 className="role__name">{role.name}</h3>

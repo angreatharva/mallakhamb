@@ -798,7 +798,7 @@
    stay side by side, and the hero tagline, which must stay clear of the title above it); every
    size is the laptop value it replaces, times one of them.
    ============================================================ */
-.mk-home[data-device="phone"]{--pz:1.45;--pb:1.2;--pt:1.3;
+.mk-home[data-device="phone"]{--pz:2.3;--pb:1.9;--pt:2.06;
   --type-tag-size:calc(12px * var(--pz));--type-button-size:calc(14.5px * var(--pt))}
 /* first screen */
 .mk-home[data-device="phone"] .brand{font-size:calc(13px * var(--pz))}
@@ -815,16 +815,41 @@
 .mk-home[data-device="phone"] .nm__gloss{font-size:calc(16px * var(--pb))}
 .mk-home[data-device="phone"] .nm__en{font-size:calc(16.6px * var(--pb))}
 .mk-home[data-device="phone"] .nm__p{font-size:calc(17.3px * var(--pb))}
+.mk-home[data-device="phone"] .og__lead{font-size:calc(21.8px * var(--pb))}
 .mk-home[data-device="phone"] .og__fact{font-size:calc(16px * var(--pb))}
 .mk-home[data-device="phone"] .og__fig figcaption{font-size:calc(13.5px * var(--pz))}
 /* 03 the apparatus */
 .mk-home[data-device="phone"] .ap3-intro{font-size:calc(16px * var(--pb))}
 .mk-home[data-device="phone"] .ap3-note{font-size:calc(13.5px * var(--pz))}
 .mk-home[data-device="phone"] .ap3-spec dt{font-size:calc(14px * var(--pz))}
+.mk-home[data-device="phone"] .ap3-lede,
 .mk-home[data-device="phone"].ap3-3d .ap3-lede{font-size:calc(15.5px * var(--pz))}
+/* "Above ground" may wrap on a phone, so the bigger tag never squeezes POLE into a column */
+.mk-home[data-device="phone"] .ap3-order__v .type-tag{white-space:normal;text-align:right;max-width:7em}
 .mk-home[data-device="phone"] .ap3-order__v .type-tag,
 .mk-home[data-device="phone"] .ap3-lab .type-tag,
 .mk-home[data-device="phone"].ap3-3d .ap3-lab .type-tag{font-size:calc(11px * var(--pz))}
+/* The bigger callout text needs a wider box: at the laptop's 118-156px cap a word like GROUND
+   is wider than its box and spills past it, across the dimension line it labels. */
+.mk-home[data-device="phone"] .ap3-lab,
+.mk-home[data-device="phone"].ap3-3d .ap3-lab{width:max-content;max-width:190px;white-space:normal}
+/* Right of the pole there is only ~195px before the photo: a word like SHEESHAM must fit that
+   whole, so the callouts' words stay a step smaller than the rest of the boosted small print,
+   and the callouts sit above the photo should one still reach it. */
+.mk-home[data-device="phone"] .ap3-co .ap3-lab .type-tag,
+.mk-home[data-device="phone"].ap3-3d .ap3-co .ap3-lab .type-tag{font-size:21px}
+.mk-home[data-device="phone"] .ap3-co,
+.mk-home[data-device="phone"] .ap3-tick{z-index:3}
+/* a dimension label hangs off a zero-width line, so without an explicit width its box shrinks to
+   the number and the words spill out to the left over the text column; it gets two lines instead */
+.mk-home[data-device="phone"] .ap3-dim .ap3-lab,
+.mk-home[data-device="phone"].ap3-3d .ap3-dim .ap3-lab{width:max-content;max-width:180px;text-align:right}
+.mk-home[data-device="phone"] .ap3-fig figcaption b{white-space:nowrap;flex:none}
+/* HANGING must stay one word in the text column */
+.mk-home[data-device="phone"].ap3-3d .ap3-name,
+.mk-home[data-device="phone"] .ap3-name{font-size:88px}
+/* the photo captions sit in a narrow column: a long word like VEERBADRASANA-III must wrap, not run off the screen */
+.mk-home[data-device="phone"] .ap3-fig figcaption{font-size:calc(11px * var(--pb));overflow-wrap:anywhere}
 /* 04 the code: clock legend, panel, slip */
 .mk-home[data-device="phone"] .cd-lead,
 .mk-home[data-device="phone"] .cd-clock.is-pinned .cd-lead{font-size:calc(17px * var(--pb))}
@@ -854,3 +879,50 @@
 .mk-home[data-device="phone"] .foot__super,
 .mk-home[data-device="phone"] .foot__copy{font-size:calc(13.5px * var(--pz))}
 .mk-home[data-device="phone"] .credits ul{font-size:calc(13px * var(--pz))}
+
+.mk-home .portal__live{display:none}
+
+/* ============================================================
+   Phones held upright: the first screen, laid out for a phone.
+   The page is still the 1280px laptop layout scaled to the screen (desktopViewport.js), so this
+   block stacks the first screen instead: the wide photo (China-Main.jpg, its spotlight rigs
+   cropped off the top), then the title, then a grid of large targets: Live scores down the left,
+   Player / Coach / Judge / Admin in a 2x2 beside it. Sized in the laptop canvas: 1280px is about
+   375px on screen, so ~3.4x is 13px.
+   ============================================================ */
+@media (orientation:portrait){
+  .mk-home[data-device="phone"] .masthead__links .live-link{display:none}
+  .mk-home[data-device="phone"] .masthead__links li:nth-child(3){display:none}
+  /* the first screen is exactly one screen: the photo and its text take the top 70%, the
+     portal the bottom 30% and the portal stretches to its foot */
+  .mk-home[data-device="phone"] .hero{min-height:100svh;display:flex;flex-direction:column}
+  .mk-home[data-device="phone"] .hero__img{position:static;inset:auto;width:100%;height:70svh;flex:none;
+    object-fit:cover;object-position:50% 100%;-webkit-mask-image:none;mask-image:none}
+  .mk-home[data-device="phone"] .hero__scrim{display:block;inset:0 0 auto;height:70svh;z-index:0;background:
+    linear-gradient(to bottom,rgb(var(--bg) / .85) 0,rgb(var(--bg) / .55) 40%,rgb(var(--bg) / 0) 60%),
+    linear-gradient(to top,rgb(var(--bg) / .8) 0,rgb(var(--bg) / 0) 12%)}
+  .mk-home[data-device="phone"] .portal{flex:1 1 auto}
+  .mk-home[data-device="phone"] .role{justify-content:center}
+  .mk-home[data-device="phone"] .role__acts{margin-top:0}
+  /* Admin has no Register: an empty half keeps its Log in the same width as the others */
+  .mk-home[data-device="phone"] .role--admin .role__acts::after{content:"";flex:1 1 0}
+  /* the title, मल्लखांब and the tagline sit on the dark stage above the performers; the portal has the bottom half */
+  .mk-home[data-device="phone"] .hero__copy{position:absolute;inset:0 0 auto;height:70svh;z-index:1;display:flex;flex-direction:column;justify-content:flex-start;padding:130px var(--pad) 0}
+  .mk-home[data-device="phone"] .lockup{width:auto}
+  .mk-home[data-device="phone"] .hero__title{justify-items:end;font-size:170px}
+  .mk-home[data-device="phone"] .hero__aside{position:static;width:auto;margin-top:20px}
+  .mk-home[data-device="phone"] .hero__deva{font-size:80px}
+  .mk-home[data-device="phone"] .hero__tag{font-size:40px;line-height:1.35;max-width:none}
+  .mk-home[data-device="phone"] .portal{grid-template-columns:.8fr 1fr 1fr;grid-template-rows:auto auto}
+  .mk-home[data-device="phone"] .portal__tab{display:none}
+  .mk-home[data-device="phone"] .portal__live{grid-row:1 / 3;font-size:60px!important;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;
+    padding:24px;background:var(--saffron);color:#000;text-decoration:none;text-align:center;
+    font:600 72px/.9 var(--display);text-transform:uppercase}
+  .mk-home[data-device="phone"] .portal__live .dot{width:28px;height:28px;background:#000}
+  .mk-home[data-device="phone"] .role{gap:14px;padding:24px 24px 26px;border-left:2px solid var(--line);border-top:0}
+  .mk-home[data-device="phone"] .role:nth-of-type(n+3){border-top:2px solid var(--line)}
+  .mk-home[data-device="phone"] .role__name{font-size:64px}
+  .mk-home[data-device="phone"] .role__desc{display:block;font-size:30px;line-height:1.3;max-width:none}
+  .mk-home[data-device="phone"] .role__acts{flex-direction:row;flex-wrap:nowrap;gap:12px;padding-top:4px}
+  .mk-home[data-device="phone"] .role__acts .ui-btn{flex:1 1 0;min-height:84px;padding:0 12px;font-size:32px}
+}

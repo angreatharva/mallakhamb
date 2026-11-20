@@ -6,6 +6,10 @@ export const HERO_IMAGE = { src: HOME_IMAGES.hero, width: 570, height: 250 };
 /** Upright screens' hero: the same photo with the stage extended upward (home.css explains). */
 export const HERO_IMAGE_TALL = { src: HOME_IMAGES.heroTall, width: 947, height: 1661 };
 export const PORTRAIT = '(orientation: portrait)';
+/** A phone: the screen's short side is under 600 CSS px (Home.jsx explains). Phones held upright
+ *  get the wide photo, cropped, above a phone-sized portal (home.css, "Phones held upright"). */
+export const IS_PHONE = typeof window !== 'undefined' && !!window.screen
+  && Math.min(window.screen.width, window.screen.height) < 600;
 const LANDSCAPE = '(orientation: landscape)'; // exactly "not portrait"; WebKit ignores `not all and …` on a preload
 
 /**
