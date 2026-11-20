@@ -35,7 +35,7 @@ const AGE_GROUP_MAP = {
 const PlayerDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading: competitionLoading } = useCompetition();
+  const { currentCompetition, assignedCompetitions, switchCompetition, isLoading: competitionLoading, selectedLevel } = useCompetition();
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState([]);
@@ -198,7 +198,7 @@ const PlayerDashboard = () => {
   const fetchTeams = async () => {
     setTeamsLoading(true);
     try {
-      const response = await playerAPI.getTeams();
+      const response = await playerAPI.getTeams(undefined, selectedLevel || undefined);
       const payload = response.data?.data ?? response.data?.teams ?? response.data ?? [];
       const teamsList = Array.isArray(payload) ? payload : [];
       setTeams(teamsList.map((t) => ({ value: t._id || t.id, label: t.name })));

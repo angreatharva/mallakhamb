@@ -23,8 +23,13 @@ export const playerAPI = {
    * call site for when that is fixed, and because the alternative is a screen
    * that silently drops the only context it has.
    */
-  getTeams: (competitionId) =>
-    api.get('/players/teams', competitionId ? { params: { competitionId } } : undefined),
+  getTeams: (competitionId, level) => {
+    const params = {
+      ...(competitionId && { competitionId }),
+      ...(level && { level }),
+    };
+    return api.get('/players/teams', Object.keys(params).length ? { params } : undefined);
+  },
   getOpenCompetitions: () => api.get('/players/competitions/open'),
   /** The Competition II / III finals this player qualified for. */
   getFinals: () => api.get('/players/finals'),

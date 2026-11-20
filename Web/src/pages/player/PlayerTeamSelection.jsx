@@ -53,7 +53,7 @@ const PlayerTeamSelection = () => {
   useEffect(() => {
     fetchTeams();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitionId]);
+  }, [competitionId, level]);
 
   useEffect(() => {
     if (!level) { setAtLevel(null); return; }
@@ -86,7 +86,8 @@ const PlayerTeamSelection = () => {
   const fetchTeams = async () => {
     setLoading(true);
     try {
-      const response = await playerAPI.getTeams(competitionId);
+      // Only the teams entered in a meet at the level the player chose.
+      const response = await playerAPI.getTeams(competitionId, level);
       const payload = response.data?.data ?? response.data?.teams ?? response.data ?? [];
       const teamsList = Array.isArray(payload) ? payload : [];
       setTeams(teamsList);

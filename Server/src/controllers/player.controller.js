@@ -81,7 +81,10 @@ function createPlayerController(container) {
      */
     getAvailableTeams: asyncHandler(async (req, res) => {
       const competitionId = req.competitionId || req.query.competitionId;
-      const teams = await playerService.getAvailableTeams(competitionId);
+      // Level → Team → Competition: the player's chosen level narrows the list
+      // to teams entered in a meet at that level.
+      const level = typeof req.query.level === 'string' ? req.query.level : null;
+      const teams = await playerService.getAvailableTeams(competitionId, { level });
       res.json({ success: true, data: teams });
     }),
 

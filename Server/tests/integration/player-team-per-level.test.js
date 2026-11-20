@@ -262,3 +262,37 @@ describe('migration 014', () => {
     expect(await levelsOf(single._id)).toEqual({});
   });
 });
+
+describe('the team list follows the chosen level', () => {
+  test('only teams entered in a meet at that level are offered', async () => {
+    const { playerService } = build();
+    const district = await coachWithTeam('Mumbai Dist');
+    const state = await coachWithTeam('Pune State');
+    const idle = await coachWithTeam('Nobody Enters');
+    await meet('district', [district]);
+    await meet('state', [state]);
+
+    const at = async (level) => (await playerService.getAvailableTeams(null, { level })).map((t) => String(t._id));
+
+    expect(await at('district')).toEqual([String(district.team._id)]);
+    expect(await at('state')).toEqual([String(state.team._id)]);
+    expect(await at('national')).toEqual([]);
+    expect(await at('national')).not.toContain(String(idle.team._id));
+  });
+
+  test('a team withdrawn from a meet (inactive entry) is not offered at that level', async () => {
+    const { playerService } = build();
+    const coach = await coachWithTeam('Withdrawn');
+    const comp = await meet('university', [coach]);
+    await Competition.updateOne({ _id: comp._id, 'registeredTeams.team': coach.team._id }, { $set: { 'registeredTeams.$.isActive': false } });
+
+    expect((await playerService.getAvailableTeams(null, { level: 'university' })).map((t) => String(t._id))).not.toContain(String(coach.team._id));
+  });
+
+  test('no level keeps the full list', async () => {
+    const { playerService } = build();
+    const coach = await coachWithTeam('Anywhere');
+    const teams = await playerService.getAvailableTeams(null);
+    expect(teams.map((t) => String(t._id))).toContain(String(coach.team._id));
+  });
+});

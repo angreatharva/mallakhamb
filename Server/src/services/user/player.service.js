@@ -133,11 +133,34 @@ class PlayerService extends UserService {
     return { level, team: null, final: false, suggested: await card(player.team) };
   }
 
-  async getAvailableTeams() {
+  /**
+   * Teams a player can choose from. A team belongs to a level when it is
+   * entered in a meet at that level (Competition.registeredTeams), so with a
+   * level only those teams are returned. Without one, every active team.
+   * @param {string|null} competitionId - Unused for now (see note in PlayerTeamSelection)
+   * @param {{level?: string|null}} options
+   * @returns {Promise<Array>} Active teams
+   */
+  async getAvailableTeams(competitionId = null, { level = null } = {}) {
+    const criteria = { isActive: true };
+    if (level) {
+      if (!this.competitionRepository) return [];
+      const meets = await this.competitionRepository.find(
+        { level },
+        { select: 'registeredTeams.team registeredTeams.isActive' }
+      );
+      const teamIds = new Set();
+      for (const meet of meets) {
+        for (const entry of meet.registeredTeams || []) {
+          if (entry.isActive !== false && entry.team) teamIds.add(String(entry.team));
+        }
+      }
+      criteria._id = { $in: [...teamIds] };
+    }
     return this.teamRepository.find(
-      { isActive: true }, 
-      { 
-        sort: { createdAt: -1 }, 
+      criteria,
+      {
+        sort: { createdAt: -1 },
         limit: 50,
         populate: 'coach' // Populate coach information
       }
