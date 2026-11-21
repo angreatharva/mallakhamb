@@ -126,7 +126,7 @@ const competitionSchema = new mongoose.Schema({
   /*
    * Scored before automatic finals existed: its Competition II / III entries
    * were chosen by coaches and stay as they are; the qualification engine
-   * leaves this meet alone (migration 016, docs/qualification-plan.md).
+   * leaves this meet alone (migration 016, docs/archive/qualification-plan.md).
    */
   legacyFinals: {
     type: Boolean,
@@ -137,7 +137,7 @@ const competitionSchema = new mongoose.Schema({
    * before 2026-11-14, when the owner made Competition II a final per gender
    * AND age group. Set by migration 017 only on meets whose All-ages final had
    * already started; those keep it, every other meet runs one final per age
-   * group (docs/qualification-plan.md).
+   * group (docs/archive/qualification-plan.md).
    */
   allAgesFinals: {
     type: Boolean,

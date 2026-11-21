@@ -117,7 +117,7 @@ const AddPlayerForm = ({ teams, competitions, onSuccess, onFetchTeams }) => {
 
     const config = {};
     // Competition II / III are filled from Competition I's results by the
-    // qualification engine (docs/qualification-plan.md) — only a meet scored
+    // qualification engine (docs/archive/qualification-plan.md) — only a meet scored
     // before it (legacyFinals) still asks here.
     doc.competitionTypes.filter((type) => doc.legacyFinals || type === 'competition_1').forEach(type => {
       const offered = offeredApparatus(doc, type, selectedGender.value);

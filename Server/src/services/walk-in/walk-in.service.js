@@ -136,7 +136,7 @@ class WalkInService {
 
   /**
    * A coach using the paper form for their own team (step 4 of
-   * docs/team-per-level-plan.md), not an Admin at the desk. A coach acts only
+   * docs/archive/team-per-level-plan.md), not an Admin at the desk. A coach acts only
    * on their own drafts, sees only their own team's children (and an exact
    * match they may take at a new level), and can never register "a different
    * child" over a child another team holds at this level.

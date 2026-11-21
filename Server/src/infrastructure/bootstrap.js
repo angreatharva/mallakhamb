@@ -236,7 +236,7 @@ function bootstrap() {
   container.register('paymentService', (c) => new PaymentService(c.resolve('config'), c.resolve('logger'), c.resolve('transactionRepository'), c.resolve('competitionRepository'), c.resolve('metrics')), 'singleton');
 
   // A player's team at each level — final; every join/registration/entry path
-  // goes through it (docs/team-per-level-plan.md).
+  // goes through it (docs/archive/team-per-level-plan.md).
   container.register('playerTeamService', (c) => new PlayerTeamService({
     playerRepository: c.resolve('playerRepository'),
     teamRepository: c.resolve('teamRepository'),
@@ -372,7 +372,7 @@ function bootstrap() {
     c.resolve('competitionRepository'),
     c.resolve('logger')
   ), 'singleton');
-  // The owner's correction record + History (docs/superadmin-control-plan.md).
+  // The owner's correction record + History (docs/archive/superadmin-control-plan.md).
   container.register('correctionService', (c) => new CorrectionService({
     auditLogRepository: c.resolve('auditLogRepository'),
     adminRepository: c.resolve('adminRepository'),
@@ -392,7 +392,7 @@ function bootstrap() {
     logger: c.resolve('logger'),
     config: c.resolve('config'),
   }))), 'singleton');
-  // Phase 3: the owner edits any account (docs/superadmin-control-plan.md).
+  // Phase 3: the owner edits any account (docs/archive/superadmin-control-plan.md).
   container.register('accountsAdminService', (c) => {
     const AccountsAdminService = require('../services/superadmin/accounts-admin.service');
     const service = new AccountsAdminService({
@@ -497,7 +497,7 @@ function bootstrap() {
     socketManager: null,
     logger: c.resolve('logger'),
   }), 'singleton');
-  // Competition I → II / III, automatically (docs/qualification-plan.md).
+  // Competition I → II / III, automatically (docs/archive/qualification-plan.md).
   container.register('qualificationService', (c) => new QualificationService({
     qualificationRepository: c.resolve('qualificationRepository'),
     competitionRepository: c.resolve('competitionRepository'),

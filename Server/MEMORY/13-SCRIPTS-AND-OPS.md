@@ -54,7 +54,6 @@ See *Seed Chains*, *Seed Roster*, *Browser Seeding Traps* in project memory for 
 |---|---|---|
 | `startup.js` | `start`, `start:check`, `prepare:db`, `indexes:sync` | The supervised boot path — see [01-ARCHITECTURE.md](01-ARCHITECTURE.md) |
 | `migrate.js` | `migrate:up`, `migrate:down`, `migrate:status` | CLI wrapper around `MigrationRunner` — `up`/`down` mutate schema; `status` is read-only. **No `--to` targeting** — always the full pending batch (`down` = just the most recent) |
-| `migrate-superadmin-role.js` | (`node scripts/migrate-superadmin-role.js`) | One-time `super_admin`→`superadmin` role rename. **Deliberately NOT in `src/migrations/`** — putting a script there once broke `migrate:up` entirely |
 | `checkEnv.js` | `env:check` | Diffs `.env`/`.env.production` key sets against `.env_example`; `--fix` rewrites in template order, never copies dev values into prod. Prints key **names** only |
 | `meetStatus.js` | `meet:status` | Read-only report: per-category entered/submitted/judged/locked state + fee-window phase |
 | `gmail-oauth-token.js` | `gmail:token` | One-time, interactive: opens Google consent for a Desktop OAuth client and prints a `gmail.send` refresh token for `GMAIL_REFRESH_TOKEN` — after first refreshing it once against the same client, so the printed token is known-good; also prints its length to compare with Render. Reads `.env`; PowerShell needs `$env:VAR=` instead of inline `VAR=value`. Writes nothing. See [modules/email.md](modules/email.md) |
@@ -111,7 +110,6 @@ rather than through `config-manager.js`:
 | `SEED_API_URL` | `admin-api.js`, `seedScores.js`, `seedApi.js` | Where seed HTTP calls point; default `http://127.0.0.1:5000/api` |
 | `SEED_WORKERS` | `setupUi.js` | Playwright parallelism; default `4` |
 | `COMPETITION_PLACE` | `planPanels.js` | Which meet the panel plan treats as "default" |
-| `MONGO_URI` | `migrate-superadmin-role.js` | Legacy fallback alias for `MONGODB_URI`, this script only |
 | `PERF_MONGODB_URI`, `PERF_BASE_URL`/`PERF_API_URL` | `scripts/perf/**` | Throwaway perf DB/API endpoints |
 | `OPENAPI_SERVER_URL` | `generateOpenApi.js` | Server URL embedded in the generated spec |
 | `DISCOUNT_CODE` | `payWithDiscount.js`, `setupUi.js` | Mirrors the config-manager var, read directly for the seed chain |

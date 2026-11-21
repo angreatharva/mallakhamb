@@ -311,7 +311,7 @@ const History = () => {
 /**
  * Super Admin → Player teams: a player's team at each competition level is
  * final; this is the one place it is corrected, with a reason, and where the
- * history of every change is read (docs/team-per-level-plan.md step 3).
+ * history of every change is read (docs/archive/team-per-level-plan.md step 3).
  */
 const SuperAdminPlayerTeams = () => {
   const [tab, setTab] = useState('find');

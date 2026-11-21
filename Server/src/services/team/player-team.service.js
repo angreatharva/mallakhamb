@@ -1,7 +1,7 @@
 /**
  * A player's team at each competition level — the ONE place it is written.
  *
- * The rule (owner, 2026-10-28; docs/team-per-level-plan.md):
+ * The rule (owner, 2026-10-28; docs/archive/team-per-level-plan.md):
  *  - a player's team is final at each level (District, State, National,
  *    International, DSO, University), forever;
  *  - it is set when the player joins a team, or a coach / the desk / a Super

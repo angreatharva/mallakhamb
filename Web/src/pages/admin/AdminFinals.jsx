@@ -165,7 +165,7 @@ FinalizeSummary.propTypes = { finals: PropTypes.array.isRequired };
  * Admin / Super Admin → Finals: who moved from Competition I into Competition
  * II (All Round, one All-ages final per gender) and III (Apparatus, per age
  * group), automatically as Competition I is locked
- * (docs/qualification-plan.md).
+ * (docs/archive/qualification-plan.md).
  */
 const AdminFinals = ({ isSuperAdmin = false, competitionId = null, meetPicker = null }) => {
   const api = (isSuperAdmin ? superAdminAPI : adminAPI).finals;

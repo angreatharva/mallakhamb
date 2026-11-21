@@ -148,7 +148,7 @@ const endDateOf = (meet) => {
 /**
  * Which competitions a seeded meet runs. Every meet names them in meets.json
  * so the season covers all four shapes — I only, I+II, I+III, I+II+III — and
- * the automatic finals (docs/qualification-plan.md) are exercised on each.
+ * the automatic finals (docs/archive/qualification-plan.md) are exercised on each.
  * A meet without the field runs I+II, as every meet did before.
  */
 const competitionTypesOf = (meet) => (Array.isArray(meet?.competitionTypes) && meet.competitionTypes.length

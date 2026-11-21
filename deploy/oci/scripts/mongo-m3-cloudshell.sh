@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MONGODB-SELF-HOSTED-PLAN.md M3, the part that needs the owner's identity. Run in OCI Cloud Shell:
+# ../archive/MONGODB-SELF-HOSTED-PLAN.md M3, the part that needs the owner's identity. Run in OCI Cloud Shell:
 #
 #   bash mongo-m3-cloudshell.sh
 #

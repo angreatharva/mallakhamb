@@ -1,6 +1,6 @@
 /**
  * Super Admin → Player teams: a correction blocked by open squad entries
- * offers to remove them first (docs/team-per-level-plan.md step 3).
+ * offers to remove them first (docs/archive/team-per-level-plan.md step 3).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';

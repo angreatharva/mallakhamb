@@ -1,6 +1,6 @@
 /**
  * The coach's paper form: one form per competition, started from the page,
- * never opened by just visiting it (docs/team-per-level-plan.md step 4).
+ * never opened by just visiting it (docs/archive/team-per-level-plan.md step 4).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';

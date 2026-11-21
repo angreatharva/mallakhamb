@@ -1,5 +1,5 @@
 /**
- * A player's team is FINAL at each competition level (docs/team-per-level-plan.md).
+ * A player's team is FINAL at each competition level (docs/archive/team-per-level-plan.md).
  *
  * Every path that joins, registers or enters a player goes through
  * PlayerTeamService; these tests walk each one against a real database.

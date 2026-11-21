@@ -105,7 +105,7 @@ Server/
 │                                 # perf/ harness. Only *.generated.json is ignored
 ├── tests/                        # setup.js + unit/ (20) + integration/ (12) + security/ (11).
 │                                 # A further 12 *.test.js sit beside their subject in src/
-├── docs/                         # openapi.{json,yaml} (generated), system-handbook,
+├── docs/                         # openapi.{json,yaml} (generated),
 │                                 # architecture, DI, deployment, testing, Razorpay, AUDIT
 └── src/
     ├── config/                   # config-manager.js, cop-rules.js, payment.config.js
@@ -384,7 +384,7 @@ A legacy `GET /api/health-legacy` returns a plain liveness message.
 
 Migration files live in `src/migrations/` and each exports `up()` / `down()`. They are executed by `MigrationRunner` (`src/infrastructure/database/migration-runner.js`), which records applied migrations in a `Migration` collection.
 
-Present: `001_initial_indexes.js`, `002_controller_alignment_indexes.js`, `migrate-superadmin-role.js`, and `migration-template.js` to copy for new ones.
+Present: `001_initial_indexes.js`, `002_controller_alignment_indexes.js`, and `migration-template.js` to copy for new ones.
 
 The `npm run migrate:*` aliases are broken (no `scripts/migrate.js`); drive `MigrationRunner` directly from a Node script until that CLI is restored.
 
@@ -429,7 +429,7 @@ npx jest tests/security
 
 Deployed on Render via the repo-root `render.yaml` as service **`mallakhamb-server`**: `rootDir: Server`, build `npm install`, start `npm start`, `PORT=10000`, `NODE_ENV=production`. Secrets (`MONGODB_URI`, `JWT_SECRET`, email keys) are marked `sync: false` and set in the Render dashboard. CORS origins point at the `mallakhamb-web` static site.
 
-See [docs/deployment-guide.md](./docs/deployment-guide.md).
+Production now runs on OCI: see `deploy/README.md` and `deploy/oci/PLAN.md`. Render (`render.yaml`) is kept as the fallback.
 
 ---
 
@@ -438,14 +438,12 @@ See [docs/deployment-guide.md](./docs/deployment-guide.md).
 | Document | Contents |
 |---|---|
 | [docs/openapi.yaml](./docs/openapi.yaml) | **Endpoint reference** — generated, and verified against the live router by `docs:openapi:check` |
-| [docs/system-handbook.md](./docs/system-handbook.md) | System narrative: entity relationships, user flows, role workflows, lifecycle. Was `API_DOCUMENTATION.md` at the repo root; its hand-written route tables are gone, because nothing proved them true and they had drifted |
 | [docs/architecture.md](./docs/architecture.md) | Layered architecture deep-dive |
 | [docs/dependency-injection-guide.md](./docs/dependency-injection-guide.md) | DI container usage |
 | [docs/api-documentation.md](./docs/api-documentation.md) | Service & repository APIs (internal interfaces — not HTTP) |
 | [docs/AUDIT.md](./docs/AUDIT.md) | The 2026-08 security audit. Still cited by `tests/security/` and `RELEASE-RUNBOOK.md`, so it is a live reference rather than history |
 | [docs/razorpay-payment-handling.md](./docs/razorpay-payment-handling.md) | Payment + webhook flow |
-| [docs/deployment-guide.md](./docs/deployment-guide.md) | Production deployment |
-| [docs/migration-guide.md](./docs/migration-guide.md) | Code migration guide |
+| [docs/RELEASE-RUNBOOK.md](./docs/RELEASE-RUNBOOK.md) | Release steps and migrations |
 | [docs/testing-guide.md](./docs/testing-guide.md) | Testing strategy |
 | [docs/troubleshooting-guide.md](./docs/troubleshooting-guide.md) | Common issues |
 | `docs/COP Mallakhamb.pdf` | Source Code of Points |

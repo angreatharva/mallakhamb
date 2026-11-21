@@ -1,6 +1,6 @@
 /**
  * Super Admin "Player teams" — look at, correct and audit a player's team at
- * each competition level (docs/team-per-level-plan.md, step 3).
+ * each competition level (docs/archive/team-per-level-plan.md, step 3).
  *
  *  - search / detail: a player's team at every level (who set it, when, how),
  *    their squad entries, entries that break the COP age rule, open conflicts;

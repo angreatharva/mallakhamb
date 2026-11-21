@@ -1,5 +1,5 @@
 /**
- * Phase 5 of docs/superadmin-control-plan.md: the owner corrects one
+ * Phase 5 of docs/archive/superadmin-control-plan.md: the owner corrects one
  * athlete's score, in any meet, finished ones included (owner decision D2:
  * directly, with a reason; no reopening, no emails).
  *

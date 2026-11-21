@@ -654,7 +654,7 @@ function createAdminRoutes(container) {
 
   /*
    * Finals: who moved from Competition I into Competition II / III
-   * (docs/qualification-plan.md). The engine fills them; admins see the lists,
+   * (docs/archive/qualification-plan.md). The engine fills them; admins see the lists,
    * mark a withdrawal (the next in rank fills in) and record a Competition II
    * draw. Admin and Super Admin, for the meet in context.
    */

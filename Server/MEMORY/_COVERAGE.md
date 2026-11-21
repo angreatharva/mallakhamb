@@ -135,7 +135,7 @@ etc.) before use.
 ## Ops: scripts, tests, docs reconciliation, env vars (agent: ops-docs-tests-envvars) → 13-SCRIPTS-AND-OPS, 14-TESTING, 12-CONFIG-AND-ENV, GOTCHAS
 - [x] scripts/*.js (all ~24 top-level) incl. scripts/lib/*.js, scripts/perf/*.js + scripts/perf/lib/*.js
 - [x] tests/** (56 suites: unit 33, integration 12, security 11 — surveyed, mapped to subsystem)
-- [x] Server/README.md, docs/{AUDIT,api-documentation,api-performance,architecture,dependency-injection-guide,deployment-guide,migration-guide,testing-guide,troubleshooting-guide,RELEASE-RUNBOOK,system-handbook}.md (reconciled — see GOTCHAS.md for the extensive staleness findings; AUDIT.md, api-performance.md, RELEASE-RUNBOOK.md confirmed current)
+- [x] Server/README.md, docs/{AUDIT,api-documentation,api-performance,architecture,dependency-injection-guide,testing-guide,troubleshooting-guide,RELEASE-RUNBOOK}.md (reconciled — see GOTCHAS.md for the extensive staleness findings; AUDIT.md, api-performance.md, RELEASE-RUNBOOK.md confirmed current)
 - [x] src/config/README.md, src/validators/README.md (reconciled — both mostly accurate, one stale test-path reference each)
 - [x] full `process.env.` grep across Server/ (excluding node_modules, logs, .env*) → 12-CONFIG-AND-ENV, 13-SCRIPTS-AND-OPS
 - [x] package.json npm scripts cross-check — all 40 map cleanly, no mismatches (contradicts README's own stale "Stale entries" note)

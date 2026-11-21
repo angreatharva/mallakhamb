@@ -80,4 +80,4 @@ All backup jobs read **db-03**, so they never load the live primary. They run on
 
 ## More detail
 
-[AUTO-FAILOVER.md](AUTO-FAILOVER.md) (failover rules, commands, alerts) · [MONGODB-SELF-HOSTED-PLAN.md](MONGODB-SELF-HOSTED-PLAN.md) (replica set, drills, backups) · [MONGODB-DB-LAYOUT-PLAN.md](MONGODB-DB-LAYOUT-PLAN.md) · [IDLE-RECLAIM-PLAN.md](IDLE-RECLAIM-PLAN.md) · [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) · [PLAN.md](PLAN.md). The earlier long version of this file (glossary, file-by-file inventory, 20 scenarios) is in git history at commit `03290c2`.
+[AUTO-FAILOVER.md](AUTO-FAILOVER.md) (failover rules, commands, alerts) · [MONGODB-SELF-HOSTED-PLAN.md](archive/MONGODB-SELF-HOSTED-PLAN.md) (replica set, drills, backups) · [MONGODB-DB-LAYOUT-PLAN.md](archive/MONGODB-DB-LAYOUT-PLAN.md) · [IDLE-RECLAIM-PLAN.md](archive/IDLE-RECLAIM-PLAN.md) · [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) · [PLAN.md](PLAN.md). The earlier long version of this file (glossary, file-by-file inventory, 20 scenarios) is in git history at commit `03290c2`.

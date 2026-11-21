@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MONGODB-SELF-HOSTED-PLAN.md M4: point the staging API at replica set "mallakhamb".
+# ../archive/MONGODB-SELF-HOSTED-PLAN.md M4: point the staging API at replica set "mallakhamb".
 # Run in OCI Cloud Shell. Rewrites ONLY MONGODB_URI and BACKUP_URI in the env secret
 # (mallakhamb-prod-bom-secret-api-env) as a new version; every other line is kept byte for byte.
 #
@@ -13,7 +13,7 @@ set -euo pipefail
 umask 077
 W="$(mktemp -d)"; trap 'find "$W" -type f -exec shred -u {} + 2>/dev/null; rm -rf "$W"' EXIT
 P=mallakhamb-prod-bom
-# MONGODB-DB-LAYOUT-PLAN.md (2026-10-28): the sslip API runs on mallakhambcompetition_prod as
+# ../archive/MONGODB-DB-LAYOUT-PLAN.md (2026-10-28): the sslip API runs on mallakhambcompetition_prod as
 # mallakhamb_app, so the cutover changes the data and keys, never this URI.
 DB=${DB:-mallakhambcompetition_prod}
 WHO=${WHO:-app}

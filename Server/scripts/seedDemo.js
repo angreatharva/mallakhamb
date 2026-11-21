@@ -8,7 +8,7 @@
  *   node scripts/seedDemo.js --from=scores             # resume at a step
  *   node scripts/seedDemo.js --only=verify             # one step
  *
- * Plan and rationale: docs/demo-seed-plan.md. The cast (who exists, who plays
+ * Plan and rationale: docs/archive/demo-seed-plan.md. The cast (who exists, who plays
  * where, which judge leans) is scripts/demo/cast.js; the marks are
  * scripts/demo/score-model.js. This file only drives the API.
  *

@@ -6,7 +6,7 @@
  * the meets are open for scoring) and the live/upcoming meets depend on
  * `today`. Nothing here talks to the API; `seedDemo.js` does that.
  *
- * Shape of the season (docs/demo-seed-plan.md):
+ * Shape of the season (docs/archive/demo-seed-plan.md):
  *   - 18 season meets, 3 per level, Jan–Oct 2026, scored and then back-dated;
  *   - 1 live meet dated today, half scored;
  *   - 1 upcoming meet in December with registration open.

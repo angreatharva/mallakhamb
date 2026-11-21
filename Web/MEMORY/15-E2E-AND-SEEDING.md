@@ -209,7 +209,7 @@ competition entry).
 
 Added by the responsive/appearance work (merged `3fab1e9`, 2026-10-04) and
 the new Home (`9814afa`). All read-only. Results and run commands:
-`docs/RESPONSIVE_UIUX_REPORT.md` ("Running the harness").
+`docs/archive/RESPONSIVE_UIUX_REPORT.md` ("Running the harness").
 
 | Spec / script | Measures |
 |---|---|

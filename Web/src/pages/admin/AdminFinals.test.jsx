@@ -1,5 +1,5 @@
 /**
- * Admin → Finals (docs/qualification-plan.md): the lists the engine filled,
+ * Admin → Finals (docs/archive/qualification-plan.md): the lists the engine filled,
  * the team-cap note, withdraw (the next in rank fills in), a stale warning.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';

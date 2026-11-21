@@ -13,7 +13,7 @@ Shared steps live in [deploy/COMMON.md](../COMMON.md). This file only holds what
 > - **A1 capacity in Mumbai is scarce:** launch without a fault domain (or retry FD-2/FD-3 for app-02) every ~5–10 min from a detached Cloud Shell script; Cloud Shell sessions are recycled when idle, which kills the script.
 > - **Node 24 on both VMs since 2026-10-16** (Render runs 24; `engines.node` = `24.x` in Server and Web). After that rolling pass the roles were switched back the same day (67 s): **app-01 active** (`pip-app-01` 137.23.63.84), **app-02 standby** (`pip-app-02` 130.210.4.142); see O11 "Rolling maintenance pass".
 > - **Next after O12/O13 and Grafana (C5): O14, the nightly full-season lifecycle check.**
-> - **Database: self-hosted, not Atlas (owner decision 2026-10-23, built 2026-10-23/24).** A 3-member replica set `mallakhamb` on app-01 (primary), app-02 and a third Always Free VM **db-03** (`VM.Standard.E2.1.Micro`, FD-3, 10.0.0.70; root quota now allows exactly one micro). TLS + x.509 + auth, VCN-only, 6.8 LTS kernel on all three (MongoDB 8.0 refuses 6.19+). **Staging runs on it since 2026-10-24**; production moves at C7. Atlas M0 stays as the hourly off-site copy. Everything in §1.1 "The database stays on Atlas", the Flex cost line in §1.3 and C2 is superseded by [MONGODB-SELF-HOSTED-PLAN.md](MONGODB-SELF-HOSTED-PLAN.md).
+> - **Database: self-hosted, not Atlas (owner decision 2026-10-23, built 2026-10-23/24).** A 3-member replica set `mallakhamb` on app-01 (primary), app-02 and a third Always Free VM **db-03** (`VM.Standard.E2.1.Micro`, FD-3, 10.0.0.70; root quota now allows exactly one micro). TLS + x.509 + auth, VCN-only, 6.8 LTS kernel on all three (MongoDB 8.0 refuses 6.19+). **Staging runs on it since 2026-10-24**; production moves at C7. Atlas M0 stays as the hourly off-site copy. Everything in §1.1 "The database stays on Atlas", the Flex cost line in §1.3 and C2 is superseded by [MONGODB-SELF-HOSTED-PLAN.md](archive/MONGODB-SELF-HOSTED-PLAN.md).
 
 ---
 
@@ -51,7 +51,7 @@ Source: Oracle's *Always Free Resources* page, plus the mid-2026 change reports 
 
 The database stays on **Atlas**.
 
-> **Superseded 2026-10-23** ([MONGODB-SELF-HOSTED-PLAN.md](MONGODB-SELF-HOSTED-PLAN.md) §0): the data turned out to be ~3 MB, so a third data-bearing member fits on the Always Free AMD micro VM — three voting data members keep a write majority with any one lost — and the app's one transaction works on any replica set. Self-hosted, with Atlas M0 kept as the hourly off-site copy.
+> **Superseded 2026-10-23** ([MONGODB-SELF-HOSTED-PLAN.md](archive/MONGODB-SELF-HOSTED-PLAN.md) §0): the data turned out to be ~3 MB, so a third data-bearing member fits on the Always Free AMD micro VM — three voting data members keep a write majority with any one lost — and the app's one transaction works on any replica set. Self-hosted, with Atlas M0 kept as the hourly off-site copy.
 
 ### 1.2 The rules that decide this plan
 
@@ -76,7 +76,7 @@ The database stays on **Atlas**.
 | BigRock hosting | existing cost, kept for email (COMMON F13) |
 | **Total new spend** | **≈ ₹100–150 / month** (the domain) since the database is self-hosted; was ≈ ₹800–2,900 / month with Flex |
 
-If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M10 + continuous backup: about $60+/month plus backup storage. *(No longer needed: the self-hosted set loses nothing on a member loss and restores to any second from its oplog slices — MONGODB-SELF-HOSTED-PLAN.md §4.)*
+If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M10 + continuous backup: about $60+/month plus backup storage. *(No longer needed: the self-hosted set loses nothing on a member loss and restores to any second from its oplog slices — archive/MONGODB-SELF-HOSTED-PLAN.md §4.)*
 
 ---
 
@@ -382,7 +382,7 @@ If D9 demands a 15-minute RPO **every day** (not only on meet days), add Atlas M
   - Compute → **each** instance → **Maintenance**: if a maintenance reboot falls within a competition week, **reschedule it** or do it early on a quiet day.
   - Bucket size (Storage → Buckets → `mallakhamb-backups` → *Approximate size*) is well under 10 GB.
   - **Patch the standby first**, check it (`startup.js --check` via a standby deploy), then patch the active **on a different day**, or the same day with the rolling pass below.
-- **Before any planned stop** (rolling pass, golden backup, resize): Console → Resource Scheduler → **disable** `mallakhamb-autostart-07` and `-37`, or they start the VM again within 30 min; re-enable when done (IDLE-RECLAIM-PLAN.md B1). A plain reboot does not need this.
+- **Before any planned stop** (rolling pass, golden backup, resize): Console → Resource Scheduler → **disable** `mallakhamb-autostart-07` and `-37`, or they start the VM again within 30 min; re-enable when done (archive/IDLE-RECLAIM-PLAN.md B1). A plain reboot does not need this.
 - **Rolling maintenance pass (OS updates, kernel, Node major).** Done 2026-10-16 for Node 22 → 24 + kernel 7.0; staging was down **62 s**. A stays serving until step 3.
   1. **Standby (B):** `apt-get upgrade` (and NodeSource `setup_<major>.x` + `apt-get install nodejs` for a Node change; re-pin `npm@11.6.2`) → reboot → `sudo rm "$(readlink -f /opt/mallakhamb/current)/.complete"` → `sudo mallakhamb-deploy $(cat /opt/mallakhamb/DEPLOYED_SHA)`. Releases are built once per SHA, so without removing `.complete` the old `node_modules` stay; the standby deploy ends with `startup.js --check` against the real config and database = the test.
   2. Cloud Shell `failover-ip.sh move <B>` → on B `sudo mallakhamb-promote` → `https://<API_HOST>/api/health/ready` = 200.
@@ -470,7 +470,7 @@ What users notice:
 | corrections | unlock → correct a time → lock → the public final moves by that deduction → restore, on a 3/4/5-judge panel; the admin screen's multi-apparatus save keeps every apparatus | 13 checks |
 | judge-screens | all 51 judges: offered exactly their meets, the plan's seat at each, the panel, a team's athletes, profile, 3 password round trips | 855 checks |
 | mail | every email read back from the capture (`EMAIL_CAPTURE`): Player ID mails, password reset by code for a coach / player / judge, no code for a no-email child, the guardian's Player ID reminder | 10 checks |
-| coverage | routes the run called vs routes the app mounts — report only ([E2E-COVERAGE.md](E2E-COVERAGE.md)) | 76 / 222 |
+| coverage | routes the run called vs routes the app mounts — report only ([E2E-COVERAGE.md](archive/E2E-COVERAGE.md)) | 76 / 222 |
 | verify | `scripts/verifySeed.js` | pass / fail (36 checks with the desk, 32 without) |
 
 About 25–40 min end to end (most of it in `scores`). Grown by a quarter on 2026-10-24 — see *Roster growth* below the first-runs table.
@@ -539,7 +539,7 @@ Checked after both: `BRMC_dev` record counts identical to the baseline taken bef
 - **Coverage:** the e2e API gets its own random `METRICS_TOKEN` (never scraped) so the `coverage` step can count the routes it served; `/var/log/mallakhamb-e2e/coverage.json`.
 - **Latency:** after `setup:api` (pass or fail) and before the API stops, `Server/scripts/e2eLatency.js` reads the same token's `/metrics` request histogram: overall p50/p95/p99, mean, share under fixed times and the 10 slowest routes by p95 go to `/var/log/mallakhamb-e2e/latency.json`; the runner publishes `mallakhamb_e2e_latency_seconds{quantile="0.5|0.95|0.99"}` and `mallakhamb_e2e_requests` (a skip keeps the last run's numbers, a run with no report publishes none). Grafana: "Nightly e2e: request latency" on the OCI resources dashboard. Report only, no alert: the run keeps the 1-OCPU VM at 100 % CPU, so it is latency under load (first measured 2026-10-27: 22,131 requests, p50 13 ms, p95 35 ms, p99 422 ms; bcrypt logins ~0.5 s set the p99).
 - **Alerts:** *E2E stale* now fires after 20 h (each VM's longest gap is 18 h); text updated. Re-apply with `apply-alerts.js` (owner, Grafana console) after deploying.
-- **Memory on a 4 GB VM during a run:** e2e API ~250 MB + throw-away mongod ≤ 700 MB + chain ~150 MB, beside the live API, the replica-set member and (active only) the OCR sidecar. Browser runs (next phase, [E2E-COVERAGE.md](E2E-COVERAGE.md)) go to the standby only.
+- **Memory on a 4 GB VM during a run:** e2e API ~250 MB + throw-away mongod ≤ 700 MB + chain ~150 MB, beside the live API, the replica-set member and (active only) the OCR sidecar. Browser runs (next phase, [E2E-COVERAGE.md](archive/E2E-COVERAGE.md)) go to the standby only.
 
 | Run (local PC, local mongod) | Code | Result | Time |
 |---|---|---|---|
@@ -629,7 +629,7 @@ Everything else in this plan is unchanged.
 ## 6. Escape hatch: if Oracle changes the deal or stops the account
 
 The servers hold nothing that can't be rebuilt: code in git, the env file in the password manager, the database on Atlas, backups in object storage **and** Atlas snapshots.
-1. Build a server on the other platform: [AWS plan](../aws/PLAN.md) A1–A7 plus COMMON C4, or Render Starter. Allow ~2–3 h.
+1. Build a server on another platform: Render (`render.yaml`, the prepared fallback) or another cloud plus COMMON C4 (the AWS plan was deleted 2026-11-21; it is in git history before that date). Allow ~2–3 h.
 2. Copy the latest dump from OCI object storage. If OCI is unreachable, use Atlas's own snapshot; the database itself never moves.
 3. Point `www` / apex / `api` at the new server at BigRock. With TTL 600, users follow within ~10 min.
 4. Set `MK_PLATFORM`. The Grafana hosted-scrape URL doesn't change if the DNS names are kept.

@@ -1,5 +1,5 @@
 /**
- * The owner's correction tools (docs/superadmin-control-plan.md, Phases 2–6),
+ * The owner's correction tools (docs/archive/superadmin-control-plan.md, Phases 2–6),
  * end to end: real app, real services, in-memory MongoDB. Each block proves a
  * correction does what it says, keeps a reason and a before/after record in
  * History, and refuses what it must refuse.

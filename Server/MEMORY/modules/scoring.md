@@ -10,7 +10,7 @@ last_verified: 2026-11-11
 
 ## Automatic finals: Competition I → II / III (2026-10-30)
 
-Owner rules and decisions: `docs/qualification-plan.md`. As built:
+Owner rules and decisions: `docs/archive/qualification-plan.md`. As built:
 
 - **Engine (pure):** `utils/scoring/qualification.util.js`. `apparatusFinal` (III:
   top 10 by Comp I rank, at most 2 per team; a tie across the cut →

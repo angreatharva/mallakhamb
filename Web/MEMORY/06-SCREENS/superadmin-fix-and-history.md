@@ -15,7 +15,7 @@ last_verified: 2026-11-11
 
 These are the owner's correction tools. The server side, rules and routes are
 in `Server/MEMORY/modules/superadmin-corrections.md`, and the plan is in
-`docs/superadmin-control-plan.md`.
+`docs/archive/superadmin-control-plan.md`.
 
 ## Wiring
 

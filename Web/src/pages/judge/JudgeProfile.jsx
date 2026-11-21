@@ -16,7 +16,7 @@ import JudgeIdentity from './JudgeIdentity';
 import JudgePanelHistory from './JudgePanelHistory';
 import { useJudgeLogout } from './useJudgeLogout';
 
-// "Marking insights" (docs/stats-plan.md §5c), loaded only when opened.
+// "Marking insights" (docs/archive/stats-plan.md §5c), loaded only when opened.
 const JudgeStats = lazy(() => import('./JudgeStats'));
 
 const TABS = [

@@ -136,7 +136,7 @@ describe('addPlayerToAgeGroup — apparatus per gender and the squad cap', () =>
       playerId: PLAYER_ID, ageGroup: 'Under14', gender: 'Female', apparatus: [POLE, ROPE],
     });
     // Competition III is the qualification engine's to fill, not the coach's
-    // (docs/qualification-plan.md): only Competition I is entered here.
+    // (docs/archive/qualification-plan.md): only Competition I is entered here.
     expect(updates[0].apparatus).toEqual({ competition_1: [POLE] });
   });
 

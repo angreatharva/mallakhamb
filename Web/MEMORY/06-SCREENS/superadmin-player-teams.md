@@ -11,7 +11,7 @@ verified_against_commit: f5465b4
 last_verified: 2026-11-11
 ---
 
-## Team per level (owner rule 2026-10-28, `docs/team-per-level-plan.md`)
+## Team per level (owner rule 2026-10-28, `docs/archive/team-per-level-plan.md`)
 
 A player's team is final at each competition level (District, State, …). Only
 a Super Admin correction changes it. Server: `Server/MEMORY/modules/team.md`.

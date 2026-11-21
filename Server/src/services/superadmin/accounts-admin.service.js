@@ -1,5 +1,5 @@
 /**
- * Phase 3 of docs/superadmin-control-plan.md: the owner corrects any account.
+ * Phase 3 of docs/archive/superadmin-control-plan.md: the owner corrects any account.
  *
  * Players, coaches and judges are edited through their Mongoose documents
  * (`doc.set` + `save`), so the schema validators and pre-save hooks run

@@ -14,7 +14,7 @@ last_verified: 2026-11-11
 
 ## A player's team is final per level (2026-10-28)
 
-Owner rule, full spec in `docs/team-per-level-plan.md`. `Player.levelTeams`
+Owner rule, full spec in `docs/archive/team-per-level-plan.md`. `Player.levelTeams`
 = `[{ level, team, setAt, setBy, setByType, via }]`, at most one per
 competition level. `Player.team` stays: the first team the player ever had,
 and the suggestion at a level not chosen yet.

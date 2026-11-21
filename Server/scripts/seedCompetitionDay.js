@@ -75,7 +75,7 @@ const STAGE = process.argv[3] || null;
 /*
  * Defects this run has FOUND and that are not fixed yet. Each is still checked
  * every run: while it reproduces it is reported as KNOWN (the run stays green
- * — it is already on the list, deploy/oci/E2E-COVERAGE.md "Found by the run");
+ * — it is already on the list, deploy/oci/archive/E2E-COVERAGE.md "Found by the run");
  * the day it stops reproducing the check FAILS, so the entry is removed and the
  * check becomes an ordinary one. A known defect can never go quiet.
  */
@@ -166,7 +166,7 @@ async function season() {
 /**
  * The categories a competition type is judged in: Competition I per age group,
  * Competition II as one "All ages" final per gender (automatic finals,
- * docs/qualification-plan.md). See scripts/lib/panel-plan#panelsForType.
+ * docs/archive/qualification-plan.md). See scripts/lib/panel-plan#panelsForType.
  */
 const categoriesOf = (meet, type = 'competition_1') => panelsForType(meet.plan, type)
   .map((p) => ({ gender: p.gender, ageGroup: p.ageGroup, size: p.size }));
@@ -421,7 +421,7 @@ async function stepResults() {
 
 // ── finals ──────────────────────────────────────────────────────────────────
 /**
- * The admin's "Finalize all ready finals" (docs/qualification-plan.md), after
+ * The admin's "Finalize all ready finals" (docs/archive/qualification-plan.md), after
  * Competition I is judged, published and corrected. Per meet:
  *
  *  - before: no final is finalized and no final's squad has anybody in it;

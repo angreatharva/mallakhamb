@@ -1,5 +1,5 @@
 /**
- * Competition I → II / III against a real database (docs/qualification-plan.md):
+ * Competition I → II / III against a real database (docs/archive/qualification-plan.md):
  * waiting until locked, the team cap, a Competition II final per age group (and
  * the old all-ages one), entries written for
  * the finals, freezing, withdrawal and replacement, coach emails.

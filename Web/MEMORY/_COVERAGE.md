@@ -34,7 +34,7 @@ dated "Since the last pass" section). Files added to scope since the build:
 - [x] .env_example, postcss.config.js, package.json full dependency list (agent) → 16-BUILD-AND-CONFIG
 - [x] No CI pipeline confirmed (no .github/workflows, no .gitlab-ci.yml; render.yaml is deploy-only) → 16-BUILD-AND-CONFIG
 - [x] docs/AUDIT.md, docs/CSP_NONCE_INTEGRATION.md (agent) → 10-AUTH-AND-SECURITY — MED-W6 confirmed fixed, HIGH-W3 stale-prose pattern flagged
-- [x] docs/RESPONSIVE_UIUX_PLAN.md (agent) → 12-RESPONSIVE, 05-DESIGN-SYSTEM — corroborates 3-source token drift + more findings
+- [x] docs/archive/RESPONSIVE_UIUX_PLAN.md (agent) → 12-RESPONSIVE, 05-DESIGN-SYSTEM — corroborates 3-source token drift + more findings
 - [x] e2e/README.md (agent) → 15-E2E-AND-SEEDING
 - [x] tailwind.config.js (agent) → 05-DESIGN-SYSTEM (third independent token copy, confirmed)
 - [x] postcss.config.js, playwright.config.js (agent, both angles: build/CI + blast-radius) → 16-BUILD-AND-CONFIG, 15-E2E-AND-SEEDING
@@ -66,7 +66,7 @@ dated "Since the last pass" section). Files added to scope since the build:
 
 ## Re-verification 2026-10-07 (`7f250ee`) — responsive/appearance merge, new Home, reset rewrite
 
-Rewritten from the code and `docs/RESPONSIVE_UIUX_REPORT.md`:
+Rewritten from the code and `docs/archive/RESPONSIVE_UIUX_REPORT.md`:
 05-DESIGN-SYSTEM, 12-RESPONSIVE, 06-SCREENS/public-home-and-scores (Home),
 10-AUTH-AND-SECURITY (password reset). Updated: 07-COMPONENTS, 08-API-INTEGRATION,
 14-TESTING, 15-E2E-AND-SEEDING, GOTCHAS, CHANGE-RECIPES, 00-INDEX.

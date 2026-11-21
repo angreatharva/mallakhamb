@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run in OCI Cloud Shell. Stops the "start" email flood (IDLE-RECLAIM-PLAN.md §7, A3).
+# Run in OCI Cloud Shell. Stops the "start" email flood (../archive/IDLE-RECLAIM-PLAN.md §7, A3).
 #
 # The auto-start schedules (B1) send START to all three VMs at :07 and :37. On a running VM that
 # does nothing, but it is still an instance action, and `mallakhamb-vm-state` emailed every one:

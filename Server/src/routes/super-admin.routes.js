@@ -85,7 +85,7 @@ function createSuperAdminRoutes(container) {
   router.post('/finals/:finalId/draw', meetRule, param('finalId').isMongoId(), body('order').isArray({ min: 2, max: 20 }), handleValidationErrors, meetOf, finals('draw'));
 
   // "Player teams": a player's team at each level — look, correct, audit
-  // (docs/team-per-level-plan.md step 3).
+  // (docs/archive/team-per-level-plan.md step 3).
   const playerTeams = container.resolve('playerTeamAdminController');
   const v = (chains) => [...chains, handleValidationErrors];
   router.get('/player-teams/players', v(playerTeamValidator.search()), playerTeams.search);
@@ -119,7 +119,7 @@ function createSuperAdminRoutes(container) {
   router.post('/account-requests/:requestId/approve', accountValidators.decideRequest(), handleValidationErrors, requests.approve);
   router.post('/account-requests/:requestId/reject', accountValidators.decideRequest(), handleValidationErrors, requests.reject);
 
-  // The owner's correction tools and History (docs/superadmin-control-plan.md).
+  // The owner's correction tools and History (docs/archive/superadmin-control-plan.md).
   require('./superadmin-corrections.routes')(router, container);
 
   return router;

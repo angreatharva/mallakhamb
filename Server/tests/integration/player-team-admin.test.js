@@ -1,5 +1,5 @@
 /**
- * Super Admin "Player teams" (docs/team-per-level-plan.md step 3): look at,
+ * Super Admin "Player teams" (docs/archive/team-per-level-plan.md step 3): look at,
  * correct and audit a player's team at each competition level.
  */
 

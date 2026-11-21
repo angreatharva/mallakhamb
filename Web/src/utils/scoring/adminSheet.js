@@ -7,7 +7,7 @@
  * with no apparatus under Pole: on a multi-apparatus sheet each athlete's Pole
  * result was overwritten with the marks of whichever apparatus loaded last,
  * and only Pole stayed locked, so Hanging and Rope fell off the public results
- * (found by the lifecycle check, deploy/oci/E2E-COVERAGE.md).
+ * (found by the lifecycle check, deploy/oci/archive/E2E-COVERAGE.md).
  *
  * So every row here is keyed `playerId|apparatus`, loads the stored row with
  * that same key, and is posted with its apparatus.

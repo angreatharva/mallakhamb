@@ -2,7 +2,7 @@
  * The COP age rule (1.8.3.2–1.8.3.5) at every point a player is put into a
  * team's age group — coach squad entry, the competition route, Super Admin Add
  * Player, the walk-in desk and the player's own choice (owner, 2026-10-28;
- * docs/team-per-level-plan.md).
+ * docs/archive/team-per-level-plan.md).
  *
  *  - Age = cut-off year − birth year, measured on 31 December
  *    (`ageCutoffYear`: always the year the meet is held — owner, 2026-10-29).

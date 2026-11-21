@@ -1,5 +1,5 @@
 /**
- * Phase 4 of docs/superadmin-control-plan.md: teams, coaches, transfers.
+ * Phase 4 of docs/archive/superadmin-control-plan.md: teams, coaches, transfers.
  *
  *  - rename / delete / restore a team;
  *  - change a team's coach (D5): the new coach takes over the team and every

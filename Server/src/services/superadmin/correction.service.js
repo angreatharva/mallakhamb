@@ -1,5 +1,5 @@
 /**
- * The owner's correction record (docs/superadmin-control-plan.md, Phase 2).
+ * The owner's correction record (docs/archive/superadmin-control-plan.md, Phase 2).
  *
  * Every change the Super Admin makes to existing data goes through
  * `record()`: who, when, what, the reason, and a field-level before/after.

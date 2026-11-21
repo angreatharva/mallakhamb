@@ -4,7 +4,7 @@
  *
  * "Appearance", never "theme": `ThemeProvider`/`useTheme` already mean the
  * per-role ACCENT colour, and the two are separate axes that meet in CSS as
- * `html[data-appearance][data-role]` (see Web/docs/RESPONSIVE_UIUX_PLAN.md §14).
+ * `html[data-appearance][data-role]` (see Web/docs/archive/RESPONSIVE_UIUX_PLAN.md §14).
  *
  * The first paint is done by `public/appearance-init.js`, a classic script that
  * runs before any stylesheet. It cannot import this module, so it restates the

@@ -1,7 +1,7 @@
 /**
  * Builds the four Grafana dashboards in this folder (deploy/monitoring/PLAN.md §3).
  *
- *   node deploy/monitoring/dashboards/build-dashboards.js [outDir] [--platform=render|oci|oci-single|aws] [--staging]
+ *   node deploy/monitoring/dashboards/build-dashboards.js [outDir] [--platform=render|oci|oci-single] [--staging]
  *
  * This file is the source of truth; the *.json files are generated from it.
  * Import them as described in README.md.
@@ -42,8 +42,6 @@ const PRESETS = {
     conn: 300, db: 'MongoDB',
   },
   'oci-single': { cpu: '1', mem: 4 * GIB, plan: 'OCI A1 single VM, 2 OCPU / 12 GB', atlas: 'Flex', host: true, standby: false },
-  // The AWS standby is optional (deploy/aws/PLAN.md); set standby: true if it is built.
-  aws: { cpu: '1', mem: 1.5 * GIB, plan: 'AWS t4g.small, 2 vCPU / 2 GiB', atlas: 'Flex', host: true, standby: false },
 };
 const PLATFORM = flag('platform') || 'render';
 const P = PRESETS[PLATFORM];
@@ -743,7 +741,7 @@ const costRow = (y) => [
   }),
 ];
 
-// Oracle's own idle test (deploy/oci/IDLE-RECLAIM-PLAN.md A1): mallakhamb-oci-idle reads the OCI agent
+// Oracle's own idle test (deploy/oci/archive/IDLE-RECLAIM-PLAN.md A1): mallakhamb-oci-idle reads the OCI agent
 // metrics Oracle judges by, hourly on both app VMs. The Alloy-based "Idle reclaim" row above is the
 // same test from our side; this one is the one that counts. No alert: it is expected red in quiet weeks.
 const OI = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby"';
@@ -753,7 +751,7 @@ const oracleIdleRow = (y) => [
   stat('May Oracle stop it?', [t(`max by (vm) (mallakhamb_oci_idle_eligible{${OI}})`, '{{vm}}')], { h: 6, w: 6, x: 0, y: y + 1 }, {
     steps: [green, { color: 'red', value: 1 }],
     mappings: [{ type: 'value', options: { 0: { text: 'NOT IDLE', color: 'green' }, 1: { text: 'IDLE: may stop', color: 'red' } } }],
-    description: 'Oracle rule: CPU p95, network and (A1 only) memory all under 20 % for 7 days. Red is not an outage: Oracle emails mallakhambindia@gmail.com a week before it stops anything, and the Resource Scheduler starts a stopped VM within 30 min. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md.',
+    description: 'Oracle rule: CPU p95, network and (A1 only) memory all under 20 % for 7 days. Red is not an outage: Oracle emails mallakhambindia@gmail.com a week before it stops anything, and the Resource Scheduler starts a stopped VM within 30 min. Runbook: deploy/oci/archive/IDLE-RECLAIM-PLAN.md.',
   }),
   stat('Memory p95 (counts for A1)', [t(`max by (vm) (mallakhamb_oci_idle_p95{${OI},metric="memory"})`, '{{vm}}')], { h: 6, w: 6, x: 6, y: y + 1 }, {
     unit: 'percent', decimals: 1, steps: under20Red,
@@ -769,7 +767,7 @@ const oracleIdleRow = (y) => [
 ];
 
 // ------------------------------------------------------------------ MongoDB replica set (oci preset)
-// deploy/oci/MONGODB-SELF-HOSTED-PLAN.md: app-01 (primary), app-02, db-03 (hidden). Gauges from
+// deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md: app-01 (primary), app-02, db-03 (hidden). Gauges from
 // mallakhamb-mongo-metrics on every member (Alloy textfile); backup ages from the jobs on the active.
 const mongoDash = () => {
   id = 0;
@@ -785,7 +783,7 @@ const mongoDash = () => {
   return dashboard({
     uid: 'mallakhamb-mongo',
     title: 'Mallakhamb MongoDB replica set',
-    description: 'The self-hosted replica set "mallakhamb" (app-01, app-02, db-03): members, replication, oplog, load, disks and every backup. deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §6',
+    description: 'The self-hosted replica set "mallakhamb" (app-01, app-02, db-03): members, replication, oplog, load, disks and every backup. deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §6',
     tags: ['database', 'mongodb', PLATFORM],
     stable: true,
     from: 'now-24h',

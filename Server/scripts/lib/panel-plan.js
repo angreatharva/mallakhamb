@@ -196,7 +196,7 @@ const sizeFor = (planOrMeet, gender, ageGroup) =>
  *
  * Competition I (and III) is per age group — the plan's own panels. Competition
  * II is ONE "All ages" final per gender since automatic finals
- * (docs/qualification-plan.md): its panel takes the people of the meet's seats
+ * (docs/archive/qualification-plan.md): its panel takes the people of the meet's seats
  * and the size of that gender's Under 14 panel (else its first), so the frozen
  * plan file needs no new draw.
  *

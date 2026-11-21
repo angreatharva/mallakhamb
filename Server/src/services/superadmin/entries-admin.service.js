@@ -1,5 +1,5 @@
 /**
- * Phase 6 of docs/superadmin-control-plan.md: a team's entry in a
+ * Phase 6 of docs/archive/superadmin-control-plan.md: a team's entry in a
  * competition, and money recorded by hand.
  *
  *  - add an athlete to a squad, remove one, change their age group, gender

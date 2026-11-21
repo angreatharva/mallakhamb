@@ -1,5 +1,5 @@
 /**
- * The owner's correction tools (docs/superadmin-control-plan.md, Phases 2–6),
+ * The owner's correction tools (docs/archive/superadmin-control-plan.md, Phases 2–6),
  * mounted inside the Super Admin router, so every route here is already
  * behind `auth, requireSuperAdmin`. None of them is guarded by the
  * competition end-date lock: correcting a finished meet is the point (D2).

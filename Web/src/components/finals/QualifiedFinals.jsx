@@ -6,7 +6,7 @@ import { logger } from '@/infrastructure/logger';
 
 /**
  * "Qualified for …" — the Competition II / III finals a coach's players, or a
- * player, moved into from Competition I (docs/qualification-plan.md). Renders
+ * player, moved into from Competition I (docs/archive/qualification-plan.md). Renders
  * nothing until there is something to show.
  *
  * @param {Object} props

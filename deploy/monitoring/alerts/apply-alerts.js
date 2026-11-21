@@ -23,7 +23,7 @@
  * which need Alloy on the servers; on Render they would fire at once.
  */
 (async () => {
-  const PLATFORM = 'oci'; // render | oci | oci-single | aws — 'oci' since the 2026-11-17 domain go-live
+  const PLATFORM = 'oci'; // render | oci | oci-single — 'oci' since the 2026-11-17 domain go-live
   const OWNER_EMAIL = 'angreatharva08@gmail.com';
   const FOLDER_UID = 'mallakhamb';
   const GROUP = 'mallakhamb-api';
@@ -42,7 +42,6 @@
     // 4 GB VMs since 2026-10-24; mongod, the OCR sidecar and the e2e mongod share them (build-dashboards.js).
     oci: { cpu: 1, mem: 1.5 * GIB, host: true, standby: true, mongo: true, failover: 'deploy/oci/PLAN.md O13' },
     'oci-single': { cpu: 1, mem: 4 * GIB, host: true, standby: false, failover: 'rebuild from the golden backup, deploy/oci/PLAN.md §5' },
-    aws: { cpu: 1, mem: 1.5 * GIB, host: true, standby: false, failover: 'deploy/aws/PLAN.md' },
   };
   // Panel ids in the Runtime dashboard's Host row (build-dashboards.js hostRow).
   const HOST_PANEL = { release: 12, backup: 13, cpu: 14, mem: 15, disk: 16, inodes: 17, oom: 20, e2ePass: 21, e2eResult: 22 };
@@ -119,7 +118,7 @@
   if (P.host) RULES.push(
     ['mk-host-missing', 'Host metrics missing', `absent(up{${HJ}})`, 'gt', 0, '10m', 'critical', 'mallakhamb-runtime', HOST_PANEL.cpu,
       'No host metrics from the active server for 10 minutes.',
-      `Alloy on the active has stopped (systemctl status alloy; journalctl -u alloy), its Grafana token was revoked, or the VM is down; check "API down" too.${P.mongo ? ' Console → Instances: if it is STOPPED (Oracle idle reclaim) the Resource Scheduler starts it within 30 min; to serve sooner, or if the start fails (no A1 capacity), fail over. deploy/oci/IDLE-RECLAIM-PLAN.md §3C.' : ''} If the VM is gone: ${P.failover}. Runbook: PLAN.md §8.`],
+      `Alloy on the active has stopped (systemctl status alloy; journalctl -u alloy), its Grafana token was revoked, or the VM is down; check "API down" too.${P.mongo ? ' Console → Instances: if it is STOPPED (Oracle idle reclaim) the Resource Scheduler starts it within 30 min; to serve sooner, or if the start fails (no A1 capacity), fail over. deploy/oci/archive/IDLE-RECLAIM-PLAN.md §3C.' : ''} If the VM is gone: ${P.failover}. Runbook: PLAN.md §8.`],
     ['mk-host-memory', 'Host memory high', `1 - node_memory_MemAvailable_bytes{${HJ}} / node_memory_MemTotal_bytes{${HJ}}`, 'gt', 0.85, '10m', 'warning', 'mallakhamb-runtime', HOST_PANEL.mem,
       'The active server is using more than 85 % of its memory ({{ humanizePercentage $values.A.Value }}).',
       'First look: Runtime → "Memory: % of plan" (is it the API?) and the Host row. Something besides the API (a stuck mongodump, a runaway script) shows as host memory without API RSS. Runbook: PLAN.md §8.'],
@@ -163,11 +162,11 @@
       'The active and the standby hold different releases for 2 hours.',
       'A deploy reached one server only (Runtime → Host → Release shows the short shas). On the active: basename $(readlink /opt/mallakhamb/current) | cut -c1-40 gives the full sha; on the standby: sudo mallakhamb-deploy <that full 40-char sha>. Runbook: PLAN.md §8.'],
   );
-  // The self-hosted replica set (deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §6). Gauges come from
+  // The self-hosted replica set (deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §6). Gauges come from
   // mallakhamb-mongo-metrics on every member (app-01, app-02, db-03) through Alloy's textfile
   // collector; the backup ages from mallakhamb-oplog-slice / -offsite-copy on the active.
   const MJ = 'scrape_job=~"mallakhamb-host|mallakhamb-host-standby|mallakhamb-db"';
-  const MDOC = 'Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).';
+  const MDOC = 'Runbook: deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).';
   if (P.mongo) RULES.push(
     ['mk-mongo-no-primary', 'MongoDB has no primary', `max(mallakhamb_mongo_primary_present{${MJ}})`, 'lt', 1, '1m', 'critical', 'mallakhamb-database', 1,
       'No replica-set member sees a PRIMARY: nothing can be written.',
@@ -216,7 +215,7 @@
   if (P.mongo) RULES.push(
     ['mk-vm-db-missing', 'db-03 VM silent', 'absent(up{scrape_job="mallakhamb-db"})', 'gt', 0, '10m', 'warning', 'mallakhamb-oci-resources', 1,
       'No metrics from db-03, the replica set third member, for 10 minutes.',
-      'Console → Instances → mallakhamb-prod-db-03. STOPPED (Oracle idle reclaim, or a manual stop): the Resource Scheduler starts it within 30 min; the set keeps its primary on 2 of 3 members meanwhile, but the next loss stops writes. Running: systemctl status alloy over the Bastion. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md §3C.'],
+      'Console → Instances → mallakhamb-prod-db-03. STOPPED (Oracle idle reclaim, or a manual stop): the Resource Scheduler starts it within 30 min; the set keeps its primary on 2 of 3 members meanwhile, but the next loss stops writes. Running: systemctl status alloy over the Bastion. Runbook: deploy/oci/archive/IDLE-RECLAIM-PLAN.md §3C.'],
   );
   // OCI money (deploy/oci/PRODUCTION-READINESS.md 1.2). The tenancy is Always Free, so ANY charge is a
   // mistake. mallakhamb-oci-cost reads the budget mallakhamb-guard (SGD 1.50, the tenancy bills in

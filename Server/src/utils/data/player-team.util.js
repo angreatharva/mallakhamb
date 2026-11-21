@@ -9,7 +9,7 @@
  * suggestion at a level not chosen yet.
  *
  * Writes go through services/team/player-team.service. Docs:
- * docs/team-per-level-plan.md.
+ * docs/archive/team-per-level-plan.md.
  *
  * @module utils/data/player-team.util
  */

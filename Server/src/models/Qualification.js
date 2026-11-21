@@ -1,6 +1,6 @@
 /**
  * One final's qualifiers: who moved from Competition I into a Competition II or
- * III final (docs/qualification-plan.md). Written only by
+ * III final (docs/archive/qualification-plan.md). Written only by
  * services/scoring/qualification.service.
  *
  *  - Competition III: one document per gender × age group × apparatus.

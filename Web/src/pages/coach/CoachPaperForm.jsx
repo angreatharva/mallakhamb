@@ -11,7 +11,7 @@ import DeskSlip from '@/pages/desk/DeskSlip';
 import { errorText, saveBlob } from '@/pages/desk/deskShared';
 
 /**
- * Paper form for a coach's own team (docs/team-per-level-plan.md step 4): the
+ * Paper form for a coach's own team (docs/archive/team-per-level-plan.md step 4): the
  * walk-in desk's photograph → review → register flow, for the competition
  * chosen in the menu bar. Players are registered on this coach's team and
  * entered in its squad; the fees are paid from the dashboard as usual.

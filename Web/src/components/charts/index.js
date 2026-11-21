@@ -1,5 +1,5 @@
 /**
- * Charts — hand-built SVG/HTML on the design tokens (docs/stats-plan.md §6).
+ * Charts — hand-built SVG/HTML on the design tokens (docs/archive/stats-plan.md §6).
  * No chart library: every mark reads a `--viz-*` token, every word an ink
  * token, and every chart has a table view, keyboard access and reduced motion.
  */

@@ -34,7 +34,7 @@ const createSuperAdmin = async () => {
       isActive: true
     };
 
-    // There is exactly ONE Super Admin, the owner (docs/superadmin-control-plan.md).
+    // There is exactly ONE Super Admin, the owner (docs/archive/superadmin-control-plan.md).
     //   --transfer-to <email>  hands ownership to an existing ADMIN account; the
     //                          current owner becomes a plain admin.
     const transferIdx = process.argv.indexOf('--transfer-to');

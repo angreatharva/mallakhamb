@@ -70,7 +70,7 @@ Web/
 ├── eslint.config.js
 ├── eslint-rules/                  # custom lint rules: no-hardcoded-colors, no-hardcoded-spacing
 ├── public/                        # _redirects (SPA rewrite), docs/COP-Mallakhamb.pdf
-├── docs/                          # architecture.md, web-guide.md, CSP_NONCE_INTEGRATION.md
+├── docs/                          # architecture.md, design-language/, homepage/, archive/
 └── src/
     ├── main.jsx  App.jsx  index.css  setupTests.js
     ├── routes/                    # index.jsx (all routes) + lazy-pages.js
@@ -254,8 +254,8 @@ Client-only additions:
 - `src/styles/tokens.js` exports `DESIGN_TOKENS` — brand colours, surfaces, borders, text, status and per-role accents (admin/judge purple `#8B5CF6`, superadmin gold `#F5A623`, coach green `#22C55E`, player saffron `#FF6B00`). The legacy `COLORS` / `ADMIN_COLORS` exports are deprecated Proxy shims that warn in development.
 - `src/components/design-system/` is the in-house kit: `ThemeProvider`/`useTheme`, `Themed{Button,Input,Select,Textarea}`, `GlassCard`/`DarkCard`/`StatCard`/`TiltCard`, the `AmbientOrbs` and `HexGrid` backgrounds, ornaments, and `FadeIn` which respects `useReducedMotion`.
 - `src/components/responsive/` provides layout primitives; `hooks/useResponsive.js` exposes the breakpoint state. Breakpoints and the z-index scale have ONE definition, `src/styles/breakpoints.js`, which `tailwind.config.js` reads too.
-- **Appearance (dark | light)** is separate from the role accent above: `html[data-appearance]`, set before first paint by `public/appearance-init.js`, and colour tokens in `src/index.css`. `AppearanceProvider`/`useAppearance` hold the preference (localStorage `mk-appearance`, default dark). Build colours with alpha as `alpha(token, 0xNN)` from `styles/tokens.js`, never by gluing hex digits onto a token — a CI test enforces it. See `docs/RESPONSIVE_UIUX_PLAN.md`.
-- `utils/ui/cn.js` is `clsx` + `tailwind-merge`.
+- **Appearance (dark | light)** is separate from the role accent above: `html[data-appearance]`, set before first paint by `public/appearance-init.js`, and colour tokens in `src/index.css`. `AppearanceProvider`/`useAppearance` hold the preference (localStorage `mk-appearance`, default dark). Build colours with alpha as `alpha(token, 0xNN)` from `styles/tokens.js`, never by gluing hex digits onto a token — a CI test enforces it. See `docs/archive/RESPONSIVE_UIUX_PLAN.md`.
+- `components/ui/cx.js` joins class names (no tailwind-merge).
 - Two custom ESLint rules (`eslint-rules/`) warn on hardcoded colours and spacing to push usage toward the tokens.
 
 ---
@@ -316,4 +316,4 @@ The "expected failure" is deliberate. `src/pages/judge/JudgeScoring.hooks.test.j
 
 Deployed on Render via the repo-root `render.yaml` as the static site **`mallakhamb-web`**: `rootDir: Web`, build `npm install && npm run build`, publish `./dist`, SPA rewrite `/* → /index.html`, plus security headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`) and a one-year immutable cache on `/assets/*`. `public/_redirects` provides the same rewrite for other static hosts.
 
-Further reading: [docs/architecture.md](./docs/architecture.md), [docs/web-guide.md](./docs/web-guide.md), [docs/CSP_NONCE_INTEGRATION.md](./docs/CSP_NONCE_INTEGRATION.md).
+Further reading: [docs/architecture.md](./docs/architecture.md) and the agent map in [MEMORY/](./MEMORY/00-INDEX.md).

@@ -13,7 +13,7 @@ const ID = 'sa-fix';
 /**
  * The sections, in the order the owner reaches for them. Each one is its own
  * file under ./fix and every write it makes asks for a reason, which History
- * keeps (docs/superadmin-control-plan.md).
+ * keeps (docs/archive/superadmin-control-plan.md).
  */
 const SECTIONS = [
   { id: 'accounts', label: 'Accounts', Component: AccountsSection },

@@ -1,7 +1,7 @@
 /**
  * 014 — A player's team per competition level (Player.levelTeams).
  *
- * The rule (owner, 2026-10-28; docs/team-per-level-plan.md): a player's team
+ * The rule (owner, 2026-10-28; docs/archive/team-per-level-plan.md): a player's team
  * is final at each level. Until now a player had ONE team for every level, so
  * what each team has already done is read off the competitions themselves:
  *

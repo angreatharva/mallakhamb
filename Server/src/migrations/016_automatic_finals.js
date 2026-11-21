@@ -1,6 +1,6 @@
 /**
  * 016 — Competition II / III are filled automatically from Competition I
- * (owner, 2026-10-29; docs/qualification-plan.md).
+ * (owner, 2026-10-29; docs/archive/qualification-plan.md).
  *
  * 1. A meet that already has a score (of any competition), or whose end date
  *    has passed, is history: `legacyFinals: true`. Its Competition II / III

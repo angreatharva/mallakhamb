@@ -51,7 +51,7 @@ export const superAdminAPI = {
     resolveConflict: (conflictId, data) => api.post(`/superadmin/player-teams/conflicts/${conflictId}/resolve`, data),
     history: (params) => api.get('/superadmin/player-teams/history', { params }),
   },
-  // The owner's correction tools and History (docs/superadmin-control-plan.md).
+  // The owner's correction tools and History (docs/archive/superadmin-control-plan.md).
   // Every write carries a `reason`, kept in History.
   fix: {
     history: (params) => api.get('/superadmin/history', { params }),

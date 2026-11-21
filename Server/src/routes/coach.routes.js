@@ -187,7 +187,7 @@ function createCoachRoutes(container) {
   router.get('/teams', authMiddleware, coachAuth, coachController.getCoachTeams);
 
   /**
-   * Co-coaches of the coach's team (docs/superadmin-control-plan.md, D5).
+   * Co-coaches of the coach's team (docs/archive/superadmin-control-plan.md, D5).
    * Everyone on the team sees the list; only the main coach removes.
    */
   const teamAdmin = () => container.resolve('teamAdminService');
@@ -440,7 +440,7 @@ function createCoachRoutes(container) {
 
   /*
    * Paper form (OCR) for the coach's own team — the walk-in desk's flow for
-   * the competition in the coach's session (docs/team-per-level-plan.md
+   * the competition in the coach's session (docs/archive/team-per-level-plan.md
    * step 4). The service keeps a coach to their own drafts and their own
    * team's children; there is no payment here — the coach uses Pay Fees.
    */

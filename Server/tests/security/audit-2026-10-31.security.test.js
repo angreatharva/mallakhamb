@@ -1,6 +1,6 @@
 /**
  * Regression suite for the security audit of 2026-10-31
- * (SECURITY-AUDIT-2026-10-31.md at the repository root).
+ * (docs/archive/SECURITY-AUDIT-2026-10-31.md at the repository root).
  *
  * Every finding the audit CONFIRMED by exploiting it is replayed here against
  * the real application — bootstrap() + createApp(), real routers, real

@@ -19,7 +19,7 @@ const teamSchema = new mongoose.Schema({
     required: [true, 'Team must have a coach']
   },
   /**
-   * Co-coaches (docs/superadmin-control-plan.md, Phase 4, D5): coaches who
+   * Co-coaches (docs/archive/superadmin-control-plan.md, Phase 4, D5): coaches who
    * work AS the main coach for this team (utils/auth/team-coach.util). Set
    * when the Super Admin changes the coach and keeps the old one; removed by
    * the main coach or the Super Admin.

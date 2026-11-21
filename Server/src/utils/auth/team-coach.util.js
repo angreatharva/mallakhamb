@@ -1,5 +1,5 @@
 /**
- * Co-coaches (docs/superadmin-control-plan.md, Phase 4, owner decision D5).
+ * Co-coaches (docs/archive/superadmin-control-plan.md, Phase 4, owner decision D5).
  *
  * A team has one main coach (`Team.coach`) and any number of co-coaches
  * (`Team.coCoaches`). Everything a coach does for a team — squads,

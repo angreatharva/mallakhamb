@@ -101,7 +101,7 @@ automatic Competition II/III finals behind an admin Finalize gate (016).
 | Debug startup/shutdown/index/migration behavior | `01-ARCHITECTURE.md`, `modules/infrastructure.md` | `scripts/startup.js`, `src/infrastructure/database/*` |
 | Debug logging/metrics/health | `11-OBSERVABILITY.md` | `src/infrastructure/{logger,health-monitor}.js`, `src/infrastructure/prometheus/` |
 | Deploy or roll back | `15-DEPLOYMENT.md` | `render.yaml` |
-| Plan or operate the move off Render (OCI staging is built) | `15-DEPLOYMENT.md` ("Move off Render") | repo-root `deploy/README.md`, `deploy/COMMON.md` (findings, phases C0–C9), `deploy/oci/PLAN.md` (its "what was actually built" box wins), `deploy/aws/PLAN.md` |
+| Operate production on OCI (live since 2026-11-17) | `15-DEPLOYMENT.md` ("Move off Render") | repo-root `deploy/README.md`, `deploy/COMMON.md` (findings, phases C0–C9), `deploy/oci/PLAN.md` (its "what was actually built" box wins); finished plans in `deploy/oci/archive/` |
 | Change the nightly e2e (throw-away `_e2e` DB) | `12-CONFIG-AND-ENV.md` (`EMAIL_PROVIDER=none`, `LOG_DIR`), `13-SCRIPTS-AND-OPS.md` (`SEED_SEASON_LEAD_DAYS`, `SETUP_LOCK_PATH`) | `src/services/email/none.adapter.js`, `scripts/lib/{meets,setup-chain}.js`, repo-root `deploy/oci/` |
 | Email won't send, or the server won't boot after copying `.env_example` | `modules/email.md`, `GOTCHAS.md` | `src/services/email/gmail-api.adapter.js`, `.env_example` |
 | Check whether a README/doc claim is trustworthy | `GOTCHAS.md` | — several `docs/*.md` files are severely stale, see the list there before citing one |

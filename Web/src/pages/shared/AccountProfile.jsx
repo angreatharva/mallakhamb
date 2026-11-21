@@ -17,7 +17,7 @@ import PlayerDefaultPasswordSection from '@/pages/coach/PlayerDefaultPasswordSec
 
 const ROLE_NAME = { player: 'Player', coach: 'Coach', admin: 'Admin', superadmin: 'Super Admin' };
 
-// The Stats tab (docs/stats-plan.md): players see their own record, coaches
+// The Stats tab (docs/archive/stats-plan.md): players see their own record, coaches
 // their squad. Lazy, so the charts load only when the tab is opened.
 const PlayerStats = lazy(() => import('./stats/PlayerStats'));
 const CoachStats = lazy(() => import('./stats/CoachStats'));

@@ -14,9 +14,9 @@
 npm --prefix Server run perf:bench -- --teams=25,100,500,1000 --out=Server/docs/perf-report.json
 ```
 
-Raw data: [`perf-report.json`](perf-report.json) (latency, payload size, row
-counts, per scale) and [`perf-queries.json`](perf-queries.json) (database round
-trips per request).
+The raw JSON reports were snapshots and are no longer kept (removed in the
+2026-11-21 cleanup); re-run the command above to regenerate them. The numbers
+below are the record.
 
 ---
 
@@ -442,11 +442,8 @@ only when concurrent users, not data size, is the constraint.
 
 ## 5. Results after Phases 0 and 1
 
-Same harness, same fixtures, same machine. Baseline in
-[`perf-report.json`](perf-report.json), result in
-[`perf-report-after.json`](perf-report-after.json); query counts in
-[`perf-queries-before.json`](perf-queries-before.json) and
-[`perf-queries.json`](perf-queries.json).
+Same harness, same fixtures, same machine. (The raw before/after JSON
+reports are no longer kept; the tables below are the record.)
 
 ### Database round trips per request (100 entered teams)
 

@@ -1,5 +1,5 @@
 /**
- * Phase 1 of docs/superadmin-control-plan.md: there is exactly ONE Super
+ * Phase 1 of docs/archive/superadmin-control-plan.md: there is exactly ONE Super
  * Admin, the owner. Nothing reachable over HTTP creates, promotes, demotes,
  * deactivates or deletes one. Real app, in-memory MongoDB.
  */

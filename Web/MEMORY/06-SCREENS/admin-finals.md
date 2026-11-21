@@ -12,7 +12,7 @@ last_verified: 2026-10-30
 
 ## What it is (2026-10-30, `f8df5b9` + `4201319`)
 
-Automatic finals (owner rules: `docs/qualification-plan.md`; server:
+Automatic finals (owner rules: `docs/archive/qualification-plan.md`; server:
 `Server/MEMORY/modules/scoring.md` "Automatic finals"). Competition II = a
 final per gender × age group (top 10 by the sum over every apparatus, at most 2
 per team; **All ages** only on older meets with `allAgesFinals`); Competition III = top 10 per gender × age group × apparatus, at

@@ -233,7 +233,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     { id: 'teams', label: 'Teams' },
     { id: 'lots', label: 'Lots' },
     { id: 'scores', label: 'Scores' },
-    // Competition I → II / III qualifiers (docs/qualification-plan.md).
+    // Competition I → II / III qualifiers (docs/archive/qualification-plan.md).
     { id: 'finals', label: 'Finals' },
     { id: 'judges', label: 'Judges' },
     { id: 'fairness', label: 'Fairness' },
@@ -243,7 +243,7 @@ const UnifiedDashboard = ({ routePrefix: routePrefixProp }) => {
     // Competition-day registration from a paper form (pages/desk).
     { id: 'desk', label: 'Walk-in' },
     // The owner's correction tools and the record of every change
-    // (docs/superadmin-control-plan.md).
+    // (docs/archive/superadmin-control-plan.md).
     { id: 'fix', label: 'Fix' },
     { id: 'history', label: 'History' },
   ] : [

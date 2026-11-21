@@ -21,8 +21,8 @@ config-manager surface that fed it (`getFeatureFlags()`,
 [modules/public.md](public.md#feature-flags--removed-2026-09-23) and
 GOTCHAS.md's "Fixed since this MEMORY build" section for the full story.
 
-Several `docs/*.md` files (`architecture.md`, `deployment-guide.md`,
-`api-documentation.md`, `system-handbook.md`, `README.md`) still describe
+Several `docs/*.md` files (`architecture.md`,
+`api-documentation.md`, `README.md`) still describe
 this system as if it exists — those were already flagged as stale in
 GOTCHAS.md before this removal, and are now additionally wrong on this one
 point. Not independently re-edited by this pass.

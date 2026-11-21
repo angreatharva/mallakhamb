@@ -1,7 +1,7 @@
 /**
  * Who goes from Competition I into the finals — the rules, with no database.
  *
- * Owner, 2026-10-29 (docs/qualification-plan.md). COP names, the owner's
+ * Owner, 2026-10-29 (docs/archive/qualification-plan.md). COP names, the owner's
  * numbers:
  *
  *  - Competition III (Apparatus Championship): per gender × age group ×

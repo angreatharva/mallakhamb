@@ -103,7 +103,7 @@ adminSchema.pre('save', async function(next) {
   }
 });
 
-// At most ONE Super Admin: the owner (docs/superadmin-control-plan.md, Phase 1).
+// At most ONE Super Admin: the owner (docs/archive/superadmin-control-plan.md, Phase 1).
 // The API refuses to create or promote one; this index is the backstop. If a
 // database already holds two, the startup index report lists it as failed and
 // nothing else changes: hand one over with scripts/createSuperAdmin.js.

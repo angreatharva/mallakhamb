@@ -44,7 +44,7 @@ const AGE_GROUPS = Object.freeze([
 
 /**
  * Competition II (All Round Individual) is ONE final per gender with the top
- * two of every age group in it (owner, 2026-10-29; docs/qualification-plan.md).
+ * two of every age group in it (owner, 2026-10-29; docs/archive/qualification-plan.md).
  * Its category's age group is this value. Only a CATEGORY carries it — scores,
  * panels, running order, tie-break draws — never a player or a squad entry.
  */

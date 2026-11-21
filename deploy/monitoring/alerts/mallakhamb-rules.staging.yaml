@@ -23,8 +23,8 @@ groups:
             Alloy on the active has stopped (systemctl status alloy; journalctl -u alloy), its Grafana token was
             revoked, or the VM is down; check "API down" too. Console → Instances: if it is STOPPED (Oracle idle
             reclaim) the Resource Scheduler starts it within 30 min; to serve sooner, or if the start fails (no A1
-            capacity), fail over. deploy/oci/IDLE-RECLAIM-PLAN.md §3C. If the VM is gone: deploy/oci/PLAN.md O13.
-            Runbook: PLAN.md §8.
+            capacity), fail over. deploy/oci/archive/IDLE-RECLAIM-PLAN.md §3C. If the VM is gone: deploy/oci/PLAN.md
+            O13. Runbook: PLAN.md §8.
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -232,7 +232,7 @@ groups:
             Two of three members are down or cut off from each other. On each VM over the Bastion: systemctl status
             mongod; journalctl -u mongod -n 100. Bring a second member back and the set elects a primary by itself. Only
             if two members are gone for good: forced reconfig to the survivor (owner decision; it can undo unreplicated
-            writes). Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            writes). Runbook: deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -284,7 +284,7 @@ groups:
           description: >-
             One member's mongod, VM or collector is down. Writes continue while two of three are up, but the next loss
             stops them. On the missing VM: systemctl status mongod mallakhamb-mongo-metrics.timer alloy. Runbook:
-            deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -337,7 +337,7 @@ groups:
           description: >-
             See which in mallakhamb_mongo_member_state (8 = down, 3 = recovering, 6 = unknown). On that VM: journalctl
             -u mongod -n 100. A member that fell off the oplog needs a resync (empty its dbPath and restart). Runbook:
-            deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -390,8 +390,8 @@ groups:
           summary: 'A member is {{ humanizeDuration $values.A.Value }} behind the primary.'
           description: >-
             Usually db-03 (the 1/8-OCPU micro) under heavy writes, or a slow disk. Harmless while app-01 and app-02 both
-            run; with one of them down it slows every majority write. Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2
-            (failure matrix).
+            run; with one of them down it slows every majority write. Runbook:
+            deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -443,7 +443,7 @@ groups:
           description: >-
             A member down longer than the window must be resynced, and point-in-time restore depends on the slices
             keeping up. Raise replication.oplogSizeMB in install-mongo.sh (rolling restart) or find what writes so much.
-            Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            Runbook: deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -494,7 +494,7 @@ groups:
           summary: '{{ $values.A.Value }} open connections on one member.'
           description: >-
             The API pool is up to 100 per process; more means a leak, a reconnect storm, or several API processes.
-            Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            Runbook: deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -546,7 +546,7 @@ groups:
           description: >-
             The app writes with w:"majority", so these should never be acknowledged writes. Look at
             /var/lib/mongodb/rollback on that member (bsondump) before deleting. Runbook:
-            deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -598,7 +598,7 @@ groups:
           description: >-
             At 100 % mongod on that member stops (drilled: it recovers by itself once space is freed). First look on
             that VM: sudo du -xh / --max-depth=2 | sort -h | tail; journalctl --disk-usage; /var/log/mongodb. Runbook:
-            deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -704,8 +704,8 @@ groups:
           summary: No oplog slice for more than 40 minutes.
           description: >-
             On the active: systemctl status mallakhamb-oplog-slice.timer; journalctl -u mallakhamb-oplog-slice -n 50.
-            Point-in-time restore cannot go past the last slice. Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2
-            (failure matrix).
+            Point-in-time restore cannot go past the last slice. Runbook: deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md
+            §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -757,7 +757,7 @@ groups:
           summary: No point-in-time base dump for more than 26 hours.
           description: >-
             The first slice of each UTC day takes the base; see journalctl -u mallakhamb-oplog-slice. Runbook:
-            deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -810,7 +810,7 @@ groups:
           description: >-
             On the active: journalctl -u mallakhamb-offsite-copy -n 50. Usually Atlas's network access list (the
             active's public IP), the Atlas user, or M0's 512 MB limit. This copy is the way out if Oracle is lost.
-            Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            Runbook: deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -916,8 +916,8 @@ groups:
           description: >-
             Console → Instances → mallakhamb-prod-db-03. STOPPED (Oracle idle reclaim, or a manual stop): the Resource
             Scheduler starts it within 30 min; the set keeps its primary on 2 of 3 members meanwhile, but the next loss
-            stops writes. Running: systemctl status alloy over the Bastion. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md
-            §3C.
+            stops writes. Running: systemctl status alloy over the Bastion. Runbook:
+            deploy/oci/archive/IDLE-RECLAIM-PLAN.md §3C.
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:
@@ -1482,7 +1482,7 @@ groups:
           description: >-
             When it expires the members refuse each other and the set falls apart. Re-issue from the private CA (Vault
             secrets mallakhamb-prod-bom-secret-mongo-*, deploy/server/mongo-tls-fetch.sh) and restart one member at a
-            time. Runbook: deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
+            time. Runbook: deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §2 (failure matrix).
           runbook_url: >-
             https://github.com/angreatharva/mallakhamb/blob/master/deploy/monitoring/PLAN.md#8-runbook--when-an-alert-fires
         data:

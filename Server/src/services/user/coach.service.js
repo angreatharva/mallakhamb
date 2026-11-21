@@ -639,7 +639,7 @@ class CoachService extends UserService {
     /*
      * Competition II / III are not the coach's to choose any more: the
      * qualification engine writes them from Competition I's results
-     * (docs/qualification-plan.md). Whatever the client sent for them is
+     * (docs/archive/qualification-plan.md). Whatever the client sent for them is
      * dropped, and what the engine already decided is kept — moving a player
      * between age groups must not take them out of a final. Meets scored
      * before the engine (`legacyFinals`) keep the old behaviour.

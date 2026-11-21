@@ -50,4 +50,4 @@ described by seat ("Judge 2"). The public feed strips slip authorship.
   (`THRESHOLDS`). Inferred marks are shown, never flagged.
 - `utils/stats/slip-attribution.util`: `buildSeatIndex`, `resolveSlipAuthor`.
 
-Owner decisions and the full plan: `docs/stats-plan.md`.
+Owner decisions and the full plan: `docs/archive/stats-plan.md`.

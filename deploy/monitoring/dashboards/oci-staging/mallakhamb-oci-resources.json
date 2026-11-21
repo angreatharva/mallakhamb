@@ -3660,7 +3660,7 @@
           "refId": "A"
         }
       ],
-      "description": "Oracle rule: CPU p95, network and (A1 only) memory all under 20 % for 7 days. Red is not an outage: Oracle emails mallakhambindia@gmail.com a week before it stops anything, and the Resource Scheduler starts a stopped VM within 30 min. Runbook: deploy/oci/IDLE-RECLAIM-PLAN.md.",
+      "description": "Oracle rule: CPU p95, network and (A1 only) memory all under 20 % for 7 days. Red is not an outage: Oracle emails mallakhambindia@gmail.com a week before it stops anything, and the Resource Scheduler starts a stopped VM within 30 min. Runbook: deploy/oci/archive/IDLE-RECLAIM-PLAN.md.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",

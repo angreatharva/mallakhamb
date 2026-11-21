@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy/oci/IDLE-RECLAIM-PLAN.md A1 — Oracle's own idle test as Grafana gauges, hourly on both app VMs
+# deploy/oci/archive/IDLE-RECLAIM-PLAN.md A1 — Oracle's own idle test as Grafana gauges, hourly on both app VMs
 # (Grafana takes the max). Oracle may stop an Always Free VM when, over 7 days, CPU p95 < 20 %,
 # network < 20 % and (A1 shapes only) memory < 20 %. This reads the same agent metrics Oracle
 # uses (namespace oci_computeagent) for every VM in this VM's compartment, with the VM's own

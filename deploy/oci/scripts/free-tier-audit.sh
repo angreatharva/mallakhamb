@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run in OCI Cloud Shell. READ-ONLY: lists every resource that has an Always Free limit and prints
 # usage against it, plus this month's metered usage by service. Written for the PAYG decision
-# (PAYG-RISK.md): on PAYG, crossing any of these limits bills instead of being refused.
+# (../archive/PAYG-RISK.md): on PAYG, crossing any of these limits bills instead of being refused.
 # Output is short on purpose (it is read off the Cloud Shell screen).
 set -uo pipefail
 T=$OCI_TENANCY

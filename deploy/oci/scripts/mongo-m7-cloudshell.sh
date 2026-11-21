@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MONGODB-SELF-HOSTED-PLAN.md M7, the parts that need the owner's identity. Run in OCI Cloud Shell:
+# ../archive/MONGODB-SELF-HOSTED-PLAN.md M7, the parts that need the owner's identity. Run in OCI Cloud Shell:
 #
 #   bash mongo-m7-cloudshell.sh
 #

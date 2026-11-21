@@ -1,6 +1,6 @@
 /**
  * The COP age rule at every point a player is put into a team's age group
- * (docs/team-per-level-plan.md, step 2): age on 31 December of the cut-off
+ * (docs/archive/team-per-level-plan.md, step 2): age on 31 December of the cut-off
  * year, "Under N" includes N, their own group or any higher one.
  */
 

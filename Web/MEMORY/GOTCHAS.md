@@ -10,7 +10,7 @@ citation in the doc it links to. Verified against commit `f0bdc1d`,
 `Web/README.md`, `Web/docs/architecture.md`, and `Web/docs/web-guide.md`
 all currently claim `react-router-dom` is **v6**. It is pinned at
 **`^7.18.2`** in `package.json` — confirmed directly, and independently
-corroborated by `docs/AUDIT.md` and `docs/RESPONSIVE_UIUX_PLAN.md` (both
+corroborated by `docs/AUDIT.md` and `docs/archive/RESPONSIVE_UIUX_PLAN.md` (both
 correctly say v7). `README.md` also lists `@tanstack/react-query` as
 "installed but unused" and `@heroicons/react` as an in-use icon
 library — **neither package exists in `package.json` at all**;
@@ -25,7 +25,7 @@ inconsistent last-updated date, and a literal three-times-duplicated
 "Deployment Checklist" section. See
 [01-ARCHITECTURE.md](01-ARCHITECTURE.md#corrected-stack--several-project-docs-disagree-with-the-actual-code-here)
 for the full breakdown. **Prefer `docs/AUDIT.md` and
-`docs/RESPONSIVE_UIUX_PLAN.md`, or this MEMORY tree, over the other three
+`docs/archive/RESPONSIVE_UIUX_PLAN.md`, or this MEMORY tree, over the other three
 docs for any current-state claim.**
 
 ## Dead / unreachable code (confirmed, not just suspected)
@@ -368,3 +368,5 @@ your own machine.
   filtered list would scramble the hidden rows.
 - **A paid squad can still read `isSubmitted: false`** (the webhook sets only
   `paymentStatus`). Lock on either signal.
+
+- **2026-11-21 cleanup:** deleted `docs/web-guide.md` and `docs/CSP_NONCE_INTEGRATION.md` (both stale, see above), `src/utils/ui/cn.js` + the `clsx`/`tailwind-merge` packages, and the unused barrels `components/responsive/index.js` and `components/design-system/accessibility/index.js` (import the files directly). `docs/RESPONSIVE_UIUX_{PLAN,REPORT}.md` moved to `docs/archive/`. Mentions of the deleted docs above are history.

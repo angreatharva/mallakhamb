@@ -1,7 +1,7 @@
 {
   "uid": "mallakhamb-mongo",
   "title": "Mallakhamb MongoDB replica set",
-  "description": "The self-hosted replica set \"mallakhamb\" (app-01, app-02, db-03): members, replication, oplog, load, disks and every backup. deploy/oci/MONGODB-SELF-HOSTED-PLAN.md §6",
+  "description": "The self-hosted replica set \"mallakhamb\" (app-01, app-02, db-03): members, replication, oplog, load, disks and every backup. deploy/oci/archive/MONGODB-SELF-HOSTED-PLAN.md §6",
   "tags": [
     "mallakhamb",
     "database",

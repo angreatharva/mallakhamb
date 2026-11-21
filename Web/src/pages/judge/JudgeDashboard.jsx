@@ -793,7 +793,7 @@ const JudgeDashboard = () => {
 
   /*
    * Competition II / III are about the PLAYER, not the team (owner,
-   * 2026-10-29; docs/qualification-plan.md): after the category, the judge
+   * 2026-10-29; docs/archive/qualification-plan.md): after the category, the judge
    * sees the finalists themselves, in running order, each with a small team
    * tag. Tapping one opens their slip (a Scorer or Time Keeper gets that
    * player's team sheet, which holds only the team's finalists).

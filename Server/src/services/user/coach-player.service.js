@@ -100,7 +100,7 @@ class CoachPlayerService {
    * quietly give it a `.2` Player ID, so the coach is shown the match (409)
    * and has to send `confirmDuplicate: true` to go ahead anyway.
    *
-   * A player's team is final at each level (docs/team-per-level-plan.md). With
+   * A player's team is final at each level (docs/archive/team-per-level-plan.md). With
    * a competition in hand, the new player is this team's at its level from the
    * start. A COACH may not register "a different child" over an exact match
    * another team holds at that level — that would hand the same child a second

@@ -12,7 +12,6 @@ covers:
   - src/contexts/AppearanceProvider.jsx
   - tailwind.config.js
   - src/components/design-system/**
-  - src/utils/ui/cn.js
   - eslint-rules/no-hardcoded-colors.js
   - eslint-rules/no-hardcoded-spacing.js
 read_when: "adding a UI primitive, touching colors/spacing/breakpoints/appearance, restyling anything, or wondering why two components share a name"
@@ -25,8 +24,8 @@ Rewritten 2026-10-07. The responsive/appearance work (branch
 `feat/responsive-appearance`, merged `3fab1e9` on 2026-10-04) replaced
 most of what this doc used to describe: there is now one breakpoint
 source, colours are CSS custom properties, and the app has Light and
-Dark. Full history: `docs/RESPONSIVE_UIUX_PLAN.md` (per-file log) and
-`docs/RESPONSIVE_UIUX_REPORT.md` (summary).
+Dark. Full history: `docs/archive/RESPONSIVE_UIUX_PLAN.md` (per-file log) and
+`docs/archive/RESPONSIVE_UIUX_REPORT.md` (summary).
 
 **Current state (2026-10-11, merged to local `master` as `0ad9159`, then
 the leftovers `c32815c`/`a79c8cb`; not yet pushed — a push deploys to
@@ -213,9 +212,9 @@ names, but they are drawn by the `ui` primitives now. `EmptyState` exists
 both there and in `@/components/ui` — grep the call site's import path
 before editing one.
 
-## `src/utils/ui/cn.js`
+## Class names
 
-`cn = (...inputs) => twMerge(clsx(inputs))`. Nothing else to know.
+`src/components/ui/cx.js` joins class names. `utils/ui/cn.js` (clsx + tailwind-merge) was unused and was deleted with both packages in the 2026-11-21 cleanup.
 
 ## Change guidance
 

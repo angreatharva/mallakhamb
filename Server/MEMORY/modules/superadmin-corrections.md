@@ -14,7 +14,7 @@ last_verified: 2026-11-11
 
 # Super Admin correction tools (2026-10-31, `0a7f58b`..`30243e5`)
 
-The plan and the owner's decisions D1–D6 are in `docs/superadmin-control-plan.md`
+The plan and the owner's decisions D1–D6 are in `docs/archive/superadmin-control-plan.md`
 (repo root). Six phases, all merged on master.
 
 ## One Super Admin — the owner (Phase 1)

@@ -10,7 +10,7 @@ import { meetCompetitionTypes, selectedMeets } from './support/panel-plan.js';
  *
  * Between judging Competition I (SCORE_STAGE=one) and judging the finals
  * (SCORE_STAGE=finals): a final has nobody in it until it is finalized
- * (docs/qualification-plan.md). The UI half of
+ * (docs/archive/qualification-plan.md). The UI half of
  * `Server/scripts/seedCompetitionDay.js finals`, which also checks the lists
  * against the rules; this one proves the button does what the screen says.
  *

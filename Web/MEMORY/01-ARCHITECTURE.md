@@ -29,7 +29,7 @@ directly: **`react-router-dom` is `^7.18.2`** (v7, data-less
 [03-ROUTING-AND-NAV.md](03-ROUTING-AND-NAV.md)). `README.md`,
 `docs/architecture.md`, and `docs/web-guide.md` all currently claim
 **v6** — stale in all three; `docs/AUDIT.md` and
-`docs/RESPONSIVE_UIUX_PLAN.md` (the two most recently touched docs)
+`docs/archive/RESPONSIVE_UIUX_PLAN.md` (the two most recently touched docs)
 correctly say v7. **`@tanstack/react-query` and `@heroicons/react` do
 not exist in this project at all** — absent from `package.json`, zero
 imports anywhere in `src/`. `README.md`'s stack table lists both as
@@ -62,7 +62,7 @@ contains a literal copy-paste defect — its "Deployment Checklist"
 section is duplicated three times in a row — and an internal date
 inconsistency (header says "Last Updated: March 26, 2026," body
 references an event from August 2026). **Treat `docs/web-guide.md` as
-superseded; prefer `docs/AUDIT.md` and `docs/RESPONSIVE_UIUX_PLAN.md`
+superseded; prefer `docs/AUDIT.md` and `docs/archive/RESPONSIVE_UIUX_PLAN.md`
 for current-state facts when in doubt**, or this MEMORY tree itself.
 
 `docs/architecture.md`'s directory tree also lists `src/errors/` and
@@ -185,7 +185,7 @@ viewport before any specific route has rendered.
   navbar is rendered as a sibling of `AppRoutes`, not a child of it.
 - Before citing `docs/web-guide.md` or `docs/architecture.md` for a
   factual claim about current behavior: check this MEMORY tree or
-  `docs/AUDIT.md`/`docs/RESPONSIVE_UIUX_PLAN.md` first — both older docs
+  `docs/AUDIT.md`/`docs/archive/RESPONSIVE_UIUX_PLAN.md` first — both older docs
   have confirmed stale sections (above).
 
 ## Since the last pass (2026-11-11, against `f5465b4`)

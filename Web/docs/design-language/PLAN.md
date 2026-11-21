@@ -7,7 +7,7 @@
 - `docs/homepage/README.md`
 
 **Builds on:**
-- `docs/RESPONSIVE_UIUX_PLAN.md`: the Appearance system, the responsive primitives and the audit harness. All of these stay.
+- `docs/archive/RESPONSIVE_UIUX_PLAN.md`: the Appearance system, the responsive primitives and the audit harness. All of these stay.
 - Project memory: protected behaviours, the audit traps and the working style.
 
 ---

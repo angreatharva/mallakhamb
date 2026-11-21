@@ -1,5 +1,5 @@
 /**
- * Competition I → II / III, automatically (docs/qualification-plan.md).
+ * Competition I → II / III, automatically (docs/archive/qualification-plan.md).
  *
  * Called whenever a Competition I score is saved, locked or unlocked, or a
  * Competition I lucky draw is recorded or cleared. It recomputes the finals

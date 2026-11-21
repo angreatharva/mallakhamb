@@ -187,7 +187,7 @@
       ],
       "cwd": "Server",
       "port": 5000,
-      "//": "Throwaway LOCAL clone of mallakhamb_local_e2e for the Super Admin Fix/History browser check (docs/superadmin-control-plan.md). Owner sign-in is in Server/sa-check.local (git-ignored)."
+      "//": "Throwaway LOCAL clone of mallakhamb_local_e2e for the Super Admin Fix/History browser check (docs/archive/superadmin-control-plan.md). Owner sign-in is in Server/sa-check.local (git-ignored)."
     },
     {
       "name": "api-demo-local",
@@ -198,7 +198,7 @@
       ],
       "cwd": "Server",
       "port": 5002,
-      "//": "The demo seed's rehearsal API (docs/demo-seed-plan.md): local mallakhamb_demo, no mail, discount on. Run: DEMO_MONGODB_URI=mongodb://127.0.0.1:27017/mallakhamb_demo DEMO_DISCOUNT_CODE=DEMOSEED100 DEMO_SUPERADMIN_PASSWORD=... node scripts/seedDemo.js --drop --yes"
+      "//": "The demo seed's rehearsal API (docs/archive/demo-seed-plan.md): local mallakhamb_demo, no mail, discount on. Run: DEMO_MONGODB_URI=mongodb://127.0.0.1:27017/mallakhamb_demo DEMO_DISCOUNT_CODE=DEMOSEED100 DEMO_SUPERADMIN_PASSWORD=... node scripts/seedDemo.js --drop --yes"
     },
     {
       "name": "web-demo-local",

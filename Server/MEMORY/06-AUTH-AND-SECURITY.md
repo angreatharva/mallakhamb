@@ -402,7 +402,7 @@ above).
   sessions keep working for their own role until the next sign-in. See
   `utils/security/cookie.util.js`.
 - **Security audit 2026-10-31** (`c3b7aa91`; per-item status is in section H
-  of `SECURITY-AUDIT-2026-10-31.md`):
+  of `docs/archive/SECURITY-AUDIT-2026-10-31.md`):
   - JWT is pinned to HS256.
   - Reset codes are hashed with SHA-256.
   - Logouts are persisted (`SessionRevocation`), with a 30-day absolute

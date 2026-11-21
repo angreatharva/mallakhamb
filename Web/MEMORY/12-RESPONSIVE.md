@@ -15,8 +15,8 @@ last_verified: 2026-11-11
 Rewritten 2026-10-07 after the responsive/appearance work (merged
 `3fab1e9`, 2026-10-04). Every screen now works at 320–1920 on phones,
 tablets and laptops, in both appearances; summary in
-`docs/RESPONSIVE_UIUX_REPORT.md`, per-file log in
-`docs/RESPONSIVE_UIUX_PLAN.md`.
+`docs/archive/RESPONSIVE_UIUX_REPORT.md`, per-file log in
+`docs/archive/RESPONSIVE_UIUX_PLAN.md`.
 
 ## Bands
 

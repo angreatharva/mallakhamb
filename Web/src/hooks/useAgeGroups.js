@@ -36,7 +36,7 @@ export const ageGroupMapping = {
   'Above16': { value: 'Above16', label: 'Above 16' },
   'Above18': { value: 'Above18', label: 'Above 18' },
   // Competition II's one final per gender, with every age group's top two.
-  // A CATEGORY, never a player's own age group (docs/qualification-plan.md).
+  // A CATEGORY, never a player's own age group (docs/archive/qualification-plan.md).
   'AllAges': { value: 'AllAges', label: 'All ages' }
 };
 

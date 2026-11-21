@@ -2,7 +2,7 @@
  * A category's age group and who is in it.
  *
  * Competition II is ONE "All ages" final per gender, holding the top 2 of every
- * age group (owner, 2026-11-17; docs/qualification-plan.md). From 14 to 17 Nov
+ * age group (owner, 2026-11-17; docs/archive/qualification-plan.md). From 14 to 17 Nov
  * it ran as a final per gender AND age group; a meet where one of those had
  * already started keeps that shape (`perAgeGroupFinals`, migration 018), so its
  * scores and results stay readable.

@@ -14,7 +14,7 @@ import { PageHeader } from '@/components/shell';
  * PlayerTeamSelection — the Team step of Level → Team → Competition.
  *
  * A player's team is FINAL at each competition level (Player.levelTeams;
- * docs/team-per-level-plan.md). At a level where they already have one, the
+ * docs/archive/team-per-level-plan.md). At a level where they already have one, the
  * team is shown read-only. Otherwise they choose, and the choice is final for
  * that level; their old team, if any, is offered first.
  */

@@ -1,5 +1,5 @@
 /**
- * Competition I → II / III qualification rules (docs/qualification-plan.md).
+ * Competition I → II / III qualification rules (docs/archive/qualification-plan.md).
  */
 
 const { apparatusFinal, allRoundAgeGroup } = require('../../src/utils/scoring/qualification.util');

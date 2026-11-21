@@ -1,12 +1,11 @@
 # Mallakhamb — Where production runs, and how to move it
 
-Status 2026-10-13: production runs on **Render** (Singapore, free plan) + **MongoDB Atlas** + **Grafana Cloud**. Nothing below has been executed yet.
+**Status 2026-11-21: production runs on OCI** (two Always Free A1 VMs, active + warm standby, self-hosted MongoDB replica set) at mallakhambcompetition.com since 2026-11-17; Render (`render.yaml`) is kept as the fallback. **AWS was not chosen and its plan was deleted** (2026-11-21); AWS columns below are history. Finished OCI plans are in [oci/archive/](oci/archive/). The text below is the original comparison (2026-10-13).
 
 | Document | What it is |
 |---|---|
 | [COMMON.md](COMMON.md) | Everything platform-neutral: findings, decisions, hostnames, the active/standby design (§4a), recovery objectives (§4b), env vars, code changes, database, DNS, server scripts, Grafana changes, rehearsal and drills, cutover, runbooks |
 | [oci/PLAN.md](oci/PLAN.md) | Oracle Cloud specifics: the free tier in full, the hard spending guard, two VMs (active + warm standby), Vault, backups, failover runbook, escape hatch |
-| [aws/PLAN.md](aws/PLAN.md) | AWS specifics: CloudFront + S3, EC2, SSM, IAM, CI |
 | [monitoring/PLAN.md](monitoring/PLAN.md) | The existing Grafana Cloud setup. COMMON C1.7 / C5 / C7 move it with the server |
 
 ## Options compared
@@ -67,7 +66,7 @@ The plan reviewed was `oci-production-architecture-plan.md`: **two active API VM
 
 ## Decisions needed now (COMMON §2)
 
-1. ~~**D1 / D2:** replace the PHP site or sit beside it?~~ **Decided: Option A**, live 2026-11-17. `www` serves the new app; the PHP site stays at `old.` as a backup ([oci/GO-LIVE-PLAN.md](oci/GO-LIVE-PLAN.md) §3).
+1. ~~**D1 / D2:** replace the PHP site or sit beside it?~~ **Decided: Option A**, live 2026-11-17. `www` serves the new app; the PHP site stays at `old.` as a backup ([oci/archive/GO-LIVE-PLAN.md](oci/archive/GO-LIVE-PLAN.md) §3).
 2. ~~**D3:** who controls the BigRock hosting?~~ **Resolved:** DNS moved to GoDaddy; BigRock is no longer used (no email on the domain).
 3. ~~**Renew the domain now.**~~ **Done:** renewed to 2027-11-14.
 4. **D9:** accept §4b's recovery objectives (≤ 15 min of data on meet days, ≤ 24 h otherwise; ≤ 10 min down on server loss), or pay for M10 + continuous backup.

@@ -7,7 +7,7 @@ import { Button, ConfirmDialog, Notice, Panel, Heading } from '@/components/ui';
 const errorOf = (error, fallback) => error?.response?.data?.error?.message || error?.response?.data?.message || fallback;
 
 /**
- * Co-coaches on the coach dashboard (docs/superadmin-control-plan.md, D5).
+ * Co-coaches on the coach dashboard (docs/archive/superadmin-control-plan.md, D5).
  * The main coach sees who co-coaches their team and can remove them; a
  * co-coach sees whose team they work on. Hidden when there is nothing to say.
  */

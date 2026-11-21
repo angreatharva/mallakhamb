@@ -1,12 +1,11 @@
 # Mallakhamb — Production Move: Common Plan (any platform)
 
-Status: **PLAN ONLY — nothing in here has been executed.**
+Status: **EXECUTED on OCI** (production since 2026-11-17). AWS was not chosen; its plan was deleted on 2026-11-21, so every `[PLATFORM: … AWS …]` branch below is history.
 Written: 2026-10-11 (supersedes the shared parts of the 2026-09-27 AWS plan). **Revised 2026-10-13:** active + warm standby (§4a), recovery objectives (§4b), meet-mode backups, new drills and alerts, after reviewing an external OCI plan (README §Review). Owner: Atharva Angre.
 
 This document holds everything that is **the same whichever cloud is chosen**. Each platform plan names the order:
 
 - [deploy/oci/PLAN.md](oci/PLAN.md): Oracle Cloud (Always Free compute)
-- [deploy/aws/PLAN.md](aws/PLAN.md): Amazon Web Services
 
 Read [deploy/README.md](README.md) first for the comparison and the decisions.
 
@@ -96,7 +95,7 @@ Phones / laptops (India)
    ├── <APP_HOST>  ──▶ [PLATFORM: CloudFront+S3 on AWS | Caddy on the VM on OCI]   React build
    └── <API_HOST>  ──▶ Caddy (TLS, WebSockets) ──▶ Node 22, ONE process, systemd "mallakhamb"
                                                      │
-                       MongoDB replica set ◀─────────┤  OCI: self-hosted on the VMs (oci/MONGODB-SELF-HOSTED-PLAN.md); AWS: Atlas Flex
+                       MongoDB replica set ◀─────────┤  OCI: self-hosted on the VMs (oci/archive/MONGODB-SELF-HOSTED-PLAN.md); AWS: Atlas Flex
                        Object storage backups ◀──────┤  nightly mongodump  [PLATFORM]
                        Secret store ─────────────────┤  env at deploy/boot [PLATFORM]
                                                      │
@@ -106,7 +105,7 @@ Phones / laptops (India)
      ├─ 4 dashboards + alert rules (re-sized for the VM)
      └─ synthetic checks from Mumbai + Hyderabad on <API_HOST> and <APP_HOST>
 DNS: stays at BigRock (only A/CNAME records change). Email: untouched at BigRock.
-(Superseded 2026-11-17: DNS moved to GoDaddy, no email on the domain — see oci/GO-LIVE-PLAN.md §3.)
+(Superseded 2026-11-17: DNS moved to GoDaddy, no email on the domain — see oci/archive/GO-LIVE-PLAN.md §3.)
 ```
 
 ### 4a. One active server + one warm standby (and why not two active ones)
@@ -298,7 +297,7 @@ Every change here also works on Render. Ship it to Render production first (C1.9
 
 ## PHASE C2 — Database: Atlas Flex (Day 3, ~1.5 h)
 
-> **On OCI this phase is replaced (owner decision 2026-10-23):** a self-hosted 3-member replica set on the VMs — built, drilled and running staging since 2026-10-24. Users, network, alerts and backups: [oci/PRODUCTION-READINESS.md](oci/PRODUCTION-READINESS.md) §4; everything else: [oci/MONGODB-SELF-HOSTED-PLAN.md](oci/MONGODB-SELF-HOSTED-PLAN.md). The steps below still apply to the AWS plan.
+> **On OCI this phase is replaced (owner decision 2026-10-23):** a self-hosted 3-member replica set on the VMs — built, drilled and running staging since 2026-10-24. Users, network, alerts and backups: [oci/PRODUCTION-READINESS.md](oci/PRODUCTION-READINESS.md) §4; everything else: [oci/archive/MONGODB-SELF-HOSTED-PLAN.md](oci/archive/MONGODB-SELF-HOSTED-PLAN.md). The steps below still apply to the AWS plan.
 
 A **new** Flex cluster rather than an in-place upgrade: the old cluster stays untouched as the rollback copy.
 
