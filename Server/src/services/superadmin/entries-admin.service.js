@@ -21,7 +21,7 @@ const { requireReason } = require('./correction.service');
 const { checkAgeGroup, groupLabel } = require('../../utils/data/age-eligibility.util');
 const { hasRoomInSquad } = require('../../utils/scoring/team-championship.util');
 const { toCanonicalApparatus } = require('../../utils/data/apparatus.util');
-const { paidEntriesAfterPayment } = require('../../config/payment.config');
+const { reopenFields } = require('../registration/team-reopen.service');
 const { isAgeGroup, isCustomAgeGroup, GENDERS, APPARATUS } = require('../../config/cop-rules');
 
 const same = (a, b) => String(a?._id || a) === String(b?._id || b);
@@ -225,10 +225,8 @@ class EntriesAdminService {
      * team paid before `paidEntries` existed, or marked paid by hand, is
      * covered the same way.
      */
-    const reopening = fields.isSubmitted === false && reg.isSubmitted && reg.paymentStatus === 'completed';
-    if (reopening) {
-      fields.paidEntries = paidEntriesAfterPayment(reg.players || [], reg.paidEntries || [], meet, reg.submittedAt || new Date());
-    }
+    const reopening = fields.isSubmitted === false && reg.isSubmitted;
+    if (reopening) Object.assign(fields, reopenFields(reg, meet));
     await this.competitions.updateRegistrationFields(meet._id, teamId, fields);
     const team = await this.Team.findById(teamId, { name: 1 }).lean();
     await this.corrections.record({

@@ -58,7 +58,7 @@ const DeskReviewRow = ({ index, row, crop = null, competition, onChange, onRemov
         <p className="type-body-s font-bold m-0">
           {index + 1}. {genderWord(row.gender)}
           {row.writtenAgeGroup ? ` · written under ${ageLabel(row.writtenAgeGroup)}` : ''}
-          {row.page ? ` · page ${row.page}, row ${row.rowNo}` : ' · typed in'}
+          {row.page ? ` · page ${row.page}, row ${row.rowNo}` : row.source === 'excel' ? ` · Excel row ${row.excelRow}` : ' · typed in'}
         </p>
         <div className="flex items-center gap-2">
           {locked
@@ -125,6 +125,14 @@ const DeskReviewRow = ({ index, row, crop = null, competition, onChange, onRemov
               checked={(row.apparatus || []).includes(name)}
               onChange={(on) => set({ apparatus: on ? [...(row.apparatus || []), name] : (row.apparatus || []).filter((a) => a !== name) })}>
               {APPARATUS_LABEL[name] || name}
+            </CheckBox>
+          ))}
+          {/* A tick read off the paper for an apparatus this meet does not run:
+              shown so it can be taken off, or the row could never be fixed. */}
+          {(row.apparatus || []).filter((name) => !forGender.apparatus.includes(name)).map((name) => (
+            <CheckBox key={name} id={id(`app-${name}`)} disabled={locked} checked
+              onChange={() => set({ apparatus: (row.apparatus || []).filter((a) => a !== name) })}>
+              {APPARATUS_LABEL[name] || name} (not offered)
             </CheckBox>
           ))}
         </div>

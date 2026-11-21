@@ -16,7 +16,9 @@ const { AGE_GROUP_PATTERN, GENDERS, APPARATUS } = require('../config/cop-rules')
  * Photos are NOT stored. Only the text read from them is.
  */
 const rowSchema = new mongoose.Schema({
-  source: { type: String, enum: ['ocr', 'manual'], default: 'manual' },
+  source: { type: String, enum: ['ocr', 'manual', 'excel'], default: 'manual' },
+  /** The row on the uploaded Excel sheet this player came from. */
+  excelRow: { type: Number },
   page: { type: Number },
   rowNo: { type: Number },
   firstName: { type: String, trim: true, default: '' },
@@ -69,6 +71,14 @@ const walkInRegistrationSchema = new mongoose.Schema({
     pages: Number,
     at: { type: Date, default: Date.now },
     seconds: Number,
+    _id: false,
+  }],
+  /** Excel files read into this form (name, rows, when) — never the file itself. */
+  imports: [{
+    kind: { type: String, enum: ['excel'] },
+    fileName: String,
+    rows: Number,
+    at: { type: Date, default: Date.now },
     _id: false,
   }],
   /** Set while a submit is running, so two clicks cannot create a child twice. */

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FileDown, RotateCcw, Trash2 } from 'lucide-react';
+import { FileDown, FileSpreadsheet, RotateCcw, Trash2 } from 'lucide-react';
 import { deskAPI } from '@/services/user/desk.api';
 import { useCompetition } from '@/contexts/CompetitionContext';
 import { logger } from '@/infrastructure/logger';
@@ -11,15 +11,17 @@ import DeskCoachStep from './DeskCoachStep';
 import DeskFormStep from './DeskFormStep';
 import DeskPayStep from './DeskPayStep';
 import DeskSlip from './DeskSlip';
+import DeskTeamStatusStep from './DeskTeamStatusStep';
 import { errorText, saveBlob } from './deskShared';
 
-const STEPS = ['Competition', 'Coach & team', 'Form', 'Payment', 'Slip'];
+const STEPS = ['Competition', 'Coach & team', 'Team status', 'Players', 'Payment', 'Slip'];
 
-const stepOf = (draft) => {
+const stepOf = (draft, locked) => {
+  if (locked) return 2;
   if (!draft) return 1;
-  if (draft.status === 'paid') return 4;
-  if (draft.status === 'submitted') return 3;
-  return 2;
+  if (draft.status === 'paid') return 5;
+  if (draft.status === 'submitted') return 4;
+  return 3;
 };
 
 /**
@@ -38,6 +40,11 @@ const WalkInDesk = () => {
   const [printing, setPrinting] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [coachKey, setCoachKey] = useState(0);
+  // A coach whose team is already submitted here: the unlock card (step 3).
+  const [locked, setLocked] = useState(null);
+  // An Excel file chosen on the coach step, imported once the form opens.
+  const [excelFile, setExcelFile] = useState(null);
+  const [templating, setTemplating] = useState(false);
 
   useEffect(() => {
     deskAPI.openMeets()
@@ -73,12 +80,29 @@ const WalkInDesk = () => {
     }
   };
 
+  const excelTemplate = async () => {
+    setTemplating(true);
+    try {
+      const res = await deskAPI.excelTemplate();
+      saveBlob(res.data, 'mallakhamb-walk-in-template.xlsx');
+    } catch (error) {
+      toast.error(errorText(error, 'Could not make the Excel template'));
+    } finally {
+      setTemplating(false);
+    }
+  };
+
   const openFor = async (coach) => {
     setOpening(true);
     try {
       const res = await deskAPI.openDraft({ competitionId: meetId, coachId: coach._id });
+      setLocked(null);
       setDraft(res.data?.data);
     } catch (error) {
+      if (error?.response?.data?.error?.details?.reason === 'TEAM_SUBMITTED') {
+        setLocked(coach);
+        return;
+      }
       toast.error(errorText(error, 'Could not start the form'));
     } finally {
       setOpening(false);
@@ -101,11 +125,13 @@ const WalkInDesk = () => {
 
   const finish = () => {
     setDraft(null);
+    setLocked(null);
+    setExcelFile(null);
     setCoachKey((k) => k + 1);
     loadDrafts();
   };
 
-  const step = stepOf(draft);
+  const step = stepOf(draft, locked);
 
   if (meets === null) return <div className="py-16 flex justify-center"><Spinner label="Loading the desk" /></div>;
 
@@ -136,11 +162,14 @@ const WalkInDesk = () => {
               label="Competition"
               value={meetId}
               disabled={Boolean(draft)}
-              onChange={(v) => { setMeetId(v); setDraft(null); }}
+              onChange={(v) => { setMeetId(v); setDraft(null); setLocked(null); }}
               placeholder="Choose a competition"
               options={meets.map((m) => ({ value: String(m._id), label: `${m.name}${m.isLate ? ' · late fee' : ''}` }))}
             />
-            <Button variant="line" icon={FileDown} loading={printing} onClick={printForm}>Print blank form</Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button variant="line" icon={FileDown} loading={printing} onClick={printForm}>Print blank form</Button>
+              <Button variant="line" icon={FileSpreadsheet} loading={templating} onClick={excelTemplate}>Excel template</Button>
+            </div>
           </div>
           {meet && (
             <p className="type-caption text-fg-muted m-0">
@@ -168,10 +197,14 @@ const WalkInDesk = () => {
         </Panel>
       )}
 
-      {meetId && !draft && (
+      {meetId && !draft && !locked && (
         opening
           ? <div className="py-8 flex justify-center"><Spinner label="Starting the form" /></div>
-          : <DeskCoachStep key={coachKey} onReady={openFor} />
+          : <DeskCoachStep key={coachKey} onReady={openFor} onExcel={setExcelFile} />
+      )}
+
+      {meetId && !draft && locked && (
+        <DeskTeamStatusStep competitionId={meetId} coach={locked} onUnlocked={openFor} onBack={finish} />
       )}
 
       {draft && (
@@ -183,7 +216,9 @@ const WalkInDesk = () => {
         </Notice>
       )}
 
-      {draft?.status === 'draft' && <DeskFormStep draft={draft} ocr={ocr} onDraft={setDraft} />}
+      {draft?.status === 'draft' && (
+        <DeskFormStep draft={draft} ocr={ocr} onDraft={setDraft} excelFile={excelFile} onExcelUsed={() => setExcelFile(null)} />
+      )}
       {draft?.status === 'submitted' && <DeskPayStep draft={draft} onDraft={setDraft} />}
       {draft?.status === 'paid' && <DeskSlip draftId={String(draft._id)} onDone={finish} />}
 

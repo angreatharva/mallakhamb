@@ -113,6 +113,28 @@
       "//": "The API on a throwaway LOCAL database with the walk-in desk's OCR sidecar (ocr/, started separately on 8090 with OCR_TOKEN=test-token) and a test discount code. Run prepare:db with the same MONGODB_URI first."
     },
     {
+      "name": "api-desk-v2-check",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.MONGODB_URI='mongodb://127.0.0.1:27017/mallakhamb_desk_v2';process.env.EMAIL_PROVIDER='none';process.env.NODE_ENV='development';process.env.MIGRATE_ON_START='false';process.env.RATE_LIMIT_ENABLED='false';process.env.OCR_URL='http://127.0.0.1:8090';process.env.OCR_TOKEN='test-token';process.env.DISCOUNT_CODE_ENABLED='true';process.env.DISCOUNT_CODE='DESK-CHECK-FREE';process.env.RAZORPAY_KEY_ID='';process.env.RAZORPAY_KEY_SECRET='';require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5000,
+      "//": "Walk-in desk v2 browser check (unlock, Excel, register player): throwaway LOCAL mallakhamb_desk_v2, OCR sidecar on 8090 with OCR_TOKEN=test-token, test discount code. Sign-in in Server/desk-v2-check.local (git-ignored)."
+    },
+    {
+      "name": "web-local-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.VITE_API_URL='http://localhost:5000/api';require('child_process').spawn('npx',['vite','--port','5177','--strictPort'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Web",
+      "port": 5177,
+      "//": "The SPA against a local API on localhost:5000 (any api-*-check entry)."
+    },
+    {
       "name": "api-stats-check",
       "runtimeExecutable": "node",
       "runtimeArgs": [

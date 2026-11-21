@@ -39,7 +39,10 @@ const {
   sortAgeGroups,
   ageGroupLabel,
 } = require('../../config/cop-rules');
-const { resolveFeeWindow, calculateTeamPaymentAmount } = require('../../config/payment.config');
+const {
+  resolveFeeWindow, calculateTeamPaymentAmount, unpaidPlayers, paidPlayerIds, calculatePlayerFee, getLateFeePerPlayer,
+} = require('../../config/payment.config');
+const { requireReason } = require('../superadmin/correction.service');
 const { mayActOnCompetition, isSuperAdmin } = require('../../utils/security/competition-access.util');
 const { isCompetitionLocked, mayBypassCompetitionLock } = require('../../utils/security/competition-lock.util');
 const { offeredApparatus } = require('../../utils/data/competition-apparatus.util');
@@ -105,6 +108,8 @@ class WalkInService {
     authenticationService,
     coachService,
     coachPlayerService,
+    teamReopenService = null,
+    excelService = null,
     auditLogRepository = null,
     ocrClient,
     config,
@@ -119,6 +124,8 @@ class WalkInService {
     this.authenticationService = authenticationService;
     this.coachService = coachService;
     this.coachPlayerService = coachPlayerService;
+    this.teamReopen = teamReopenService;
+    this.excel = excelService;
     this.auditLogRepository = auditLogRepository;
     this.ocr = ocrClient;
     this.config = config;
@@ -316,6 +323,176 @@ class WalkInService {
     return { _id: team._id, name: team.name, created: true };
   }
 
+  // ── Step 2b: the team's status, and unlocking a submitted team ──────────
+
+  /**
+   * Where the coach's team stands at this meet: not entered, open, or
+   * submitted (paid). The desk shows the unlock card for a submitted team.
+   */
+  async teamStatus(actor, { competitionId, coachId }) {
+    const competition = await this._meetFor(actor, competitionId, { write: false });
+    const registration = (competition.registeredTeams || []).find((rt) => sameId(rt.coach, coachId));
+    const window = resolveFeeWindow(competition);
+    const base = { feeWindow: { canPay: window.canPay, isLate: Boolean(window.isLate), lateFeePerPlayer: window.lateFeePerPlayer || 0 } };
+    if (!registration) return { ...base, registered: false, isSubmitted: false, reopened: false, players: 0, paidPlayers: 0, squad: [] };
+    return {
+      ...base,
+      registered: true,
+      isSubmitted: Boolean(registration.isSubmitted),
+      reopened: !registration.isSubmitted && (registration.paidEntries || []).length > 0,
+      paymentStatus: registration.paymentStatus || null,
+      paymentAmount: registration.paymentAmount ?? null,
+      players: (registration.players || []).length,
+      paidPlayers: (registration.paidEntries || []).length,
+      squad: await this._squad(registration, new Set()),
+    };
+  }
+
+  /**
+   * Unlock a submitted team at the desk (owner, 2026-11-21: Admins too, on
+   * the meets they are assigned to). Everyone already paid for is recorded
+   * as paid, so only players added now are charged. Recorded in History.
+   */
+  async unlockTeam(actor, { competitionId, coachId, reason }) {
+    if (this._isCoach(actor)) throw new AuthorizationError('Only the competition office can unlock a team.');
+    const why = requireReason(reason);
+    const competition = await this._meetFor(actor, competitionId);
+    if (!resolveFeeWindow(competition).canPay) {
+      throw new BusinessRuleError('This competition is not taking entries right now, so the team cannot be unlocked to add players.');
+    }
+    const registration = (competition.registeredTeams || []).find((rt) => sameId(rt.coach, coachId));
+    if (!registration) throw new NotFoundError('This coach\'s team entry');
+    if (!registration.isSubmitted) throw new ConflictError('This team is already open.', { reason: 'NOT_SUBMITTED' });
+
+    const result = await this.teamReopen.reopenTeam(
+      { id: actor.id, type: this._teamActor(actor).type, name: actor.user?.name },
+      { meet: competition, coachId, reason: why, via: 'walk-in-desk' }
+    );
+    // A form that took this team's earlier payment is finished; the next one starts fresh.
+    await this.drafts.model.updateMany(
+      { competition: competitionId, coach: coachId, status: 'submitted' },
+      { $set: { status: 'paid', paidAt: new Date() } }
+    );
+    await this._audit(actor, 'WALK_IN_TEAM_UNLOCKED', 'competition', competitionId, {
+      coach: String(coachId), team: String(idOf(registration.team)), paidPlayers: result.paidPlayers, reason: why,
+    });
+    return { ...result, status: await this.teamStatus(actor, { competitionId, coachId }) };
+  }
+
+  /**
+   * The squad as entered, by name, each marked paid or not. `skip` holds
+   * the players this form itself entered (they are on the form's rows).
+   * @private
+   */
+  async _squad(registration, skip) {
+    const entries = (registration?.players || []).filter((e) => e.player && !skip.has(idOf(e.player)));
+    if (!entries.length) return [];
+    const paid = paidPlayerIds(registration.paidEntries || []);
+    const people = await this.playerRepository.find({ _id: { $in: entries.map((e) => idOf(e.player)) } }, { select: 'firstName lastName loginId' });
+    const byId = new Map((people || []).map((p) => [String(p._id), p]));
+    return entries.map((e) => {
+      const p = byId.get(idOf(e.player));
+      return {
+        _id: idOf(e.player),
+        name: p ? [p.firstName, p.lastName].filter(Boolean).join(' ').replace(/&#x27;/gi, "'") : 'Player',
+        loginId: p?.loginId || null,
+        gender: e.gender,
+        ageGroup: e.ageGroup,
+        paid: paid.has(idOf(e.player)),
+      };
+    });
+  }
+
+  /** What the coach owes now: the unpaid players' fees, plus the late fee each. @private */
+  _feeBreakdown(registration, competition) {
+    if (!registration) return null;
+    const owing = unpaidPlayers(registration.players || [], registration.paidEntries || []);
+    let late = 0;
+    try { late = getLateFeePerPlayer(competition, new Date()) || 0; } catch { late = 0; }
+    const entryFees = owing.reduce((sum, e) => { try { return sum + calculatePlayerFee(e, competition); } catch { return sum; } }, 0);
+    return {
+      newPlayers: owing.length,
+      paidPlayers: (registration.paidEntries || []).length,
+      entryFees,
+      lateFeePerPlayer: late,
+      lateFeeTotal: late * owing.length,
+      total: entryFees + late * owing.length,
+    };
+  }
+
+  // ── Excel ─────────────────────────────────────────────────────────────────
+
+  async excelTemplate() {
+    return this.excel.template();
+  }
+
+  /** Read a filled template without saving anything (the coach step's "Fill from Excel"). */
+  async parseExcel(actor, buffer) {
+    const parsed = await this.excel.parse(buffer);
+    const existingCoach = parsed.coach.email ? await this.findCoach(parsed.coach.email) : null;
+    return { ...parsed, existingCoach };
+  }
+
+  /**
+   * Add a filled template's players to the draft. Rows go through the same
+   * review as a scanned page; nothing is created here. A row already on the
+   * form (same name and date of birth) is skipped, so uploading the same
+   * file twice adds nobody twice.
+   */
+  async importExcel(actor, draftId, buffer, { fileName } = {}) {
+    const { draft, competition } = await this._draftFor(actor, draftId);
+    if (draft.status !== 'draft') throw new BusinessRuleError('This form is already submitted.');
+    this._refuseIfSquadSubmitted(actor, draft, competition);
+    const parsed = await this.excel.parse(buffer);
+    const key = (r) => `${tidyName(r.firstName)}|${tidyName(r.lastName)}|${r.dateOfBirth || r.dobRaw || ''}`;
+    const have = new Set(draft.rows.map(key));
+    const fresh = [];
+    let skipped = 0;
+    for (const row of parsed.rows) {
+      if (have.has(key(row))) { skipped += 1; continue; }
+      have.add(key(row));
+      let { ageGroup } = row;
+      // No age group written: the youngest one the player may enter.
+      if (!ageGroup && row.gender && row.dateOfBirth) {
+        const dob = parseDate(row.dateOfBirth);
+        if (dob) ageGroup = lowestAgeGroup(ageOnCutoff(dob, ageCutoffYear(competition)), row.gender) || null;
+      }
+      fresh.push({
+        source: 'excel',
+        excelRow: row.excelRow,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        dateOfBirth: row.dateOfBirth,
+        dobRaw: row.dobRaw,
+        gender: row.gender,
+        writtenAgeGroup: row.ageGroup,
+        ageGroup,
+        apparatus: row.apparatus,
+      });
+    }
+    if (draft.rows.length + fresh.length > MAX_ROWS) {
+      throw new ValidationError(`A form holds at most ${MAX_ROWS} players; this file would make ${draft.rows.length + fresh.length}.`);
+    }
+    const name = String(fileName || 'players.xlsx').replace(/[^\w .()-]/g, '').slice(0, 120);
+    await this.drafts.updateById(draftId, {
+      rows: [...draft.rows, ...fresh],
+      imports: [...(draft.imports || []), { kind: 'excel', fileName: name, rows: fresh.length, at: new Date() }],
+    });
+    await this._audit(actor, 'WALK_IN_EXCEL_IMPORTED', 'competition', draft.competition, {
+      draft: String(draftId), rows: fresh.length, skipped, fileName: name,
+    });
+    return { draft: await this.view(actor, draftId), added: fresh.length, skipped, errors: parsed.errors };
+  }
+
+  /** The coach's default player password, for the coach to read at the desk. */
+  async coachDefaultPassword(actor, coachId) {
+    const coach = await this.coachRepository.findById(coachId);
+    if (!coach) throw new NotFoundError('Coach');
+    const result = await this.coachPlayerService.getDefaultPassword(coachId);
+    await this._audit(actor, 'WALK_IN_DEFAULT_PASSWORD_VIEWED', 'coach', coachId);
+    return result;
+  }
+
   // ── Step 3: open a draft ──────────────────────────────────────────────────
 
   /**
@@ -340,7 +517,8 @@ class WalkInService {
     if (registration?.isSubmitted) {
       throw new ConflictError(this._isCoach(actor)
         ? 'Your squad for this competition is already submitted. Register Player still creates Player IDs; contact the competition office to add them to the squad.'
-        : 'This coach\'s team is already submitted and paid for this competition. Add further players from Super Admin → Add Player.');
+        : 'This coach\'s team is already submitted for this competition. Unlock it to add players.',
+      this._isCoach(actor) ? {} : { reason: 'TEAM_SUBMITTED' });
     }
     if (!registration) {
       await this.coachService.registerTeamForCompetition(team._id, competitionId, coachId);
@@ -548,10 +726,12 @@ class WalkInService {
       return {
         ...(known ? { _id: known._id } : {}),
         source: known?.source || 'manual',
+        ...(known?.excelRow ? { excelRow: known.excelRow } : {}),
         page: known?.page ?? null,
         rowNo: known?.rowNo ?? null,
         confidence: known?.confidence,
-        writtenAgeGroup: known?.writtenAgeGroup ?? (row.ageGroup || null),
+        // An Excel row keeps what its file said, even "nothing".
+        writtenAgeGroup: known?.source === 'excel' ? (known.writtenAgeGroup ?? null) : (known?.writtenAgeGroup ?? (row.ageGroup || null)),
         firstName: tidyName(row.firstName),
         lastName: tidyName(row.lastName),
         dateOfBirth: String(row.dateOfBirth || '').trim(),
@@ -640,7 +820,12 @@ class WalkInService {
         // charged again, exactly as the checkout prices it (owner, 2026-11-17).
         amountDue: registration.isSubmitted ? 0 : calculateTeamPaymentAmount(registration.players || [], competition, new Date(), registration.paidEntries || []),
         paidPlayers: (registration.paidEntries || []).length,
+        reopened: !registration.isSubmitted && (registration.paidEntries || []).length > 0,
+        fees: registration.isSubmitted ? null : this._feeBreakdown(registration, competition),
       } : null,
+      // Players already in the squad before this form, shown read-only.
+      squad: registration ? await this._squad(registration, new Set((draft.rows || []).map((r) => idOf(r.player)).filter(Boolean))) : [],
+      imports: draft.imports || [],
       submittedAt: draft.submittedAt || null,
       paidAt: draft.paidAt || null,
     };
@@ -784,6 +969,7 @@ class WalkInService {
       rows.push({
         _id: row._id,
         source: row.source,
+        excelRow: row.excelRow ?? null,
         page: row.page ?? null,
         rowNo: row.rowNo ?? null,
         firstName,

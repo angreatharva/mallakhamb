@@ -19,6 +19,9 @@ const v = require('../validators/walk-in.validator');
 
 /** A phone photo, already shrunk by the browser; the cap is generous on purpose. */
 const IMAGE_LIMIT = '8mb';
+/** The filled Excel template; the service refuses anything over 1 MB with a clear message. */
+const EXCEL_LIMIT = '2mb';
+const EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 function createWalkInRoutes(container) {
   const router = express.Router();
@@ -36,9 +39,22 @@ function createWalkInRoutes(container) {
   router.post('/coaches', userRateLimit, check(v.createCoach()), controller.createCoach);
   router.put('/coaches/:coachId/player-default-password', userRateLimit, check(v.setDefaultPassword()), controller.setDefaultPassword);
   router.post('/coaches/:coachId/team', check(v.ensureTeam()), controller.ensureTeam);
+  // The coach reads their own default player password at the desk.
+  router.get('/coaches/:coachId/player-default-password', userRateLimit, check(v.coachId()), controller.getDefaultPassword);
+
+  // A submitted team: its status, and unlocking it to add players (Admins on
+  // their own meets, Super Admin on any — scope checked in the service).
+  router.get('/teams/status', check(v.teamStatus()), controller.teamStatus);
+  router.post('/teams/unlock', userRateLimit, check(v.unlockTeam()), controller.unlockTeam);
 
   // One form for every competition: the meet is chosen at the desk, not printed.
   router.get('/form', controller.formPdf);
+
+  // The Excel template, and reading a filled one (nothing is saved by /parse).
+  const excelBody = express.raw({ type: [EXCEL_TYPE, 'application/octet-stream'], limit: EXCEL_LIMIT });
+  router.get('/excel-template', controller.excelTemplate);
+  router.post('/excel/parse', userRateLimit, excelBody, controller.parseExcel);
+  router.post('/drafts/:draftId/excel', userRateLimit, excelBody, check(v.draftId()), controller.importExcel);
 
   router.get('/drafts', check(v.competitionInQuery()), controller.listDrafts);
   router.post('/drafts', check(v.openDraft()), controller.openDraft);

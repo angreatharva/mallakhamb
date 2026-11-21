@@ -82,8 +82,24 @@ const discount = () => [
   body('discountCode').trim().notEmpty().withMessage('Enter a discount code').isLength({ max: 128 }),
 ];
 
+const coachId = () => [objectId('coachId')];
+
+const teamStatus = () => [
+  objectId('competitionId', 'query'),
+  objectId('coachId', 'query'),
+];
+
+const unlockTeam = () => [
+  objectId('competitionId', 'body'),
+  objectId('coachId', 'body'),
+  body('reason').trim().isLength({ min: 5, max: 300 }).withMessage('Give a reason (5 to 300 characters)'),
+];
+
 module.exports = {
   draftId,
+  coachId,
+  teamStatus,
+  unlockTeam,
   findCoach,
   createCoach,
   setDefaultPassword,

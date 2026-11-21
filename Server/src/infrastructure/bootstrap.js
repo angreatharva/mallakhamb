@@ -274,6 +274,20 @@ function bootstrap() {
     logger: c.resolve('logger'),
   })), 'singleton');
   container.register('ocrClient', (c) => new OcrClient({ config: c.resolve('config'), logger: c.resolve('logger') }), 'singleton');
+  // One reopen rule for Fix → Entries and the walk-in desk (docs/walk-in-desk-v2-plan.md).
+  container.register('teamReopenService', (c) => {
+    const TeamReopenService = require('../services/registration/team-reopen.service');
+    return new TeamReopenService({
+      competitionRepository: c.resolve('competitionRepository'),
+      correctionService: c.resolve('correctionService'),
+      teamRepository: c.resolve('teamRepository'),
+      logger: c.resolve('logger'),
+    });
+  }, 'singleton');
+  container.register('walkInExcelService', () => {
+    const WalkInExcelService = require('../services/walk-in/excel.service');
+    return new WalkInExcelService();
+  }, 'singleton');
   container.register('walkInService', (c) => withPlayerTeams(c, new WalkInService({
     walkInRegistrationRepository: c.resolve('walkInRegistrationRepository'),
     competitionRepository: c.resolve('competitionRepository'),
@@ -284,6 +298,8 @@ function bootstrap() {
     authenticationService: c.resolve('authenticationService'),
     coachService: c.resolve('coachService'),
     coachPlayerService: c.resolve('coachPlayerService'),
+    teamReopenService: c.resolve('teamReopenService'),
+    excelService: c.resolve('walkInExcelService'),
     auditLogRepository: c.resolve('auditLogRepository'),
     ocrClient: c.resolve('ocrClient'),
     config: c.resolve('config'),

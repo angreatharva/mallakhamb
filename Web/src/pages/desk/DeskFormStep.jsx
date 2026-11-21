@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
-import { Camera, ImageUp, Plus, Send } from 'lucide-react';
+import { Camera, Eye, EyeOff, FileSpreadsheet, FileUp, ImageUp, Plus, Send, UserPlus } from 'lucide-react';
 import { deskAPI } from '@/services/user/desk.api';
 import { logger } from '@/infrastructure/logger';
-import { Button, ConfirmDialog, Field, Heading, Notice, Panel, Select, StatusTag } from '@/components/ui';
+import { Button, ConfirmDialog, Field, Heading, Notice, Panel, Select, StatusTag, Tabs, TabPanel } from '@/components/ui';
 import DeskReviewRow from './DeskReviewRow';
 import { shrinkPhoto } from './shrinkPhoto';
-import { CheckBox, errorText } from './deskShared';
+import { CheckBox, ageLabel, errorText, genderWord, saveBlob } from './deskShared';
+
+/** The three ways to add players at the desk (docs/walk-in-desk-v2-plan.md). */
+const TABS = [
+  { id: 'scan', label: 'Scan form' },
+  { id: 'excel', label: 'Excel' },
+  { id: 'register', label: 'Register player' },
+];
 
 const AUTOSAVE_MS = 1200;
 
@@ -33,7 +40,14 @@ const editable = (row) => ({
  * red on screen is what the server would refuse. Row photos (`crops`) live in
  * this component only: they are never stored, and a reload drops them.
  */
-const DeskFormStep = ({ draft, ocr, onDraft, api = deskAPI, who = 'admin' }) => {
+const DeskFormStep = ({ draft, ocr, onDraft, api = deskAPI, who = 'admin', excelFile = null, onExcelUsed = () => {} }) => {
+  // The Admin desk offers all three ways; a coach's own paper form only scans.
+  const desk = who === 'admin';
+  const [tab, setTab] = useState(excelFile ? 'excel' : 'scan');
+  const [importing, setImporting] = useState(false);
+  const [excelResult, setExcelResult] = useState(null);
+  const [password, setPassword] = useState(null);
+  const excelInput = useRef(null);
   const [rows, setRows] = useState(draft.rows);
   const [consent, setConsent] = useState(Boolean(draft.guardianConsent));
   const [dirty, setDirty] = useState(false);
@@ -111,6 +125,56 @@ const DeskFormStep = ({ draft, ocr, onDraft, api = deskAPI, who = 'admin' }) => 
     }
   };
 
+  const importExcel = async (file) => {
+    setImporting(true);
+    setExcelResult(null);
+    try {
+      if (dirty && !(await save())) return;
+      const res = await api.importExcel(draft._id, file);
+      const data = res.data?.data;
+      onDraft(data.draft);
+      setExcelResult({ name: file.name, added: data.added, skipped: data.skipped, errors: data.errors || [] });
+      toast.success(`${file.name}: ${data.added} player${data.added === 1 ? '' : 's'} added${data.skipped ? `, ${data.skipped} already on the form` : ''}`);
+    } catch (error) {
+      setExcelResult({ name: file.name, failed: errorText(error, 'Could not read that Excel file') });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // A file chosen on the coach step is imported once, as soon as the form is open.
+  useEffect(() => {
+    if (!desk || !excelFile) return;
+    onExcelUsed();
+    setTab('excel');
+    importExcel(excelFile);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excelFile]);
+
+  const onExcelChosen = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) importExcel(file);
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      saveBlob((await api.excelTemplate()).data, 'mallakhamb-walk-in-template.xlsx');
+    } catch (error) {
+      toast.error(errorText(error, 'Could not make the Excel template'));
+    }
+  };
+
+  const togglePassword = async () => {
+    if (password !== null) { setPassword(null); return; }
+    try {
+      const data = (await api.defaultPassword(draft.coach._id)).data?.data;
+      setPassword(data?.readable ? data.password : '');
+    } catch (error) {
+      toast.error(errorText(error, 'Could not read the default password'));
+    }
+  };
+
   const addRow = () => touch([...rows, {
     firstName: '', lastName: '', dateOfBirth: '', gender: null, ageGroup: null, apparatus: [], issues: [],
   }]);
@@ -139,6 +203,79 @@ const DeskFormStep = ({ draft, ocr, onDraft, api = deskAPI, who = 'admin' }) => 
 
   return (
     <div className="grid gap-6">
+      {desk && (
+        <Panel className="grid gap-3 p-5">
+          <Heading level={3} step="display-s">Add players</Heading>
+          <p className="type-body-s text-fg-muted m-0">
+            Three ways, mixed freely: photograph the paper form, upload the Excel template, or register players by
+            typing them in. Every player gets a Player ID and no email, and signs in with the coach&apos;s default player password.
+          </p>
+          <Tabs idBase="desk-add" label="How to add players" tabs={TABS} value={tab} onChange={setTab} />
+        </Panel>
+      )}
+
+      {desk && tab === 'excel' && (
+        <TabPanel idBase="desk-add" tabId="excel">
+          <Panel className="grid gap-4 p-5">
+            <Heading level={3} step="display-s">Upload the Excel template</Heading>
+            <p className="type-body-s text-fg-muted m-0">
+              One coach per file. Players are added to the list below for checking; nobody is registered until you
+              press Register. Uploading the same file again adds nobody twice.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button icon={FileUp} loading={importing} onClick={() => excelInput.current?.click()}>Choose Excel file</Button>
+              <Button variant="line" icon={FileSpreadsheet} onClick={downloadTemplate}>Download template</Button>
+            </div>
+            <input ref={excelInput} type="file" className="sr-only" tabIndex={-1} aria-hidden="true"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onExcelChosen} />
+            {excelResult?.failed && <Notice tone="danger" title={`${excelResult.name} could not be read`}>{excelResult.failed}</Notice>}
+            {excelResult && !excelResult.failed && (
+              <Notice tone={excelResult.errors.length ? 'warning' : 'success'}
+                title={`${excelResult.name}: ${excelResult.added} added${excelResult.skipped ? ` · ${excelResult.skipped} already on the form` : ''}`}>
+                {excelResult.errors.length === 0 ? 'Check each player below.' : (
+                  <ul className="m-0 pl-4">
+                    {excelResult.errors.map((e, i) => (
+                      <li key={`${e.excelRow}-${e.field}-${i}`}>{e.excelRow ? `Excel row ${e.excelRow}: ` : ''}{e.message}</li>
+                    ))}
+                  </ul>
+                )}
+              </Notice>
+            )}
+            {(draft.imports || []).length > 0 && (
+              <p className="type-caption text-fg-muted m-0">
+                Read so far: {draft.imports.map((f) => `${f.fileName} (${f.rows})`).join(', ')}
+              </p>
+            )}
+          </Panel>
+        </TabPanel>
+      )}
+
+      {desk && tab === 'register' && (
+        <TabPanel idBase="desk-add" tabId="register">
+          <Panel className="grid gap-4 p-5">
+            <Heading level={3} step="display-s">Register a player</Heading>
+            <p className="type-body-s text-fg-muted m-0">
+              The same as Register Player on the coach&apos;s dashboard: no email, a Player ID, and the coach&apos;s
+              default player password. The Player ID is emailed to the coach.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button icon={UserPlus} onClick={addRow}>Add a player</Button>
+              <Button variant="line" icon={password ? EyeOff : Eye} onClick={togglePassword}>
+                {password !== null ? 'Hide default password' : 'Show default password'}
+              </Button>
+              {password !== null && (
+                <span className="type-body-s" aria-live="polite">
+                  {password
+                    ? <>Default player password: <strong className="font-mono">{password}</strong></>
+                    : 'It cannot be read: the coach sets it again on their profile.'}
+                </span>
+              )}
+            </div>
+          </Panel>
+        </TabPanel>
+      )}
+
+      {(!desk || tab === 'scan') && (
       <Panel className="grid gap-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Heading level={3} step="display-s">Photograph the form</Heading>
@@ -181,6 +318,22 @@ const DeskFormStep = ({ draft, ocr, onDraft, api = deskAPI, who = 'admin' }) => 
           </>
         )}
       </Panel>
+      )}
+
+      {desk && (draft.squad || []).length > 0 && (
+        <Panel className="grid gap-3 p-5">
+          <Heading level={3} step="display-s">Already in the squad</Heading>
+          <p className="type-caption text-fg-muted m-0">Entered before this form. Paid players are never charged again.</p>
+          <ul className="grid gap-1 m-0 p-0 list-none">
+            {draft.squad.map((p) => (
+              <li key={p._id} className="flex flex-wrap items-center justify-between gap-2 type-body-s">
+                <span>{p.name} <span className="text-fg-muted">· {p.loginId} · {genderWord(p.gender)} {ageLabel(p.ageGroup)}</span></span>
+                <StatusTag status={p.paid ? 'success' : 'warning'}>{p.paid ? 'Paid' : 'Not paid'}</StatusTag>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
 
       <Panel className="grid gap-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -190,7 +343,7 @@ const DeskFormStep = ({ draft, ocr, onDraft, api = deskAPI, who = 'admin' }) => 
           </span>
         </div>
 
-        {rows.length === 0 && <p className="type-body-s text-fg-muted m-0">No players yet. Photograph a page, or add one by hand.</p>}
+        {rows.length === 0 && <p className="type-body-s text-fg-muted m-0">No players yet. Photograph a page, upload the Excel file, or register a player.</p>}
 
         <ol className="grid gap-4 m-0 p-0 list-none">
           {rows.map((row, i) => (
@@ -244,6 +397,9 @@ DeskFormStep.propTypes = {
   /** deskAPI (Admin desk) or paperFormAPI (a coach's own form): same methods. */
   api: PropTypes.object,
   who: PropTypes.oneOf(['admin', 'coach']),
+  /** An Excel file chosen on the coach step: imported as soon as the form opens. */
+  excelFile: PropTypes.object,
+  onExcelUsed: PropTypes.func,
 };
 
 export default DeskFormStep;

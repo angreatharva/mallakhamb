@@ -67,3 +67,15 @@ PP-OCRv5 mobile English rec on ONNX Runtime, no detection model; CTC decode mask
 
 - The competition and team pickers are searchable (`SearchSelect`) on the web
   side. The OCR sidecar has a pixel cap (audit). No change to the desk flow.
+
+## Desk v2: unlock, Excel, Register player (2026-11-21, branch feature/walk-in-desk-v2)
+
+Plan: `docs/walk-in-desk-v2-plan.md`. GIF: `docs/roles/media/walk-in-desk-unlock-scan-excel-register.gif`.
+
+- **Steps:** Competition → Coach & team → Team status → Players → Payment → Slip. `openDraft` answers a submitted team with 409 `details.reason: 'TEAM_SUBMITTED'`; the web shows `DeskTeamStatusStep` instead of an error.
+- **Unlock** — `GET /desk/teams/status`, `POST /desk/teams/unlock {competitionId, coachId, reason}`. **Admins may unlock too** (owner, 2026-11-21) on their assigned meets (`_meetFor`); fee window must be open. One rule for Fix and the desk: `services/registration/team-reopen.service.js` (`reopenFields` stamps `paidEntries` when paid; `reopenTeam` writes History `ENTRY_REOPENED` with `via`). `correctionService.record` now writes `adminType: 'admin'` when `actor.type === 'admin'`. Unlock also closes the team's `submitted` drafts to `paid`, so the next `openDraft` starts a fresh form.
+- **Pricing** is unchanged code: `calculateTeamPaymentAmount` skips `paidEntries`; the late fee is per player, so only new players pay it. `view().registration.fees` = `{newPlayers, paidPlayers, entryFees, lateFeePerPlayer, lateFeeTotal, total}`; `view().squad` = players entered before this form (read-only, paid flag).
+- **Excel** — `utils/walk-in/excel-layout.util.js` is the ONE column list (template + reader); version cell `Z1 = MKXL1` on both sheets. `services/walk-in/excel.service.js` (exceljs, NOT the npm `xlsx`): `.xlsx` only (zip magic), ≤1 MB, ≤200 rows, values only (formula results), date cells or DD-MM-YYYY text. `GET /desk/excel-template`, `POST /desk/excel/parse` (saves nothing; returns `existingCoach` by email), `POST /desk/drafts/:id/excel?fileName=` (raw body; rows `source: 'excel'`, `excelRow`; empty age group → the COP minimum; same name+DOB already on the form is skipped; `draft.imports[]`). Passwords are never in the file.
+- **Register player** tab = the existing typed row; `GET /desk/coaches/:coachId/player-default-password` lets the coach read their default at the desk (audited).
+- A scanned tick for an apparatus the meet does not run is now shown as "X (not offered)" so it can be unticked (before: the row could not be fixed).
+- Local check: launch `api-desk-v2-check` (+ `web-local-api` on 5177), DB `mallakhamb_desk_v2`, sign-in in `Server/desk-v2-check.local`.

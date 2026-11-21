@@ -99,7 +99,8 @@ class CorrectionService {
     try {
       return await this.audit.logAction({
         adminId: actor.id,
-        adminType: 'superadmin',
+        // The walk-in desk lets meet Admins reopen a team too (owner, 2026-11-21).
+        adminType: actor?.type === 'admin' ? 'admin' : 'superadmin',
         action,
         resource: entity,
         resourceId: String(entityId),

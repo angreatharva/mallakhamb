@@ -8,6 +8,7 @@
 import api from '../api-client.js';
 
 const draft = (id) => `/desk/drafts/${id}`;
+const EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 export const deskAPI = {
   openMeets: () => api.get('/desk/meets'),
@@ -19,6 +20,23 @@ export const deskAPI = {
   createCoach: (data) => api.post('/desk/coaches', data),
   setDefaultPassword: (coachId, data) => api.put(`/desk/coaches/${coachId}/player-default-password`, data),
   ensureTeam: (coachId, data) => api.post(`/desk/coaches/${coachId}/team`, data),
+  /** The coach's default player password, for the coach to read at the desk. */
+  defaultPassword: (coachId) => api.get(`/desk/coaches/${coachId}/player-default-password`),
+
+  /** Is the coach's team submitted at this meet? (the unlock card) */
+  teamStatus: (competitionId, coachId) => api.get('/desk/teams/status', { params: { competitionId, coachId } }),
+  /** Unlock a submitted team: paid players stay paid, only new ones are charged. */
+  unlockTeam: (data) => api.post('/desk/teams/unlock', data),
+
+  /** The Excel template, as a Blob. */
+  excelTemplate: () => api.get('/desk/excel-template', { responseType: 'blob' }),
+  /** Read a filled template; nothing is saved. */
+  parseExcel: (file) => api.post('/desk/excel/parse', file, { headers: { 'Content-Type': EXCEL_TYPE } }),
+  /** Add a filled template's players to the form, for review. */
+  importExcel: (id, file) => api.post(`${draft(id)}/excel`, file, {
+    params: { fileName: file.name || 'players.xlsx' },
+    headers: { 'Content-Type': EXCEL_TYPE },
+  }),
 
   /** The printable form — one for every competition — as a Blob. */
   formPdf: () => api.get('/desk/form', { responseType: 'blob' }),

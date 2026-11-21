@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { Search, UserPlus, Users } from 'lucide-react';
+import { FileSpreadsheet, Search, UserPlus, Users } from 'lucide-react';
 import { deskAPI } from '@/services/user/desk.api';
 import { Button, Field, Heading, Input, Notice, Panel, PasswordInput, SpecList } from '@/components/ui';
 import { errorText } from './deskShared';
@@ -22,7 +22,7 @@ const PHONE_RULE = {
  * their name, phone, email or team; a new one is registered here. One who has
  * not set a default player password sets it here.
  */
-const DeskCoachStep = ({ onReady }) => {
+const DeskCoachStep = ({ onReady, onExcel = () => {} }) => {
   const [query, setQuery] = useState('');
   const [looking, setLooking] = useState(false);
   const [results, setResults] = useState(null); // null: not searched yet
@@ -32,6 +32,48 @@ const DeskCoachStep = ({ onReady }) => {
   const create = useForm();
   const defaults = useForm();
   const team = useForm();
+  const excelInput = useRef(null);
+  const [excelName, setExcelName] = useState('');
+  const [reading, setReading] = useState(false);
+
+  /**
+   * "Fill from Excel": read the Coach sheet of a filled template. A coach
+   * whose email is on record is picked; otherwise the new-coach form opens
+   * filled in. Passwords are never in the file: the coach types them here.
+   * The file is kept, and its players are added once the form opens.
+   */
+  const onExcelFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setReading(true);
+    try {
+      const res = await deskAPI.parseExcel(file);
+      const data = res.data?.data || {};
+      onExcel(file);
+      setExcelName(file.name);
+      const players = data.rows?.length || 0;
+      toast.success(`${file.name}: ${players} player${players === 1 ? '' : 's'} found`);
+      if (data.coach?.teamName) team.reset({ name: data.coach.teamName });
+      if (data.existingCoach) {
+        setCoach(data.existingCoach);
+        setRegistering(false);
+        return;
+      }
+      create.reset({
+        firstName: data.coach?.firstName || '',
+        lastName: data.coach?.lastName || '',
+        email: data.coach?.email || '',
+        phone: data.coach?.phone || '',
+      });
+      setCoach(null);
+      setRegistering(true);
+    } catch (error) {
+      toast.error(errorText(error, 'Could not read that Excel file'));
+    } finally {
+      setReading(false);
+    }
+  };
 
   const search = async (event) => {
     event?.preventDefault();
@@ -115,6 +157,9 @@ const DeskCoachStep = ({ onReady }) => {
   return (
     <Panel className="grid gap-5 p-5">
       <Heading level={3} step="display-s">Coach</Heading>
+      <input ref={excelInput} type="file" className="sr-only" tabIndex={-1} aria-hidden="true"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onExcelFile} />
+      {excelName && coach && <p className="type-caption text-fg-muted m-0">Excel: {excelName}. Its players are added on the next step.</p>}
 
       {!coach && (
         <>
@@ -129,6 +174,14 @@ const DeskCoachStep = ({ onReady }) => {
             <Button type="submit" variant="line" icon={Search} loading={looking}>Search</Button>
             <Button type="button" icon={UserPlus} onClick={startRegistering}>Register new coach</Button>
           </form>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="line" icon={FileSpreadsheet} loading={reading} onClick={() => excelInput.current?.click()}>
+              Fill from Excel
+            </Button>
+            <span className="type-caption text-fg-muted">
+              {excelName ? `Using ${excelName}: its players are added on the next step.` : 'A filled Excel template fills in the coach, and later the players.'}
+            </span>
+          </div>
         </>
       )}
 
@@ -234,6 +287,6 @@ const DeskCoachStep = ({ onReady }) => {
   );
 };
 
-DeskCoachStep.propTypes = { onReady: PropTypes.func.isRequired };
+DeskCoachStep.propTypes = { onReady: PropTypes.func.isRequired, onExcel: PropTypes.func };
 
 export default DeskCoachStep;

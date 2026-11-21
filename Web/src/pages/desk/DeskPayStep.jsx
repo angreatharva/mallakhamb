@@ -25,6 +25,8 @@ const DeskPayStep = ({ draft, onDraft }) => {
   const paidPlayers = draft.registration?.paidPlayers ?? 0;
   const nothingNewToPay = paidPlayers > 0 && due === 0 && players > 0;
   const late = draft.competition.feePhase === 'late';
+  // New players' fees and the late fee on each of them (paid players excluded).
+  const fees = draft.registration?.fees || null;
 
   const pay = async () => {
     setProcessing(true);
@@ -116,10 +118,12 @@ const DeskPayStep = ({ draft, onDraft }) => {
       <SpecList items={[
         { label: 'Team', value: draft.team?.name || '—' },
         { label: 'Players in this entry', value: String(players) },
-        ...(paidPlayers > 0 ? [{ label: 'Already paid for', value: `${paidPlayers} player${paidPlayers === 1 ? '' : 's'}` }] : []),
+        ...(paidPlayers > 0 ? [{ label: 'Already paid for', value: `${paidPlayers} player${paidPlayers === 1 ? '' : 's'} · not charged again` }] : []),
+        ...(fees ? [{ label: `Entry fee · ${fees.newPlayers} new player${fees.newPlayers === 1 ? '' : 's'}`, value: rupees(fees.entryFees) }] : []),
+        ...(fees?.lateFeeTotal ? [{ label: `Late fee · ${rupees(fees.lateFeePerPlayer)} × ${fees.newPlayers}`, value: rupees(fees.lateFeeTotal) }] : []),
         { label: 'Amount due', value: rupees(due) },
       ]} />
-      {late && (
+      {late && !fees && (
         <Notice tone="warning" title="Late fee applies">
           Past the fee deadline: {rupees(draft.competition.lateFeePerPlayer)} per player is included.
         </Notice>

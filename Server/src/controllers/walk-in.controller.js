@@ -40,6 +40,32 @@ function createWalkInController(container) {
       ok(res, data, data.created ? 'Team created' : 'The coach already has a team', data.created ? 201 : 200);
     }),
 
+    getDefaultPassword: asyncHandler(async (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      ok(res, await service().coachDefaultPassword(actorOf(req), req.params.coachId));
+    }),
+
+    teamStatus: asyncHandler(async (req, res) => ok(res, await service().teamStatus(actorOf(req), req.query))),
+
+    unlockTeam: asyncHandler(async (req, res) => ok(res, await service().unlockTeam(actorOf(req), req.body), 'Team unlocked')),
+
+    excelTemplate: asyncHandler(async (req, res) => {
+      const file = await service().excelTemplate();
+      res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.set('Content-Disposition', 'attachment; filename="mallakhamb-walk-in-template.xlsx"');
+      res.send(file);
+    }),
+
+    parseExcel: asyncHandler(async (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      ok(res, await service().parseExcel(actorOf(req), req.body));
+    }),
+
+    importExcel: asyncHandler(async (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      ok(res, await service().importExcel(actorOf(req), req.params.draftId, req.body, { fileName: typeof req.query.fileName === 'string' ? req.query.fileName : undefined }));
+    }),
+
     formPdf: asyncHandler(async (req, res) => {
       const { pdf } = await service().formPdf();
       res.set('Content-Type', 'application/pdf');
