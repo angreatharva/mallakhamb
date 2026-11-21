@@ -2535,6 +2535,212 @@ function buildPaths() {
     parameters: draftParam, responses: { 200: ok('Slip'), ...NOT_FOUND },
   });
 
+  // Desk v2 (docs/walk-in-desk-v2-plan.md): unlock, Excel, default password.
+  const coachIdParam = [pathParam('coachId', 'Coach')];
+  const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const xlsxBody = { required: true, content: { [xlsx]: { schema: { type: 'string', format: 'binary' } } } };
+  const excelErrors = { type: 'array', items: inline({ excelRow: S.int, field: S.str, message: S.str }) };
+  desk('/api/desk/coaches/{coachId}/player-default-password', 'get', {
+    operationId: 'deskGetCoachDefaultPassword', summary: 'The coach’s default player password, for the coach to read at the desk',
+    description: 'Decrypted (it is stored encrypted, not hashed). `readable: false` means the key was rotated and the coach must set it again. Audited.',
+    parameters: coachIdParam,
+    responses: { 200: ok('Password', inline({ isSet: S.bool, readable: S.bool, password: S.str, setAt: { type: 'string', format: 'date-time' } })), ...NOT_FOUND },
+  });
+  desk('/api/desk/teams/status', 'get', {
+    operationId: 'deskTeamStatus', summary: 'Is the coach’s team entered / submitted / paid at this meet?',
+    parameters: [queryParam('competitionId', S.id, 'Competition', true), queryParam('coachId', S.id, 'Coach', true)],
+    responses: {
+      200: ok('Status', inline({
+        registered: S.bool, isSubmitted: S.bool, reopened: S.bool, paymentStatus: S.str, paymentAmount: S.num,
+        players: S.int, paidPlayers: S.int,
+        feeWindow: inline({ canPay: S.bool, isLate: S.bool, lateFeePerPlayer: S.num }),
+        squad: { type: 'array', items: inline({ _id: S.id, name: S.str, loginId: S.str, gender: S.gender, ageGroup: S.ageGroup, paid: S.bool }) },
+      })),
+      ...VALIDATION_ERROR,
+    },
+  });
+  desk('/api/desk/teams/unlock', 'post', {
+    operationId: 'deskUnlockTeam', summary: 'Unlock a submitted team so players can be added',
+    description: 'Admins on their assigned meets, the Super Admin on any. A paid squad is written into `paidEntries` first, so only players added after this are charged (plus the per-player late fee). Recorded in History as `ENTRY_REOPENED` (`via: walk-in-desk`).',
+    requestBody: jsonBody(inline({ competitionId: S.id, coachId: S.id, reason: { type: 'string', minLength: 5, maxLength: 300 } }, ['competitionId', 'coachId', 'reason'])),
+    responses: {
+      200: ok('Unlocked', inline({ paidPlayers: S.int, paidAmount: S.num, status: { type: 'object' } })),
+      ...VALIDATION_ERROR, ...NOT_FOUND, 409: errorResponse('Team already open'), 422: errorResponse('Meet not taking entries'),
+    },
+  });
+  desk('/api/desk/excel-template', 'get', {
+    operationId: 'deskExcelTemplate', summary: 'The walk-in Excel template (.xlsx): Coach, Players and Read me sheets',
+    responses: { 200: { description: 'Workbook', content: { [xlsx]: { schema: { type: 'string', format: 'binary' } } } } },
+  });
+  desk('/api/desk/excel/parse', 'post', {
+    operationId: 'deskParseExcel', summary: 'Read a filled template without saving anything',
+    description: 'Body is the .xlsx itself (at most 1 MB, 200 players). Returns the Coach sheet, the player rows and an error per bad cell; `existingCoach` is the account with the sheet’s email, if any.',
+    requestBody: xlsxBody,
+    responses: { 200: ok('Parsed', inline({ coach: { type: 'object' }, rows: { type: 'array', items: draftRow }, errors: excelErrors, existingCoach: { type: 'object', nullable: true } })), ...VALIDATION_ERROR },
+  });
+  desk('/api/desk/drafts/{draftId}/excel', 'post', {
+    operationId: 'deskImportExcel', summary: 'Add a filled template’s players to the form for review',
+    description: 'Rows get `source: excel` and `excelRow`. A row already on the form (same name and date of birth) is skipped, so uploading the same file twice adds nobody twice. Nothing is registered until submit.',
+    parameters: [...draftParam, queryParam('fileName', S.str, 'Original file name, for the record')],
+    requestBody: xlsxBody,
+    responses: { 200: ok('Draft', inline({ draft: { type: 'object' }, added: S.int, skipped: S.int, errors: excelErrors })), ...VALIDATION_ERROR, ...NOT_FOUND },
+  });
+
+  // ===================== Qualification finals (Competition II / III) =====================
+  const finalIdParam = [pathParam('finalId', 'Final (one Competition II / III category)')];
+  const finalsFor = (prefix, tag, roles, competitionContext) => {
+    const meetQuery = competitionContext ? [] : [queryParam('competitionId', S.id, 'Competition', true)];
+    const f = (path, method, config) => add(`${prefix}${path}`, method, op({ tag, roles, competitionContext, ...config, parameters: [...meetQuery, ...(config.parameters || [])] }));
+    const id = prefix.replace(/\W/g, '');
+    f('/finals', 'get', { operationId: `${id}ListFinals`, summary: 'Every final with its qualifiers and state', responses: { 200: ok('Finals') } });
+    f('/finals/recompute', 'post', { operationId: `${id}RecomputeFinals`, summary: 'Recompute qualifiers from published Competition I scores (unfinalized finals only)', responses: { 200: ok('Finals'), 423: errorResponse('Competition locked') } });
+    f('/finals/finalize-all', 'post', { operationId: `${id}FinalizeAllFinals`, summary: 'Finalize every final that is ready: enter the qualifiers', responses: { 200: ok('Finals'), 423: errorResponse('Competition locked') } });
+    f('/finals/{finalId}/finalize', 'post', { operationId: `${id}FinalizeFinal`, summary: 'Finalize one final', parameters: finalIdParam, responses: { 200: ok('Final'), ...NOT_FOUND, 422: errorResponse('Ties unresolved') } });
+    f('/finals/{finalId}/withdraw', 'post', {
+      operationId: `${id}WithdrawFinalist`, summary: 'Withdraw a qualifier (the next one moves up)', parameters: finalIdParam,
+      requestBody: jsonBody(inline({ playerId: S.id, reason: S.str }, ['playerId'])), responses: { 200: ok('Final'), ...VALIDATION_ERROR, ...NOT_FOUND },
+    });
+    f('/finals/{finalId}/reinstate', 'post', {
+      operationId: `${id}ReinstateFinalist`, summary: 'Reinstate a withdrawn qualifier', parameters: finalIdParam,
+      requestBody: jsonBody(inline({ playerId: S.id }, ['playerId'])), responses: { 200: ok('Final'), ...VALIDATION_ERROR, ...NOT_FOUND },
+    });
+    f('/finals/{finalId}/draw', 'post', {
+      operationId: `${id}DrawFinal`, summary: 'Record the physical lucky draw that breaks a tie at the cut-off', parameters: finalIdParam,
+      requestBody: jsonBody(inline({ ageGroup: S.ageGroup, order: { type: 'array', items: S.id, minItems: 2, maxItems: 20 } }, ['order'])),
+      responses: { 200: ok('Final'), ...VALIDATION_ERROR, ...NOT_FOUND },
+    });
+  };
+  finalsFor('/api/admin', 'Admin', 'admin (own meet), superadmin', true);
+  finalsFor('/api/superadmin', 'Super admin', 'superadmin', false);
+  add('/api/superadmin/finals/{finalId}/reopen', 'post', op({
+    tag: 'Super admin', roles: 'superadmin', operationId: 'superadminReopenFinal', summary: 'Reopen a finalized final (Super Admin only)',
+    parameters: [queryParam('competitionId', S.id, 'Competition', true), ...finalIdParam], responses: { 200: ok('Final'), ...NOT_FOUND },
+  }));
+  add('/api/coaches/finals', 'get', op({
+    tag: 'Coaches', roles: 'coach', competitionContext: true, operationId: 'coachFinals',
+    summary: 'The coach’s players who qualified for Competition II / III', responses: { 200: ok('Finals') },
+  }));
+  add('/api/players/finals', 'get', op({
+    tag: 'Players', roles: 'player', operationId: 'playerFinals',
+    summary: 'The player’s own qualification for Competition II / III', responses: { 200: ok('Finals') },
+  }));
+  add('/api/public/finals', 'get', op({
+    tag: 'Public', auth: false, operationId: 'publicFinals', summary: 'Who qualified for each Competition II / III final',
+    parameters: [queryParam('competitionId', S.id, 'Competition', true)], responses: { 200: ok('Finals'), ...VALIDATION_ERROR },
+  }));
+
+  // ===================== Coach: co-coaches, paper form; player: team at a level =====================
+  add('/api/coaches/co-coaches', 'get', op({
+    tag: 'Coaches', roles: 'coach', operationId: 'coachListCoCoaches', summary: 'The team’s main coach and co-coaches',
+    responses: { 200: ok('Coaches') },
+  }));
+  add('/api/coaches/co-coaches/{coachId}/remove', 'post', op({
+    tag: 'Coaches', roles: 'coach (main coach)', operationId: 'coachRemoveCoCoach', summary: 'Remove a co-coach from the team',
+    parameters: coachIdParam, responses: { 200: ok('Removed'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  }));
+  const paper = (path, method, config) => add(`/api/coaches/paper-form${path}`, method, op({
+    tag: 'Coaches', roles: 'coach', competitionContext: path.startsWith('/draft'),
+    description: 'A coach’s own paper form: the walk-in desk flow on their own team, behind the COACH_PAPER_FORM_ENABLED flag (404 when off). Pays from the dashboard, not here.',
+    ...config,
+  }));
+  paper('/form', 'get', { operationId: 'paperFormPdf', summary: 'The printable form (A4 PDF)', responses: { 200: { description: 'PDF', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } } } });
+  paper('/ocr/status', 'get', { operationId: 'paperFormOcrStatus', summary: 'Is the form reader answering?', responses: { 200: ok('Status', inline({ enabled: S.bool, healthy: S.bool })) } });
+  paper('/draft', 'get', { operationId: 'paperFormCurrent', summary: 'The coach’s unfinished form at this meet, and whether the squad is submitted', responses: { 200: ok('Form', inline({ draft: { type: 'object', nullable: true }, squadSubmitted: S.bool })) } });
+  paper('/draft', 'post', { operationId: 'paperFormOpen', summary: 'Open (or resume) the coach’s form', responses: { 201: ok('Draft'), 409: errorResponse('Squad already submitted') } });
+  paper('/draft/{draftId}', 'get', { operationId: 'paperFormGet', summary: 'The form with each row’s checks', parameters: draftParam, responses: { 200: ok('Draft'), ...NOT_FOUND } });
+  paper('/draft/{draftId}', 'delete', { operationId: 'paperFormCancel', summary: 'Discard the form', parameters: draftParam, responses: { 200: ok('Cancelled'), ...NOT_FOUND } });
+  paper('/draft/{draftId}/scan', 'post', {
+    operationId: 'paperFormScan', summary: 'Read one photographed page', parameters: [...draftParam, queryParam('page', S.int, 'Page number if the QR is unreadable')],
+    requestBody: { required: true, content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } } } },
+    responses: { 200: ok('Rows read'), ...VALIDATION_ERROR, 503: errorResponse('Reader busy or unavailable') },
+  });
+  paper('/draft/{draftId}/rows', 'put', {
+    operationId: 'paperFormSaveRows', summary: 'Save the review grid', parameters: draftParam,
+    requestBody: jsonBody(inline({ rows: { type: 'array', items: draftRow, maxItems: 120 }, guardianConsent: S.bool }, ['rows'])), responses: { 200: ok('Draft'), ...VALIDATION_ERROR },
+  });
+  paper('/draft/{draftId}/submit', 'post', { operationId: 'paperFormSubmit', summary: 'Register and enter every player', parameters: draftParam, responses: { 200: ok('Draft'), 422: errorResponse('Rows still invalid') } });
+  paper('/draft/{draftId}/slip', 'get', { operationId: 'paperFormSlip', summary: 'Player IDs for the registered players', parameters: draftParam, responses: { 200: ok('Slip'), ...NOT_FOUND } });
+  add('/api/players/team/level', 'get', op({
+    tag: 'Players', roles: 'player', operationId: 'playerTeamAtLevel', summary: 'The player’s team at one competition level (final per level)',
+    parameters: [queryParam('level', { type: 'string', enum: [...COMPETITION_LEVELS] }, 'Competition level', true)], responses: { 200: ok('Team or null'), ...VALIDATION_ERROR },
+  }));
+
+  // ===================== Restore judges' edit allowance =====================
+  const restoreEdits = (prefix, tag, roles) => add(`${prefix}/scores/{scoreId}/players/{playerId}/restore-edits`, 'put', op({
+    tag, roles, operationId: `${prefix.replace(/\W/g, '')}RestoreSlipEdits`,
+    summary: 'Give the judges their Edit My Score allowance (3) back on one athlete. No mark changes.',
+    parameters: [pathParam('scoreId', 'Score sheet'), pathParam('playerId', 'Player')],
+    requestBody: jsonBody(inline({ apparatus: S.apparatus, judgeType: S.judgeType }, ['apparatus'])),
+    responses: { 200: ok('Restored'), ...VALIDATION_ERROR, ...NOT_FOUND },
+  }));
+  restoreEdits('/api/admin', 'Scores', 'admin (own meet), superadmin');
+  restoreEdits('/api/superadmin', 'Super admin', 'superadmin');
+
+  // ===================== Super Admin: History, Fix, Accounts, Player teams =====================
+  // Every write takes `reason` (5+ characters) and is recorded in History.
+  const saOp = (path, method, config) => add(`/api/superadmin${path}`, method, op({ tag: 'Super admin', roles: 'superadmin', ...config }));
+  const REASON = { type: 'string', minLength: 5, maxLength: 500, description: 'Why — recorded in History' };
+  const withReason = (properties = {}, required = []) => jsonBody(inline({ ...properties, reason: REASON }, [...required, 'reason']));
+  const why = { ...VALIDATION_ERROR, ...NOT_FOUND };
+
+  saOp('/history', 'get', {
+    operationId: 'saHistory', summary: 'Everything on record, newest first (corrections and audited actions)',
+    parameters: [queryParam('entity', S.str, 'Entity type'), queryParam('competitionId', S.id, 'Competition'), queryParam('entityId', S.str, 'Entity id'), queryParam('q', S.str, 'Search text'), queryParam('correctionsOnly', S.bool, 'Only Super Admin corrections'), ...PAGINATION_QUERY],
+    responses: { 200: ok('Page of records') },
+  });
+  saOp('/history/{logId}/undo', 'post', { operationId: 'saUndo', summary: 'Undo a plain field edit (replayed through the same service)', parameters: [pathParam('logId', 'History record')], requestBody: withReason(), responses: { 200: ok('Undone'), ...why, 422: errorResponse('Not undoable') } });
+  saOp('/competitions-deleted', 'get', { operationId: 'saDeletedCompetitions', summary: 'Deleted competitions that can be restored', responses: { 200: ok('Competitions') } });
+  saOp('/competitions/{id}/restore', 'post', { operationId: 'saRestoreCompetition', summary: 'Restore a deleted competition', parameters: [pathParam('id', 'Competition')], requestBody: withReason(), responses: { 200: ok('Competition'), ...why } });
+
+  const accountParams = [{ name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['player', 'coach', 'judge', 'admin'] } }, pathParam('accountId', 'Account')];
+  saOp('/accounts', 'get', { operationId: 'saSearchAccounts', summary: 'Find accounts of any role', parameters: [queryParam('q', S.str, 'Name, email or Player ID'), queryParam('type', { type: 'string', enum: ['player', 'coach', 'judge', 'admin'] }, 'Role')], responses: { 200: ok('Accounts') } });
+  saOp('/accounts/{type}/{accountId}', 'get', { operationId: 'saGetAccount', summary: 'One account in full', parameters: accountParams, responses: { 200: ok('Account'), ...why } });
+  saOp('/accounts/{type}/{accountId}', 'put', { operationId: 'saUpdateAccount', summary: 'Correct an account’s fields (name, email, phone, DOB, gender…)', parameters: accountParams, requestBody: withReason({}, []), responses: { 200: ok('Saved'), ...why, 409: errorResponse('Email or Player ID taken') } });
+  saOp('/accounts/{type}/{accountId}/reset-password', 'post', { operationId: 'saResetPassword', summary: 'Set a temporary password (returned once)', parameters: accountParams, requestBody: withReason(), responses: { 200: ok('Temporary password'), ...why } });
+  saOp('/accounts/{type}/{accountId}/sign-out', 'post', { operationId: 'saSignOutEverywhere', summary: 'End every session of the account', parameters: accountParams, requestBody: withReason(), responses: { 200: ok('Signed out'), ...why } });
+  saOp('/accounts/{type}/{accountId}/active', 'post', { operationId: 'saSetActive', summary: 'Activate or deactivate an account (coaches cannot be deactivated)', parameters: accountParams, requestBody: withReason({ isActive: S.bool }, ['isActive']), responses: { 200: ok('Saved'), ...why } });
+
+  const teamParam = [pathParam('teamId', 'Team')];
+  saOp('/fix/teams', 'get', { operationId: 'saSearchTeams', summary: 'Find teams by name or coach', parameters: [queryParam('q', S.str, 'Team or coach name / email'), queryParam('includeDeleted', S.bool, 'Include deleted teams (default true)')], responses: { 200: ok('Teams') } });
+  saOp('/fix/teams/{teamId}', 'get', { operationId: 'saTeamDetail', summary: 'A team with its coaches, players and entries', parameters: teamParam, responses: { 200: ok('Team'), ...why } });
+  saOp('/fix/teams/{teamId}', 'put', { operationId: 'saRenameTeam', summary: 'Rename a team', parameters: teamParam, requestBody: withReason({ name: S.str }, ['name']), responses: { 200: ok('Team'), ...why } });
+  saOp('/fix/teams/{teamId}/delete', 'post', { operationId: 'saDeleteTeam', summary: 'Delete (hide) a team', parameters: teamParam, requestBody: withReason(), responses: { 200: ok('Team'), ...why } });
+  saOp('/fix/teams/{teamId}/restore', 'post', { operationId: 'saRestoreTeam', summary: 'Restore a deleted team', parameters: teamParam, requestBody: withReason(), responses: { 200: ok('Team'), ...why } });
+  saOp('/fix/teams/{teamId}/change-coach', 'post', { operationId: 'saChangeCoach', summary: 'Give the team a new main coach', parameters: teamParam, requestBody: withReason({ coachId: S.id, oldCoach: { type: 'string', enum: ['cocoach', 'remove'] } }, ['coachId']), responses: { 200: ok('Team'), ...why } });
+  saOp('/fix/teams/{teamId}/co-coaches/{coachId}/remove', 'post', { operationId: 'saRemoveCoCoach', summary: 'Remove a co-coach', parameters: [...teamParam, ...coachIdParam], requestBody: withReason(), responses: { 200: ok('Team'), ...why } });
+  const transferQuery = { playerId: S.id, toTeamId: S.id, level: { type: 'string', enum: [...COMPETITION_LEVELS] } };
+  saOp('/fix/transfer/preview', 'get', { operationId: 'saTransferPreview', summary: 'What moving a player to another team at a level would change', parameters: Object.entries(transferQuery).map(([k, s]) => queryParam(k, s, k, true)), responses: { 200: ok('Preview'), ...why } });
+  saOp('/fix/transfer', 'post', { operationId: 'saTransfer', summary: 'Move a player to another team at a level (and their entries)', requestBody: withReason({ ...transferQuery, competitionIds: { type: 'array', items: S.id }, overrideLimit: S.bool }, ['playerId', 'toTeamId', 'level']), responses: { 200: ok('Moved'), ...why, 422: errorResponse('Squad full or meet locked') } });
+
+  saOp('/fix/scores', 'get', { operationId: 'saListScores', summary: 'Score sheets to correct', parameters: [queryParam('competitionId', S.id, 'Competition', true), ...CATEGORY_QUERY, queryParam('teamId', S.id, 'Team')], responses: { 200: ok('Score sheets') } });
+  saOp('/fix/scores/{scoreId}/rows/{rowId}', 'post', {
+    operationId: 'saCorrectScore', summary: 'Correct one athlete’s marks, time or deductions (totals recomputed)',
+    parameters: [pathParam('scoreId', 'Score sheet'), pathParam('rowId', 'Athlete row')],
+    requestBody: withReason({ slips: { type: 'array', items: inline({ judgeRole: S.str, difficultyScore: S.num, combinationScore: S.num, executionScore: S.num, bonusScore: S.num }) }, judgeScores: { type: 'object' }, time: S.num, deduction: S.num, otherDeduction: S.num }),
+    responses: { 200: ok('Score'), ...why },
+  });
+  saOp('/fix/scores/{scoreId}/players/{playerId}/unlock', 'post', { operationId: 'saUnlockForJudges', summary: 'Unlock one athlete for the judges (clears Final Submit)', parameters: [pathParam('scoreId', 'Score sheet'), pathParam('playerId', 'Player')], requestBody: withReason({ apparatus: S.apparatus }), responses: { 200: ok('Unlocked'), ...why } });
+
+  const entryParams = [pathParam('competitionId', 'Competition'), ...teamParam];
+  const playerParam = [pathParam('playerId', 'Player')];
+  const entryFields = { gender: S.gender, ageGroup: S.ageGroup, apparatus: { type: 'array', items: S.apparatus }, overrideAge: S.bool, overrideLimit: S.bool };
+  saOp('/fix/entries/{competitionId}', 'get', { operationId: 'saEntryTeams', summary: 'Teams entered in a meet', parameters: [pathParam('competitionId', 'Competition')], responses: { 200: ok('Teams'), ...why } });
+  saOp('/fix/entries/{competitionId}/{teamId}', 'get', { operationId: 'saEntry', summary: 'One team’s entry: players, payment, paid entries', parameters: entryParams, responses: { 200: ok('Entry'), ...why } });
+  saOp('/fix/entries/{competitionId}/{teamId}/players', 'post', { operationId: 'saEntryAddPlayer', summary: 'Add an athlete to the squad (COP age rule and squad size apply unless overridden)', parameters: entryParams, requestBody: withReason({ playerId: S.id, ...entryFields }, ['playerId', 'gender', 'ageGroup']), responses: { 200: ok('Entry'), ...why, 422: errorResponse('Squad full or age rule') } });
+  saOp('/fix/entries/{competitionId}/{teamId}/players/{playerId}', 'put', { operationId: 'saEntryUpdatePlayer', summary: 'Change an athlete’s age group, gender or apparatus', parameters: [...entryParams, ...playerParam], requestBody: withReason(entryFields), responses: { 200: ok('Entry'), ...why } });
+  saOp('/fix/entries/{competitionId}/{teamId}/players/{playerId}/remove', 'post', { operationId: 'saEntryRemovePlayer', summary: 'Remove an athlete from the squad (a paid entry is not refunded)', parameters: [...entryParams, ...playerParam], requestBody: withReason(), responses: { 200: ok('Entry'), ...why } });
+  saOp('/fix/entries/{competitionId}/{teamId}/status', 'post', { operationId: 'saEntryStatus', summary: 'Correct submitted / payment status (unsubmitting a paid team records its players as paid)', parameters: entryParams, requestBody: withReason({ isSubmitted: S.bool, paymentStatus: { type: 'string', enum: ['pending', 'completed', 'failed'] } }), responses: { 200: ok('Entry'), ...why } });
+  saOp('/fix/entries/{competitionId}/{teamId}/money', 'post', { operationId: 'saEntryMoney', summary: 'Record money that moved outside the app (cash, bank, refund)', parameters: entryParams, requestBody: withReason({ kind: { type: 'string', enum: ['payment', 'refund'] }, amount: S.num, method: S.str, note: S.str }, ['kind', 'amount']), responses: { 200: ok('Ledger line'), ...why } });
+
+  const ptLevel = { type: 'string', enum: [...COMPETITION_LEVELS] };
+  saOp('/player-teams/players', 'get', { operationId: 'saPlayerTeamsSearch', summary: 'Find players and their team at each level', parameters: [queryParam('q', S.str, 'Name or Player ID')], responses: { 200: ok('Players') } });
+  saOp('/player-teams/players/{playerId}', 'get', { operationId: 'saPlayerTeamsDetail', summary: 'A player’s team per level and their entries', parameters: playerParam, responses: { 200: ok('Player'), ...why } });
+  saOp('/player-teams/players/{playerId}/correct', 'post', { operationId: 'saPlayerTeamsCorrect', summary: 'Correct a player’s team at a level', parameters: playerParam, requestBody: withReason({ level: ptLevel, teamId: S.id }, ['level', 'teamId']), responses: { 200: ok('Player'), ...why } });
+  saOp('/player-teams/players/{playerId}/remove-entries', 'post', { operationId: 'saPlayerTeamsRemoveEntries', summary: 'Remove a player’s entries at a level', parameters: playerParam, requestBody: jsonBody(inline({ level: ptLevel }, ['level'])), responses: { 200: ok('Player'), ...why } });
+  saOp('/player-teams/conflicts', 'get', { operationId: 'saPlayerTeamsConflicts', summary: 'Players entered for two teams at one level (from before the rule)', responses: { 200: ok('Conflicts') } });
+  saOp('/player-teams/conflicts/{conflictId}/resolve', 'post', { operationId: 'saPlayerTeamsResolve', summary: 'Resolve a conflict by choosing the team', parameters: [pathParam('conflictId', 'Conflict')], requestBody: jsonBody(inline({ teamId: S.id }, ['teamId'])), responses: { 200: ok('Resolved'), ...why } });
+  saOp('/player-teams/history', 'get', { operationId: 'saPlayerTeamsHistory', summary: 'Changes to players’ teams per level', parameters: [queryParam('level', ptLevel, 'Level'), queryParam('teamId', S.id, 'Team'), queryParam('playerId', S.id, 'Player'), queryParam('page', S.int, 'Page')], responses: { 200: ok('Page of changes') } });
+
   return paths;
 }
 /* eslint-enable max-lines-per-function */
