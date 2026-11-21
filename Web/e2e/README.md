@@ -38,6 +38,7 @@ against one role, so a run that fails names the thing that broke:
 | `register-player` | player | Scrutinising the player flow with one ad-hoc player. | `test:e2e:player` |
 | `register-coach` | coach | The coach flow in full: register, create a team, enter a meet. | `test:e2e:coach` |
 | `score-panel` | judges | Every scoring rule, and every state that blocks Final Submit. | `test:e2e:scoring` |
+| `walk-in-desk` | admin | The walk-in desk v2 through the screens: all three ways to add players (Scan form, Excel, Register player), Unlock a paid team, and Payment pricing only the new players. Leaves only paid forms behind, so a seeded season still verifies. | `test:e2e:desk` |
 
 The first seven build an environment, in that order — each needs the one above
 it — and `score-all` is what you run once they have. `seed:ui` is the middle of

@@ -2,6 +2,28 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "api-e2e-full",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "Object.assign(process.env,{PORT:'5001',MONGODB_URI:'mongodb://127.0.0.1:27017/mallakhamb_deskv2_e2e',BACKUP_URI:'mongodb://127.0.0.1:27017/mallakhamb_deskv2_e2e',NODE_ENV:'development',MIGRATE_ON_START:'false',RATE_LIMIT_ENABLED:'false',EMAIL_PROVIDER:'none',EMAIL_CAPTURE:'true',RAZORPAY_KEY_ID:'',RAZORPAY_KEY_SECRET:'',DISCOUNT_CODE_ENABLED:'true',DISCOUNT_CODE:'E2EFULLLOCAL',METRICS_TOKEN:'e2e-local-metrics',SEED_SEASON_LEAD_DAYS:'14',OCR_URL:'http://127.0.0.1:8090',OCR_TOKEN:'test-token',KEEP_ALIVE:'false'});require('child_process').spawn('npm',['start'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Server",
+      "port": 5001,
+      "//": "The nightly e2e chain locally, in full: throw-away mallakhamb_deskv2_e2e, mail captured, discount on, metrics on (coverage step), OCR sidecar on 8090 (walkin step; start ocr/ with OCR_TOKEN=test-token). Run setupApi.js with the same env (see Server/MEMORY 15-E2E notes)."
+    },
+    {
+      "name": "web-e2e-full",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-e",
+        "process.env.VITE_API_URL='http://localhost:5001/api';require('child_process').spawn('npx',['vite','--port','5178','--strictPort'],{stdio:'inherit',shell:true}).on('exit',c=>process.exit(c))"
+      ],
+      "cwd": "Web",
+      "port": 5178,
+      "//": "The SPA against api-e2e-full (:5001), for the Playwright specs: E2E_BASE_URL=http://localhost:5178 E2E_API_URL=http://localhost:5001/api."
+    },
+    {
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

@@ -724,11 +724,16 @@ async function stepCorrections() {
       const type = 'competition_1';
       const q = { gender: cat.gender, ageGroup: cat.ageGroup, competitionType: type };
       const where = `${meet.place} ${cat.gender} ${cat.ageGroup} (${cat.size}-judge)`;
-      const teams = listOf(await admin.get('/api/admin/scores/team', { query: q })).filter((t) => t.scoreMetadata?._id && t.scores?.length);
+      // A time correction must be able to MOVE the final: never the meet's
+      // Absent athlete (scores step, all zeros) or any row already at 0. Which
+      // row that is depends on squad sizes, which the desk steps change.
+      const movable = (s) => !s.isAbsent && Number(s.finalScore) > 1;
+      const teams = listOf(await admin.get('/api/admin/scores/team', { query: q }))
+        .filter((t) => t.scoreMetadata?._id && (t.scores || []).some(movable));
       const team = teams[0];
       if (!team) continue;
       const scoreId = team.scoreMetadata._id;
-      const target = team.scores[0];
+      const target = team.scores.find(movable);
       const publicFinal = async () => {
         const docs = listOf(await pub.get('/api/public/scores', { query: { competitionId: admin.competitionId, ...q } }));
         const row = docs.flatMap((d) => d.playerScores || [])

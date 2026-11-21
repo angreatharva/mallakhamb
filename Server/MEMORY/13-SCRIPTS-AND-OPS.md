@@ -185,3 +185,11 @@ New and changed scripts in `deploy/server/` (installed to `/usr/local/bin` on th
 - `seedScores.js` corrects each slip as **its own judge** (the Senior Judge
   override is gone).
 - `seed/judges.json`: judges that were on Club are now International.
+
+## Chain steps added 2026-11-21 (walk-in desk v2 branch)
+
+- **`desk-v2`** (`scripts/seedDeskV2.js`, after `walkin`, both `setup:api` and `setup`): the desk without a camera, as the organiser Admin — Register player (typed, no email) → pay → refused (409 `TEAM_SUBMITTED`) → unlock with a reason (History `ENTRY_REOPENED`, actorType admin) → Excel template → parse (saves nothing) → import → re-import adds nobody → one more typed → only the 3 new players priced → pay → slip → squad 5/5 paid. Idempotent. Needs no OCR sidecar. Uses the desk's first open meet (Mumbai in the seeded season) and coach `desk.v2.coach@example.com`, team `DESK-V2-CLUB`.
+- **`owner-tools`** (`scripts/seedOwnerTools.js`, after `mail`, before `coverage`): Super Admin History (rename undone from History, double undo 422), Fix → Teams / Entries (reopen + resubmit a paid team; ₹100 cash in and refunded) / Scores / transfer preview, Accounts (phone corrected and put back, sign-out everywhere), Player teams; admin restore-edits and the fairness board (`?competition=`); Stats tabs for coach, player, judge; coach/player finals. Everything is put back so verifySeed holds. NOT covered on purpose: per-athlete unlock for judges (only a judge's Final Submit restores it) and cancelling a desk form (leaves the team entered) — Jest integration covers both.
+- **`seedCompetitionDay.js corrections`** now picks a row that can move (not `isAbsent`, final > 1): a desk entry can make a category the meet's Absent case.
+- Coverage of a full local run: 121/298 routes (was 92). Browser spec `Web/e2e/walk-in-desk.spec.js` (`test:e2e:desk`) drives the same desk flow through the screens.
+- Local full run: launch `api-e2e-full` (:5001, DB `mallakhamb_deskv2_e2e`, OCR on 8090) + `web-e2e-full` (:5178); run `setupApi.js --yes` with the same env.

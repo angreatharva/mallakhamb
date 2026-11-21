@@ -184,6 +184,20 @@ const STEPS = [
       + 'SKIPPED when the API has no reachable OCR sidecar (OCR_URL).',
   },
   {
+    id: 'desk-v2',
+    where: 'server',
+    needsApi: true,
+    needsEnv: ['SEED_ADMIN_PASSWORD', 'DISCOUNT_CODE_ENABLED', 'DISCOUNT_CODE'],
+    title: 'Walk-in desk v2 (register player, unlock, Excel)',
+    command: ['node', 'scripts/seedDeskV2.js'],
+    why: 'The desk without a camera, as the organiser (an Admin): a new coach with two '
+      + 'players typed in (no email, the coach\'s default password), paid; the team is '
+      + 'then refused a new form until it is UNLOCKED with a reason (History records it); '
+      + 'the Excel template is filled, parsed (saves nothing), imported, and imported again '
+      + '(adds nobody); one more typed player; only the 3 new players are priced, the late '
+      + 'fee per new player; slip and squad checked. Needs no OCR sidecar.',
+  },
+  {
     id: 'panels',
     where: 'server',
     needsApi: true,
@@ -326,6 +340,20 @@ const STEPS = [
       + 'code for a coach, a player and a judge, the no-email child who gets no '
       + 'code, and the guardian reminded of every child under one address. '
       + 'SKIPPED when the API is not capturing, so real reset mail is never sent.',
+  },
+  {
+    id: 'owner-tools',
+    where: 'server',
+    needsApi: true,
+    needsEnv: ['SEED_ADMIN_PASSWORD'],
+    title: 'Owner tools and the newer screens',
+    command: ['node', 'scripts/seedOwnerTools.js'],
+    why: 'Super Admin History (a rename undone from it), Fix -> Teams / Entries (reopen and '
+      + 'resubmit a paid team, cash in and refunded) / Scores / transfer preview, Accounts '
+      + '(a phone corrected and put back, signed out everywhere), Player teams; the admin '
+      + 'restoring judges\' edit allowance and the fairness board; Stats tabs for a coach, a '
+      + 'player and a judge; the coach\'s and player\'s finals. Everything is put back, so '
+      + 'verifySeed still sees the season as judged.',
   },
 ];
 
