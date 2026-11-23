@@ -207,7 +207,6 @@ describe('Panel Review — Senior Judge unlocks used-up edits (user rule 2026-11
 
   beforeEach(() => {
     window.scrollTo = vi.fn();
-    window.confirm = vi.fn(() => true);
     api.restoreJudgeEdits.mockClear();
   });
 
@@ -222,14 +221,18 @@ describe('Panel Review — Senior Judge unlocks used-up edits (user rule 2026-11
     render(<JudgePanelReview />);
     push(panel(0, 3));
     expect(screen.queryByRole('button', { name: 'Unlock my edits' })).toBeNull();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Unlock edits for Judge 1' })); });
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock edits for Judge 1' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 edits back');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Unlock' })); });
     expect(api.restoreJudgeEdits).toHaveBeenCalledWith('s1', 'p1', { apparatus: 'Pole Mallakhamb', judgeType: 'Judge 1' });
   });
 
   it("unlocks the Senior Judge's own edits once all 3 are used", async () => {
     render(<JudgePanelReview />);
     push(panel(3, 0));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Unlock my edits' })); });
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock my edits' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 edits back');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Unlock' })); });
     expect(api.restoreJudgeEdits).toHaveBeenCalledWith('s1', 'p1', { apparatus: 'Pole Mallakhamb', judgeType: 'Senior Judge' });
   });
 });

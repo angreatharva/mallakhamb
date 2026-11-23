@@ -21,6 +21,7 @@ import { FG } from '@/styles/tokens';
 import { useReducedMotion } from '@/hooks/useResponsive';
 import { apparatusKey } from '@/utils/scoring/apparatus';
 import { useCompetitionLock } from '@/hooks/useCompetitionLock';
+import { ConfirmDialog } from '@/components/ui';
 import CompetitionLockBanner from '@/components/competition/CompetitionLockBanner';
 import {
   getCombinationChecklist,
@@ -87,14 +88,17 @@ const JudgePanelReview = () => {
   const [showToleranceModal, setShowToleranceModal] = useState(false);
   const [toleranceDismissed, setToleranceDismissed] = useState(false);
   const [unlockingSeat, setUnlockingSeat] = useState(null);
+  // The seat the themed confirm dialog is asking about (null = closed).
+  const [confirmSeat, setConfirmSeat] = useState(null);
 
   /** Seats whose Edit My Score allowance is used up on this athlete. */
   const seatOutOfEdits = (jt) => !!panelScores[jt] && (Number(panelScores[jt].editCount) || 0) >= SLIP_EDIT_LIMIT;
   const canUnlockEdits = isSeniorJudge && !finalized && !competitionLocked && !!scoreId;
 
-  const unlockEdits = async (judgeType) => {
-    const label = judgeType === myJudgeType ? 'your' : `${judgeType}'s`;
-    if (!window.confirm(`Give ${label} ${SLIP_EDIT_LIMIT} edits back for ${selectedPlayer?.name || 'this athlete'}?`)) return;
+  // The buttons only open the dialog; the dialog's Unlock does the work.
+  const unlockEdits = (judgeType) => setConfirmSeat(judgeType);
+
+  const doUnlockEdits = async (judgeType) => {
     setUnlockingSeat(judgeType);
     try {
       await judgeAPI.restoreJudgeEdits(scoreId, playerIdOf(selectedPlayer), {
@@ -666,6 +670,21 @@ const JudgePanelReview = () => {
       {/* Modals */}
       {/* Also gated on the live condition, so a mismatch resolved over the
           socket never flashes an empty dialog before the effect closes it. */}
+      <ConfirmDialog
+        open={!!confirmSeat}
+        onClose={() => setConfirmSeat(null)}
+        onConfirm={() => doUnlockEdits(confirmSeat)}
+        title={confirmSeat === myJudgeType ? 'Unlock your edits?' : `Unlock ${confirmSeat}'s edits?`}
+        confirmText="Unlock"
+      >
+        {/* SHOWN_EDIT_LIMIT, not SLIP_EDIT_LIMIT: judges are shown one edit
+            fewer than they have (owner, 2026-11-17), so this says 2. */}
+        <p>
+          {confirmSeat === myJudgeType ? 'You get' : `${confirmSeat} gets`} {SHOWN_EDIT_LIMIT} edits back
+          for {selectedPlayer?.name || 'this athlete'}. No marks change.
+        </p>
+      </ConfirmDialog>
+
       <MismatchModal
         isOpen={showMismatchModal && shouldSeeMismatch}
         onClose={() => { setShowMismatchModal(false); setMismatchDismissed(true); }}
