@@ -480,6 +480,11 @@ with the real 0-10 `judgeScores` schema).
 - **Tolerance** is reported only once there is no Difficulty or Combination
   mismatch. The lookup rounds to the hundredth on both stacks.
 - **3 edits per slip** (`editCount`). The Senior Judge override is removed.
+  Once a seat has used all 3 on an athlete, the Senior Judge of THAT panel
+  (their own seat too) resets it to 0 - `PUT /api/judge/scores/:scoreId/players/:playerId/restore-edits`,
+  `restoreSlipEditsAsSenior`: 403 for anyone else, 409 while edits are left
+  or once the athlete is final/locked (user rule 2026-11-23). Admins keep
+  their own restore.
 - **Unlock** (per athlete or whole sheet) clears Final Submit and the
   apparatus lock without moving any mark. The result is withdrawn until the
   next Final Submit.

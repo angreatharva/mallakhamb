@@ -265,7 +265,9 @@ stop appearing on screen.
   totals and gap, each differing A/B/C count, and each differing combination
   requirement.
 - **Edit My Score** shows the edits left and is disabled at 0. There is no
-  Senior Judge override of other slips.
+  Senior Judge override of other slips. At 0 the Senior Judge sees "Unlock
+  edits" on that judge's card ("Unlock my edits" for their own seat) -
+  `judgeAPI.restoreJudgeEdits`, full reset to 3; never shown before (2026-11-23).
 - The phone slip's tabs switch **on tap only**. The swipe handlers are gone.
 - The Scorer's Lock & Submit needs a Senior Judge mark above 0 on every
   athlete (`athletesAwaitingSeniorJudge`, `pages/judge/scorerRows.js`). Until

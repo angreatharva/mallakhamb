@@ -11,7 +11,7 @@
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, Pencil, Lock } from 'lucide-react';
+import { AlertTriangle, Pencil, Lock, Unlock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { logger } from '@/infrastructure/logger';
 import { judgeAPI } from '@/services/public/judge.api';
@@ -75,6 +75,8 @@ const JudgePanelReview = () => {
     // the fallback (see useJudgePanelData) — never the stored list alone.
     mySeat,
     myJudgeType,
+    scoreId,
+    refetchScores,
   // Re-read every 10 s: the socket is the fast path, this is what guarantees a
   // judge's edited slip replaces their old one here even if a broadcast is lost.
   } = useJudgePanelData({ judgeInfo, session, refreshMs: 10_000 });
@@ -84,13 +86,42 @@ const JudgePanelReview = () => {
   const [mismatchDismissed, setMismatchDismissed] = useState(false);
   const [showToleranceModal, setShowToleranceModal] = useState(false);
   const [toleranceDismissed, setToleranceDismissed] = useState(false);
+  const [unlockingSeat, setUnlockingSeat] = useState(null);
+
+  /** Seats whose Edit My Score allowance is used up on this athlete. */
+  const seatOutOfEdits = (jt) => !!panelScores[jt] && (Number(panelScores[jt].editCount) || 0) >= SLIP_EDIT_LIMIT;
+  const canUnlockEdits = isSeniorJudge && !finalized && !competitionLocked && !!scoreId;
+
+  const unlockEdits = async (judgeType) => {
+    const label = judgeType === myJudgeType ? 'your' : `${judgeType}'s`;
+    if (!window.confirm(`Give ${label} ${SLIP_EDIT_LIMIT} edits back for ${selectedPlayer?.name || 'this athlete'}?`)) return;
+    setUnlockingSeat(judgeType);
+    try {
+      await judgeAPI.restoreJudgeEdits(scoreId, playerIdOf(selectedPlayer), {
+        apparatus: selectedApparatus,
+        judgeType,
+      });
+      setPanelScores((prev) => (prev[judgeType]
+        ? { ...prev, [judgeType]: { ...prev[judgeType], editCount: 0 } }
+        : prev));
+      toast.success(judgeType === myJudgeType ? 'Your edits are unlocked' : `${judgeType}'s edits are unlocked`);
+      refetchScores?.();
+    } catch (err) {
+      logger.error('Unlock edits failed', err);
+      toast.error(err?.response?.data?.error?.message || err?.response?.data?.message || 'Could not unlock the edits');
+    } finally {
+      setUnlockingSeat(null);
+    }
+  };
 
   const combinationChecklist = getCombinationChecklist(selectedApparatus);
   const panelMismatch = analyzePanelMismatches(panelScores, effectivePanelSize);
   const canFinalSubmit = !finalized && !competitionLocked && allPanelSubmitted && isSeniorJudge;
 
   // Edit My Score: SLIP_EDIT_LIMIT changes per slip for every judge, the
-  // Senior Judge included (user rule 2026-11-09); an admin restores them.
+  // Senior Judge included (user rule 2026-11-09). Once a seat has used them
+  // all, the Senior Judge of this panel (their own seat too) or an admin
+  // gives them back - full reset to SLIP_EDIT_LIMIT (user rule 2026-11-23).
   const myEditsUsed = Number(panelScores[myJudgeType]?.editCount) || 0;
   const myEditsLeft = Math.max(0, SLIP_EDIT_LIMIT - myEditsUsed);
   const outOfEdits = !!panelScores[myJudgeType] && myEditsLeft === 0;
@@ -383,8 +414,20 @@ const JudgePanelReview = () => {
                   data-testid="edits-left"
                   className={`text-xs font-bold px-2.5 py-1.5 rounded-full ${outOfEdits ? 'bg-danger-tint text-danger-fg' : 'bg-surface-sunken text-fg-muted'}`}
                 >
-                  {outOfEdits ? 'No edits left — ask the admin' : `${shownEditsLeft} of ${SHOWN_EDIT_LIMIT} edits left`}
+                  {outOfEdits ? (isSeniorJudge ? 'No edits left' : 'No edits left — ask the Senior Judge') : `${shownEditsLeft} of ${SHOWN_EDIT_LIMIT} edits left`}
                 </span>
+              )}
+              {canUnlockEdits && outOfEdits && (
+                <button
+                  type="button"
+                  onClick={() => unlockEdits(myJudgeType)}
+                  disabled={unlockingSeat === myJudgeType}
+                  className="disabled:opacity-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
+                  style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
+                >
+                  <Unlock className="w-3.5 h-3.5" aria-hidden="true" />
+                  Unlock my edits
+                </button>
               )}
               {finalized && (
                 <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-success-tint text-success-fg">
@@ -476,6 +519,20 @@ const JudgePanelReview = () => {
                       </div>
                     </div>
                   </div>
+
+                  {canUnlockEdits && !isYou && seatOutOfEdits(judge) && (
+                    <button
+                      type="button"
+                      onClick={() => unlockEdits(judge)}
+                      disabled={unlockingSeat === judge}
+                      aria-label={`Unlock edits for ${judge}`}
+                      className="disabled:opacity-50 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
+                      style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
+                    >
+                      <Unlock className="w-3.5 h-3.5" aria-hidden="true" />
+                      {unlockingSeat === judge ? 'Unlocking…' : 'Unlock edits'}
+                    </button>
+                  )}
 
                   <div className="space-y-1">
                     <p className="type-tag text-fg-secondary">Difficulty</p>

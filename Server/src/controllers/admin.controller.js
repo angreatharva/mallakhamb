@@ -368,6 +368,28 @@ function createAdminController(container) {
       res.json({ success: true, data: result });
     }),
 
+    /**
+     * @route PUT /api/judge/scores/:scoreId/players/:playerId/restore-edits
+     * The Senior Judge gives one seat on their own panel (themselves included)
+     * the Edit My Score allowance back on one athlete, once it is used up.
+     * Body: { apparatus?, judgeType } - judgeType is required here.
+     */
+    restoreSlipEditsAsSenior: asyncHandler(async (req, res) => {
+      const { scoreId, playerId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(String(scoreId)) || !mongoose.Types.ObjectId.isValid(String(playerId))) {
+        return res.status(400).json({ success: false, error: { message: 'Invalid score or player id', code: 'VALIDATION_ERROR' } });
+      }
+      const apparatus = typeof req.body?.apparatus === 'string' ? req.body.apparatus : undefined;
+      const judgeType = typeof req.body?.judgeType === 'string' ? req.body.judgeType : undefined;
+      if (!judgeType || !PANEL_JUDGE_TYPES.includes(judgeType)) {
+        return res.status(400).json({ success: false, error: { message: 'Choose which judge to unlock', code: 'VALIDATION_ERROR' } });
+      }
+      const result = await adminService.restoreSlipEditsAsSenior(
+        scoreId, { playerId, apparatus, judgeType }, req.user, req.judgeAssignments || []
+      );
+      res.json({ success: true, data: result });
+    }),
+
     /** @route PUT /api/admin/scores/lock */
     lockScores: asyncHandler(async (req, res) => {
       const result = await adminService.lockScores(

@@ -95,7 +95,9 @@ Tests: `tests/integration/qualification-service.test.js`.
 - `saveScores`: panel size from the seats (`utils/scoring/seated-panel.util.js`).
   A Scorer save takes only Time and Other Deduction. Single-slip submits need
   Execution of at least 0.10. Each slip has 3 edits (`editCount`, 422 after
-  that). The Senior Judge override is removed.
+  that). The Senior Judge override is removed. The panel's Senior Judge may
+  reset a used-up seat (own included) on one athlete: `restoreSlipEditsAsSenior`,
+  `PUT /api/judge/scores/:scoreId/players/:playerId/restore-edits` (2026-11-23).
 - Unlock per athlete or per sheet, and restore edits: see
   [05-API-SURFACE.md](../05-API-SURFACE.md).
 - An admin's locked save finalizes every athlete with marks (it republishes).

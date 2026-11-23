@@ -474,4 +474,62 @@ describe('judge scoring flow — a full panel sequence', () => {
     // Only Judge 1 was restored: the Senior Judge is still out of edits.
     expect((await post(tokenFor(senior), slip({ score: 8.5 }))).status).toBe(422);
   });
+
+  // User rule 2026-11-23: the Senior Judge of THIS panel unlocks a seat's
+  // used-up edits on one athlete - their own seat too - and nobody else can.
+  test('the Senior Judge unlocks used-up edits on their own panel only', async () => {
+    const seatsOf = (who) => Judge.find({ judgeAccount: who.account._id }).lean();
+    const useAllEdits = async (who) => {
+      for (const score of [8.0, 8.1, 8.2, 8.3]) {
+        expect((await post(tokenFor(who), slip({ score }))).status).toBe(200);
+      }
+    };
+    const target = (judgeType) => ({ playerId: playerId.toString(), apparatus: 'Pole Mallakhamb', judgeType });
+
+    expect((await post(tokenFor(j1), slip({ score: 8.0 }))).status).toBe(200);
+    let doc = await Score.findOne({ teamId, competition: competitionId }).lean();
+
+    // Edits left -> refused, no topping up early.
+    await expect(scoringService.restoreSlipEditsAsSenior(doc._id, target('Judge 1'), senior.account, await seatsOf(senior)))
+      .rejects.toMatchObject({ statusCode: 409 });
+
+    await post(tokenFor(j1), slip({ score: 8.1 }));
+    await post(tokenFor(j1), slip({ score: 8.2 }));
+    await post(tokenFor(j1), slip({ score: 8.3 }));
+    expect((await post(tokenFor(j1), slip({ score: 8.4 }))).status).toBe(422);
+
+    // A panel judge, or a Senior Judge of another panel, is refused.
+    await expect(scoringService.restoreSlipEditsAsSenior(doc._id, target('Judge 1'), j2.account, await seatsOf(j2)))
+      .rejects.toMatchObject({ statusCode: 403 });
+    const otherAccount = await JudgeAccount.create({
+      firstName: 'Other', lastName: 'Chief', email: 'sr9@club.in', password: 'PlaintextSecret1', isActive: true,
+    });
+    await Judge.create({
+      judgeAccount: otherAccount._id, competition: competitionId, competitionTypes: ['competition_1'],
+      gender: 'Male', ageGroup: 'Under18', judgeNo: 1, judgeType: 'Senior Judge', isActive: true,
+    });
+    const other = { account: otherAccount };
+    await expect(scoringService.restoreSlipEditsAsSenior(doc._id, target('Judge 1'), other.account, await seatsOf(other)))
+      .rejects.toMatchObject({ statusCode: 403 });
+
+    // This panel's Senior Judge unlocks Judge 1, who gets 3 edits again.
+    const result = await scoringService.restoreSlipEditsAsSenior(doc._id, target('Judge 1'), senior.account, await seatsOf(senior));
+    expect(result.slipsRestored).toBe(1);
+    for (const score of [8.4, 8.5, 8.6]) {
+      expect((await post(tokenFor(j1), slip({ score }))).status).toBe(200);
+    }
+    expect((await post(tokenFor(j1), slip({ score: 8.7 }))).status).toBe(422);
+
+    // Their own seat too.
+    await useAllEdits(senior);
+    expect((await post(tokenFor(senior), slip({ score: 8.4 }))).status).toBe(422);
+    await scoringService.restoreSlipEditsAsSenior(doc._id, target('Senior Judge'), senior.account, await seatsOf(senior));
+    expect((await post(tokenFor(senior), slip({ score: 8.4 }))).status).toBe(200);
+
+    // Once the athlete is final, no more unlocks.
+    await Score.updateOne({ _id: doc._id }, { $set: { 'playerScores.0.isFinalized': true, 'playerScores.0.judgeSlips.$[s].editCount': 3 } },
+      { arrayFilters: [{ 's.judgeRole': 'J1' }] });
+    await expect(scoringService.restoreSlipEditsAsSenior(doc._id, target('Judge 1'), senior.account, await seatsOf(senior)))
+      .rejects.toMatchObject({ statusCode: 409 });
+  });
 });

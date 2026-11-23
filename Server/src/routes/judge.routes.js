@@ -206,6 +206,20 @@ function createJudgeRoutes(container) {
     adminController.saveScores
   );
 
+  /**
+   * @route  PUT /api/judge/scores/:scoreId/players/:playerId/restore-edits
+   * @desc   Senior Judge unlocks one judge's used-up Edit My Score allowance
+   *         (their own included) on one athlete. Body: { apparatus, judgeType }.
+   * @access Senior Judge of THIS panel - checked against the sheet's category
+   *         in ScoringService.restoreSlipEditsAsSenior.
+   */
+  router.put('/scores/:scoreId/players/:playerId/restore-edits',
+    authenticate,
+    requireJudge,
+    requireUnlockedCompetition(),
+    adminController.restoreSlipEditsAsSenior
+  );
+
   // ==================== Running Order ====================
 
   /**

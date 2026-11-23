@@ -138,6 +138,10 @@ slip.
 ## Since the last pass (2026-11-11, against `f5465b4`)
 
 - Edit My Score shows the edits left (3 per slip) and is disabled at 0.
+- 2026-11-23: once a seat is at 0, the Senior Judge gets "Unlock edits" on
+  that card ("Unlock my edits" by Edit My Score for their own seat); other
+  judges read "No edits left - ask the Senior Judge". Needs `scoreId` from
+  `useJudgePanelData` (`team.scoreMetadata._id`).
 - The Senior Judge override of other judges' slips is removed.
 - The mismatch dialog lists exact differences (`describeSlipDifferences`); a
   panel judge sees only their own.

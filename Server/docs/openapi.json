@@ -29322,6 +29322,162 @@
         ]
       }
     },
+    "/api/judge/scores/{scoreId}/players/{playerId}/restore-edits": {
+      "put": {
+        "tags": [
+          "Judge"
+        ],
+        "summary": "Senior Judge gives one seat (their own included) its Edit My Score allowance (3) back on one athlete, once used up.",
+        "operationId": "judgeRestoreSlipEdits",
+        "parameters": [
+          {
+            "name": "scoreId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Score sheet"
+          },
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Player"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "apparatus": {
+                    "type": "string",
+                    "enum": [
+                      "Pole Mallakhamb",
+                      "Hanging Mallakhamb",
+                      "Rope Mallakhamb"
+                    ]
+                  },
+                  "judgeType": {
+                    "type": "string",
+                    "enum": [
+                      "Senior Judge",
+                      "Judge 1",
+                      "Judge 2",
+                      "Judge 3",
+                      "Judge 4",
+                      "Scorer",
+                      "Time Keeper"
+                    ]
+                  }
+                },
+                "required": [
+                  "apparatus",
+                  "judgeType"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Restored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {},
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation — `error.details` names the field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, expired or logged-out token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated, but the principal lacks the required role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Edits still left, or the athlete is already final / locked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "**Roles:** judge (Senior Judge of this panel)",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ]
+      }
+    },
     "/api/superadmin/history": {
       "get": {
         "tags": [

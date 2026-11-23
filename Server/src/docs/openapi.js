@@ -2675,6 +2675,17 @@ function buildPaths() {
   }));
   restoreEdits('/api/admin', 'Scores', 'admin (own meet), superadmin');
   restoreEdits('/api/superadmin', 'Super admin', 'superadmin');
+  add('/api/judge/scores/{scoreId}/players/{playerId}/restore-edits', 'put', op({
+    tag: 'Judge', roles: 'judge (Senior Judge of this panel)', operationId: 'judgeRestoreSlipEdits',
+    summary: 'Senior Judge gives one seat (their own included) its Edit My Score allowance (3) back on one athlete, once used up.',
+    parameters: [pathParam('scoreId', 'Score sheet'), pathParam('playerId', 'Player')],
+    requestBody: jsonBody(inline({ apparatus: S.apparatus, judgeType: S.judgeType }, ['apparatus', 'judgeType'])),
+    responses: {
+      200: ok('Restored'), ...VALIDATION_ERROR, ...NOT_FOUND,
+      403: errorResponse('Not the Senior Judge of this panel'),
+      409: errorResponse('Edits still left, or the athlete is already final / locked'),
+    },
+  }));
 
   // ===================== Super Admin: History, Fix, Accounts, Player teams =====================
   // Every write takes `reason` (5+ characters) and is recorded in History.

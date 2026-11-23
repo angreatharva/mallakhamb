@@ -10,8 +10,11 @@
 const { 
   ValidationError, 
   NotFoundError,
-  BusinessRuleError 
+  BusinessRuleError,
+  AuthorizationError,
+  ConflictError,
 } = require('../../errors');
+const { resolveAssignment } = require('../../utils/data/judge-assignment.util');
 const EventTypes = require('../../socket/events/event-types');
 const { scoringRoomIds } = require('../../utils/data/scoring-room.util');
 const { noopMetrics } = require('../../infrastructure/prometheus/registry');
@@ -1205,6 +1208,52 @@ class ScoringService {
       slipsRestored: restored,
       editLimit: SLIP_EDIT_LIMIT,
     };
+  }
+
+  /**
+   * The Senior Judge gives one judge on THEIR OWN panel - themselves included -
+   * the Edit My Score allowance back on one athlete (user rule 2026-11-23).
+   * Same full reset as the admin's restore, with four extra conditions:
+   *   - the caller holds the Senior Judge seat for this sheet's category and
+   *     this athlete's apparatus (403 otherwise);
+   *   - the named seat has used every edit - no topping up early (409);
+   *   - the athlete is not Final Submitted, and the sheet / apparatus is not
+   *     locked (409).
+   */
+  async restoreSlipEditsAsSenior(scoreId, { playerId, apparatus, judgeType } = {}, judgeUser, assignments) {
+    const Model = this.scoreRepository.model;
+    const doc = await Model.findById(scoreId);
+    if (!doc) throw new NotFoundError('Score');
+    const wanted = apparatusKey(apparatus);
+    const row = (doc.playerScores || []).find((ps) => String(ps.playerId) === String(playerId)
+      && (apparatus === undefined || apparatus === null || apparatus === '' || apparatusKey(ps.apparatus) === wanted));
+    if (!row) throw new NotFoundError('Player score');
+
+    const seat = resolveAssignment(assignments, {
+      competition: doc.competition?._id || doc.competition,
+      gender: doc.gender,
+      ageGroup: doc.ageGroup,
+      competitionType: doc.competitionType,
+      apparatus: row.apparatus,
+    });
+    if (!seat || seat.judgeType !== 'Senior Judge') {
+      throw new AuthorizationError("Only the Senior Judge of this panel can unlock a judge's edits");
+    }
+    const rowApparatus = apparatusKey(row.apparatus);
+    if (row.isFinalized || doc.isLocked
+      || (doc.lockedApparatus || []).some((a) => apparatusKey(a) === rowApparatus)) {
+      throw new ConflictError("This athlete's scores are already submitted and locked");
+    }
+    const ROLE_BY_TYPE = {
+      'Senior Judge': ['SR_JUDGE', 'CHIEF'], 'Judge 1': ['J1'], 'Judge 2': ['J2'], 'Judge 3': ['J3'], 'Judge 4': ['J4'],
+    };
+    const roles = ROLE_BY_TYPE[judgeType] || [];
+    const slip = (row.judgeSlips || []).find((s) => roles.includes(s.judgeRole));
+    if (!slip || (Number(slip.editCount) || 0) < SLIP_EDIT_LIMIT) {
+      throw new ConflictError(`${judgeType} still has edits left on this athlete`);
+    }
+    return this.restoreSlipEdits(scoreId, { playerId, apparatus: row.apparatus, judgeType }, judgeUser?._id,
+      { competitionId: String(doc.competition?._id || doc.competition) });
   }
 
   /** Tell the panel an athlete's edit allowance is back, so Panel Review re-reads. */

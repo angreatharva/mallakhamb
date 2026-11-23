@@ -294,6 +294,8 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
   const [panelSeat, setPanelSeat] = useState(null);
   const [seatLookupDone, setSeatLookupDone] = useState(false);
   const [finalized, setFinalized] = useState(false);
+  // The Score sheet this athlete's slips live on (Senior Judge's Unlock edits).
+  const [scoreId, setScoreId] = useState(null);
   // True once the first read of the stored slips has settled, found or not.
   const [loaded, setLoaded] = useState(false);
   const [socket, setSocket] = useState(null);
@@ -403,6 +405,7 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
       );
       if (!targetPs) return;
       const scoreDoc = { isLocked: team.scoreMetadata?.isLocked === true };
+      if (team.scoreMetadata?._id) setScoreId(String(team.scoreMetadata._id));
 
       const loadedPanelScores = {};
 
@@ -659,6 +662,7 @@ export function useJudgePanelData({ judgeInfo, session, refreshMs = 0 }) {
     socket,
     isConnected,
     refetchScores: fetchExistingScores,
+    scoreId,
     loaded,
     panelScoresCount,
     effectivePanelSize,

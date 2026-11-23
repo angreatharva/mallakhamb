@@ -11,7 +11,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const feed = vi.hoisted(() => ({ push: null }));
-const api = vi.hoisted(() => ({ saveScore: null }));
+const api = vi.hoisted(() => ({ saveScore: null, restoreJudgeEdits: null }));
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
@@ -25,7 +25,13 @@ vi.mock('@/hooks/useResponsive', () => ({ useReducedMotion: () => true }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/services/public/judge.api', () => {
   api.saveScore = vi.fn().mockResolvedValue({ data: {} });
-  return { judgeAPI: { saveScore: (...a) => api.saveScore(...a) } };
+  api.restoreJudgeEdits = vi.fn().mockResolvedValue({ data: {} });
+  return {
+    judgeAPI: {
+      saveScore: (...a) => api.saveScore(...a),
+      restoreJudgeEdits: (...a) => api.restoreJudgeEdits(...a),
+    },
+  };
 });
 vi.mock('./useJudgePanelData', async () => {
   const { useState } = await import('react');
@@ -61,6 +67,8 @@ vi.mock('./useJudgePanelData', async () => {
         orderedPanelEntries: SEATS.filter((jt) => panelScores[jt]).map((jt) => [jt, panelScores[jt]]),
         allPanelSubmitted: count >= size,
         isSeniorJudge: true,
+        scoreId: 's1',
+        refetchScores: vi.fn(),
       };
     },
     resolveJudgeSeat: (judgeInfo) => judgeInfo,
@@ -177,7 +185,42 @@ describe('Panel Review — Edit My Score shows one edit fewer than allowed (owne
     window.scrollTo = vi.fn();
     render(<JudgePanelReview />);
     push(mine(3));
-    expect(label()).toHaveTextContent('No edits left — ask the admin');
+    expect(label()).toHaveTextContent('No edits left');
     expect(editButton()).toBeDisabled();
+  });
+});
+
+describe('Panel Review — Senior Judge unlocks used-up edits (user rule 2026-11-23)', () => {
+  const panel = (srUsed, j1Used) => ({
+    'Senior Judge': { ...slip('Senior Judge', 2.4, 1.6, 8), editCount: srUsed },
+    'Judge 1': { ...slip('Judge 1', 2.4, 1.6, 8), editCount: j1Used },
+  });
+
+  beforeEach(() => {
+    window.scrollTo = vi.fn();
+    window.confirm = vi.fn(() => true);
+    api.restoreJudgeEdits.mockClear();
+  });
+
+  it('no Unlock button while any edit is left', () => {
+    render(<JudgePanelReview />);
+    push(panel(2, 2));
+    expect(screen.queryByRole('button', { name: /Unlock edits for/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Unlock my edits' })).toBeNull();
+  });
+
+  it("unlocks another judge's edits once all 3 are used", async () => {
+    render(<JudgePanelReview />);
+    push(panel(0, 3));
+    expect(screen.queryByRole('button', { name: 'Unlock my edits' })).toBeNull();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Unlock edits for Judge 1' })); });
+    expect(api.restoreJudgeEdits).toHaveBeenCalledWith('s1', 'p1', { apparatus: 'Pole Mallakhamb', judgeType: 'Judge 1' });
+  });
+
+  it("unlocks the Senior Judge's own edits once all 3 are used", async () => {
+    render(<JudgePanelReview />);
+    push(panel(3, 0));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Unlock my edits' })); });
+    expect(api.restoreJudgeEdits).toHaveBeenCalledWith('s1', 'p1', { apparatus: 'Pole Mallakhamb', judgeType: 'Senior Judge' });
   });
 });

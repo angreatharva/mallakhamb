@@ -102,6 +102,16 @@ export const judgeAPI = {
    */
   getTeamScores: (params) => api.get('/judge/scores/team', { params }),
 
+  /**
+   * Senior Judge: give one judge on this panel (themselves included) their
+   * Edit My Score allowance back on one athlete, once it is used up.
+   * @param {string} scoreId
+   * @param {string} playerId
+   * @param {{apparatus: string, judgeType: string}} body
+   */
+  restoreJudgeEdits: (scoreId, playerId, body) =>
+    api.put(`/judge/scores/${scoreId}/players/${playerId}/restore-edits`, body),
+
   /** Players on a team, with per-player scored/finalized flags. */
   /*
    * The roster, scored FOR A CATEGORY. `params` carries gender, ageGroup and
