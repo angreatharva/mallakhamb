@@ -365,6 +365,47 @@ const JudgePanelReview = () => {
 
   if (!judgeInfo || !selectedPlayer) return null;
 
+  // Edit My Score, the edits left and (Senior Judge, at 0) Unlock my edits.
+  // They sit on the judge's own score card (user, 2026-11-23); the header
+  // keeps them only until the judge has a slip, i.e. a card.
+  const myEditControls = (
+    <>
+        {!finalized && !competitionLocked && (
+          <button
+            type="button"
+            onClick={goBackToScoring}
+            disabled={outOfEdits}
+            aria-disabled={outOfEdits}
+            className="disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
+            style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
+          >
+            <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+            Edit My Score
+          </button>
+        )}
+        {!finalized && !competitionLocked && panelScores[myJudgeType] && (
+          <span
+            data-testid="edits-left"
+            className={`text-xs font-bold px-2.5 py-1.5 rounded-full ${outOfEdits ? 'bg-danger-tint text-danger-fg' : 'bg-surface-sunken text-fg-muted'}`}
+          >
+            {outOfEdits ? (isSeniorJudge ? 'No edits left' : 'No edits left — ask the Senior Judge') : `${shownEditsLeft} of ${SHOWN_EDIT_LIMIT} edits left`}
+          </span>
+        )}
+        {canUnlockEdits && outOfEdits && (
+          <button
+            type="button"
+            onClick={() => unlockEdits(myJudgeType)}
+            disabled={unlockingSeat === myJudgeType}
+            className="disabled:opacity-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
+            style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
+          >
+            <Unlock className="w-3.5 h-3.5" aria-hidden="true" />
+            Unlock my edits
+          </button>
+        )}
+    </>
+  );
+
   return (
     <div className="min-h-dvh relative pb-24 lg:pb-0 bg-bg text-fg">
       <JudgeAmbience />
@@ -396,39 +437,8 @@ const JudgePanelReview = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {!finalized && !competitionLocked && (
-                <button
-                  type="button"
-                  onClick={goBackToScoring}
-                  disabled={outOfEdits}
-                  aria-disabled={outOfEdits}
-                  className="disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
-                  style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
-                >
-                  <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
-                  Edit My Score
-                </button>
-              )}
-              {!finalized && !competitionLocked && panelScores[myJudgeType] && (
-                <span
-                  data-testid="edits-left"
-                  className={`text-xs font-bold px-2.5 py-1.5 rounded-full ${outOfEdits ? 'bg-danger-tint text-danger-fg' : 'bg-surface-sunken text-fg-muted'}`}
-                >
-                  {outOfEdits ? (isSeniorJudge ? 'No edits left' : 'No edits left — ask the Senior Judge') : `${shownEditsLeft} of ${SHOWN_EDIT_LIMIT} edits left`}
-                </span>
-              )}
-              {canUnlockEdits && outOfEdits && (
-                <button
-                  type="button"
-                  onClick={() => unlockEdits(myJudgeType)}
-                  disabled={unlockingSeat === myJudgeType}
-                  className="disabled:opacity-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all duration-200 hover:bg-ink/5 tap-safe"
-                  style={{ borderColor: 'rgb(var(--accent) / 0.4)', color: 'rgb(var(--accent-fg))' }}
-                >
-                  <Unlock className="w-3.5 h-3.5" aria-hidden="true" />
-                  Unlock my edits
-                </button>
-              )}
+              {/* No slip of mine yet: there is no card to carry the button. */}
+              {!panelScores[myJudgeType] && myEditControls}
               {finalized && (
                 <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-success-tint text-success-fg">
                   <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Finalized
@@ -520,6 +530,11 @@ const JudgePanelReview = () => {
                     </div>
                   </div>
 
+                  {isYou && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {myEditControls}
+                    </div>
+                  )}
                   {canUnlockEdits && !isYou && seatOutOfEdits(judge) && (
                     <button
                       type="button"

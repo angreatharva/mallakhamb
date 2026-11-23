@@ -181,6 +181,15 @@ describe('Panel Review — Edit My Score shows one edit fewer than allowed (owne
     expect(editButton()).not.toBeDisabled();
   });
 
+  it('the button sits on the judge’s own score card (user, 2026-11-23)', () => {
+    window.scrollTo = vi.fn();
+    render(<JudgePanelReview />);
+    push(mine(1));
+    const card = screen.getByText('You').closest('.rounded-2xl');
+    expect(card).toContainElement(editButton());
+    expect(card).toContainElement(label());
+  });
+
   it('all 3 used: no edits left, the button is off', () => {
     window.scrollTo = vi.fn();
     render(<JudgePanelReview />);
