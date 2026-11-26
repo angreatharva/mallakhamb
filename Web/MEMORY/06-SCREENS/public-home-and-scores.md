@@ -55,7 +55,7 @@ quality bar). The old 839-line Home (particles, `MagneticCursor`, dead
   "Prime Time" language that `docs/design-language/PLAN.md` rolls out
   site-wide. Note `.cd-rb` sets local `--bg`/`--fg` that shadow global token
   names — rename before Home consumes shared tokens.
-- Brand rule: the page says **"Mallakhamb India"**; "Bhausaheb", "Ranade",
+- Brand rule (owner, 2026-11-26): the page says **"Mallakhamb Competition"**; "Bhausaheb", "Ranade",
   "Navodit" must not appear. `src/assets/main-home.jpg` shows "RANADE" in its
   pixels — never use it here.
 - No data fetching. **Photos are local** since 2026-10-11 (`274c13a`):
