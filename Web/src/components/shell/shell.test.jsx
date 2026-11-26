@@ -19,7 +19,7 @@ describe('brand', () => {
   it('names the brand once, as text, and links home', () => {
     at('/', <Wordmark />);
     expect(screen.getByRole('link', { name: BRAND_NAME })).toHaveAttribute('href', '/');
-    expect(BRAND_NAME).toBe('Mallakhamb India');
+    expect(BRAND_NAME).toBe('Mallakhamb Competition');
   });
 
   it('a compact wordmark keeps its name for screen readers', () => {
@@ -28,11 +28,11 @@ describe('brand', () => {
   });
 
   it('the pole mark is decorative unless it is given a title', () => {
-    const { container } = render(<><PoleMark /><PoleMark title="Mallakhamb India" /></>);
+    const { container } = render(<><PoleMark /><PoleMark title="Mallakhamb Competition" /></>);
     const [plain, named] = container.querySelectorAll('svg');
     expect(plain).toHaveAttribute('aria-hidden', 'true');
     expect(named).toHaveAttribute('role', 'img');
-    expect(named).toHaveAccessibleName('Mallakhamb India');
+    expect(named).toHaveAccessibleName('Mallakhamb Competition');
   });
 });
 

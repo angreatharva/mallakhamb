@@ -24,7 +24,7 @@ const sectionsHtml = fillImages(sectionsRaw);
  */
 
 /*
- * Mallakhamb India: the landing page.
+ * Mallakhamb Competition: the landing page.
  *
  * The first screen (masthead, hero and role portal) is plain React: real <Link>s to every login and
  * register route, the app's Light/Dark switch, and nothing that waits for JavaScript beyond React
@@ -105,9 +105,9 @@ const Home = () => {
 
       <header className="masthead">
         <nav className="masthead__nav" aria-label="Primary">
-          <Link className="brand" to="/" aria-label="Mallakhamb India">
+          <Link className="brand" to="/" aria-label="Mallakhamb Competition">
             <PoleMark />
-            <span>Mallakhamb India</span>
+            <span>Mallakhamb Competition</span>
           </Link>
           <ul className="masthead__links">
             <li className="opt"><a href="#name">The sport</a></li>
@@ -134,7 +134,7 @@ const Home = () => {
           <div className="hero__scrim" aria-hidden="true" />
           <div className="hero__copy">
             <div className="lockup">
-              <h1 id="hero-title" className="hero__title"><span className="l1">Mallakhamb</span> <span className="l2">India</span></h1>
+              <h1 id="hero-title" className="hero__title"><span className="l1">Mallakhamb</span> <span className="l2">Competition</span></h1>
               <div className="hero__aside">
                 <p className="hero__deva" lang="mr">मल्लखांब</p>
                 <p className="hero__tag">Registration, judging and live results for pole, hanging pole and rope Mallakhamb.</p>

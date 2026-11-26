@@ -1,5 +1,5 @@
 /*
- * Mallakhamb India: the landing page.
+ * Mallakhamb Competition: the landing page.
  *
  * Every rule is scoped to .mk-home. Vite keeps a lazy route's CSS on the page after you navigate
  * away, so an unscoped rule here would restyle the rest of the app. The class that switches the 3D
@@ -103,11 +103,11 @@
 .mk-home .hero__title{display:grid;justify-items:end;font:600 min(16.6vw,25.5svh)/.8 var(--display);text-transform:uppercase;letter-spacing:.004em;color:var(--chalk);white-space:nowrap}
 .mk-home .hero__title span{display:block}
 .mk-home .hero__title .l1{margin-bottom:-.04em}
-.mk-home .hero__aside{position:absolute;left:0;bottom:.02em;width:44%;display:grid;gap:6px}
+/* "Competition" fills the second line, so the aside sits under the title at every width. */
+.mk-home .hero__aside{display:grid;gap:6px;margin-top:16px}
 .mk-home .hero__deva{font:600 clamp(30px,3.6vw,58px)/1 var(--display);color:var(--saffron)}
 .mk-home .hero__tag{font:500 clamp(14.5px,1.15vw,17px)/1.45 var(--text);color:var(--chalk);max-width:34ch}
 @media (max-width:899px){
-  .mk-home .hero__aside{position:static;width:auto;margin-top:16px}
   .mk-home .hero__title{justify-items:start}
 }
 /* the portal: a broadcast lower third */

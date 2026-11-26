@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { cx } from '@/components/ui/cx';
 
 /** The brand name, in one place (design-language PLAN D9). */
-export const BRAND_NAME = 'Mallakhamb India';
+export const BRAND_NAME = 'Mallakhamb Competition';
 
 /**
  * The pole mark: the brand's symbol, lifted from the landing page. Decorative
@@ -25,7 +25,7 @@ export const PoleMark = ({ title = null, className = '' }) => (
 PoleMark.propTypes = { title: PropTypes.string, className: PropTypes.string };
 
 /**
- * The wordmark: the mark and "Mallakhamb India". A link home unless `to` is
+ * The wordmark: the mark and "Mallakhamb Competition". A link home unless `to` is
  * null. `compact` keeps only the mark (still named) for the narrowest phones.
  */
 export const Wordmark = ({ to = '/', compact = false, className = '' }) => {

@@ -120,7 +120,7 @@ const LookSpecimen = () => {
           <div className="flex flex-wrap items-center gap-6">
             <Wordmark to={null} />
             <PoleMark className="h-12 w-auto" />
-            <PoleMark title="Mallakhamb India" className="h-8 w-auto" />
+            <PoleMark title="Mallakhamb Competition" className="h-8 w-auto" />
           </div>
         </Section>
 
